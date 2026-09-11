@@ -4,6 +4,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Review-branch J16–J18 corrections: preserve unscoped/malformed legacy drafts during load, save cleanup and quota sweeps; require explicit scope for automatic migration. Remove premature dirty-state reset when switching sets. Manual legacy recovery and coordinated single-confirmation switching remain pending.
+- Canonical identifier validation now covers save, info, rename and delete. Named-set browser tests require an explicit test-owned file; complete fixture cleanup and corrected-workflow acceptance remain pending.
+
 - Reviewed J01–J05: literal explicit save identifiers, configured initial set names, slide creation rate limits and production rename tests. Malformed explicit saves now fail instead of silently choosing another set.
 - Corrected buffered-save completion so newer buffered edits and changed drafts survive an earlier save response. Draft-key collisions and browser acceptance remain tracked follow-ups; page-owned history remains unregistered.
 

@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-Prepared September 10, 2026 against `main` at `e03504ec` (manifest 1.5.95). Review update is on `codex/j05-exact-draft-cleanup` at `9819921f` plus local corrections; it is not yet merged to main.
+Prepared September 10, 2026 against `main` at `e03504ec` (manifest 1.5.95). Latest review covers J16–J18 through `1baf0086` plus local corrections; it does not claim a merge to main.
 
 This is the execution queue for the [product roadmap](../improvement_plan.md). It assigns bounded implementation work to junior engineers and retains architectural, authorization and data-migration decisions with the lead engineer. Tasks are **not started or assigned** merely because they appear here. No feature is enabled by this document.
 
@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Review update — September 10:** J01–J05 have been implemented and reviewed; corrections and remaining limits are recorded in [the junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md). Give the next junior engineer **J16**, then **J17**, then **J18**. J18 can run independently in an isolated test environment. The lead resumes **L01**. The original task packets below remain context; do not reassign them as untouched work.
+**Review update — September 11:** J16–J18 have been reviewed. J17 is accepted within its unit-tested scope; J16/J18 required corrections and remain partial. Give juniors **J19**, then **J20**, then **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -18,7 +18,7 @@ Copy this instruction together with the selected task packet:
 
 > Implement task [ID] from docs/IMPLEMENTATION_HANDOFF_PLAN.md. Read its dependencies and linked contracts first. Confirm that dependencies have merged; otherwise report the missing dependency without guessing its design. Work only within this packet, use a codex/ branch, and submit one reviewable pull request. Exercise production behavior and include the commands, results and remaining limitations. Preserve unrelated changes. Do not enable page-owned publishing, migrate real data, change release numbers or publish documentation externally as part of this task. Update this plan's progress ledger with evidence, not just a completion claim.
 
-Paths below are repository-relative. New files are explicitly described as proposed. For J16–J18, start from the reviewed corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
+Paths below are repository-relative. New files are explicitly described as proposed. For J19–J21, start from the September 11 review corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
 
 ## What already exists
 
@@ -132,6 +132,34 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 **Ready independently in an isolated test wiki.** Read `tests/e2e/named-sets.spec.js` and the actual set-selector/dialog components. Use a disposable image fixture and test account; never rename a user's real set. Verify creation, save, rename and reload against persisted state. Required controls must have unconditional assertions. Replace outdated assumptions such as a permanently undeletable literal `default` set with the actual documented policy.
 
 **Acceptance:** the test fails if a required control is removed or the rename does not persist; cleanup affects only test-owned sets; report the browser/MediaWiki version and exact command. If authentication/fixtures are unavailable, mark this task blocked rather than reporting a skipped suite as acceptance. Reuse current harness setup; no enabling experimental publishing.
+
+## Next junior batch — September 11 review
+
+### J19 — Complete draft recovery without inferring ownership
+
+**Ready after the review corrections are captured.** Read `DraftManager.js` and the J16–J18 review. Ordinary legacy records lack wiki identity; preserve them, do not auto-apply, auto-delete, expire or sweep them. Keep the corrected v2-only save cleanup.
+
+Implement a localized, keyboard-accessible notice and an explicit local export/recovery dialog for preserved legacy data. Show metadata as escaped text; do not log annotation content or send it to a server. Let the user export the original bytes before any optional import. Manual import must identify the intended wiki/file/set/page, validate content using the existing import boundary, mark work dirty and never publish automatically. Invalid data stays exportable; cancelling or quota failure preserves the original. Do not implement automatic legacy removal in this packet.
+
+Verify scope discovery against actual supported MediaWiki configuration, including multiple wikis sharing an origin/database with different paths or prefixes. The current `getWikiScope()` fallback and tests that inject `editor.wikiScope` are insufficient evidence. Propose the exact stable scope tuple in the PR before changing stored-key compatibility; retain keys created by prior review branches as recoverable data. Validate decoded v2 tuple types and complete payload identity before recovery; do not normalize a different filename into a match.
+
+**Acceptance:** ordinary unscoped legacy record, missing page, malformed JSON, two wikis/users, same-name collisions, cancel, export round trip, quota failure and restart. No deletion of ambiguous records; UI test checks a visible notice, not only `getAmbiguousLegacyRecord()`. If actual runtime scope cannot be established, return that concrete design issue to the lead.
+
+### J20 — Single confirmation with failure-safe set switching
+
+**Ready; independent of J19.** Read `ui/SetSelectorController.js`, `editor/LayerSetManager.js`, `editor/RevisionManager.js`, the editor wrapper and their tests. The selector must not mark work clean to suppress another component's confirmation.
+
+Use one authoritative switch operation for confirmation and loading. Explicitly represent cancelled, failed and successful outcomes. Keep current layers, current set and dirty state until the new set has loaded successfully; restore the selector on cancellation/failure. Preserve newer edits if the load completes late, and guard against two rapid switches applying out of order. Include buffered pages in the unsaved-work decision. Do not change general API retry or publication semantics.
+
+**Acceptance:** one dialog on successful dirty switch, cancel, rejected/timed-out load, clean switch, buffered edits, newer edit during load and overlapping requests. Test actual collaborating components rather than a mock that always succeeds. Changes that require a general editor state redesign go to the lead before expanding this PR.
+
+### J21 — Isolated named-set browser acceptance
+
+**After J20; fixture preparation may proceed independently.** Keep the explicit `TEST_FILE` prerequisite. Use a dedicated test image/account and a per-run set-name prefix; track every created/renamed set and clean up only those identities in failure-safe teardown. An interrupted previous run must be identifiable without sweeping other data. Make cleanup failures visible, preserve unrelated sets and test maximum-set-cap behavior over repeated runs.
+
+Rerun named-set create/save/switch/rename/delete/reload tests against the corrected code, including a deliberately failed set load. Store a concise reproducible record: branch/commit, environment, exact command without secrets, pass/fail counts and fixture cleanup result. Scope longer timeouts to slow acceptance tests if necessary rather than weakening every project's defaults. The earlier engineer-reported ten passes are not fresh acceptance for J20.
+
+**Acceptance:** two consecutive clean runs, required controls removed cause failures, persisted state agrees after reload, and no test-owned sets remain. No writes to an implicit default image. If prerequisites are missing, report blocked rather than passed/skipped acceptance.
 
 ## Lead-owned history work
 
@@ -287,11 +315,14 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J01 | Reviewed with corrections | `6486046f`; invalid explicit names now rejected before resolution; see review record |
 | J02 | Reviewed with corrections | `0ca2b3a4`; explicit configuration injection and failure propagation |
 | J03 | Reviewed | `9b8a0d5e`; production-route unit tests pass; live concurrency not claimed |
-| J04 | Unit work reviewed; browser acceptance complete | `be126dd6`; live browser rename persistence proven in J18 |
+| J04 | Unit work reviewed; browser acceptance qualified | J18 reported a run; corrected switching/fixture acceptance remains J21 |
 | J05 | Partially complete after corrections | `9819921f`; buffered snapshot/draft races corrected; storage identity remains J16 |
-| J16 | Complete on branch | `codex/j16-unambiguous-draft-identity` (`e26eaa7d`); injective v2 tuple encoding, safe legacy migration/quota fallback, user/wiki sweep isolation, foreground save audit documented |
-| J17 | Complete on branch | `codex/j17-mutation-identifier-alignment` (`5e3524c1`); canonical literal validation via `SetNameSanitizer::isCanonical`, silent rewriting/character stripping eliminated across rename, delete, info and save, redirection guards verified |
-| J18 | Complete on branch | `codex/j18-named-set-acceptance`; live browser acceptance proven on MediaWiki 1.45.3 / Chromium 145.0.7632.6 (10 passed); unconditional control assertions, single-dialog confirm on switch, persisted rename and deletion verified |
+| J16 | Reviewed with safety corrections; partial | Unscoped/malformed legacy records preserved; recovery UI/scope proof remains J19 |
+| J17 | Reviewed; unit scope accepted | `f7a9a164`; shared canonical mutation/read validation |
+| J18 | Partial; prior run reported by engineer | `1baf0086`; unsafe dirty reset removed; J20/J21 remain |
+| J19 | Ready | Draft recovery UI and actual wiki-scope verification |
+| J20 | Ready | Safe coordinated set switching |
+| J21 | Depends on J20 | Isolated fixtures and fresh browser acceptance |
 | L01 | Next lead work; not implemented | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 

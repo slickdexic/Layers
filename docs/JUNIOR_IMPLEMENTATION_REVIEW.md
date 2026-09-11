@@ -1,4 +1,25 @@
-# Junior implementation review — J01–J05
+# Junior implementation review — J01–J18
+
+## J16–J18 review — September 11, 2026
+
+Scope: `e26eaa7d`, `f7a9a164`, `1baf0086`, followed by local review corrections. The prior review corrections were committed as `ee0604bd`. These statements concern the working branch, not a merged release or verified external wiki publication.
+
+| Finding | Correction / remaining work |
+| --- | --- |
+| **High: legacy drafts could cross wiki boundaries.** J16 sweeps selected legacy keys using only user ID, despite those keys carrying no wiki identity. Matching file/set names were also enough to stamp the current wiki onto a legacy draft and remove the original. | Legacy keys are excluded from automatic expiry/quota sweeps. Automatic migration now requires explicit matching wiki/user/file/set/page fields. Ordinary old drafts lack that scope and remain preserved, unapplied; J19 supplies the manual recovery workflow. |
+| **High: malformed recovery data was deleted.** Both load and cleanup removed unparseable legacy records. Missing page identity was treated as acceptable. | Preserve malformed and incomplete legacy records. Require explicit page identity for migration. Regression tests cover unscoped old data and cleanup beside a newer v2 draft. |
+| **High: one saved draft could delete a different legacy record.** J16 compared the captured v2 value but then deleted the legacy key too. | Capture and successful-save cleanup now address only the v2 key. Legacy records require their separate validated recovery path. |
+| **High: J18 cleared dirty state before loading the selected set.** A failed request left the old work present but marked clean, weakening save/leave protection. | Removed the premature reset; a regression assertion prevents its return. The pre-existing duplicate-confirmation problem remains J20 and requires coordinated set-switch handling. |
+| **J17: reviewed with no additional production defect identified in this scope.** Canonical validation is shared by save, info, rename and delete, including old/new rename names. | PHP suite passes; this is production-path unit evidence with mocked persistence, not a new live database proof. Ledger commit corrected to `f7a9a164`. |
+| **J18: live evidence is reported, not reverified here.** The engineer reports 10 passes on MediaWiki 1.45.3 / Chromium 145.0.7632.6. Tests defaulted to an existing-looking file and had no general cleanup for created sets. | Require an explicitly supplied test-owned `TEST_FILE` before writes. J21 must create/clean fixtures and rerun after J20. Do not treat the earlier run as evidence for the corrected dirty-switch behavior. |
+
+J16's tuple encoding fixes set/page key collisions, but its completion claim was too broad. Legacy recovery currently exposes an internal record getter/log, not a finished user recovery interface. Wiki-scope discovery and strict v2 payload identity also need the J19 acceptance work; an editor-supplied scope in a unit fixture is not proof of real multi-wiki isolation.
+
+Next assignments: **J19 (legacy recovery and real scope verification), J20 (safe set switching), J21 (isolated browser fixtures and acceptance)**. L01 remains lead-owned. No public page-owned history registration or data migration was enabled.
+
+Verification for this review: standalone PHP **1,070 tests / 2,485 assertions, one existing skip**; focused draft/selector tests **202 passed**. Full Jest: **180 suites / 14,349 tests passed**. Grunt ESLint/style/i18n, PHP syntax/style/MinusX, documentation/version and whitespace checks passed; the two existing duplicate Config/HashConfig stub warnings remain. No fresh browser/core integration, coverage or LTS-backport claim is made.
+
+## Earlier J01–J05 review (September 10)
 
 Reviewed September 10, 2026. Scope: commits `6486046f`, `0ca2b3a4`, `9b8a0d5e`, `be126dd6`, and `9819921f`, plus the uncommitted corrections in this working tree on `codex/j05-exact-draft-cleanup`. Local `main` remains at `e03504ec`; this review does not claim these changes are merged or pushed. This is a review of five tasks, not a fresh audit of the entire extension.
 

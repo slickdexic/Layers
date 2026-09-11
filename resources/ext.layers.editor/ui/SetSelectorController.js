@@ -229,7 +229,6 @@
 								this.setSelectEl.value = currentSet;
 								return;
 							}
-							this.editor.stateManager.set( 'isDirty', false );
 						}
 
 						this.editor.loadLayerSetByName( selectedValue );

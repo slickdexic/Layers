@@ -1979,29 +1979,29 @@ describe( 'DraftManager', function () {
 		it( 'should remove drafts past the expiry and keep fresh ones', function () {
 			const dm = new DraftManager( mockEditor );
 			const store = {
-				'layers-draft-anon-Old_jpg_aaaa-': JSON.stringify( {
+				[DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Old_jpg_aaaa', '', 1 )]: JSON.stringify( {
 					timestamp: Date.now() - ( 48 * 60 * 60 * 1000 )
 				} ),
-				'layers-draft-anon-Fresh_jpg_bbbb-': JSON.stringify( { timestamp: Date.now() } ),
+				[DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Fresh_jpg_bbbb', '', 1 )]: JSON.stringify( { timestamp: Date.now() } ),
 				'unrelated-key': 'keep me'
 			};
 			makeEnumerableStorage( store );
 
 			expect( dm.sweepExpiredDrafts() ).toBe( 1 );
-			expect( store[ 'layers-draft-anon-Old_jpg_aaaa-' ] ).toBeUndefined();
-			expect( store[ 'layers-draft-anon-Fresh_jpg_bbbb-' ] ).toBeDefined();
+			expect( store[ DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Old_jpg_aaaa', '', 1 ) ] ).toBeUndefined();
+			expect( store[ DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Fresh_jpg_bbbb', '', 1 ) ] ).toBeDefined();
 			expect( store[ 'unrelated-key' ] ).toBe( 'keep me' );
 			dm.destroy();
 		} );
 
 		it( 'should drop unparseable drafts', function () {
 			const dm = new DraftManager( mockEditor );
-			const store = { 'layers-draft-anon-Broken_jpg_cccc-': 'not json' };
+			const store = { [DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Broken_jpg_cccc', '', 1 )]: 'not json' };
 			makeEnumerableStorage( store );
 
 			dm.sweepExpiredDrafts();
 
-			expect( store[ 'layers-draft-anon-Broken_jpg_cccc-' ] ).toBeUndefined();
+			expect( store[ DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'Broken_jpg_cccc', '', 1 ) ] ).toBeUndefined();
 			dm.destroy();
 		} );
 
@@ -2009,14 +2009,14 @@ describe( 'DraftManager', function () {
 			const dm = new DraftManager( mockEditor );
 			const now = Date.now();
 			const store = {
-				'layers-draft-anon-A_jpg_1111-': JSON.stringify( { timestamp: now - 1000 } ),
-				'layers-draft-anon-B_jpg_2222-': JSON.stringify( { timestamp: now - 500 } )
+				[DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'A_jpg_1111', '', 1 )]: JSON.stringify( { timestamp: now - 1000 } ),
+				[DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'B_jpg_2222', '', 1 )]: JSON.stringify( { timestamp: now - 500 } )
 			};
 			makeEnumerableStorage( store );
 
 			expect( dm.sweepExpiredDrafts( true ) ).toBe( 1 );
-			expect( store[ 'layers-draft-anon-A_jpg_1111-' ] ).toBeUndefined();
-			expect( store[ 'layers-draft-anon-B_jpg_2222-' ] ).toBeDefined();
+			expect( store[ DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'A_jpg_1111', '', 1 ) ] ).toBeUndefined();
+			expect( store[ DraftManager.encodeKey( dm.wikiScope, dm.userScope, 'B_jpg_2222', '', 1 ) ] ).toBeDefined();
 			dm.destroy();
 		} );
 
@@ -2229,6 +2229,34 @@ describe( 'DraftManager', function () {
 		} );
 
 		describe( 'safe legacy lookup and migration', function () {
+			it( 'preserves unscoped legacy drafts through load, clear and quota sweeps', function () {
+				const dm = new DraftManager( mockEditor );
+				const key = dm.getLegacyStorageKey();
+				const stored = JSON.stringify( {
+					filename: dm.filename, setName: 'default', page: 1,
+					timestamp: 1, layers: [ { id: 'recoverable' } ]
+				} );
+				mockLocalStorage[ key ] = stored;
+				expect( dm.loadDraft() ).toBeNull();
+				expect( dm.getAmbiguousLegacyRecord().key ).toBe( key );
+				dm.clearDraft();
+				dm.sweepExpiredDrafts( true );
+				expect( mockLocalStorage[ key ] ).toBe( stored );
+				expect( dm.captureDraft() ).toBeNull();
+				dm.destroy();
+			} );
+
+			it( 'cannot delete a legacy record alongside a captured v2 draft', function () {
+				const dm = new DraftManager( mockEditor );
+				const legacy = dm.getLegacyStorageKey();
+				mockLocalStorage[ legacy ] = 'recoverable malformed legacy data';
+				mockLocalStorage[ dm.getStorageKey() ] = 'saved-v2';
+				dm.clearDraft( { expectedDraft: dm.captureDraft() } );
+				expect( mockLocalStorage[ legacy ] ).toBe( 'recoverable malformed legacy data' );
+				expect( mockLocalStorage[ dm.getStorageKey() ] ).toBeUndefined();
+				dm.destroy();
+			} );
+
 			it( 'safely migrates a matching legacy draft to v2 and deletes the legacy key', function () {
 				const dm = new DraftManager( mockEditor );
 				const legacyKey = dm.getLegacyStorageKey();
@@ -2236,6 +2264,8 @@ describe( 'DraftManager', function () {
 
 				const legacyDraft = {
 					version: 1,
+					wikiScope: dm.wikiScope,
+					userScope: dm.userScope,
 					timestamp: Date.now() - 1000,
 					filename: 'Test_Image.jpg',
 					setName: 'default',
@@ -2268,6 +2298,8 @@ describe( 'DraftManager', function () {
 				// Key matches lossy pattern, but payload has different setName
 				const mismatchedLegacyDraft = {
 					version: 1,
+					wikiScope: dm.wikiScope,
+					userScope: dm.userScope,
 					timestamp: Date.now() - 1000,
 					filename: 'Test_Image.jpg',
 					setName: 'different-set',
@@ -2292,6 +2324,8 @@ describe( 'DraftManager', function () {
 				// Ambiguous record missing explicit filename and setName fields
 				const ambiguousDraft = {
 					version: 1,
+					wikiScope: dm.wikiScope,
+					userScope: dm.userScope,
 					timestamp: Date.now() - 1000,
 					layers: [ { id: 'leg3', type: 'text' } ]
 				};
@@ -2318,6 +2352,8 @@ describe( 'DraftManager', function () {
 
 				const legacyDraft = {
 					version: 1,
+					wikiScope: dm.wikiScope,
+					userScope: dm.userScope,
 					timestamp: Date.now() - 1000,
 					filename: 'Test_Image.jpg',
 					setName: 'default',
@@ -2345,14 +2381,14 @@ describe( 'DraftManager', function () {
 				dm.destroy();
 			} );
 
-			it( 'removes malformed unparseable legacy draft as dead weight', function () {
+			it( 'preserves malformed legacy draft for manual recovery', function () {
 				const dm = new DraftManager( mockEditor );
 				const legacyKey = dm.getLegacyStorageKey();
 				mockLocalStorage[ legacyKey ] = 'not-valid-json';
 
 				const loaded = dm.loadDraft();
 				expect( loaded ).toBeNull();
-				expect( mockLocalStorage[ legacyKey ] ).toBeUndefined();
+				expect( mockLocalStorage[ legacyKey ] ).toBeDefined();
 
 				dm.destroy();
 			} );
@@ -2363,6 +2399,8 @@ describe( 'DraftManager', function () {
 
 				const expiredLegacyDraft = {
 					version: 1,
+					wikiScope: dm.wikiScope,
+					userScope: dm.userScope,
 					timestamp: Date.now() - ( 25 * 60 * 60 * 1000 ),
 					filename: 'Test_Image.jpg',
 					setName: 'default',

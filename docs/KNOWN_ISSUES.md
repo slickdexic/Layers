@@ -1,6 +1,6 @@
 # Known issues — Layers 1.5.95 and subsequent main fixes
 
-Updated September 10, 2026. This is the current operational summary; dated reviews remain historical evidence. J01–J05 corrections below are on the local review branch and are not yet merged to main.
+Updated September 11, 2026. This is the current operational summary; dated reviews remain historical evidence. Review-branch corrections below are on the local review branch and are not yet merged to main.
 
 See [Current status](CURRENT_STATUS.md) for tested revisions, upgrade notes and capability boundaries, and [the R6 review](../codebase_review.md) for reproduction evidence.
 
@@ -9,12 +9,12 @@ See [Current status](CURRENT_STATUS.md) for tested revisions, upgrade notes and 
 | Corporate history (R6.19) | The optional null-edit audit path does not supply reliable page revisions. Do not claim controlled-document compliance |
 | Search | Text inside slides/images/PDF annotations is not explicitly indexed by MediaWiki; name filters are different |
 | Cargo | Current support selects gallery layer sets; annotation tables and linked fields are proposals |
-| Set naming | R6.09/R6.17 save targeting and configured seeds corrected. Remaining rename/delete identifier consistency is tracked as J17; malformed explicit saves now fail instead of redirecting |
+| Set naming | R6.09/R6.17 save targeting and configured seeds corrected. J17 now validates canonical names across save/info/rename/delete on the review branch |
 | Drafts (R6.10) | Unambiguous versioned injective draft keys (v2) implemented in J16 with safe legacy migration, user/wiki sweep scoping, and quota protection. Foreground save lifecycle audit documented for L01/J08 |
 | Exports (R6.11–12) | Failed pages/overlays may be omitted; server rendering does not reproduce all background, rich-text and rotation settings. Compare exported output with the viewer |
 | Foreign files (R6.13) | A missing local File page can prevent backlink cache purges; refresh affected pages if overlays remain stale |
 | Slide rate limiting (R6.14) | Corrected on review branch: new slides/named slide sets use the creation bucket; existing updates retain save limits |
-| Test quality (R6.15) | Rename tests now exercise production behavior; live browser proof and remaining named-set false-pass patterns remain J18 |
+| Test quality (R6.15) | J18 reports browser passes; premature dirty reset was removed during review. Failure-safe switching and isolated reruns remain J20/J21 |
 | Dependencies (R6.16) | A production-only dependency audit omits the vendored pdf.js dependency; check shipped assets as well |
 
 ## Recently fixed

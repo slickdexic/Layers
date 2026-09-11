@@ -710,6 +710,7 @@ describe( 'SetSelectorController', () => {
 			await jest.runAllTimersAsync();
 
 			expect( mockUiManager.showConfirmDialog ).toHaveBeenCalled();
+			expect( mockStateManager.set ).not.toHaveBeenCalledWith( 'isDirty', false );
 		} );
 
 		it( 'should restore previous selection if user cancels', async () => {

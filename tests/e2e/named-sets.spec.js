@@ -6,7 +6,7 @@
  * independent annotation sets per image with version history.
  *
  * Usage:
- *   MW_SERVER=http://192.168.77.33:8080 MW_USERNAME=LayersQA MW_PASSWORD=... \
+ *   MW_SERVER=http://localhost:8080 TEST_FILE=LayersQA.png MW_USERNAME=LayersQA MW_PASSWORD=... \
  *     npx playwright test tests/e2e/named-sets.spec.js
  */
 
@@ -21,6 +21,12 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	let editorPage;
 
+	test.beforeAll( () => {
+		if ( !process.env.TEST_FILE ) {
+			throw new Error( 'Set TEST_FILE to an isolated, test-owned image before running named-set writes.' );
+		}
+	} );
+
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
@@ -28,7 +34,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	describeNamedSets( 'Set Selection', () => {
 		test( 'can see set selector dropdown', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			await editorPage.openEditor( testFile );
 
 			// Check for set selector in the UI
@@ -37,7 +43,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'a set is selected initially', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			await editorPage.openEditor( testFile );
 
 			// Some set is always shown as selected; its name is user-defined,
@@ -48,7 +54,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'can create a new named set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const newSetName = 'test-set-' + Date.now();
 			await editorPage.openEditor( testFile );
 
@@ -71,7 +77,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'switching sets clears and reloads layers', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const setA = 'switch-a-' + Date.now();
 			const setB = 'switch-b-' + Date.now();
 			await editorPage.openEditor( testFile );
@@ -122,7 +128,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	describeNamedSets( 'Set Persistence', () => {
 		test( 'layers saved to a set persist after reload', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const uniqueSetName = 'persist-test-' + Date.now();
 
 			await editorPage.openEditor( testFile );
@@ -163,7 +169,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'different sets have independent layers', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const set1 = 'indep-1-' + Date.now();
 			const set2 = 'indep-2-' + Date.now();
 
@@ -207,7 +213,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	describeNamedSets( 'Revision History', () => {
 		test( 'can view revision history for a set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			await editorPage.openEditor( testFile );
 
 			// Revision dropdown and load button are unconditional controls in header
@@ -219,7 +225,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'saving creates a new revision in the revision selector', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const testSetName = 'rev-test-' + Date.now();
 			await editorPage.openEditor( testFile );
 
@@ -252,7 +258,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	describeNamedSets( 'Set Management', () => {
 		test( 'can delete a user-owned named set with confirmation', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const toDeleteName = 'del-test-' + Date.now();
 
 			await editorPage.openEditor( testFile );
@@ -289,7 +295,7 @@ describeNamedSets( 'Named Layer Sets', () => {
 		} );
 
 		test( 'can rename a named set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testFile = process.env.TEST_FILE;
 			const originalName = 'rename-test-' + Date.now();
 			const newName = 'renamed-' + Date.now();
 

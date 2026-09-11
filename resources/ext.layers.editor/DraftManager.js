@@ -213,7 +213,6 @@
 				return 0;
 			}
 			const currentKey = this.getStorageKey();
-			const legacyUserPrefix = STORAGE_KEY_PREFIX + this.userScope + '-';
 			const survivors = [];
 			let removed = 0;
 			try {
@@ -231,10 +230,6 @@
 						if ( decoded && decoded.userScope === this.userScope && decoded.wikiScope === this.wikiScope ) {
 							isCandidate = true;
 						}
-					} else if ( key.indexOf( legacyUserPrefix ) === 0 ) {
-						// Legacy key belonging to current user scope
-						// Note: legacy keys do not record wiki identity; we do not infer cross-wiki ownership
-						isCandidate = true;
 					}
 
 					if ( !isCandidate ) {
@@ -610,6 +605,7 @@
 		 * @return {Object|null} The draft object or null if not found/expired
 		 */
 		loadDraft( options ) {
+			this.ambiguousLegacyRecord = null;
 			const targetKey = this.getStorageKey( options );
 			const legacyKey = this.getLegacyStorageKey( options );
 
@@ -649,7 +645,9 @@
 								const hasSetName = legacyDraft.setName !== undefined && legacyDraft.setName !== null;
 								const hasPage = legacyDraft.page !== undefined && legacyDraft.page !== null;
 
-								if ( !hasFilename || !hasSetName ) {
+								if ( !hasFilename || !hasSetName || !hasPage ||
+									legacyDraft.wikiScope !== this.wikiScope ||
+									legacyDraft.userScope !== this.userScope ) {
 									this.ambiguousLegacyRecord = {
 										key: legacyKey,
 										draft: legacyDraft
@@ -657,7 +655,7 @@
 									if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 										mw.log.warn( '[DraftManager] Ambiguous legacy draft missing explicit tuple fields preserved at key:', legacyKey );
 									}
-									// Do not auto-apply or auto-delete ambiguous record
+									// Legacy records normally have no wiki identity. Never infer it.
 									return null;
 								}
 
@@ -695,11 +693,11 @@
 									return legacyDraft;
 								}
 							} else {
-								localStorage.removeItem( legacyKey );
+								this.ambiguousLegacyRecord = { key: legacyKey, raw: legacyStored };
 								return null;
 							}
 						} catch ( parseErr ) {
-							localStorage.removeItem( legacyKey );
+							this.ambiguousLegacyRecord = { key: legacyKey, raw: legacyStored };
 							return null;
 						}
 					}
@@ -836,11 +834,7 @@
 		 */
 		captureDraft( options ) {
 			try {
-				const v2Val = localStorage.getItem( this.getStorageKey( options ) );
-				if ( v2Val !== null ) {
-					return v2Val;
-				}
-				return localStorage.getItem( this.getLegacyStorageKey( options ) );
+				return localStorage.getItem( this.getStorageKey( options ) );
 			} catch ( e ) {
 				return undefined;
 			}
@@ -863,17 +857,16 @@
 
 			try {
 				const targetKey = this.getStorageKey( options );
-				const legacyKey = this.getLegacyStorageKey( options );
 
 				if ( options && Object.prototype.hasOwnProperty.call( options, 'expectedDraft' ) ) {
-					const actual = localStorage.getItem( targetKey ) ?? localStorage.getItem( legacyKey );
+					const actual = localStorage.getItem( targetKey );
 					if ( options.expectedDraft === undefined || actual !== options.expectedDraft ) {
 						return;
 					}
 				}
 
 				if ( options && typeof options === 'object' && typeof options.maxTimestamp === 'number' ) {
-					const existing = localStorage.getItem( targetKey ) ?? localStorage.getItem( legacyKey );
+					const existing = localStorage.getItem( targetKey );
 					if ( existing ) {
 						try {
 							const parsed = JSON.parse( existing );
@@ -893,43 +886,7 @@
 
 				localStorage.removeItem( targetKey );
 
-				// Clean matching legacy key if present (do not delete ambiguous or mismatched records)
-				const legacyItem = localStorage.getItem( legacyKey );
-				if ( legacyItem ) {
-					try {
-						const parsedLegacy = JSON.parse( legacyItem );
-						if ( parsedLegacy && parsedLegacy.filename !== undefined && parsedLegacy.setName !== undefined ) {
-							let targetFilename = this.filename;
-							let targetSetName = ( this.editor && this.editor.stateManager ) ?
-								this.editor.stateManager.get( 'currentSetName' ) || '' : '';
-							let targetPage = ( this.editor && this.editor.page !== undefined ) ?
-								Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ) : 1;
-
-							if ( typeof options === 'number' ) {
-								targetPage = Math.max( 1, parseInt( options, 10 ) || 1 );
-							} else if ( options && typeof options === 'object' ) {
-								if ( options.filename !== undefined ) {
-									targetFilename = options.filename;
-								}
-								if ( options.setName !== undefined ) {
-									targetSetName = options.setName;
-								}
-								if ( options.page !== undefined ) {
-									targetPage = Math.max( 1, parseInt( options.page, 10 ) || 1 );
-								}
-							}
-
-							if ( parsedLegacy.filename === targetFilename &&
-								parsedLegacy.setName === targetSetName &&
-								( parsedLegacy.page === undefined || Number( parsedLegacy.page ) === targetPage )
-							) {
-								localStorage.removeItem( legacyKey );
-							}
-						}
-					} catch ( e ) {
-						localStorage.removeItem( legacyKey );
-					}
-				}
+				// Legacy records are preserved; their wiki ownership may be unknown.
 
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[DraftManager] Draft cleared for key:', targetKey );

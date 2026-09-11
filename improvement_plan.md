@@ -7,7 +7,7 @@
 
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. J01–J05 have been reviewed and corrected, with remaining limits in the [review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Next juniors: J16 (draft identity), J17 (mutation identifiers), J18 (browser acceptance). The lead retains L01 (alternate save admission), then the architecture and security gates for history, search and Cargo. Later packets remain dependency-gated; this queue does not announce implemented history/search features.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. The September 11 review covers J16–J18; J17 is accepted within its tested scope, while draft recovery and browser/set-switch work remain partial. Next juniors: **J19 (safe legacy recovery and scope verification), J20 (failure-safe set switching), J21 (isolated browser acceptance)**. See the [review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). The lead retains L01 and subsequent history/security design gates.
 
 ## Product improvement roadmap
 
