@@ -28,3 +28,5 @@ R6.08 now rejects malformed JSON containers before writes while preserving expli
 For a normal bug, include branch/commit, MediaWiki/PHP/browser versions, image/PDF/slide type, minimal markup, expected/actual behavior and sanitized console/API errors. Use private reporting for security issues as described in [SECURITY.md](../SECURITY.md). Do not include confidential SOP content, tokens or database dumps in public issues.
 
 See the [junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md) for corrections, verification and remaining limits.
+
+Latest J19–J21 review corrected import-validation bypass and stale set responses. Recovery destination/undo behavior and real API/browser acceptance remain J22–J24; see [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Earlier task references above are historical checkpoints.

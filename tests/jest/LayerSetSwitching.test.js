@@ -179,7 +179,7 @@ describe( 'LayerSetSwitching (J20)', () => {
 
 			// Exactly one confirmation dialog
 			expect( mockDialogManager.showConfirmDialog ).toHaveBeenCalledTimes( 1 );
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 
 			// New set is active
 			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-a' );
@@ -224,7 +224,7 @@ describe( 'LayerSetSwitching (J20)', () => {
 			await jest.runAllTimersAsync();
 
 			expect( mockDialogManager.showConfirmDialog ).toHaveBeenCalledTimes( 1 );
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 
 			// Failure notification shown
 			expect( global.mw.notify ).toHaveBeenCalledWith(
@@ -252,7 +252,7 @@ describe( 'LayerSetSwitching (J20)', () => {
 			await jest.runAllTimersAsync();
 
 			expect( mockDialogManager.showConfirmDialog ).not.toHaveBeenCalled();
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-a' );
 			expect( controller.setSelectEl.value ).toBe( 'set-a' );
 		} );
@@ -287,7 +287,7 @@ describe( 'LayerSetSwitching (J20)', () => {
 			await jest.runAllTimersAsync();
 
 			expect( mockDialogManager.showConfirmDialog ).toHaveBeenCalledTimes( 1 );
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'set-a', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 			expect( mockPageBuffer.clear ).toHaveBeenCalled();
 		} );
 	} );
@@ -334,6 +334,37 @@ describe( 'LayerSetSwitching (J20)', () => {
 	} );
 
 	describe( '7. Overlapping rapid requests (request sequencing)', () => {
+		it( 'rejects an old response after the newer switch has fully completed, including identical names', async () => {
+			stateManager.set( 'isDirty', false );
+			const responses = [];
+			mockApiManager.loadLayersBySetName.mockImplementation( ( name, options ) => new Promise( ( resolve ) => {
+				const id = responses.length ? 'newest' : 'stale';
+				responses.push( () => {
+					if ( !options.shouldApply() ) {
+						resolve( { superseded: true } );
+						return;
+					}
+					stateManager.set( 'layers', [ { id } ] );
+					resolve( {} );
+				} );
+			} ) );
+			const first = layerSetManager.loadLayerSetByName( 'set-a' );
+			const second = layerSetManager.loadLayerSetByName( 'set-a' );
+			responses[ 1 ]();
+			expect( ( await second ).status ).toBe( 'success' );
+			responses[ 0 ]();
+			expect( ( await first ).reason ).toBe( 'superseded' );
+			expect( stateManager.get( 'layers' ) ).toEqual( [ { id: 'newest' } ] );
+		} );
+
+		it( 'detects content edits that preserve layer IDs and dirty state', () => {
+			stateManager.set( 'isDirty', true );
+			stateManager.set( 'layers', [ { id: 'same', x: 1 } ] );
+			const snapshot = layerSetManager._captureEditSnapshot();
+			stateManager.get( 'layers' )[ 0 ].x = 100;
+			expect( layerSetManager._hasNewerEdits( snapshot ) ).toBe( true );
+		} );
+
 		it( 'should discard late-resolving older requests and apply the latest selection', async () => {
 			stateManager.set( 'isDirty', false );
 

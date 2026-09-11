@@ -397,7 +397,7 @@ describe( 'LayerSetManager', () => {
 			await layerSetManager.loadLayerSetByName( 'anatomy' );
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'anatomy' );
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 		} );
 
 		it( 'should check for unsaved changes', async () => {
@@ -416,7 +416,7 @@ describe( 'LayerSetManager', () => {
 
 			await layerSetManager.loadLayerSetByName( 'anatomy' );
 
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 		} );
 
 		it( 'should handle empty set name', async () => {

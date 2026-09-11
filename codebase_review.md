@@ -7,6 +7,10 @@
 
 **Publication checkpoint, September 6, 2026:** The complete current change set passed `npm test` (180 suites, 14,310 tests, and repository guards), `npm run test:php`, and PHPUnit (686 tests, 1,475 assertions, one skipped). The remediation sections below retain their original working-tree status as historical context. The page-owned history, search and Cargo work remains a proposal; this checkpoint contains the existing fixes and documentation, not implementation of those larger features.
 
+## J19–J21 follow-up — September 11, 2026
+
+Review corrected a legacy import validation bypass, stale set-response application and cross-run test cleanup. See [the review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md) for evidence and J22–J24 for remaining acceptance work. Earlier completion statements are not current release claims.
+
 ## J16–J18 review follow-up — September 11, 2026
 
 Review found destructive legacy draft migration/cleanup and a premature dirty-state reset introduced by J18. Corrections preserve unknown-scope/malformed legacy records and leave dirty state intact until successful loading. J17 canonical mutation validation is accepted within unit-test scope. J16/J18 remain partial; J19–J21 carry recovery, switching and isolated-browser acceptance. See [the updated review](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Earlier completion claims are superseded by this review.

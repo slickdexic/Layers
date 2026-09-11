@@ -360,7 +360,6 @@
 		}
 
 		/**
-		/**
 		 * Restore the set selector dropdown value across available UI controllers
 		 * @param {string} setName Set name to restore
 		 */
@@ -421,7 +420,7 @@
 		}
 
 		/**
-		 * Get a lightweight fingerprint of current layers
+		 * Capture current content for a bounded switch-time comparison
 		 * @private
 		 * @return {string}
 		 */
@@ -432,7 +431,16 @@
 				if ( !Array.isArray( layers ) ) {
 					return 'empty';
 				}
-				return layers.length + ':' + layers.map( ( l ) => ( l && l.id ) || '' ).join( ',' );
+				return JSON.stringify( {
+					layers,
+					page: this.editor && this.editor.page,
+					background: this.stateManager ? [
+						'backgroundVisible', 'backgroundOpacity', 'slideBackgroundColor',
+						'slideCanvasWidth', 'slideCanvasHeight', 'canvasWidth', 'canvasHeight'
+					].map( ( key ) => this.stateManager.get( key ) ) : [],
+					buffer: this.editor && this.editor.pageBuffer && this.editor.pageBuffer.pages ?
+						Array.from( this.editor.pageBuffer.pages.entries() ) : []
+				} );
 			} catch ( e ) {
 				return 'error';
 			}
@@ -494,6 +502,8 @@
 		 * @return {Promise<Object>} Outcome object { status: 'success'|'cancelled'|'failed', ... }
 		 */
 		async loadLayerSetByName( setName, options = {} ) {
+			this._switchGeneration = ( this._switchGeneration || 0 ) + 1;
+			const switchId = this._switchGeneration;
 			try {
 				if ( !setName || typeof setName !== 'string' || !setName.trim() ) {
 					this.errorLog( 'loadLayerSetByName: No set name provided' );
@@ -522,6 +532,9 @@
 						confirmText: this.getMessage( 'layers-switch-anyway', 'Switch Anyway' ),
 						isDanger: true
 					} );
+					if ( switchId !== this._switchGeneration ) {
+						return { status: 'failed', reason: 'superseded', success: false };
+					}
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.restoreSelectorDropdown( currentSetName );
@@ -534,9 +547,6 @@
 					}
 				}
 
-				// Monotonic sequence counter to guard against rapid out-of-order switches
-				this._switchGeneration = ( this._switchGeneration || 0 ) + 1;
-				const switchId = this._switchGeneration;
 
 				// Capture edit snapshot before async load to detect newer edits made during flight
 				const editSnapshot = this._captureEditSnapshot();
@@ -556,7 +566,10 @@
 				let loadResult = null;
 				try {
 					if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
-						loadResult = await this.apiManager.loadLayersBySetName( targetSetName );
+						loadResult = await this.apiManager.loadLayersBySetName( targetSetName, {
+							shouldApply: () => switchId === this._switchGeneration &&
+								this._activeSwitch === switchContext && this.canApplyLoadedSet( targetSetName )
+						} );
 					}
 				} finally {
 					if ( this._activeSwitch === switchContext ) {
@@ -622,6 +635,9 @@
 					setName: targetSetName
 				};
 			} catch ( error ) {
+				if ( switchId !== this._switchGeneration ) {
+					return { status: 'failed', reason: 'superseded', success: false };
+				}
 				this.errorLog( 'Error loading layer set by name:', error );
 
 				// Keep current layers, current set and dirty state intact

@@ -1424,9 +1424,10 @@
 				importBtn.setAttribute( 'aria-disabled', 'true' );
 			} else {
 				importBtn.addEventListener( 'click', () => {
-					this.importLegacyRecord( rec );
-					this.closeLegacyRecoveryDialog();
-					this.dismissLegacyNotice();
+					if ( this.importLegacyRecord( rec ) ) {
+						this.closeLegacyRecoveryDialog();
+						this.dismissLegacyNotice();
+					}
 				} );
 			}
 			actions.appendChild( importBtn );
@@ -1588,31 +1589,9 @@
 				}
 			}
 
+			// Validation failure is final. Keep the original record exportable.
 			if ( !layersToImport ) {
-				// Sanitized fallback validation
-				const validTypes = [
-					'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
-					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape',
-					'marker', 'dimension', 'angleDimension'
-				];
-				layersToImport = record.draft.layers.map( ( layer ) => {
-					const obj = { ...layer };
-					if ( !obj.id ) {
-						obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
-					}
-					if ( obj.type && !validTypes.includes( obj.type ) ) {
-						obj.type = 'rectangle';
-					}
-					if ( typeof obj.text === 'string' ) {
-						obj.text = obj.text.replace( /<[^>]*>/g, '' );
-					}
-					if ( typeof obj.name === 'string' ) {
-						obj.name = obj.name.replace( /<[^>]*>/g, '' );
-					}
-					delete obj.__proto__;
-					delete obj.constructor;
-					return obj;
-				} );
+				return false;
 			}
 
 			if ( !Array.isArray( layersToImport ) || layersToImport.length === 0 ) {

@@ -7,7 +7,7 @@
 
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. The September 11 review covers J16–J18; J17 is accepted within its tested scope, while draft recovery and browser/set-switch work remain partial. Next juniors: **J19 (safe legacy recovery and scope verification), J20 (failure-safe set switching), J21 (isolated browser acceptance)**. See the [review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). The lead retains L01 and subsequent history/security design gates.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. Latest J19–J21 review corrected import validation, set-response races and test cleanup. Next: **J22 (recovery behavior), J23 (actual API switch tests), J24 (cleanup proof and browser acceptance)**. See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). The lead retains L01; page-owned publication, search and Cargo remain gated.
 
 ## Product improvement roadmap
 

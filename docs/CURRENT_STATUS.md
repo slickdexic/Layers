@@ -2,6 +2,10 @@
 
 Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manifest still reports **1.5.95**; fixes after the September 2 tag are on `main` and described under **Unreleased**. A checkout of the tag does not include those fixes.
 
+## Latest J19–J21 review (local branch)
+
+Recovery now fails closed if shared import validation rejects data. Primary-manager set loads carry request-specific response guards, and test cleanup is limited to exact current-run identities. Manual recovery destination/undo behavior, actual API switch integration and fresh browser acceptance remain J22–J24. Earlier reported J21 browser passes predate these corrections. See the [review record](https://github.com/slickdexic/Layers/blob/main/docs/JUNIOR_IMPLEMENTATION_REVIEW.md). No merge, release or external wiki publication is claimed.
+
 ## History implementation progress
 
 **Page-owned history is not wired into the editor or public APIs. Existing Layers saves remain on the legacy path and are not revision-compliant.** Internal progress as of September 10, 2026:

@@ -1111,8 +1111,6 @@ class LayersEditor {
 	}
 
 	/**
-	 * Load a layer set by name
-	/**
 	 * Load a layer set by its name (authoritative switch operation)
 	 *
 	 * @param {string} setName The name of the set to load

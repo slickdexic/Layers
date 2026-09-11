@@ -1,4 +1,24 @@
-# Junior implementation review — J01–J18
+# Junior implementation review — J01–J21
+
+## J19–J21 review — September 11, 2026
+
+Reviewed `22af7b31`, `de254bea`, `f318c8ae` after prior corrections `ca87c79e`. Corrections below are local working-tree changes on the J21 branch, not a release/merge or external wiki publication.
+
+| Finding | Correction and limits |
+| --- | --- |
+| **High: import validation could be bypassed.** After the shared parser threw (including its layer-count rejection), J19 used a second permissive parser and imported anyway. | Removed fallback parsing. Missing/rejected validation returns failure without applying content. A rejected import leaves the recovery dialog open and raw data available for export. Success test now uses the real ImportExportManager parser. |
+| **High: late set responses could apply after the latest switch completed.** J20 guarded using a mutable active-switch field; once cleared, `canApplyLoadedSet()` returned true. Identical target names also defeated name-only matching. | Every primary-manager load supplies a request-specific `shouldApply` closure checking generation and exact context before API processing. Same-name overlapping-request regression applies distinct payloads and verifies the old one cannot win. |
+| **High: confirmation order could override selection order.** Request generation was allocated after awaiting confirmation. | Allocate generation on entry; an older confirmation cannot start a newer load. Stale errors do not restore an obsolete selector or emit an unrelated failure notice. |
+| **Edit detection was incomplete.** The fallback fingerprint counted layer IDs, missing same-ID geometry/text changes and buffered content. | Compare serialized content, page, saved canvas/background settings and buffered snapshots alongside existing version/history guards. This is bounded switch-time work, not a new per-frame operation. |
+| **High: cleanup crossed test-run ownership.** J21 deleted any `j21_` set and accepted absent author metadata as ownership. It performed this sweep before a run. | Remove automatic prior-run cleanup. Delete only exact registered names with the current run prefix. Capture the real pre-run inventory for preservation checks; no hardcoded `001`/`002` assumption. Top-level cleanup failure must fail teardown. Old interrupted runs require explicit inventory/reconciliation. |
+| **Credential committed in test instructions.** A literal QA password appeared in the source comment. | Removed the value from current source. If the credential is active, rotate it before further use; it remains in git history. Do not copy it into commands, documents or test reports. Rotation has not been performed by this review. |
+| **Lint failure in new CSS.** Extra blank lines at EOF failed Grunt's stylesheet check. | Removed trailing blank lines and reran lint. |
+
+J19's new notice/export UI is useful, but destination lifetime, import failure feedback and undo/recovery behavior need J22. J20's new tests instantiate StateManager/selector/manager but mock APIManager; they are not proof of the real API processing boundary. J23 adds that focused integration evidence, with remaining fallback-manager and loading-state defects returned to the lead. J21's two reported 13-test browser passes used the earlier code and unsafe cleanup; corrected acceptance remains J24.
+
+Verification: focused draft/switch tests passed (167 tests); the full JavaScript run initially found two old call-signature assertions, which were corrected and passed in the focused 84-test manager suite. Final full Jest rerun passed **181 suites / 14,377 tests**. Grunt ESLint/style/i18n, documentation/version consistency and whitespace checks passed. Bundle-size and i18n wiring checks pass (existing advisory unused-message notices). No new PHP implementation changed; prior PHP results remain historical. No browser/core integration or coverage measurement was performed in this review.
+
+Next assignment order is **J22 → J23 → J24**; J22/J23 can run independently without editing the same production files. L01 remains lead-owned and page-owned publication remains unregistered.
 
 ## J16–J18 review — September 11, 2026
 

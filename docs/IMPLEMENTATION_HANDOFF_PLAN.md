@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Review update — September 11:** J16–J18 reviewed and corrected; J19 and J20 implemented and verified. Give juniors **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
+**Latest review — J19–J21:** corrected validation bypass, stale set-response application and cross-run test cleanup. See [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Next assignments are **J22, J23, J24** below; earlier implementation/completion notes are superseded where this review identifies remaining work. The lead retains L01.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -18,7 +18,7 @@ Copy this instruction together with the selected task packet:
 
 > Implement task [ID] from docs/IMPLEMENTATION_HANDOFF_PLAN.md. Read its dependencies and linked contracts first. Confirm that dependencies have merged; otherwise report the missing dependency without guessing its design. Work only within this packet, use a codex/ branch, and submit one reviewable pull request. Exercise production behavior and include the commands, results and remaining limitations. Preserve unrelated changes. Do not enable page-owned publishing, migrate real data, change release numbers or publish documentation externally as part of this task. Update this plan's progress ledger with evidence, not just a completion claim.
 
-Paths below are repository-relative. New files are explicitly described as proposed. For J19–J21, start from the September 11 review corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
+Paths below are repository-relative. New files are explicitly described as proposed. For J22–J24, start from the latest J19–J21 review corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
 
 ## What already exists
 
@@ -137,7 +137,7 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J19 — Complete draft recovery without inferring ownership
 
-**Implemented.** Scope: branch `codex/j19-draft-recovery`. Ordinary legacy records lack wiki identity; they are preserved in `localStorage` without automatic migration, deletion, expiry, or sweeping across wikis.
+**Submitted implementation; corrected during review, J22 remains.** Scope: branch `codex/j19-draft-recovery`. Ordinary legacy records lack wiki identity; they are preserved in `localStorage` without automatic migration, deletion, expiry, or sweeping across wikis.
 
 - **UI & Accessibility:** Localized, keyboard-accessible notice (`.layers-legacy-draft-notice`) with Review & Recover and Dismiss actions; modal recovery dialog (`.layers-legacy-dialog`, role `dialog`, `aria-modal="true"`) displaying escaped metadata (`textContent` only), unscoped-wiki warning, and focus trap with Escape handling.
 - **Export & Import Safety:** Client-side raw byte export (`exportLegacyRecord()`) creates a JSON download without transmitting data or logging annotation contents; works for valid and malformed data. Manual import (`importLegacyRecord()`) validates layers through existing import boundary, applies them to current active editor context, marks work dirty (`isDirty = true`), and never auto-publishes or deletes the legacy record.
@@ -147,6 +147,8 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 **Acceptance:** ordinary unscoped legacy record, missing page, malformed JSON, two wikis/users, same-name collisions, cancel, export round trip, quota failure and restart. No deletion of ambiguous records; UI test checks a visible notice, not only `getAmbiguousLegacyRecord()`. If actual runtime scope cannot be established, return that concrete design issue to the lead.
 
 ### J20 — Single confirmation with failure-safe set switching
+
+**Review qualification:** the submission below required safety corrections; J23 remains. Any reported passes predate the latest corrections.
 
 **Implemented.** Scope: branch `codex/j20-set-switching`. Coordinated set switching authoritatively handled by `LayerSetManager` (with delegation in `SetSelectorController`, `RevisionManager`, and `LayersEditor`).
 
@@ -160,6 +162,8 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J21 — Isolated named-set browser acceptance
 
+**Review qualification:** the submission below required safety corrections; J24 remains. Any reported passes predate the latest corrections.
+
 **Completed on `codex/j21-browser-acceptance`.** Executed end-to-end browser acceptance tests for named layer sets against live MediaWiki 1.45.3 on container `mediawiki-145` (PHP 8.4.11, port 8080).
 - **Isolated Fixtures & Safe Scoping:** Validates explicit `TEST_FILE` (`ImageTest03.png`), `MW_SERVER`, `MW_USERNAME` (`LayersQA`), and `MW_PASSWORD` prerequisites in `test.beforeAll`; reports blocked with explicit error rather than writing to an implicit default image. Sets use unique per-run prefixes (`j21_${RUN_ID}_*`). Tracked sets and test-owned identities are cleaned up in failure-safe post-run teardown (`test.afterAll`) via authenticated `mw.Api` `layersdelete` requests. Unrelated existing sets (`001`, `002`) are strictly preserved.
 - **Scenarios Verified:** Coordinated single confirmation on dirty switch (J20), canceled dirty switch restoring selector and canvas layers, deliberately failed set load (via route interception) restoring selector and preserving canvas layers, set creation, set rename with page-reload persistence, deletion with confirmation, independent layers across sets, unconditional revision history controls, and maximum-set-cap headroom verification under `$wgLayersMaxNamedSets = 15`.
@@ -168,6 +172,32 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
   - **Run 2 (Consecutive Clean Run):** 13/13 passed (6.9m). 7 test-owned sets cleaned up. Teardown asserted 0 test-owned sets remaining on `ImageTest03.png`, and unrelated sets `001` and `002` intact.
   - Set cap headroom preserved at 2/15 sets (`001` and `002`). Full Jest suite: 181 suites / 14,374 tests passing (0 failures). Full PHP standalone: 1,070 tests / 2,485 assertions (1 skip, 0 errors). MinusX and doc sync clean.
   - Junior task queue (J19 → J20 → J21) is complete. Next task is lead-owned `L01` (Close alternate publication paths).
+
+## Next assignments after J19–J21 review
+
+### J22 — Finish manual recovery destination and failure behavior
+
+**Ready after review corrections are captured.** Restrict edits to DraftManager recovery UI and its tests/messages. Retain fail-closed shared import validation and byte-preserving export; never restore the removed fallback parser.
+
+Capture and display the destination wiki/file/set/page when opening recovery. If the editor changes destination while the dialog is open, reject import and require reopening. Show a localized failure notice when validation fails; preserve the dialog and original record. Prevent silently replacing newer unsaved work: require a specific replacement confirmation or reject while current work is dirty. Use existing editor history/import integration so successful recovery is undoable; do not duplicate history state. Keep original legacy records untouched on success/failure/cancel.
+
+**Acceptance:** a real shared parser rejects over-limit input without state changes, missing parser fails closed, destination changes cannot redirect import, current edits survive cancelled replacement, successful import is dirty/undoable, and failed export cannot report success. Include image, PDF page and slide contexts without building three separate implementations. Return any required redesign of the general import boundary to the lead.
+
+### J23 — Verify switches through the actual APIManager
+
+**Ready; tests first.** Use real APIManager + LayerSetManager + StateManager, mocking only the network and rendering boundary. Current J20 tests mock the component that processes the response, which allowed its most important race to escape.
+
+Cover latest response completing before old response, same target name twice, reversed confirmation resolution, cached result, rejected response, in-place text/geometry edits, background edits and buffered-page edits during load. Assert actual layers and canvas context, not only `currentSetName` or a returned status. Verify loading indicators remain correct while the newest request is pending. Exercise the RevisionManager fallback separately: do not claim parity merely because the normal path delegates.
+
+**Acceptance:** demonstrate the reviewed request closure prevents real response processing for stale requests; include mutation-style proof that removing it causes the regression to fail. This is a bounded test packet. Return discovered fallback/API loading-state defects to the lead with reproductions; do not create another switch implementation or relax assertions.
+
+### J24 — Verify cleanup isolation, then rerun browser acceptance
+
+**After J23 and any lead fixes; fixture-unit work can begin now.** Add behavior tests for the cleanup selection rule and failure propagation using test API responses: tracked current-run name, untracked same-prefix name, another run's name, missing author metadata, network failure and API delete failure. Only exact tracked current-run identities may be deleted. Do not reintroduce automatic `j21_` sweeps. Record interrupted runs for explicit manual reconciliation without embedding credentials.
+
+Then run two isolated browser acceptance passes against the corrected branch, using a dedicated file/account supplied through environment settings. Verify each run's cleanup and preservation of the initial inventory. Report exact commit/environment/results without secrets. Rotate the previously committed QA credential before use if it is active; ask the operator to provide replacement credentials through the environment rather than recording them in this plan.
+
+**Acceptance:** cleanup tests fail if broad prefix deletion is restored; two clean browser passes with zero current-run leftovers; prior-run/unrelated data intact. No claim that earlier J21 passes validate the corrected implementation.
 
 ## Lead-owned history work
 
@@ -328,9 +358,12 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J16 | Reviewed with safety corrections; partial | Unscoped/malformed legacy records preserved; recovery UI/scope proof remains J19 |
 | J17 | Reviewed; unit scope accepted | `f7a9a164`; shared canonical mutation/read validation |
 | J18 | Partial; prior run reported by engineer | `1baf0086`; unsafe dirty reset removed; J20/J21 remain |
-| J19 | Implemented | Draft recovery UI and actual wiki-scope verification; suite passes |
-| J20 | Implemented | Coordinated single-confirmation failure-safe set switching; suite passes |
-| J21 | Implemented | Two consecutive clean browser runs (13/13 passed); isolated teardown; 0 test sets remaining |
+| J19 | Reviewed with corrections; partial | Validation bypass removed; destination/undo/failure UI remains J22 |
+| J20 | Reviewed with corrections; integration evidence pending | Request-bound response guard and content comparison; actual API tests remain J23 |
+| J21 | Reviewed with cleanup corrections | Broad cross-run deletion removed; reported browser results precede correction; J24 remains |
+| J22 | Ready | Recovery destination and failure behavior |
+| J23 | Ready | Actual APIManager switch regression tests |
+| J24 | Depends on J23/lead fixes | Cleanup isolation tests and fresh browser runs |
 | L01 | Next lead work; ready to begin | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 

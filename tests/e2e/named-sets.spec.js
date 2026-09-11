@@ -17,7 +17,7 @@
  *   $env:MW_SERVER="http://localhost:8080"
  *   $env:TEST_FILE="ImageTest03.png"
  *   $env:MW_USERNAME="LayersQA"
- *   $env:MW_PASSWORD="LayersQA-Test-2026!"
+ *   # Supply MW_PASSWORD through your local test environment; never commit it.
  *   npx playwright test tests/e2e/named-sets.spec.js --workers=1
  */
 
@@ -33,7 +33,7 @@ const createdSetNames = new Set();
 
 /**
  * Clean up test-owned sets on the target file via MediaWiki API.
- * Strictly preserves unrelated sets ('001', '002', 'default', or sets owned by other users).
+ * Only explicitly tracked identities within this run are eligible for deletion.
  *
  * @param {import('@playwright/test').Page} page
  * @param {string} testFile
@@ -59,11 +59,11 @@ async function cleanupTestSets( page, testFile, setsToDelete, prefix ) {
 				if ( s.name === '001' || s.name === '002' || s.name === 'default' ) {
 					continue;
 				}
-				// Only delete sets created in this run, or matching j21_ test prefixes owned by LayersQA
+				// Delete only exact registered identities in this run; unknown provenance is not ownership.
 				const isTracked = targetSets.includes( s.name );
-				const matchesPrefix = s.name.startsWith( runPrefix ) || s.name.startsWith( 'j21_' );
+				const matchesPrefix = s.name.startsWith( runPrefix + '_' );
 
-				if ( ( isTracked || matchesPrefix ) && ( s.latest_user_name === 'LayersQA' || s.latest_user_name === undefined ) ) {
+				if ( isTracked && matchesPrefix ) {
 					try {
 						await api.postWithToken( 'csrf', {
 							action: 'layersdelete',
@@ -91,6 +91,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 	test.describe.configure( { mode: 'serial' } );
 
 	let editorPage;
+	let initialSetNames = [];
 
 	test.beforeAll( async ( { browser } ) => {
 		// Strict prerequisite validation: must not write to an implicit default image
@@ -104,20 +105,20 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			throw new Error( 'Blocked: MW_USERNAME and MW_PASSWORD must be set for named-set browser acceptance tests.' );
 		}
 
-		// Pre-run cleanup of any orphaned j21_ sets from interrupted runs
 		const context = await browser.newContext();
-		const page = await context.newPage();
 		try {
+			const page = await context.newPage();
 			const ep = new LayersEditorPage( page );
 			await ep.login();
 			await ep.openEditor( process.env.TEST_FILE );
-			const preClean = await cleanupTestSets( page, process.env.TEST_FILE, [], RUN_PREFIX );
-			if ( preClean.deleted.length > 0 ) {
-				console.log( `[Pre-run] Cleaned up ${ preClean.deleted.length } leftover test sets:`, preClean.deleted );
-			}
+			initialSetNames = await page.evaluate( async ( filename ) => {
+				const result = await new mw.Api().get( { action: 'layersinfo', filename } );
+				return result.layersinfo.named_sets.map( ( entry ) => entry.name );
+			}, process.env.TEST_FILE );
 		} finally {
 			await context.close();
 		}
+
 	} );
 
 	test.afterAll( async ( { browser } ) => {
@@ -136,7 +137,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 				RUN_PREFIX
 			);
 
-			if ( cleanupResult.failed && cleanupResult.failed.length > 0 ) {
+			if ( !cleanupResult.success ) {
 				console.error( '[Teardown] Cleanup failures encountered:', cleanupResult.failed );
 				throw new Error( `Teardown cleanup failed for sets: ${ JSON.stringify( cleanupResult.failed ) }` );
 			}
@@ -153,13 +154,11 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const remainingTestSets = remainingSets.filter( ( s ) => s.name.startsWith( RUN_PREFIX ) );
 			expect( remainingTestSets ).toHaveLength( 0 );
 
-			// Verify unrelated sets ('001', '002') are intact
-			const unrelated001 = remainingSets.find( ( s ) => s.name === '001' );
-			const unrelated002 = remainingSets.find( ( s ) => s.name === '002' );
-			expect( unrelated001 ).toBeDefined();
-			expect( unrelated002 ).toBeDefined();
-			expect( unrelated001.name ).toBe( '001' );
-			expect( unrelated002.name ).toBe( '002' );
+			// Preserve the actual pre-run inventory rather than assuming fixture names.
+			for ( const name of initialSetNames ) {
+				expect( remainingSets.some( ( entry ) => entry.name === name ) ).toBe( true );
+			}
+
 		} finally {
 			await context.close();
 		}

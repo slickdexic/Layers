@@ -2871,6 +2871,20 @@ describe( 'DraftManager', function () {
 			} );
 
 			describe( 'manual import into current set', function () {
+				it( 'does not bypass a rejected import or dismiss recovery', function () {
+					const dm = new DraftManager( mockEditor );
+					mockEditor.importExportManager = {
+						parseLayersJSON: jest.fn( () => { throw new Error( 'Too many layers' ); } )
+					};
+					const raw = JSON.stringify( { layers: [ { id: 'rejected' } ] } );
+					const record = dm.recordLegacyDraft( dm.getLegacyStorageKey(), raw );
+					dm.showLegacyRecoveryDialog( record );
+					expect( dm.importLegacyRecord( record ) ).toBe( false );
+					document.querySelector( '.layers-legacy-import-btn' ).click();
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+					dm.destroy();
+				} );
+
 				it( 'validates layers, sets dirty state, updates canvas and panel, and preserves legacy key', function () {
 					const markDirtyMock = jest.fn();
 					const renderLayersMock = jest.fn();
@@ -2895,6 +2909,7 @@ describe( 'DraftManager', function () {
 						}
 					};
 
+					customEditor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( customEditor );
 					const dm = new DraftManager( customEditor );
 					const legacyKey = dm.getLegacyStorageKey();
 					const raw = JSON.stringify( {
