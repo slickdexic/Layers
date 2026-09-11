@@ -150,12 +150,13 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		$data = $params['data'];
-		// A generic viewer intent is not a set name; treat it as "unnamed" so the
-		// save resolves to the image's current set instead of creating one called
-		// "on". Set names are user-defined and nothing is reserved.
-		$rawSetName = (string)( $params['setname'] ?? '' );
-		$setName = SetNameResolver::isSpecificName( $rawSetName )
-			? SetNameSanitizer::sanitize( $rawSetName )
+		// Explicit API set names are literal names (e.g. 'on', 'off', 'all', 'true',
+		// 'false', '1', '0', or any user-defined name). Wikitext display intents
+		// do not intercept explicit API identifiers. If omitted or unusable, treat
+		// as unnamed ('') so recency resolution chooses the target set.
+		$rawSetName = isset( $params['setname'] ) ? (string)$params['setname'] : null;
+		$setName = SetNameResolver::hasExplicitName( $rawSetName )
+			? SetNameSanitizer::sanitize( (string)$rawSetName )
 			: '';
 
 		// Size limit check
@@ -322,7 +323,7 @@ class ApiLayersSave extends ApiBase {
 			// FILE VERIFICATION: Ensure target file exists and is accessible
 			// RepoGroup handles both local and foreign (wikimedia commons) files
 			// This is a secondary check after Title validation
-			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$repoGroup = $this->getRepoGroup();
 			$file = $repoGroup->findFile( $title );
 			if ( !$file || !$file->exists() ) {
 				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
@@ -711,5 +712,14 @@ class ApiLayersSave extends ApiBase {
 			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
 		}
 		return $this->logger;
+	}
+
+	/**
+	 * Get the repo group service.
+	 *
+	 * @return mixed
+	 */
+	protected function getRepoGroup() {
+		return MediaWikiServices::getInstance()->getRepoGroup();
 	}
 }

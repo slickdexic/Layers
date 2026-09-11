@@ -258,7 +258,8 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 
 | Task IDs | Status at plan creation | Evidence / next action |
 | --- | --- | --- |
-| J01–J04 | Ready subject to listed ordering; unassigned | Give J01 to first junior; J04 can proceed independently |
+| J01 | Completed on branch `codex/j01-explicit-set-names` | Separated explicit API set-name handling (`SetNameResolver::hasExplicitName()`, `resolveExplicit()`) from wikitext display intent parsing in `ApiLayersSave.php` and `ApiLayersInfo.php`. Tested literal set names (`on`, `off`, `all`, `true`, `false`, `1`, `0`, custom names) across image, slide and multi-page PDF routes. Target isolation verified against pre-existing latest sets. Unit tests: `SetNameResolverTest` (13 tests, 74 assertions), `ApiLayersSaveExplicitSetNameTest` (34 tests, 166 assertions). Standalone PHPUnit: 905 tests, 2,148 assertions, 1 skip, 0 failures. `npm run test:php`: clean (0 errors). Ready for review/merge. |
+| J02–J04 | Ready subject to listed ordering | J02 (seed name) follows J01; J04 (rename tests) can proceed independently |
 | L01 | Next lead work; not implemented | Write and prove admission design |
 | J05 | Queued | Follow J01–J03; coordinate editor ownership |
 | J06–J15, L02–L08 | Blocked on listed dependencies; unassigned | Split each ID into its own ledger row when assigned |

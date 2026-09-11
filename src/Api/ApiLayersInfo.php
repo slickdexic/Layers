@@ -19,7 +19,6 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
-use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
@@ -138,7 +137,7 @@ class ApiLayersInfo extends ApiBase {
 		}
 
 		$user = $this->getUser();
-		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		$permissionManager = $this->getPermissionManager();
 		if ( !$permissionManager->userCan( 'read', $user, $title ) ) {
 			$this->dieWithError( 'badaccess-group0', 'permissiondenied' );
 		}
@@ -220,7 +219,7 @@ class ApiLayersInfo extends ApiBase {
 				$normalizedName, $fileSha1, $loadedSetName, $limit, $loadedPage
 			);
 			$result['all_layersets'] = $this->enrichWithUserNames( $setRevisions );
-		} elseif ( $setName ) {
+		} elseif ( $setName !== null && $setName !== '' ) {
 			// Get specific named set
 			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName, $page );
 
@@ -418,7 +417,7 @@ class ApiLayersInfo extends ApiBase {
 		} else {
 			// Fetch by name, or by recency when the caller named no set. Slide set
 			// names are user-defined, so no particular name is assumed to exist.
-			$layerSet = SetNameResolver::isSpecificName( $setName )
+			$layerSet = ( $setName !== null && $setName !== '' )
 				? $db->getLayerSetByName( $normalizedName, $fileSha1, (string)$setName )
 				: $db->getLatestLayerSet( $normalizedName, $fileSha1 );
 			if ( $layerSet ) {
@@ -715,6 +714,15 @@ class ApiLayersInfo extends ApiBase {
 	 */
 	protected function getRepoGroup() {
 		return MediaWikiServices::getInstance()->getRepoGroup();
+	}
+
+	/**
+	 * Resolve the permission manager service.
+	 *
+	 * @return mixed
+	 */
+	protected function getPermissionManager() {
+		return MediaWikiServices::getInstance()->getPermissionManager();
 	}
 
 	/**

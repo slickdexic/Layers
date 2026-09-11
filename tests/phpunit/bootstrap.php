@@ -151,14 +151,6 @@ namespace {
 		}
 	}
 
-	if ( !class_exists( 'User' ) ) {
-		class User {
-			public function isAllowed( string $right ): bool {
-				return false;
-			}
-		}
-	}
-
 	if ( !class_exists( 'Skin' ) ) {
 		class Skin {
 		}
@@ -408,6 +400,41 @@ namespace MediaWiki\User {
 			 * @return bool
 			 */
 			public function isRegistered(): bool;
+		}
+	}
+
+	if ( !class_exists( User::class ) ) {
+		/**
+		 * Minimal standalone User stub for package-level PHPUnit runs.
+		 */
+		class User implements UserIdentity {
+			public function getId(): int {
+				return 0;
+			}
+
+			public function getName(): string {
+				return 'User';
+			}
+
+			public function getWikiId() {
+				return false;
+			}
+
+			public function isRegistered(): bool {
+				return false;
+			}
+
+			public function isAllowed( string $right ): bool {
+				return false;
+			}
+
+			public function pingLimiter( string $action = 'default' ): bool {
+				return false;
+			}
+		}
+
+		if ( !class_exists( 'User' ) ) {
+			class_alias( User::class, 'User' );
 		}
 	}
 }

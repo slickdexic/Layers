@@ -73,6 +73,61 @@ class SetNameResolverTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * @covers ::hasExplicitName
+	 */
+	public function testHasExplicitName(): void {
+		$explicit = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'default', '001', 'anatomy', '  on  ' ];
+		foreach ( $explicit as $value ) {
+			$this->assertTrue( SetNameResolver::hasExplicitName( $value ), (string)$value );
+		}
+
+		$omittedOrInvalid = [ null, '', '   ', "\x00", '///' ];
+		foreach ( $omittedOrInvalid as $value ) {
+			$this->assertFalse( SetNameResolver::hasExplicitName( $value ), (string)$value );
+		}
+	}
+
+	/**
+	 * @covers ::resolveExplicit
+	 */
+	public function testResolveExplicitWithExplicitNames(): void {
+		$db = $this->makeDb( [ 'name' => 'latest-set' ] );
+		$literalNames = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'custom-name', '  trimmed-set  ' ];
+		$expected = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'custom-name', 'trimmed-set' ];
+
+		foreach ( $literalNames as $idx => $literal ) {
+			$this->assertSame(
+				$expected[$idx],
+				SetNameResolver::resolveExplicit( $db, 'Foo.jpg', 'sha1', $literal ),
+				"Explicit name '$literal' must be honored literally"
+			);
+		}
+	}
+
+	/**
+	 * @covers ::resolveExplicit
+	 */
+	public function testResolveExplicitWithOmittedNames(): void {
+		$dbWithLatest = $this->makeDb( [ 'name' => 'latest-set' ] );
+		foreach ( [ null, '', '   ' ] as $omitted ) {
+			$this->assertSame(
+				'latest-set',
+				SetNameResolver::resolveExplicit( $dbWithLatest, 'Foo.jpg', 'sha1', $omitted )
+			);
+		}
+
+		$dbEmpty = $this->makeDb( null );
+		$this->assertSame(
+			'custom-fallback',
+			SetNameResolver::resolveExplicit( $dbEmpty, 'Foo.jpg', 'sha1', null, 1, 'custom-fallback' )
+		);
+		$this->assertSame(
+			'default',
+			SetNameResolver::resolveExplicit( $dbEmpty, 'Foo.jpg', 'sha1', null, 1 )
+		);
+	}
+
+	/**
 	 * @covers ::resolve
 	 */
 	public function testResolveReturnsNullForHideIntent() {

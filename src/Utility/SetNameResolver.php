@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Utility;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 
 /**
  * Resolves a caller-supplied layer set reference to a concrete set name.
@@ -87,6 +88,61 @@ class SetNameResolver {
 		return $value !== null
 			&& trim( $value ) !== ''
 			&& !self::isGenericIntent( $value );
+	}
+
+	/**
+	 * Whether a raw caller-supplied value provides an explicit set name.
+	 *
+	 * Unlike wikitext display attributes (where "on", "off", "1", etc. represent
+	 * display directives evaluated by isSpecificName()), API callers may explicitly
+	 * specify any valid layer set name, including literal names like "on", "off",
+	 * "all", "true", "false", "1", or "0".
+	 *
+	 * An explicit name is present if the value is non-null and, once sanitized,
+	 * is non-empty.
+	 *
+	 * @param string|null $value Raw caller-supplied value
+	 * @return bool True if an explicit set name was provided
+	 */
+	public static function hasExplicitName( ?string $value ): bool {
+		if ( $value === null || trim( $value ) === '' ) {
+			return false;
+		}
+		return SetNameSanitizer::sanitize( $value ) !== '';
+	}
+
+	/**
+	 * Resolve an explicit set name supplied to API endpoints.
+	 *
+	 * If an explicit name is provided, it is sanitized and returned literally without
+	 * being intercepted by wikitext display-intent checks (such as "on", "off", "1", etc.).
+	 *
+	 * If no explicit name is provided (null, empty, or whitespace-only), recency
+	 * resolution is used to find the latest existing set name for the target image
+	 * and page. If no set exists yet, $fallbackDefault or the configured seed name is used.
+	 *
+	 * @param LayersDatabase $db Database access
+	 * @param string $imgName Image or slide DB key
+	 * @param string $sha1 File SHA-1 or slide type
+	 * @param string|null $requested Caller-supplied explicit set name
+	 * @param int $page 1-based page number for multi-page files
+	 * @param string|null $fallbackDefault Seed name when no set exists yet
+	 * @return string Concrete sanitized set name
+	 */
+	public static function resolveExplicit(
+		LayersDatabase $db,
+		string $imgName,
+		string $sha1,
+		?string $requested,
+		int $page = 1,
+		?string $fallbackDefault = null
+	): string {
+		if ( self::hasExplicitName( $requested ) ) {
+			return SetNameSanitizer::sanitize( (string)$requested );
+		}
+		return self::latestName( $db, $imgName, $sha1, $page )
+			?? $fallbackDefault
+			?? SetNameSanitizer::getDefaultName();
 	}
 
 	/**
