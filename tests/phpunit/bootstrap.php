@@ -250,6 +250,14 @@ namespace {
 		}
 	}
 
+	if ( !class_exists( 'PermissionManager' ) ) {
+		class PermissionManager {
+			public function userCan( string $action, $user, $title ): bool {
+				return true;
+			}
+		}
+	}
+
 	if ( !class_exists( 'SpecialPage' ) ) {
 		class SpecialPage {
 			/** @var string */
@@ -663,6 +671,7 @@ namespace {
 		'PPFrame' => 'MediaWiki\\Parser\\PPFrame',
 		'ForeignAPIFile' => 'MediaWiki\\FileRepo\\File\\ForeignAPIFile',
 		'ForeignDBFile' => 'MediaWiki\\FileRepo\\File\\ForeignDBFile',
+		'PermissionManager' => 'MediaWiki\\Permissions\\PermissionManager',
 	];
 
 	foreach ( $layersStubAliases as $globalName => $namespacedName ) {

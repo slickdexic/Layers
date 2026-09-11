@@ -398,7 +398,7 @@ class ApiLayersSaveExplicitSetNameTest extends \MediaWikiUnitTestCase {
 			);
 
 		$user = $this->createMockUser();
-		$permissionManager = new class {
+		$permissionManager = new class extends \MediaWiki\Permissions\PermissionManager {
 			public function userCan( $action, $user, $title ): bool {
 				return true;
 			}

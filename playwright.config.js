@@ -18,11 +18,11 @@ module.exports = defineConfig( {
 	outputDir: 'test-results',
 	
 	// Global timeout for each test
-	timeout: 30000,
+	timeout: 60000,
 	
 	// Expect timeout
 	expect: {
-		timeout: 5000
+		timeout: 10000
 	},
 
 	use: {

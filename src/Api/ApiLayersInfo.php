@@ -22,6 +22,7 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Permissions\PermissionManager;
 use MediaWiki\Title\Title;
 
 class ApiLayersInfo extends ApiBase {
@@ -728,9 +729,9 @@ class ApiLayersInfo extends ApiBase {
 	/**
 	 * Resolve the permission manager service.
 	 *
-	 * @return mixed
+	 * @return PermissionManager
 	 */
-	protected function getPermissionManager() {
+	protected function getPermissionManager(): PermissionManager {
 		return MediaWikiServices::getInstance()->getPermissionManager();
 	}
 

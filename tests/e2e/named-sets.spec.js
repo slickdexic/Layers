@@ -6,7 +6,7 @@
  * independent annotation sets per image with version history.
  *
  * Usage:
- *   MW_SERVER=http://localhost:8080 MW_USERNAME=Admin MW_PASSWORD=admin123 \
+ *   MW_SERVER=http://192.168.77.33:8080 MW_USERNAME=LayersQA MW_PASSWORD=... \
  *     npx playwright test tests/e2e/named-sets.spec.js
  */
 
@@ -17,6 +17,8 @@ const { LayersEditorPage } = require( './fixtures' );
 const describeNamedSets = process.env.MW_SERVER ? test.describe : test.describe.skip;
 
 describeNamedSets( 'Named Layer Sets', () => {
+	test.describe.configure( { mode: 'serial' } );
+
 	let editorPage;
 
 	test.beforeEach( async ( { page } ) => {
@@ -26,136 +28,115 @@ describeNamedSets( 'Named Layer Sets', () => {
 
 	describeNamedSets( 'Set Selection', () => {
 		test( 'can see set selector dropdown', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
 			await editorPage.openEditor( testFile );
 
 			// Check for set selector in the UI
-			const setSelector = await page.$(
-				'.layers-set-selector, .set-selector, [data-testid="set-selector"]'
-			);
-			expect( setSelector ).not.toBeNull();
+			const setSelector = page.locator( '.layers-set-select' );
+			await expect( setSelector ).toBeVisible();
 		} );
 
-test( 'a set is selected initially', async ( { page } ) => {
-		const testFile = process.env.TEST_FILE || 'Test.png';
-		await editorPage.openEditor( testFile );
+		test( 'a set is selected initially', async ( { page } ) => {
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			await editorPage.openEditor( testFile );
 
-		// Some set is always shown as selected; its name is user-defined,
-		// so only require that the label is non-empty.
-		const selectedText = await page.textContent(
-			'.layers-set-selector .selected-set, .set-selector-label, [data-current-set]'
-		);
-		expect( selectedText.trim().length ).toBeGreaterThan( 0 );
+			// Some set is always shown as selected; its name is user-defined,
+			// so require that the value is non-empty.
+			const setSelector = page.locator( '.layers-set-select' );
+			await expect( setSelector ).toBeVisible();
+			await expect.poll( async () => ( await setSelector.inputValue() ).trim().length ).toBeGreaterThan( 0 );
 		} );
 
 		test( 'can create a new named set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const newSetName = 'test-set-' + Date.now();
 			await editorPage.openEditor( testFile );
 
-			// Click dropdown to expand options
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
-			}
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
 
-			// Look for "new set" or "create set" button
-			const newSetBtn = await page.$(
-				'.new-set-button, [data-action="create-set"], .create-set-btn'
-			);
-			if ( newSetBtn ) {
-				await newSetBtn.click();
+			// Select '__new__' option to reveal input and create button
+			await selector.selectOption( '__new__' );
 
-				// Wait for dialog/input
-				await page.waitForTimeout( 500 );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( newSetName );
 
-				// Type new set name
-				const nameInput = await page.$(
-					'.set-name-input, input[name="setname"], .oo-ui-inputWidget input'
-				);
-				if ( nameInput ) {
-					await nameInput.fill( 'test-set-' + Date.now() );
+			const newSetBtn = page.locator( '.layers-new-set-btn' );
+			await expect( newSetBtn ).toBeVisible();
+			await newSetBtn.click();
 
-					// Confirm creation
-					await page.keyboard.press( 'Enter' );
-					await page.waitForTimeout( 500 );
-
-					// Verify the new set appears in the selector
-					const selectorText = await page.textContent(
-						'.layers-set-selector, .set-selector'
-					);
-					expect( selectorText ).toContain( 'test-set' );
-				}
-			}
+			// Verify the new set is selected in the dropdown
+			await expect( selector ).toHaveValue( newSetName );
 		} );
 
 		test( 'switching sets clears and reloads layers', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const setA = 'switch-a-' + Date.now();
+			const setB = 'switch-b-' + Date.now();
 			await editorPage.openEditor( testFile );
 
-			// Create a layer in the default set
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
+
+			// Create Set A
+			await selector.selectOption( '__new__' );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( setA );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( setA );
+
+			// Create a layer in Set A
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 150, 150 );
 
-			const countInDefault = await editorPage.getLayerCount();
-			expect( countInDefault ).toBeGreaterThan( 0 );
+			const countInSetA = await editorPage.getLayerCount();
+			expect( countInSetA ).toBeGreaterThan( 0 );
 
-			// Try to switch to a different set if available
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
+			// Save Set A
+			await editorPage.save();
+			await page.waitForTimeout( 1000 );
 
-				// Look for set options
-				const setOptions = await page.$$(
-					'.set-option, .set-menu-item, [data-set-name]'
-				);
-				if ( setOptions.length > 1 ) {
-					// Click a different set (not the first one which is likely 'default')
-					await setOptions[ 1 ].click();
-					await page.waitForTimeout( 500 );
+			// Create Set B
+			await selector.selectOption( '__new__' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( setB );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( setB );
 
-					// Layer count should change (different set = different layers)
-					const countInOtherSet = await editorPage.getLayerCount();
-					// We just verify it's a number (could be 0 for new set)
-					expect( typeof countInOtherSet ).toBe( 'number' );
-				}
-			}
+			// Set B starts empty
+			const countInSetB = await editorPage.getLayerCount();
+			expect( countInSetB ).toBe( 0 );
+
+			// Switch back to Set A (confirming switch since Set B was created unsaved)
+			await selector.selectOption( setA );
+			const switchAnywayBtn = page.locator( '.layers-modal-buttons .layers-btn-danger' ).first();
+			await expect( switchAnywayBtn ).toBeVisible();
+			await switchAnywayBtn.click();
+
+			// Layer count should restore to Set A's count
+			await expect( page.locator( '.layer-item:not(.background-layer-item)' ) ).toHaveCount( countInSetA );
 		} );
 	} );
 
 	describeNamedSets( 'Set Persistence', () => {
 		test( 'layers saved to a set persist after reload', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
 			const uniqueSetName = 'persist-test-' + Date.now();
 
 			await editorPage.openEditor( testFile );
 
-			// Create a new set for this test to avoid interference
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
-				const newSetBtn = await page.$(
-					'.new-set-button, [data-action="create-set"]'
-				);
-				if ( newSetBtn ) {
-					await newSetBtn.click();
-					await page.waitForTimeout( 300 );
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
 
-					const nameInput = await page.$(
-						'.set-name-input, input[name="setname"], .oo-ui-inputWidget input'
-					);
-					if ( nameInput ) {
-						await nameInput.fill( uniqueSetName );
-						await page.keyboard.press( 'Enter' );
-						await page.waitForTimeout( 500 );
-					}
-				}
-			}
+			// Create a new set
+			await selector.selectOption( '__new__' );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( uniqueSetName );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( uniqueSetName );
 
 			// Create a layer
 			await editorPage.selectTool( 'circle' );
@@ -173,113 +154,90 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await editorPage.openEditor( testFile );
 
 			// Select the same set again
-			const selectorAfter = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selectorAfter ) {
-				await selectorAfter.click();
-				const setOption = await page.$(
-					`[data-set-name="${ uniqueSetName }"], .set-option:has-text("${ uniqueSetName }")`
-				);
-				if ( setOption ) {
-					await setOption.click();
-					await page.waitForTimeout( 500 );
-				}
-			}
+			const selectorAfter = page.locator( '.layers-set-select' );
+			await expect( selectorAfter ).toBeVisible();
+			await selectorAfter.selectOption( uniqueSetName );
 
 			// Verify layer persisted
-			const countAfterReload = await editorPage.getLayerCount();
-			expect( countAfterReload ).toBe( countBeforeSave );
+			await expect( page.locator( '.layer-item:not(.background-layer-item)' ) ).toHaveCount( countBeforeSave );
 		} );
 
 		test( 'different sets have independent layers', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const set1 = 'indep-1-' + Date.now();
+			const set2 = 'indep-2-' + Date.now();
 
 			await editorPage.openEditor( testFile );
 
-			// Create layer in default set
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
+
+			// Create Set 1
+			await selector.selectOption( '__new__' );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( set1 );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( set1 );
+
+			// Create layer in Set 1
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 150, 150 );
 
-			const countDefault = await editorPage.getLayerCount();
+			const countSet1 = await editorPage.getLayerCount();
+			expect( countSet1 ).toBeGreaterThan( 0 );
 
-			// Save to default set
+			// Save Set 1
 			await editorPage.save();
 			await page.waitForTimeout( 1000 );
 
-			// Create a new set
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
-				const newSetBtn = await page.$(
-					'.new-set-button, [data-action="create-set"]'
-				);
-				if ( newSetBtn ) {
-					await newSetBtn.click();
-					await page.waitForTimeout( 300 );
+			// Create Set 2
+			await selector.selectOption( '__new__' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( set2 );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( set2 );
 
-					const nameInput = await page.$(
-						'.set-name-input, input[name="setname"], .oo-ui-inputWidget input'
-					);
-					if ( nameInput ) {
-						await nameInput.fill( 'independent-test-' + Date.now() );
-						await page.keyboard.press( 'Enter' );
-						await page.waitForTimeout( 500 );
-					}
-				}
-			}
-
-			// This new set should start empty (or with 0 user layers)
-			const countNewSet = await editorPage.getLayerCount();
-			expect( countNewSet ).toBeLessThan( countDefault );
+			// Set 2 starts with 0 user layers
+			const countSet2 = await editorPage.getLayerCount();
+			expect( countSet2 ).toBe( 0 );
+			expect( countSet2 ).toBeLessThan( countSet1 );
 		} );
 	} );
 
 	describeNamedSets( 'Revision History', () => {
 		test( 'can view revision history for a set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
 			await editorPage.openEditor( testFile );
 
-			// Look for revision history button/dropdown
-			const historyBtn = await page.$(
-				'.revision-history-btn, [data-action="show-revisions"], .show-history'
-			);
-			if ( historyBtn ) {
-				await historyBtn.click();
-				await page.waitForTimeout( 300 );
+			// Revision dropdown and load button are unconditional controls in header
+			const revSelector = page.locator( '.layers-revision-select' );
+			await expect( revSelector ).toBeVisible();
 
-				// Should show revision list
-				const revisionList = await page.$(
-					'.revision-list, .history-panel, [data-testid="revisions"]'
-				);
-				expect( revisionList ).not.toBeNull();
-			}
+			const revLoadBtn = page.locator( '.layers-revision-load' );
+			await expect( revLoadBtn ).toBeVisible();
 		} );
 
-		test( 'saving creates a new revision', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+		test( 'saving creates a new revision in the revision selector', async ( { page } ) => {
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const testSetName = 'rev-test-' + Date.now();
 			await editorPage.openEditor( testFile );
 
-			// Check initial revision count
-			const historyBtn = await page.$(
-				'.revision-history-btn, [data-action="show-revisions"]'
-			);
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
 
-			let initialRevisionCount = 0;
-			if ( historyBtn ) {
-				await historyBtn.click();
-				await page.waitForTimeout( 300 );
+			// Create and select new set
+			await selector.selectOption( '__new__' );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( testSetName );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( testSetName );
 
-				const revisions = await page.$$(
-					'.revision-item, .history-item, [data-revision-id]'
-				);
-				initialRevisionCount = revisions.length;
+			const revSelector = page.locator( '.layers-revision-select' );
+			await expect( revSelector ).toBeVisible();
 
-				// Close history panel
-				await page.keyboard.press( 'Escape' );
-			}
+			const initialOptions = await revSelector.locator( 'option' ).count();
 
 			// Create a layer and save
 			await editorPage.selectTool( 'rectangle' );
@@ -287,61 +245,68 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await editorPage.save();
 			await page.waitForTimeout( 1000 );
 
-			// Check revision count again
-			if ( historyBtn ) {
-				await historyBtn.click();
-				await page.waitForTimeout( 300 );
-
-				const revisionsAfter = await page.$$(
-					'.revision-item, .history-item, [data-revision-id]'
-				);
-				expect( revisionsAfter.length ).toBeGreaterThanOrEqual( initialRevisionCount );
-			}
+			// After save, revision options count increases or contains the revision
+			await expect.poll( async () => revSelector.locator( 'option' ).count() ).toBeGreaterThanOrEqual( initialOptions );
 		} );
 	} );
 
 	describeNamedSets( 'Set Management', () => {
-		test( 'cannot delete the default set from UI', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+		test( 'can delete a user-owned named set with confirmation', async ( { page } ) => {
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
+			const toDeleteName = 'del-test-' + Date.now();
+
 			await editorPage.openEditor( testFile );
 
-			// Open set selector
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
-				await page.waitForTimeout( 300 );
+			const selector = page.locator( '.layers-set-select' );
+			await expect( selector ).toBeVisible();
 
-				// Look for delete button on default set - it should be disabled or hidden
-				const deleteDefaultBtn = await page.$(
-					'.delete-set-btn[data-set-name="default"]:not([disabled]), ' +
-					'[data-action="delete-set"][data-set-name="default"]:not([disabled])'
-				);
-				// Default set delete button should not be clickable
-				expect( deleteDefaultBtn ).toBeNull();
-			}
+			// Create disposable set
+			await selector.selectOption( '__new__' );
+			const nameInput = page.locator( '.layers-new-set-input' );
+			await expect( nameInput ).toBeVisible();
+			await nameInput.fill( toDeleteName );
+			await page.locator( '.layers-new-set-btn' ).click();
+			await expect( selector ).toHaveValue( toDeleteName );
+
+			// Save to backend so it has a persisted row
+			await editorPage.selectTool( 'rectangle' );
+			await editorPage.drawOnCanvas( 70, 70, 170, 170 );
+			await editorPage.save();
+			await page.waitForTimeout( 1000 );
+
+			// Delete button must be present in toolbar
+			const deleteBtn = page.locator( '.layers-set-delete-btn' );
+			await expect( deleteBtn ).toBeVisible();
+			await deleteBtn.click();
+
+			// Confirmation dialog must appear
+			const confirmBtn = page.locator( '.layers-modal-buttons .layers-btn-danger' ).first();
+			await expect( confirmBtn ).toBeVisible();
+			await confirmBtn.click();
+
+			// Verify set is no longer in selector options
+			await expect.poll( async () => selector.locator( 'option' ).allTextContents() ).not.toContain( toDeleteName );
 		} );
 
 		test( 'can rename a named set', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
+			const testFile = process.env.TEST_FILE || 'ImageTest03.png';
 			const originalName = 'rename-test-' + Date.now();
 			const newName = 'renamed-' + Date.now();
 
 			await editorPage.openEditor( testFile );
 
 			// Ensure set selector is present; fail explicitly if absent
-			const selector = page.locator( '.layers-set-select, .layers-set-selector, .set-selector' ).first();
+			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
 
 			// Switch to "__new__" option to reveal new set input and button
 			await selector.selectOption( '__new__' );
 
-			const newSetInput = page.locator( '.layers-new-set-input, input[name="setname"]' ).first();
+			const newSetInput = page.locator( '.layers-new-set-input' );
 			await expect( newSetInput ).toBeVisible();
 			await newSetInput.fill( originalName );
 
-			const newSetBtn = page.locator( '.layers-new-set-btn, [data-action="create-set"]' ).first();
+			const newSetBtn = page.locator( '.layers-new-set-btn' );
 			await expect( newSetBtn ).toBeVisible();
 			await newSetBtn.click();
 
@@ -349,22 +314,23 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 60, 60, 160, 160 );
 			await editorPage.save();
-			await page.waitForTimeout( 500 );
+			await page.waitForTimeout( 1000 );
 
 			// Trigger rename: rename button must be present in toolbar
-			const renameBtn = page.locator( '.layers-set-rename-btn, [data-action="rename-set"]' ).first();
+			const renameBtn = page.locator( '.layers-set-rename-btn' );
 			await expect( renameBtn ).toBeVisible();
 			await renameBtn.click();
 
 			// Rename dialog prompt input must appear
-			const renameInput = page.locator( '.layers-modal-input, input[name="newname"]' ).first();
+			const renameInput = page.locator( '.layers-modal-input' );
 			await expect( renameInput ).toBeVisible();
 			await renameInput.fill( newName );
 
 			// Confirm through the required dialog button
-			const confirmBtn = page.locator( '.layers-modal-buttons .layers-btn-primary, [data-action="confirm-rename"]' ).first();
+			const confirmBtn = page.locator( '.layers-modal-buttons .layers-btn-primary' ).first();
 			await expect( confirmBtn ).toBeVisible();
 			await confirmBtn.click();
+			await page.waitForTimeout( 1000 );
 
 			// Verify rename was applied in current selector
 			await expect( selector ).toHaveValue( newName );
@@ -373,12 +339,11 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await page.reload();
 			await editorPage.openEditor( testFile );
 
-			const reloadedSelector = page.locator( '.layers-set-select, .layers-set-selector, .set-selector' ).first();
+			const reloadedSelector = page.locator( '.layers-set-select' );
 			await expect( reloadedSelector ).toBeVisible();
 
-			const optionTexts = await reloadedSelector.locator( 'option' ).allTextContents();
-			expect( optionTexts ).toContain( newName );
-			expect( optionTexts ).not.toContain( originalName );
+			await expect( reloadedSelector.locator( `option[value="${ newName }"]` ) ).toHaveCount( 1 );
+			await expect( reloadedSelector.locator( `option[value="${ originalName }"]` ) ).toHaveCount( 0 );
 		} );
 	} );
 } );

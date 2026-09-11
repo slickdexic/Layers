@@ -8,6 +8,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersInfo;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Permissions\PermissionManager;
 use MediaWiki\Title\Title;
 use MediaWiki\User\UserIdentity;
 use PHPUnit\Framework\TestCase;
@@ -385,9 +386,7 @@ class ApiLayersInfoValidationTest extends TestCase {
 			}
 		};
 
-		$permissionManager = $this->getMockBuilder( \stdClass::class )
-			->addMethods( [ 'userCan' ] )
-			->getMock();
+		$permissionManager = $this->createMock( PermissionManager::class );
 		$permissionManager->method( 'userCan' )->willReturn( true );
 
 		$fileMock = new class {

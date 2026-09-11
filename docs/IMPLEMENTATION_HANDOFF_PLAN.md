@@ -42,7 +42,7 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 | 1 J01 | Junior | Literal explicit set names (R6.09) | Reviewed and corrected; J17 follows |
 | 2 J02 | Junior | Configured initial set name (R6.17) | Reviewed and corrected |
 | 3 J03 | Junior | Slide creation rate limit (R6.14) | Reviewed; unit evidence |
-| 4 J04 | Junior | Production rename regression tests (R6.15) | Reviewed; live acceptance remains J18 |
+| 4 J04 | Junior | Production rename regression tests (R6.15) | Reviewed; live browser acceptance proven in J18 |
 | 5 L01 | Lead | Alternate-path admission design and enforcement | Next lead task; independent of J01–J04 |
 | 6 J05 | Junior | Identity-specific draft cleanup (R6.10) | Corrected; identity format remains J16 |
 | 7 J06 | Junior | Source and transport acceptance fixtures | L01 test registration contract |
@@ -287,11 +287,11 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J01 | Reviewed with corrections | `6486046f`; invalid explicit names now rejected before resolution; see review record |
 | J02 | Reviewed with corrections | `0ca2b3a4`; explicit configuration injection and failure propagation |
 | J03 | Reviewed | `9b8a0d5e`; production-route unit tests pass; live concurrency not claimed |
-| J04 | Unit work reviewed; browser acceptance pending | `be126dd6`; required button assertions strengthened; J18 remains |
+| J04 | Unit work reviewed; browser acceptance complete | `be126dd6`; live browser rename persistence proven in J18 |
 | J05 | Partially complete after corrections | `9819921f`; buffered snapshot/draft races corrected; storage identity remains J16 |
 | J16 | Complete on branch | `codex/j16-unambiguous-draft-identity` (`e26eaa7d`); injective v2 tuple encoding, safe legacy migration/quota fallback, user/wiki sweep isolation, foreground save audit documented |
 | J17 | Complete on branch | `codex/j17-mutation-identifier-alignment` (`5e3524c1`); canonical literal validation via `SetNameSanitizer::isCanonical`, silent rewriting/character stripping eliminated across rename, delete, info and save, redirection guards verified |
-| J18 | Ready with isolated browser prerequisites | Live rename persistence and named-set test corrections |
+| J18 | Complete on branch | `codex/j18-named-set-acceptance`; live browser acceptance proven on MediaWiki 1.45.3 / Chromium 145.0.7632.6 (10 passed); unconditional control assertions, single-dialog confirm on switch, persisted rename and deletion verified |
 | L01 | Next lead work; not implemented | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 
