@@ -330,56 +330,61 @@ test( 'a set is selected initially', async ( { page } ) => {
 
 			await editorPage.openEditor( testFile );
 
-			// Create a new set first
-			const selector = await page.$(
-				'.layers-set-selector, .set-selector'
-			);
-			if ( selector ) {
-				await selector.click();
-				const newSetBtn = await page.$(
-					'.new-set-button, [data-action="create-set"]'
-				);
-				if ( newSetBtn ) {
-					await newSetBtn.click();
-					await page.waitForTimeout( 300 );
+			// Ensure set selector is present; fail explicitly if absent
+			const selector = page.locator( '.layers-set-select, .layers-set-selector, .set-selector' ).first();
+			await expect( selector ).toBeVisible();
 
-					const nameInput = await page.$(
-						'.set-name-input, input[name="setname"], .oo-ui-inputWidget input'
-					);
-					if ( nameInput ) {
-						await nameInput.fill( originalName );
-						await page.keyboard.press( 'Enter' );
-						await page.waitForTimeout( 500 );
-					}
-				}
+			// Switch to "__new__" option to reveal new set input and button
+			await selector.selectOption( '__new__' );
 
-				// Now try to rename it
-				await selector.click();
-				await page.waitForTimeout( 300 );
+			const newSetInput = page.locator( '.layers-new-set-input, input[name="setname"]' ).first();
+			await expect( newSetInput ).toBeVisible();
+			await newSetInput.fill( originalName );
 
-				const renameBtn = await page.$(
-					`[data-action="rename-set"], .rename-set-btn`
-				);
-				if ( renameBtn ) {
-					await renameBtn.click();
-					await page.waitForTimeout( 300 );
-
-					const renameInput = await page.$(
-						'.rename-input, input[name="newname"], .oo-ui-inputWidget input'
-					);
-					if ( renameInput ) {
-						await renameInput.fill( newName );
-						await page.keyboard.press( 'Enter' );
-						await page.waitForTimeout( 500 );
-
-						// Verify rename happened
-						const selectorText = await page.textContent(
-							'.layers-set-selector, .set-selector'
-						);
-						expect( selectorText ).toContain( newName );
-					}
-				}
+			const newSetBtn = page.locator( '.layers-new-set-btn, [data-action="create-set"]' ).first();
+			if ( await newSetBtn.isVisible() ) {
+				await newSetBtn.click();
+			} else {
+				await newSetInput.press( 'Enter' );
 			}
+
+			// Save the set to ensure it is persisted to the backend
+			await editorPage.selectTool( 'rectangle' );
+			await editorPage.drawOnCanvas( 60, 60, 160, 160 );
+			await editorPage.save();
+			await page.waitForTimeout( 500 );
+
+			// Trigger rename: rename button must be present in toolbar
+			const renameBtn = page.locator( '.layers-set-rename-btn, [data-action="rename-set"]' ).first();
+			await expect( renameBtn ).toBeVisible();
+			await renameBtn.click();
+
+			// Rename dialog prompt input must appear
+			const renameInput = page.locator( '.layers-modal-input, input[name="newname"]' ).first();
+			await expect( renameInput ).toBeVisible();
+			await renameInput.fill( newName );
+
+			// Confirm rename via dialog confirm button or Enter
+			const confirmBtn = page.locator( '.layers-modal-buttons .layers-btn-primary, [data-action="confirm-rename"]' ).first();
+			if ( await confirmBtn.isVisible() ) {
+				await confirmBtn.click();
+			} else {
+				await renameInput.press( 'Enter' );
+			}
+
+			// Verify rename was applied in current selector
+			await expect( selector ).toHaveValue( newName );
+
+			// Verify persistence after reload: reopen editor and check database-backed sets
+			await page.reload();
+			await editorPage.openEditor( testFile );
+
+			const reloadedSelector = page.locator( '.layers-set-select, .layers-set-selector, .set-selector' ).first();
+			await expect( reloadedSelector ).toBeVisible();
+
+			const optionTexts = await reloadedSelector.locator( 'option' ).allTextContents();
+			expect( optionTexts ).toContain( newName );
+			expect( optionTexts ).not.toContain( originalName );
 		} );
 	} );
 } );
