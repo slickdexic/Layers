@@ -112,9 +112,12 @@ describe( 'Multi-page (PDF) editing', function () {
 
 		it( 'keeps page 1 on the legacy unsuffixed key so old drafts survive', function () {
 			const p1 = new DraftManager( makeEditor( 1, [] ) );
-			expect( p1.getStorageKey() ).not.toMatch( /-p\d+$/ );
+			expect( DraftManager.decodeKey( p1.getStorageKey() ).page ).toBe( 1 );
+			expect( p1.getLegacyStorageKey() ).not.toMatch( /-p\d+$/ );
+
 			const p3 = new DraftManager( makeEditor( 3, [] ) );
-			expect( p3.getStorageKey() ).toMatch( /-p3$/ );
+			expect( DraftManager.decodeKey( p3.getStorageKey() ).page ).toBe( 3 );
+			expect( p3.getLegacyStorageKey() ).toMatch( /-p3$/ );
 		} );
 
 		it( 'does not let editing page 2 destroy page 1\'s draft', function () {

@@ -32,10 +32,16 @@
 	const MAX_DRAFT_AGE_MS = 24 * 60 * 60 * 1000;
 
 	/**
-	 * LocalStorage key prefix for drafts
+	 * LocalStorage key prefix for legacy drafts (v1)
 	 * @constant {string}
 	 */
 	const STORAGE_KEY_PREFIX = 'layers-draft-';
+
+	/**
+	 * LocalStorage key prefix for versioned injective drafts (v2)
+	 * @constant {string}
+	 */
+	const STORAGE_KEY_PREFIX_V2 = 'layers-draft-v2:';
 
 	/**
 	 * DraftManager class
@@ -49,11 +55,15 @@
 		constructor( editor ) {
 			this.editor = editor;
 			this.filename = editor.filename || '';
-			// Append a short FNV-1a hash of the original filename to prevent key
-			// collisions when two filenames sanitize to the same string
-			// (e.g. "Foo/bar.jpg" and "Foo_bar.jpg" both become "Foo_bar.jpg")
+			this.wikiScope = ( editor && editor.wikiScope !== undefined && editor.wikiScope !== null ) ?
+				String( editor.wikiScope ) :
+				DraftManager.getWikiScope();
+			this.userScope = ( editor && editor.userScope !== undefined && editor.userScope !== null ) ?
+				String( editor.userScope ) :
+				DraftManager.getUserScope();
+			// Retain legacy key prefix for backward-compatible lookups
 			this.storageKey = STORAGE_KEY_PREFIX +
-				DraftManager.getUserScope() + '-' +
+				this.userScope + '-' +
 				this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
 				'_' + DraftManager.fnv1a( this.filename );
 			this.autoSaveTimer = null;
@@ -61,8 +71,21 @@
 			this.isRecoveryMode = false;
 			this.lastWriteFailed = false;
 			this.stateSubscription = null;
+			this.ambiguousLegacyRecord = null;
 
 			this.initialize();
+		}
+
+		/**
+		 * Identify the current wiki for draft key scoping.
+		 *
+		 * @return {string} Stable wiki identifier ('default' when unknown)
+		 */
+		static getWikiScope() {
+			if ( typeof mw === 'undefined' || !mw.config || !mw.config.get ) {
+				return 'default';
+			}
+			return mw.config.get( 'wgWikiId' ) || mw.config.get( 'wgDBname' ) || 'default';
 		}
 
 		/**
@@ -80,6 +103,53 @@
 			}
 			const id = mw.config.get( 'wgUserId' );
 			return id ? 'u' + id : 'anon';
+		}
+
+		/**
+		 * Injective encoding of the complete draft identity tuple:
+		 * [ wikiScope, userScope, filename, setName, page ]
+		 *
+		 * @param {string} wikiScope Wiki scope
+		 * @param {string} userScope User scope
+		 * @param {string} filename Original filename
+		 * @param {string} setName Original set name
+		 * @param {number|string} page Normalized page number
+		 * @return {string} Versioned storage key
+		 */
+		static encodeKey( wikiScope, userScope, filename, setName, page ) {
+			const w = ( wikiScope !== undefined && wikiScope !== null ) ? String( wikiScope ) : 'default';
+			const u = ( userScope !== undefined && userScope !== null ) ? String( userScope ) : 'anon';
+			const f = ( filename !== undefined && filename !== null ) ? String( filename ) : '';
+			const s = ( setName !== undefined && setName !== null ) ? String( setName ) : '';
+			const p = Math.max( 1, parseInt( page, 10 ) || 1 );
+			return STORAGE_KEY_PREFIX_V2 + JSON.stringify( [ w, u, f, s, p ] );
+		}
+
+		/**
+		 * Decode a versioned storage key into its identity tuple.
+		 *
+		 * @param {string} key Storage key
+		 * @return {Object|null} Decoded tuple or null if not a valid v2 key
+		 */
+		static decodeKey( key ) {
+			if ( typeof key !== 'string' || key.indexOf( STORAGE_KEY_PREFIX_V2 ) !== 0 ) {
+				return null;
+			}
+			try {
+				const tuple = JSON.parse( key.slice( STORAGE_KEY_PREFIX_V2.length ) );
+				if ( Array.isArray( tuple ) && tuple.length === 5 ) {
+					return {
+						wikiScope: tuple[ 0 ],
+						userScope: tuple[ 1 ],
+						filename: tuple[ 2 ],
+						setName: tuple[ 3 ],
+						page: tuple[ 4 ]
+					};
+				}
+			} catch ( e ) {
+				return null;
+			}
+			return null;
 		}
 
 		/**
@@ -124,10 +194,13 @@
 		}
 
 		/**
-		 * Remove every Layers draft past MAX_DRAFT_AGE_MS, for any file or user.
+		 * Remove expired Layers drafts for the current user and wiki.
 		 *
-		 * @param {boolean} [aggressive] Also drop the oldest surviving drafts, used
-		 *   to free space after a quota failure
+		 * Does not sweep other users' drafts. Unparseable drafts belonging to
+		 * the current user are removed as dead weight.
+		 *
+		 * @param {boolean} [aggressive] Also drop the oldest surviving drafts
+		 *   for the current user, used to free space after a quota failure
 		 * @return {number} Number of keys removed
 		 */
 		sweepExpiredDrafts( aggressive ) {
@@ -140,14 +213,34 @@
 				return 0;
 			}
 			const currentKey = this.getStorageKey();
+			const legacyUserPrefix = STORAGE_KEY_PREFIX + this.userScope + '-';
 			const survivors = [];
 			let removed = 0;
 			try {
 				for ( let i = localStorage.length - 1; i >= 0; i-- ) {
 					const key = localStorage.key( i );
-					if ( !key || key.indexOf( STORAGE_KEY_PREFIX ) !== 0 || key === currentKey ) {
+					if ( !key || key === currentKey ) {
 						continue;
 					}
+
+					let isCandidate = false;
+
+					// Check if v2 key belonging to current user and wiki
+					if ( key.indexOf( STORAGE_KEY_PREFIX_V2 ) === 0 ) {
+						const decoded = DraftManager.decodeKey( key );
+						if ( decoded && decoded.userScope === this.userScope && decoded.wikiScope === this.wikiScope ) {
+							isCandidate = true;
+						}
+					} else if ( key.indexOf( legacyUserPrefix ) === 0 ) {
+						// Legacy key belonging to current user scope
+						// Note: legacy keys do not record wiki identity; we do not infer cross-wiki ownership
+						isCandidate = true;
+					}
+
+					if ( !isCandidate ) {
+						continue;
+					}
+
 					let timestamp = 0;
 					try {
 						timestamp = ( JSON.parse( localStorage.getItem( key ) ) || {} ).timestamp || 0;
@@ -179,14 +272,43 @@
 		}
 
 		/**
-		 * Build a storage key for an explicit file, set name, and page.
+		 * Build an unambiguous v2 storage key for an explicit file, set name, and page.
 		 *
 		 * @param {string} [filename] Target filename
 		 * @param {string} [setName] Target set name
 		 * @param {number|string} [page] Target page number
+		 * @param {Object} [options] Context options override
+		 * @param {string} [options.wikiScope] Explicit wiki scope override
+		 * @param {string} [options.userScope] Explicit user scope override
 		 * @return {string} Storage key
 		 */
-		buildStorageKey( filename, setName, page ) {
+		buildStorageKey( filename, setName, page, options ) {
+			const opts = ( typeof options === 'object' && options !== null ) ? options : {};
+			const wiki = ( opts.wikiScope !== undefined ) ? opts.wikiScope : this.wikiScope;
+			const user = ( opts.userScope !== undefined ) ? opts.userScope : this.userScope;
+			const file = ( opts.filename !== undefined ) ?
+				opts.filename :
+				( ( filename !== undefined && filename !== null ) ? filename : ( this.filename || '' ) );
+			const set = ( opts.setName !== undefined ) ?
+				opts.setName :
+				( ( setName !== undefined && setName !== null ) ? setName : '' );
+			const pageVal = ( opts.page !== undefined ) ?
+				opts.page :
+				( page !== undefined ? page : 1 );
+
+			return DraftManager.encodeKey( wiki, user, file, set, pageVal );
+		}
+
+		/**
+		 * Build a legacy v1 storage key for backward-compatibility lookups.
+		 *
+		 * @param {string} [filename] Target filename
+		 * @param {string} [setName] Target set name
+		 * @param {number|string} [page] Target page number
+		 * @param {string} [userScope] Target user scope
+		 * @return {string} Legacy storage key
+		 */
+		buildLegacyStorageKey( filename, setName, page, userScope ) {
 			const file = ( filename !== undefined && filename !== null ) ?
 				String( filename ) :
 				( this.filename || '' );
@@ -195,14 +317,16 @@
 				'';
 			const pageNum = Math.max( 1, parseInt( page, 10 ) || 1 );
 			const pageSuffix = pageNum > 1 ? '-p' + pageNum : '';
+			const u = ( userScope !== undefined && userScope !== null ) ?
+				String( userScope ) :
+				( this.userScope || 'anon' );
 
-			// If targeting the instance's filename, reuse this.storageKey prefix
-			if ( file === this.filename && this.storageKey ) {
+			if ( file === this.filename && u === this.userScope && this.storageKey ) {
 				return this.storageKey + '-' + set.replace( /[^a-zA-Z0-9_.-]/g, '_' ) + pageSuffix;
 			}
 
 			return STORAGE_KEY_PREFIX +
-				DraftManager.getUserScope() + '-' +
+				u + '-' +
 				file.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
 				'_' + DraftManager.fnv1a( file ) + '-' +
 				set.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
@@ -212,21 +336,15 @@
 		/**
 		 * Build the storage key for the current set and page, or an explicit target context.
 		 *
-		 * Multi-page files (PDF) keep a separate draft per page. Without the
-		 * page qualifier every page of a document shared one slot, so paging
-		 * through a PDF restored the previous page's layers onto the next one
-		 * and editing page 2 destroyed page 1's draft.
-		 *
 		 * @param {Object|number} [options] Target context options or explicit page number
-		 * @param {string} [options.filename] Explicit filename
-		 * @param {string} [options.setName] Explicit set name
-		 * @param {number|string} [options.page] Explicit page number
 		 * @return {string} Storage key
 		 */
 		getStorageKey( options ) {
 			let filename;
 			let setName;
 			let page;
+			let wikiScope;
+			let userScope;
 
 			if ( typeof options === 'number' ) {
 				page = options;
@@ -234,6 +352,8 @@
 				filename = options.filename;
 				setName = options.setName;
 				page = options.page;
+				wikiScope = options.wikiScope;
+				userScope = options.userScope;
 			}
 
 			if ( filename === undefined ) {
@@ -250,7 +370,45 @@
 					1;
 			}
 
-			return this.buildStorageKey( filename, setName, page );
+			return this.buildStorageKey( filename, setName, page, { wikiScope, userScope } );
+		}
+
+		/**
+		 * Build the legacy storage key for the current set and page, or an explicit target context.
+		 *
+		 * @param {Object|number} [options] Target context options or explicit page number
+		 * @return {string} Legacy storage key
+		 */
+		getLegacyStorageKey( options ) {
+			let filename;
+			let setName;
+			let page;
+			let userScope;
+
+			if ( typeof options === 'number' ) {
+				page = options;
+			} else if ( options && typeof options === 'object' ) {
+				filename = options.filename;
+				setName = options.setName;
+				page = options.page;
+				userScope = options.userScope;
+			}
+
+			if ( filename === undefined ) {
+				filename = this.filename;
+			}
+			if ( setName === undefined ) {
+				setName = ( this.editor && this.editor.stateManager ) ?
+					this.editor.stateManager.get( 'currentSetName' ) || '' :
+					'';
+			}
+			if ( page === undefined ) {
+				page = ( this.editor && this.editor.page !== undefined ) ?
+					this.editor.page :
+					1;
+			}
+
+			return this.buildLegacyStorageKey( filename, setName, page, userScope );
 		}
 
 		/**
@@ -366,14 +524,19 @@
 					return false;
 				}
 
+				const currentSetName = this.editor.stateManager ?
+					this.editor.stateManager.get( 'currentSetName' ) || '' :
+					'';
+				const currentPage = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
+
 				serialized = JSON.stringify( {
-					version: 1,
+					version: 2,
 					timestamp: Date.now(),
+					wikiScope: this.wikiScope,
+					userScope: this.userScope,
 					filename: this.filename,
-					setName: this.editor.stateManager ?
-						this.editor.stateManager.get( 'currentSetName' ) || '' :
-						'',
-					page: Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ),
+					setName: currentSetName,
+					page: currentPage,
 					// Strip base64 image src data to avoid localStorage overflow
 					layers: layers.map( ( l ) => {
 						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {
@@ -441,17 +604,107 @@
 		}
 
 		/**
-		 * Load a draft from localStorage
+		 * Load a draft from localStorage (supporting v2 and validated legacy formats).
 		 *
+		 * @param {Object|number} [options] Target context options or explicit page number
 		 * @return {Object|null} The draft object or null if not found/expired
 		 */
-		loadDraft() {
-			if ( !this.isStorageAvailable() ) {
-				return null;
+		loadDraft( options ) {
+			const targetKey = this.getStorageKey( options );
+			const legacyKey = this.getLegacyStorageKey( options );
+
+			// Determine target identity tuple
+			let targetFilename = this.filename;
+			let targetSetName = ( this.editor && this.editor.stateManager ) ?
+				this.editor.stateManager.get( 'currentSetName' ) || '' : '';
+			let targetPage = ( this.editor && this.editor.page !== undefined ) ?
+				Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ) : 1;
+
+			if ( typeof options === 'number' ) {
+				targetPage = Math.max( 1, parseInt( options, 10 ) || 1 );
+			} else if ( options && typeof options === 'object' ) {
+				if ( options.filename !== undefined ) {
+					targetFilename = options.filename;
+				}
+				if ( options.setName !== undefined ) {
+					targetSetName = options.setName;
+				}
+				if ( options.page !== undefined ) {
+					targetPage = Math.max( 1, parseInt( options.page, 10 ) || 1 );
+				}
 			}
 
 			try {
-				const stored = localStorage.getItem( this.getStorageKey() );
+				let stored = localStorage.getItem( targetKey );
+
+				if ( !stored ) {
+					// Fallback to legacy key lookup
+					const legacyStored = localStorage.getItem( legacyKey );
+					if ( legacyStored ) {
+						try {
+							const legacyDraft = JSON.parse( legacyStored );
+							if ( legacyDraft && Array.isArray( legacyDraft.layers ) ) {
+								// Check for ambiguity (missing explicit identity fields)
+								const hasFilename = legacyDraft.filename !== undefined && legacyDraft.filename !== null;
+								const hasSetName = legacyDraft.setName !== undefined && legacyDraft.setName !== null;
+								const hasPage = legacyDraft.page !== undefined && legacyDraft.page !== null;
+
+								if ( !hasFilename || !hasSetName ) {
+									this.ambiguousLegacyRecord = {
+										key: legacyKey,
+										draft: legacyDraft
+									};
+									if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+										mw.log.warn( '[DraftManager] Ambiguous legacy draft missing explicit tuple fields preserved at key:', legacyKey );
+									}
+									// Do not auto-apply or auto-delete ambiguous record
+									return null;
+								}
+
+								// Check for mismatch against requested target tuple
+								if ( legacyDraft.filename !== targetFilename ||
+									legacyDraft.setName !== targetSetName ||
+									( hasPage && Number( legacyDraft.page ) !== targetPage )
+								) {
+									// Identity mismatch; do not apply or delete
+									return null;
+								}
+
+								// Check age of matching legacy draft
+								if ( legacyDraft.timestamp && ( Date.now() - legacyDraft.timestamp ) > MAX_DRAFT_AGE_MS ) {
+									localStorage.removeItem( legacyKey );
+									return null;
+								}
+
+								// Migrate: write to v2 key before removing legacy record
+								legacyDraft.version = 2;
+								legacyDraft.wikiScope = this.wikiScope;
+								legacyDraft.userScope = this.userScope;
+								const migratedSerialized = JSON.stringify( legacyDraft );
+								try {
+									localStorage.setItem( targetKey, migratedSerialized );
+									// Successfully written to new key: remove legacy record
+									localStorage.removeItem( legacyKey );
+									stored = migratedSerialized;
+								} catch ( quotaError ) {
+									// Quota failure: preserve legacy record, do NOT delete old data
+									if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+										mw.log.warn( '[DraftManager] Quota exceeded migrating legacy draft; preserving legacy key' );
+									}
+									// Allow in-memory recovery
+									return legacyDraft;
+								}
+							} else {
+								localStorage.removeItem( legacyKey );
+								return null;
+							}
+						} catch ( parseErr ) {
+							localStorage.removeItem( legacyKey );
+							return null;
+						}
+					}
+				}
+
 				if ( !stored ) {
 					return null;
 				}
@@ -460,19 +713,18 @@
 
 				// Check if draft is too old
 				if ( draft.timestamp && ( Date.now() - draft.timestamp ) > MAX_DRAFT_AGE_MS ) {
-					this.clearDraft();
+					this.clearDraft( options );
 					return null;
 				}
 
 				// Validate draft structure
 				if ( !draft.layers || !Array.isArray( draft.layers ) ) {
-					this.clearDraft();
+					this.clearDraft( options );
 					return null;
 				}
 
-				// The key encodes set and page, but a stale key format or a
-				// hand-edited store must never splice one page's layers onto another.
-				if ( !this.matchesCurrentContext( draft ) ) {
+				// Verify context match
+				if ( !this.matchesCurrentContext( draft, options ) ) {
 					return null;
 				}
 
@@ -488,43 +740,81 @@
 		/**
 		 * Check that a stored draft belongs to the set and page now being edited.
 		 *
-		 * Drafts written before these fields existed omit them; those are accepted
-		 * because their key already constrained them to the filename and set.
-		 *
 		 * @param {Object} draft The parsed draft
+		 * @param {Object|number} [options] Expected context options
 		 * @return {boolean} True when the draft is safe to apply
 		 */
-		matchesCurrentContext( draft ) {
-			const currentPage = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
-			if ( draft.page !== undefined && Number( draft.page ) !== currentPage ) {
+		matchesCurrentContext( draft, options ) {
+			let expectedPage = ( this.editor && this.editor.page !== undefined ) ?
+				Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ) : 1;
+			let expectedSet = ( this.editor && this.editor.stateManager ) ?
+				this.editor.stateManager.get( 'currentSetName' ) || '' : '';
+			let expectedFilename = this.filename;
+
+			if ( typeof options === 'number' ) {
+				expectedPage = Math.max( 1, parseInt( options, 10 ) || 1 );
+			} else if ( options && typeof options === 'object' ) {
+				if ( options.page !== undefined ) {
+					expectedPage = Math.max( 1, parseInt( options.page, 10 ) || 1 );
+				}
+				if ( options.setName !== undefined ) {
+					expectedSet = options.setName;
+				}
+				if ( options.filename !== undefined ) {
+					expectedFilename = options.filename;
+				}
+			}
+
+			if ( draft.page !== undefined && Number( draft.page ) !== expectedPage ) {
 				return false;
 			}
-			const currentSet = this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) || '' :
-				'';
-			if ( draft.setName !== undefined && String( draft.setName ) !== currentSet ) {
+			if ( draft.setName !== undefined && String( draft.setName ) !== expectedSet ) {
+				return false;
+			}
+			if ( draft.filename !== undefined ) {
+				const normDraft = String( draft.filename ).replace( / /g, '_' );
+				const normExpected = String( expectedFilename ).replace( / /g, '_' );
+				if ( normDraft !== normExpected ) {
+					return false;
+				}
+			}
+			if ( draft.userScope !== undefined && String( draft.userScope ) !== this.userScope ) {
+				return false;
+			}
+			if ( draft.wikiScope !== undefined && String( draft.wikiScope ) !== this.wikiScope ) {
 				return false;
 			}
 			return true;
 		}
 
 		/**
+		 * Get information about any ambiguous legacy draft record preserved during load.
+		 *
+		 * @return {Object|null} Ambiguous record info or null
+		 */
+		getAmbiguousLegacyRecord() {
+			return this.ambiguousLegacyRecord;
+		}
+
+		/**
 		 * Check if a recoverable draft exists
 		 *
+		 * @param {Object|number} [options] Context options
 		 * @return {boolean} True if a valid draft exists
 		 */
-		hasDraft() {
-			const draft = this.loadDraft();
+		hasDraft( options ) {
+			const draft = this.loadDraft( options );
 			return draft !== null && draft.layers && draft.layers.length > 0;
 		}
 
 		/**
 		 * Get draft info for display
 		 *
+		 * @param {Object|number} [options] Context options
 		 * @return {Object|null} Draft info or null
 		 */
-		getDraftInfo() {
-			const draft = this.loadDraft();
+		getDraftInfo( options ) {
+			const draft = this.loadDraft( options );
 			if ( !draft ) {
 				return null;
 			}
@@ -546,7 +836,11 @@
 		 */
 		captureDraft( options ) {
 			try {
-				return localStorage.getItem( this.getStorageKey( options ) );
+				const v2Val = localStorage.getItem( this.getStorageKey( options ) );
+				if ( v2Val !== null ) {
+					return v2Val;
+				}
+				return localStorage.getItem( this.getLegacyStorageKey( options ) );
 			} catch ( e ) {
 				return undefined;
 			}
@@ -569,14 +863,17 @@
 
 			try {
 				const targetKey = this.getStorageKey( options );
-				if ( options && Object.prototype.hasOwnProperty.call( options, 'expectedDraft' ) &&
-					( options.expectedDraft === undefined ||
-						localStorage.getItem( targetKey ) !== options.expectedDraft ) ) {
-					return;
+				const legacyKey = this.getLegacyStorageKey( options );
+
+				if ( options && Object.prototype.hasOwnProperty.call( options, 'expectedDraft' ) ) {
+					const actual = localStorage.getItem( targetKey ) ?? localStorage.getItem( legacyKey );
+					if ( options.expectedDraft === undefined || actual !== options.expectedDraft ) {
+						return;
+					}
 				}
 
 				if ( options && typeof options === 'object' && typeof options.maxTimestamp === 'number' ) {
-					const existing = localStorage.getItem( targetKey );
+					const existing = localStorage.getItem( targetKey ) ?? localStorage.getItem( legacyKey );
 					if ( existing ) {
 						try {
 							const parsed = JSON.parse( existing );
@@ -595,6 +892,45 @@
 				}
 
 				localStorage.removeItem( targetKey );
+
+				// Clean matching legacy key if present (do not delete ambiguous or mismatched records)
+				const legacyItem = localStorage.getItem( legacyKey );
+				if ( legacyItem ) {
+					try {
+						const parsedLegacy = JSON.parse( legacyItem );
+						if ( parsedLegacy && parsedLegacy.filename !== undefined && parsedLegacy.setName !== undefined ) {
+							let targetFilename = this.filename;
+							let targetSetName = ( this.editor && this.editor.stateManager ) ?
+								this.editor.stateManager.get( 'currentSetName' ) || '' : '';
+							let targetPage = ( this.editor && this.editor.page !== undefined ) ?
+								Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ) : 1;
+
+							if ( typeof options === 'number' ) {
+								targetPage = Math.max( 1, parseInt( options, 10 ) || 1 );
+							} else if ( options && typeof options === 'object' ) {
+								if ( options.filename !== undefined ) {
+									targetFilename = options.filename;
+								}
+								if ( options.setName !== undefined ) {
+									targetSetName = options.setName;
+								}
+								if ( options.page !== undefined ) {
+									targetPage = Math.max( 1, parseInt( options.page, 10 ) || 1 );
+								}
+							}
+
+							if ( parsedLegacy.filename === targetFilename &&
+								parsedLegacy.setName === targetSetName &&
+								( parsedLegacy.page === undefined || Number( parsedLegacy.page ) === targetPage )
+							) {
+								localStorage.removeItem( legacyKey );
+							}
+						}
+					} catch ( e ) {
+						localStorage.removeItem( legacyKey );
+					}
+				}
+
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[DraftManager] Draft cleared for key:', targetKey );
 				}
@@ -789,6 +1125,7 @@
 			// Clear references to allow GC
 			this.editor = null;
 			this.filename = null;
+			this.ambiguousLegacyRecord = null;
 		}
 	}
 

@@ -10,7 +10,7 @@ See [Current status](CURRENT_STATUS.md) for tested revisions, upgrade notes and 
 | Search | Text inside slides/images/PDF annotations is not explicitly indexed by MediaWiki; name filters are different |
 | Cargo | Current support selects gallery layer sets; annotation tables and linked fields are proposals |
 | Set naming | R6.09/R6.17 save targeting and configured seeds corrected. Remaining rename/delete identifier consistency is tracked as J17; malformed explicit saves now fail instead of redirecting |
-| Drafts (R6.10) | Buffered cleanup and save races corrected, but legacy draft keys can collide across set/page identities. J16 remains open; inspect offered recovery data |
+| Drafts (R6.10) | Unambiguous versioned injective draft keys (v2) implemented in J16 with safe legacy migration, user/wiki sweep scoping, and quota protection. Foreground save lifecycle audit documented for L01/J08 |
 | Exports (R6.11–12) | Failed pages/overlays may be omitted; server rendering does not reproduce all background, rich-text and rotation settings. Compare exported output with the viewer |
 | Foreign files (R6.13) | A missing local File page can prevent backlink cache purges; refresh affected pages if overlays remain stale |
 | Slide rate limiting (R6.14) | Corrected on review branch: new slides/named slide sets use the creation bucket; existing updates retain save limits |
