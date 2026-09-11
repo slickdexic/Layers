@@ -577,8 +577,8 @@
 					}
 				}
 
-				// Check 1: Was this switch request superseded by a newer switch?
-				if ( switchId !== this._switchGeneration || ( loadResult && loadResult.superseded ) ) {
+				// Check 1: Was this switch request superseded by a newer switch generation?
+				if ( switchId !== this._switchGeneration ) {
 					this.debugLog( 'Discarding load result for ' + targetSetName + ' because switch was superseded' );
 					return {
 						status: 'failed',
@@ -606,6 +606,18 @@
 						success: false,
 						failed: true,
 						reason: 'newer_edits',
+						setName: targetSetName
+					};
+				}
+
+				// Check 3: Did APIManager indicate the result was superseded?
+				if ( loadResult && loadResult.superseded ) {
+					this.debugLog( 'Discarding load result for ' + targetSetName + ' because switch was superseded' );
+					return {
+						status: 'failed',
+						success: false,
+						failed: true,
+						reason: 'superseded',
 						setName: targetSetName
 					};
 				}
