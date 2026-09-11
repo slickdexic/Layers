@@ -1203,6 +1203,14 @@
 				"layers-legacy-draft-import",
 				"layers-legacy-draft-close",
 				"layers-legacy-draft-imported",
+				"layers-legacy-draft-dest-title",
+				"layers-legacy-draft-dest-changed",
+				"layers-legacy-draft-replace-title",
+				"layers-legacy-draft-replace-confirm",
+				"layers-legacy-draft-replace-proceed",
+				"layers-legacy-draft-validation-failed",
+				"layers-legacy-draft-exported",
+				"layers-legacy-draft-export-failed",
 				"layers-switch-newer-edits-preserved"
 			]
 		},

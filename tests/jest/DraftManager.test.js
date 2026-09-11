@@ -2978,5 +2978,650 @@ describe( 'DraftManager', function () {
 				} );
 			} );
 		} );
+
+		describe( 'J22 manual recovery destination and failure behavior', function () {
+			beforeEach( function () {
+				document.body.innerHTML = '';
+				if ( !window.URL ) {
+					window.URL = {};
+				}
+				window.URL.createObjectURL = jest.fn( function () {
+					return 'blob:mock-url';
+				} );
+				window.URL.revokeObjectURL = jest.fn();
+				global.mw.notify = jest.fn();
+			} );
+
+			afterEach( function () {
+				document.body.innerHTML = '';
+			} );
+
+			describe( 'destination capture and display', function () {
+				it( 'captures and displays destination wiki, file, set, and page in dialog', function () {
+					const editor = {
+						filename: 'Sample_Image.png',
+						page: 2,
+						wikiScope: 'testwiki:/w',
+						userScope: 'u42',
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'annot-set-B' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( {
+						filename: 'Old_Asset.png',
+						setName: 'old-set',
+						page: 1,
+						layers: [ { id: 'l1', type: 'rectangle' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const destSection = document.querySelector( '.layers-legacy-destination' );
+					expect( destSection ).not.toBeNull();
+
+					expect( destSection.querySelector( '.layers-legacy-dest-wiki' ).textContent ).toBe( 'testwiki:/w' );
+					expect( destSection.querySelector( '.layers-legacy-dest-file' ).textContent ).toBe( 'Sample_Image.png' );
+					expect( destSection.querySelector( '.layers-legacy-dest-set' ).textContent ).toBe( 'annot-set-B' );
+					expect( destSection.querySelector( '.layers-legacy-dest-page' ).textContent ).toBe( '2' );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'supports image, PDF page, and slide contexts uniformly in destination', function () {
+					// 1. Slide context without filename property, using slideId
+					const slideEditor = {
+						slideId: 'presentation-slide-7',
+						page: 7,
+						wikiScope: 'slidewiki',
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'slide-layer-1' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					const dmSlide = new DraftManager( slideEditor );
+					const raw = JSON.stringify( { layers: [ { id: 's1', type: 'text' } ] } );
+					const recordSlide = dmSlide.recordLegacyDraft( 'layers-draft-slide', raw );
+					dmSlide.showLegacyRecoveryDialog( recordSlide );
+
+					expect( document.querySelector( '.layers-legacy-dest-file' ).textContent ).toBe( 'presentation-slide-7' );
+					expect( document.querySelector( '.layers-legacy-dest-page' ).textContent ).toBe( '7' );
+					expect( document.querySelector( '.layers-legacy-dest-set' ).textContent ).toBe( 'slide-layer-1' );
+
+					dmSlide.closeLegacyRecoveryDialog();
+					dmSlide.destroy();
+
+					// 2. PDF context with page 12
+					const pdfEditor = {
+						filename: 'Document.pdf',
+						page: 12,
+						wikiScope: 'pdfwiki',
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'review-set' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					const dmPdf = new DraftManager( pdfEditor );
+					const recordPdf = dmPdf.recordLegacyDraft( 'layers-draft-pdf', raw );
+					dmPdf.showLegacyRecoveryDialog( recordPdf );
+
+					expect( document.querySelector( '.layers-legacy-dest-file' ).textContent ).toBe( 'Document.pdf' );
+					expect( document.querySelector( '.layers-legacy-dest-page' ).textContent ).toBe( '12' );
+					expect( document.querySelector( '.layers-legacy-dest-set' ).textContent ).toBe( 'review-set' );
+
+					dmPdf.closeLegacyRecoveryDialog();
+					dmPdf.destroy();
+				} );
+			} );
+
+			describe( 'destination change rejection guard', function () {
+				it( 'rejects import and notifies error if destination page changes while dialog is open', async function () {
+					let currentPage = 1;
+					const editor = {
+						filename: 'MultiPage.pdf',
+						get page() { return currentPage; },
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( { editor } );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					// User or system switches page in background while dialog is still open
+					currentPage = 2;
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					importBtn.click();
+
+					// Destination guard must reject and notify error
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-dest-changed',
+						{ type: 'error' }
+					);
+
+					// Dialog must stay open so user can review/export
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+
+					// State must NOT be updated with recovered layers
+					expect( editor.stateManager.update ).not.toHaveBeenCalled();
+
+					// Legacy record must be preserved in storage
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'rejects import and notifies error if destination set changes while dialog is open', async function () {
+					let currentSet = 'set-A';
+					const editor = {
+						filename: 'Image.png',
+						page: 1,
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? currentSet : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( { editor } );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					// Set changes while dialog is open
+					currentSet = 'set-B';
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					importBtn.click();
+
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-dest-changed',
+						{ type: 'error' }
+					);
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+					expect( editor.stateManager.update ).not.toHaveBeenCalled();
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'allows import after reopening dialog with new destination', function () {
+					let currentSet = 'set-A';
+					const editor = {
+						filename: 'Image.png',
+						page: 1,
+						saveState: jest.fn(),
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? currentSet : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					// Destination changes
+					currentSet = 'set-B';
+					document.querySelector( '.layers-legacy-import-btn' ).click();
+					expect( global.mw.notify ).toHaveBeenCalledWith( 'layers-legacy-draft-dest-changed', { type: 'error' } );
+
+					// User closes dialog and reopens it
+					dm.closeLegacyRecoveryDialog();
+					dm.showLegacyRecoveryDialog( record );
+
+					// Destination in dialog is now updated to set-B
+					expect( document.querySelector( '.layers-legacy-dest-set' ).textContent ).toBe( 'set-B' );
+
+					// Clicking import now succeeds
+					document.querySelector( '.layers-legacy-import-btn' ).click();
+					expect( editor.stateManager.update ).toHaveBeenCalled();
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).toBeNull();
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'unsaved changes confirmation guard', function () {
+				it( 'prompts confirmation before replacing when editor has unsaved changes and cancels safely', async function () {
+					const hasUnsavedChangesMock = jest.fn( () => true );
+					const showConfirmDialogMock = jest.fn( () => Promise.resolve( false ) ); // User cancels
+					const editor = {
+						filename: 'Image.png',
+						hasUnsavedChanges: hasUnsavedChangesMock,
+						dialogManager: {
+							showConfirmDialog: showConfirmDialogMock
+						},
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					importBtn.click();
+
+					// Wait for promise resolution
+					await Promise.resolve();
+
+					// Confirmation dialog was shown
+					expect( showConfirmDialogMock ).toHaveBeenCalledWith( expect.objectContaining( {
+						title: 'layers-legacy-draft-replace-title',
+						message: 'layers-legacy-draft-replace-confirm',
+						confirmText: 'layers-legacy-draft-replace-proceed',
+						cancelText: 'layers-cancel',
+						isDanger: true
+					} ) );
+
+					// Because user cancelled, state is NOT updated
+					expect( editor.stateManager.update ).not.toHaveBeenCalled();
+
+					// Recovery dialog stays open
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+
+					// Legacy record in storage remains preserved
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'proceeds with import and records history when unsaved changes replacement is confirmed', async function () {
+					const showConfirmDialogMock = jest.fn( () => Promise.resolve( true ) ); // User confirms
+					const saveStateMock = jest.fn();
+					const editor = {
+						filename: 'Image.png',
+						hasUnsavedChanges: () => true,
+						saveState: saveStateMock,
+						dialogManager: {
+							showConfirmDialog: showConfirmDialogMock
+						},
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					importBtn.click();
+
+					await Promise.resolve();
+					await Promise.resolve();
+
+					expect( showConfirmDialogMock ).toHaveBeenCalled();
+					expect( editor.stateManager.update ).toHaveBeenCalled();
+					expect( saveStateMock ).toHaveBeenCalledWith( 'Recover legacy draft' );
+
+					// Dialog is closed after successful import
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).toBeNull();
+
+					// Legacy record is STILL preserved in storage
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.destroy();
+				} );
+
+				it( 'imports directly without confirmation prompt when editor has no unsaved changes', function () {
+					const showConfirmDialogMock = jest.fn();
+					const saveStateMock = jest.fn();
+					const editor = {
+						filename: 'Image.png',
+						hasUnsavedChanges: () => false,
+						saveState: saveStateMock,
+						dialogManager: {
+							showConfirmDialog: showConfirmDialogMock
+						},
+						stateManager: {
+							get: jest.fn( ( key ) => {
+								if ( key === 'currentSetName' ) { return 'default'; }
+								if ( key === 'isDirty' ) { return false; }
+								return null;
+							} ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					importBtn.click();
+
+					// Confirmation was NOT needed
+					expect( showConfirmDialogMock ).not.toHaveBeenCalled();
+
+					// Import proceeded directly
+					expect( editor.stateManager.update ).toHaveBeenCalled();
+					expect( saveStateMock ).toHaveBeenCalledWith( 'Recover legacy draft' );
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'editor history integration', function () {
+				it( 'calls editor.saveState("Recover legacy draft") exactly once on recovery', function () {
+					const saveStateMock = jest.fn();
+					const editor = {
+						filename: 'Image.png',
+						saveState: saveStateMock,
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'circle' } ] } );
+					const record = dm.recordLegacyDraft( dm.getLegacyStorageKey(), raw );
+
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( true );
+					expect( saveStateMock ).toHaveBeenCalledTimes( 1 );
+					expect( saveStateMock ).toHaveBeenCalledWith( 'Recover legacy draft' );
+
+					dm.destroy();
+				} );
+
+				it( 'delegates to historyManager.saveState when editor.saveState is not directly defined', function () {
+					const historySaveStateMock = jest.fn();
+					const editor = {
+						filename: 'Image.png',
+						historyManager: {
+							saveState: historySaveStateMock
+						},
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'circle' } ] } );
+					const record = dm.recordLegacyDraft( dm.getLegacyStorageKey(), raw );
+
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( true );
+					expect( historySaveStateMock ).toHaveBeenCalledTimes( 1 );
+					expect( historySaveStateMock ).toHaveBeenCalledWith( 'Recover legacy draft' );
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'validation failure notifications and dialog preservation', function () {
+				it( 'notifies localized validation failure when parseLayersJSON throws', function () {
+					const editor = {
+						filename: 'Image.png',
+						saveState: jest.fn(),
+						importExportManager: {
+							parseLayersJSON: jest.fn( () => { throw new Error( 'Corrupt layer syntax' ); } )
+						},
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'corrupt' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( false );
+
+					// Localized notification
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-validation-failed',
+						{ type: 'error' }
+					);
+
+					// Dialog must remain open
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+
+					// State and history untouched
+					expect( editor.stateManager.update ).not.toHaveBeenCalled();
+					expect( editor.saveState ).not.toHaveBeenCalled();
+
+					// Record untouched
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'notifies validation failure when importExportManager is missing', function () {
+					const editor = {
+						filename: 'Image.png',
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+						// No importExportManager
+					};
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1', type: 'rectangle' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( false );
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-validation-failed',
+						{ type: 'error' }
+					);
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.destroy();
+				} );
+
+				it( 'notifies validation failure when layer count exceeds limit', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( ( key ) => key === 'wgLayersMaxLayerCount' ? 2 : false );
+
+					const editor = {
+						filename: 'Image.png',
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					// 3 layers with max limit 2
+					const raw = JSON.stringify( { layers: [ { id: '1' }, { id: '2' }, { id: '3' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( false );
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-validation-failed',
+						{ type: 'error' }
+					);
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.destroy();
+					mw.config.get = origMwConfigGet;
+				} );
+			} );
+
+			describe( 'export failure handling', function () {
+				it( 'notifies error and returns false when URL.createObjectURL throws', function () {
+					window.URL.createObjectURL = jest.fn( () => {
+						throw new Error( 'Blob URL allocation failed' );
+					} );
+
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const exportBtn = document.querySelector( '.layers-legacy-export-btn' );
+					exportBtn.click();
+
+					// Error notification
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-export-failed',
+						{ type: 'error' }
+					);
+
+					// Never reports success
+					expect( global.mw.notify ).not.toHaveBeenCalledWith(
+						'layers-legacy-draft-exported',
+						expect.anything()
+					);
+
+					// Storage preserved
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+
+				it( 'notifies success and leaves storage intact when export succeeds', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'l1' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const exportBtn = document.querySelector( '.layers-legacy-export-btn' );
+					exportBtn.click();
+
+					expect( global.mw.notify ).toHaveBeenCalledWith(
+						'layers-legacy-draft-exported',
+						{ type: 'success' }
+					);
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'storage immutability invariant', function () {
+				it( 'never deletes or mutates legacy record under success, validation error, dest rejection, cancel, or export', async function () {
+					const editor = {
+						filename: 'Image.png',
+						page: 1,
+						saveState: jest.fn(),
+						hasUnsavedChanges: () => false,
+						stateManager: {
+							get: jest.fn( ( key ) => key === 'currentSetName' ? 'default' : null ),
+							update: jest.fn(),
+							subscribe: jest.fn( () => jest.fn() )
+						}
+					};
+					editor.importExportManager = new ( require( '../../resources/ext.layers.editor/ImportExportManager.js' ) )( editor );
+
+					const dm = new DraftManager( editor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const initialRaw = JSON.stringify( {
+						filename: 'Old.png',
+						setName: 'old',
+						page: 1,
+						layers: [ { id: 'l1', type: 'rectangle' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = initialRaw;
+
+					const record = dm.recordLegacyDraft( legacyKey, initialRaw );
+
+					// 1. Export
+					dm.exportLegacyRecord( record );
+					expect( mockLocalStorage[ legacyKey ] ).toBe( initialRaw );
+
+					// 2. Failed validation
+					const corruptRecord = { isMalformed: true, raw: 'corrupt' };
+					dm.importLegacyRecord( corruptRecord );
+					expect( mockLocalStorage[ legacyKey ] ).toBe( initialRaw );
+
+					// 3. Successful recovery
+					const success = dm.importLegacyRecord( record );
+					expect( success ).toBe( true );
+					expect( mockLocalStorage[ legacyKey ] ).toBe( initialRaw );
+
+					dm.destroy();
+				} );
+			} );
+		} );
 	} );
 } );

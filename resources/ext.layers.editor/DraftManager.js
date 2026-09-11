@@ -1252,6 +1252,62 @@
 		}
 
 		/**
+		 * Show a confirmation dialog via DialogManager or UIManager or fallback.
+		 *
+		 * @param {Object} options Dialog options { title, message, confirmText, cancelText, isDanger }
+		 * @return {Promise<boolean>} Resolves to true if confirmed
+		 */
+		showConfirmDialog( options ) {
+			if ( this.editor && this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
+				return this.editor.dialogManager.showConfirmDialog( options );
+			}
+			if ( this.editor && this.editor.uiManager && typeof this.editor.uiManager.showConfirmDialog === 'function' ) {
+				return this.editor.uiManager.showConfirmDialog( options );
+			}
+			return new Promise( ( resolve ) => {
+				if ( typeof window !== 'undefined' && typeof window.confirm === 'function' ) {
+					resolve( window.confirm( ( options && options.message ) || '' ) );
+				} else {
+					resolve( false );
+				}
+			} );
+		}
+
+		/**
+		 * Get the current editor destination context.
+		 * Supports image, PDF page, and slide contexts uniformly.
+		 *
+		 * @return {{wiki: string, file: string, set: string, page: number}}
+		 */
+		getDestinationContext() {
+			const wiki = this.wikiScope || DraftManager.getWikiScope();
+			const file = this.filename || ( this.editor && ( this.editor.filename || this.editor.title || this.editor.slideId ) ) || '';
+			const set = ( this.editor && this.editor.stateManager ) ?
+				( this.editor.stateManager.get( 'currentSetName' ) || '' ) : '';
+			const page = ( this.editor && this.editor.page !== undefined ) ?
+				this.editor.page : 1;
+			return { wiki, file, set, page };
+		}
+
+		/**
+		 * Check if the editor destination has remained unchanged since recovery opened.
+		 *
+		 * @return {boolean} True if destination matches captured destination
+		 */
+		isDestinationValid() {
+			if ( !this._recoveryDestination ) {
+				return false;
+			}
+			const current = this.getDestinationContext();
+			return (
+				this._recoveryDestination.wiki === current.wiki &&
+				this._recoveryDestination.file === current.file &&
+				this._recoveryDestination.set === current.set &&
+				this._recoveryDestination.page === current.page
+			);
+		}
+
+		/**
 		 * Show the explicit local export & recovery dialog for preserved legacy draft.
 		 *
 		 * @param {Object} [record] Legacy record
@@ -1268,6 +1324,9 @@
 			if ( typeof document === 'undefined' || !document.createElement ) {
 				return null;
 			}
+
+			// Capture destination context at dialog open time
+			this._recoveryDestination = this.getDestinationContext();
 
 			// Capture focus origin
 			if ( document.activeElement &&
@@ -1394,6 +1453,66 @@
 
 			dialog.appendChild( metaContainer );
 
+			// Destination container (escaped text via textContent only)
+			const destContainer = document.createElement( 'div' );
+			destContainer.className = 'layers-legacy-destination';
+
+			const destTitle = document.createElement( 'div' );
+			destTitle.className = 'layers-legacy-dest-title';
+			const destTitleStrong = document.createElement( 'strong' );
+			destTitleStrong.textContent = this.getMessage(
+				'layers-legacy-draft-dest-title',
+				'Destination Target (Current Editor Session):'
+			);
+			destTitle.appendChild( destTitleStrong );
+			destContainer.appendChild( destTitle );
+
+			const destWiki = document.createElement( 'div' );
+			destWiki.className = 'layers-legacy-dest-row';
+			const destWikiLabel = document.createElement( 'strong' );
+			destWikiLabel.textContent = 'Wiki: ';
+			destWiki.appendChild( destWikiLabel );
+			const destWikiVal = document.createElement( 'span' );
+			destWikiVal.className = 'layers-legacy-dest-wiki';
+			destWikiVal.textContent = String( this._recoveryDestination.wiki || 'Unknown' );
+			destWiki.appendChild( destWikiVal );
+			destContainer.appendChild( destWiki );
+
+			const destFile = document.createElement( 'div' );
+			destFile.className = 'layers-legacy-dest-row';
+			const destFileLabel = document.createElement( 'strong' );
+			destFileLabel.textContent = 'File: ';
+			destFile.appendChild( destFileLabel );
+			const destFileVal = document.createElement( 'span' );
+			destFileVal.className = 'layers-legacy-dest-file';
+			destFileVal.textContent = String( this._recoveryDestination.file || 'Unknown' );
+			destFile.appendChild( destFileVal );
+			destContainer.appendChild( destFile );
+
+			const destSet = document.createElement( 'div' );
+			destSet.className = 'layers-legacy-dest-row';
+			const destSetLabel = document.createElement( 'strong' );
+			destSetLabel.textContent = 'Set: ';
+			destSet.appendChild( destSetLabel );
+			const destSetVal = document.createElement( 'span' );
+			destSetVal.className = 'layers-legacy-dest-set';
+			destSetVal.textContent = String( this._recoveryDestination.set || 'default' );
+			destSet.appendChild( destSetVal );
+			destContainer.appendChild( destSet );
+
+			const destPage = document.createElement( 'div' );
+			destPage.className = 'layers-legacy-dest-row';
+			const destPageLabel = document.createElement( 'strong' );
+			destPageLabel.textContent = 'Page: ';
+			destPage.appendChild( destPageLabel );
+			const destPageVal = document.createElement( 'span' );
+			destPageVal.className = 'layers-legacy-dest-page';
+			destPageVal.textContent = String( this._recoveryDestination.page );
+			destPage.appendChild( destPageVal );
+			destContainer.appendChild( destPage );
+
+			dialog.appendChild( destContainer );
+
 			// Actions
 			const actions = document.createElement( 'div' );
 			actions.className = 'layers-modal-buttons layers-legacy-dialog-actions';
@@ -1406,7 +1525,28 @@
 				'Export Original (JSON)'
 			);
 			exportBtn.addEventListener( 'click', () => {
-				this.exportLegacyRecord( rec );
+				const success = this.exportLegacyRecord( rec );
+				if ( success ) {
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							this.getMessage(
+								'layers-legacy-draft-exported',
+								'Legacy draft exported as JSON.'
+							),
+							{ type: 'success' }
+						);
+					}
+				} else {
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							this.getMessage(
+								'layers-legacy-draft-export-failed',
+								'Failed to export legacy draft.'
+							),
+							{ type: 'error' }
+						);
+					}
+				}
 			} );
 			actions.appendChild( exportBtn );
 
@@ -1423,7 +1563,42 @@
 				importBtn.disabled = true;
 				importBtn.setAttribute( 'aria-disabled', 'true' );
 			} else {
-				importBtn.addEventListener( 'click', () => {
+				importBtn.addEventListener( 'click', async () => {
+					// 1. Destination change guard: reject if destination changed
+					if ( !this.isDestinationValid() ) {
+						if ( typeof mw !== 'undefined' && mw.notify ) {
+							mw.notify(
+								this.getMessage(
+									'layers-legacy-draft-dest-changed',
+									'Editor destination has changed since opening recovery. Please reopen recovery to verify the destination.'
+								),
+								{ type: 'error' }
+							);
+						}
+						return;
+					}
+
+					// 2. Unsaved work guard: prompt confirmation if editor has unsaved changes
+					const isDirty = ( this.editor && typeof this.editor.hasUnsavedChanges === 'function' && this.editor.hasUnsavedChanges() ) ||
+						( this.editor && this.editor.stateManager && this.editor.stateManager.get( 'isDirty' ) );
+
+					if ( isDirty ) {
+						const confirmed = await this.showConfirmDialog( {
+							title: this.getMessage( 'layers-legacy-draft-replace-title', 'Replace Unsaved Changes?' ),
+							message: this.getMessage(
+								'layers-legacy-draft-replace-confirm',
+								'You have unsaved changes. Recovering this draft will replace your current unsaved edits. Do you want to continue?'
+							),
+							confirmText: this.getMessage( 'layers-legacy-draft-replace-proceed', 'Replace and Recover' ),
+							cancelText: this.getMessage( 'layers-cancel', 'Cancel' ),
+							isDanger: true
+						} );
+						if ( !confirmed ) {
+							return;
+						}
+					}
+
+					// 3. Import record
 					if ( this.importLegacyRecord( rec ) ) {
 						this.closeLegacyRecoveryDialog();
 						this.dismissLegacyNotice();
@@ -1458,7 +1633,7 @@
 						if ( e.shiftKey && document.activeElement === first ) {
 							e.preventDefault();
 							last.focus();
-						} else if ( !e.shiftKey && document.activeElement === last ) {
+						} else if (!e.shiftKey && document.activeElement === last ) {
 							e.preventDefault();
 							first.focus();
 						}
@@ -1500,6 +1675,7 @@
 			}
 			this.legacyOverlayElement = null;
 			this.legacyDialogElement = null;
+			this._recoveryDestination = null;
 
 			if ( this.previousDialogFocus && typeof this.previousDialogFocus.focus === 'function' ) {
 				if ( typeof document !== 'undefined' && document.body && document.body.contains( this.previousDialogFocus ) ) {
@@ -1564,20 +1740,33 @@
 
 		/**
 		 * Manually import a legacy draft record into the current active editor set.
-		 * Validates layers, marks editor dirty, updates canvas and panel,
-		 * and never auto-publishes or removes the legacy record.
+		 * Validates layers via shared parser, marks editor dirty, records in history,
+		 * updates canvas and panel, and never auto-publishes or removes the legacy record.
 		 *
 		 * @param {Object} record Legacy draft record
 		 * @return {boolean} True if imported successfully
 		 */
 		importLegacyRecord( record ) {
+			const notifyValidationFailure = () => {
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.getMessage(
+							'layers-legacy-draft-validation-failed',
+							'Draft validation failed. The draft could not be imported.'
+						),
+						{ type: 'error' }
+					);
+				}
+			};
+
 			if ( !record || record.isMalformed || !record.draft || !Array.isArray( record.draft.layers ) ) {
+				notifyValidationFailure();
 				return false;
 			}
 
 			let layersToImport = null;
 
-			// Boundary validation: Use ImportExportManager if available
+			// Boundary validation: Require real ImportExportManager parser
 			if ( this.editor && this.editor.importExportManager &&
 				typeof this.editor.importExportManager.parseLayersJSON === 'function' &&
 				typeof record.raw === 'string'
@@ -1589,12 +1778,9 @@
 				}
 			}
 
-			// Validation failure is final. Keep the original record exportable.
-			if ( !layersToImport ) {
-				return false;
-			}
-
-			if ( !Array.isArray( layersToImport ) || layersToImport.length === 0 ) {
+			// Validation failure is final. Show localized notification and keep record exportable.
+			if ( !layersToImport || !Array.isArray( layersToImport ) || layersToImport.length === 0 ) {
+				notifyValidationFailure();
 				return false;
 			}
 
@@ -1625,6 +1811,15 @@
 					this.editor.layerPanel.updateLayers( layersToImport );
 				}
 
+				// Integrate with existing history manager so recovery is undoable without state duplication
+				if ( this.editor && typeof this.editor.saveState === 'function' ) {
+					this.editor.saveState( 'Recover legacy draft' );
+				} else if ( this.editor && this.editor.historyManager &&
+					typeof this.editor.historyManager.saveState === 'function'
+				) {
+					this.editor.historyManager.saveState( 'Recover legacy draft' );
+				}
+
 				if ( typeof mw !== 'undefined' && mw.notify ) {
 					mw.notify(
 						this.getMessage(
@@ -1640,6 +1835,7 @@
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 					mw.log.error( '[DraftManager] Failed to import legacy draft:', e.message );
 				}
+				notifyValidationFailure();
 				return false;
 			} finally {
 				this.isRecoveryMode = false;
