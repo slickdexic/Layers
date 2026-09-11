@@ -1112,14 +1112,38 @@ class LayersEditor {
 
 	/**
 	 * Load a layer set by name
+	/**
+	 * Load a layer set by its name (authoritative switch operation)
 	 *
 	 * @param {string} setName The name of the set to load
-	 * @return {Promise<void>}
+	 * @param {Object} [options] Switch options
+	 * @return {Promise<Object>}
 	 */
-	async loadLayerSetByName( setName ) {
-		if ( this.revisionManager ) {
-			return this.revisionManager.loadLayerSetByName( setName );
+	async loadLayerSetByName( setName, options ) {
+		if ( this.layerSetManager && typeof this.layerSetManager.loadLayerSetByName === 'function' ) {
+			return this.layerSetManager.loadLayerSetByName( setName, options );
 		}
+		if ( this.revisionManager && typeof this.revisionManager.loadLayerSetByName === 'function' ) {
+			return this.revisionManager.loadLayerSetByName( setName, options );
+		}
+		return {
+			status: 'failed',
+			success: false,
+			failed: true,
+			reason: 'no_manager',
+			setName: setName || ''
+		};
+	}
+
+	/**
+	 * Switch layer set (alias for loadLayerSetByName)
+	 *
+	 * @param {string} setName The name of the set to load
+	 * @param {Object} [options] Switch options
+	 * @return {Promise<Object>}
+	 */
+	async switchLayerSet( setName, options ) {
+		return this.loadLayerSetByName( setName, options );
 	}
 
 	/**

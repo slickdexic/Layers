@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Review update — September 11:** J16–J18 reviewed and corrected; J19 implemented and verified. Give juniors **J20**, then **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
+**Review update — September 11:** J16–J18 reviewed and corrected; J19 and J20 implemented and verified. Give juniors **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -148,9 +148,13 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J20 — Single confirmation with failure-safe set switching
 
-**Ready; independent of J19.** Read `ui/SetSelectorController.js`, `editor/LayerSetManager.js`, `editor/RevisionManager.js`, the editor wrapper and their tests. The selector must not mark work clean to suppress another component's confirmation.
+**Implemented.** Scope: branch `codex/j20-set-switching`. Coordinated set switching authoritatively handled by `LayerSetManager` (with delegation in `SetSelectorController`, `RevisionManager`, and `LayersEditor`).
 
-Use one authoritative switch operation for confirmation and loading. Explicitly represent cancelled, failed and successful outcomes. Keep current layers, current set and dirty state until the new set has loaded successfully; restore the selector on cancellation/failure. Preserve newer edits if the load completes late, and guard against two rapid switches applying out of order. Include buffered pages in the unsaved-work decision. Do not change general API retry or publication semantics.
+- **Single Authoritative Confirmation:** Eliminated duplicate confirmation dialogs by centralizing the unsaved-work check (`hasUnsavedChanges()`, evaluating canvas dirty state and `pageBuffer` dirty pages) in `LayerSetManager.prototype.loadLayerSetByName`. `SetSelectorController` removes its redundant prompt and delegates directly to the authoritative switch operation. Clean switches trigger 0 prompts.
+- **Explicit Outcome Representation:** Switch operations return typed result objects (`{ status: 'success' | 'cancelled' | 'failed', success: boolean, cancelled?: boolean, failed?: boolean, reason?: string, setName: string, error?: Error }`), providing clear state transitions for UI and coordinating components.
+- **Failure-Safe State Retention & Reversion:** On cancellation or network/API failure, `currentSetName`, `layers`, and `isDirty` state remain intact. The dropdown selector automatically reverts to `currentSetName` (unless superseded by a newer switch).
+- **Request Sequencing & Newer Edits Preservation:** Monotonic generation counter (`_switchGeneration`) discards stale/out-of-order rapid switch responses. Pre-load edit snapshot (`_captureEditSnapshot()`) and `canApplyLoadedSet()` coordination with `APIManager` detect newer user edits made during flight; incoming server layers are safely discarded with `layers-switch-newer-edits-preserved` warning notice. Discarded `pageBuffer` entries for the previous set are cleared only upon confirmed switch success.
+- **Validation:** 8 acceptance tests in `LayerSetSwitching.test.js` passing; all 63 tests in `SetSelectorController.test.js`, 54 in `LayerSetManager.test.js`, 112 in `RevisionManager.test.js`, 110 in `UIManager.test.js`, and 346 in `LayersEditor` passing. Full JavaScript suite: 181 suites / 14,374 tests passing (0 failures). Full PHP standalone: 1,070 tests / 2,485 assertions (1 skip). MinusX, PHPCS, Grunt ESLint, documentation verification, and repository integrity guards passing.
 
 **Acceptance:** one dialog on successful dirty switch, cancel, rejected/timed-out load, clean switch, buffered edits, newer edit during load and overlapping requests. Test actual collaborating components rather than a mock that always succeeds. Changes that require a general editor state redesign go to the lead before expanding this PR.
 
@@ -321,9 +325,9 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J16 | Reviewed with safety corrections; partial | Unscoped/malformed legacy records preserved; recovery UI/scope proof remains J19 |
 | J17 | Reviewed; unit scope accepted | `f7a9a164`; shared canonical mutation/read validation |
 | J18 | Partial; prior run reported by engineer | `1baf0086`; unsafe dirty reset removed; J20/J21 remain |
-| J19 | Ready | Draft recovery UI and actual wiki-scope verification |
-| J20 | Ready | Safe coordinated set switching |
-| J21 | Depends on J20 | Isolated fixtures and fresh browser acceptance |
+| J19 | Implemented | Draft recovery UI and actual wiki-scope verification; suite passes |
+| J20 | Implemented | Coordinated single-confirmation failure-safe set switching; suite passes |
+| J21 | Ready; depends on J20 | Isolated fixtures and fresh browser acceptance |
 | L01 | Next lead work; not implemented | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 

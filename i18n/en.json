@@ -627,6 +627,7 @@
 	"layers-revision-select-aria": "Select revision to load",
 	"layers-revision-load-aria": "Load selected revision",
 	"layers-switch-set-unsaved-confirm": "You have unsaved changes. Switch to another set without saving?",
+	"layers-switch-newer-edits-preserved": "Newer edits were preserved; set switch cancelled.",
 	"layers-security-violation": "Security violation detected in layer data",
 	"layers-invalid-layer-type": "Invalid layer type: $1",
 	"layers-invalid-coordinates": "Invalid coordinates detected in layer data",

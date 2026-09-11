@@ -1191,7 +1191,19 @@
 				"layers-type-blur",
 				"layers-folder-collapse",
 				"layers-folder-expand",
-				"layers-rename"
+				"layers-rename",
+				"layers-legacy-draft-notice",
+				"layers-legacy-draft-review",
+				"layers-legacy-draft-dismiss",
+				"layers-legacy-draft-dialog-title",
+				"layers-legacy-draft-dialog-desc",
+				"layers-legacy-draft-unscoped-warning",
+				"layers-legacy-draft-malformed",
+				"layers-legacy-draft-export",
+				"layers-legacy-draft-import",
+				"layers-legacy-draft-close",
+				"layers-legacy-draft-imported",
+				"layers-switch-newer-edits-preserved"
 			]
 		},
 		"ext.layers.shapeLibrary": {

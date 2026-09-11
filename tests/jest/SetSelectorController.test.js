@@ -96,8 +96,19 @@ describe( 'SetSelectorController', () => {
 
 		// Load the module
 		jest.resetModules();
+		require( '../../resources/ext.layers.editor/LayerSetManager.js' );
 		require( '../../resources/ext.layers.editor/ui/SetSelectorController.js' );
+		const LayerSetManager = global.window.Layers.Core.LayerSetManager;
 		SetSelectorController = global.window.Layers.UI.SetSelectorController;
+
+		const layerSetManager = new LayerSetManager( {
+			editor: mockEditor,
+			stateManager: mockStateManager,
+			apiManager: mockApiManager,
+			uiManager: mockUiManager
+		} );
+		mockEditor.layerSetManager = layerSetManager;
+		mockEditor.loadLayerSetByName = jest.fn( ( name, opts ) => layerSetManager.loadLayerSetByName( name, opts ) );
 
 		// Create controller
 		controller = new SetSelectorController( mockUiManager );

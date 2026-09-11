@@ -209,29 +209,28 @@
 					// Hide new set input
 					this.showNewSetInput( false );
 
-					// Load selected set
+					// Load selected set via authoritative switch operation
 					if ( selectedValue && this.editor.loadLayerSetByName ) {
-						// Check for unsaved changes
-						const isDirty = this.editor.stateManager ?
-							this.editor.stateManager.get( 'isDirty' ) : false;
+						try {
+							const result = await this.editor.loadLayerSetByName( selectedValue );
 
-						if ( isDirty ) {
-							const confirmed = await this.showConfirmDialog( {
-								message: this.getMessage( 'layers-switch-set-unsaved-confirm' ),
-								title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
-								confirmText: this.getMessage( 'layers-switch-anyway', 'Switch Anyway' ),
-								isDanger: true
-							} );
-							if ( !confirmed ) {
-								// Restore previous selection
-								const currentSet = this.editor.stateManager ?
-									this.editor.stateManager.get( 'currentSetName' ) : '';
-								this.setSelectEl.value = currentSet;
-								return;
+							// If switch was cancelled or failed (and not superseded), restore selection to active set
+							if ( result && ( result.status === 'cancelled' || result.status === 'failed' || result.cancelled || result.failed ) ) {
+								if ( result.reason !== 'superseded' ) {
+									const activeSet = this.editor.stateManager ?
+										this.editor.stateManager.get( 'currentSetName' ) : '';
+									if ( this.setSelectEl && activeSet !== undefined ) {
+										this.setSelectEl.value = activeSet;
+									}
+								}
+							}
+						} catch ( error ) {
+							const activeSet = this.editor.stateManager ?
+								this.editor.stateManager.get( 'currentSetName' ) : '';
+							if ( this.setSelectEl && activeSet !== undefined ) {
+								this.setSelectEl.value = activeSet;
 							}
 						}
-
-						this.editor.loadLayerSetByName( selectedValue );
 					}
 				}
 			} );

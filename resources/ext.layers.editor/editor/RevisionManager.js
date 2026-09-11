@@ -282,28 +282,43 @@
 		}
 
 		/**
-		 * Load a layer set by its name
+		/**
+		 * Load a layer set by its name (authoritative switch operation)
 		 * @param {string} setName The name of the set to load
-		 * @return {Promise<void>}
+		 * @param {Object} [options={}] Switch options
+		 * @return {Promise<Object>}
 		 */
-		async loadLayerSetByName( setName ) {
+		async loadLayerSetByName( setName, options ) {
+			const opts = options || {};
 			// Delegate to LayerSetManager if available
-			if ( this.editor.layerSetManager ) {
+			if ( this.editor && this.editor.layerSetManager && typeof this.editor.layerSetManager.loadLayerSetByName === 'function' ) {
+				if ( options !== undefined ) {
+					return this.editor.layerSetManager.loadLayerSetByName( setName, options );
+				}
 				return this.editor.layerSetManager.loadLayerSetByName( setName );
 			}
 
 			try {
-				if ( !setName ) {
+				if ( !setName || typeof setName !== 'string' || !setName.trim() ) {
 					if ( mw.log && mw.log.error ) {
 						mw.log.error( '[RevisionManager] loadLayerSetByName: No set name provided' );
 					}
-					return;
+					return {
+						status: 'failed',
+						success: false,
+						failed: true,
+						setName: setName || '',
+						reason: 'invalid_name',
+						error: new Error( 'No set name provided' )
+					};
 				}
 
+				const targetSetName = setName.trim();
+
 				// Check for unsaved changes before switching
-				if ( this.editor.hasUnsavedChanges() ) {
+				if ( !opts.skipConfirm && this.hasUnsavedChanges() ) {
 					let confirmSwitch = false;
-					if ( this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
+					if ( this.editor && this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
 						confirmSwitch = await this.editor.dialogManager.showConfirmDialog( {
 							title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
 							message: this.getMessage( 'layers-unsaved-changes-warning',
@@ -323,33 +338,70 @@
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.buildSetSelector();
-						return;
+						return {
+							status: 'cancelled',
+							success: false,
+							cancelled: true,
+							setName: targetSetName
+						};
 					}
 				}
 
-				this.debugLog( `Loading layer set: ${ setName }` );
+				this.debugLog( `Loading layer set: ${ targetSetName }` );
 
 				// Load the set via API
-				await this.apiManager.loadLayersBySetName( setName );
+				if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
+					await this.apiManager.loadLayersBySetName( targetSetName );
+				}
 
 				// Update current set name in state only after successful load
-				this.stateManager.set( 'currentSetName', setName );
+				if ( this.stateManager ) {
+					this.stateManager.set( 'currentSetName', targetSetName );
+				}
 
 				// Notify user
-				mw.notify(
-					this.getMessage( 'layers-set-loaded', `Loaded layer set: ${ setName }` )
-						.replace( '$1', setName ),
-					{ type: 'info' }
-				);
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.getMessage( 'layers-set-loaded', `Loaded layer set: ${ targetSetName }` )
+							.replace( '$1', targetSetName ),
+						{ type: 'info' }
+					);
+				}
+
+				return {
+					status: 'success',
+					success: true,
+					setName: targetSetName
+				};
 			} catch ( error ) {
 				if ( mw.log && mw.log.error ) {
 					mw.log.error( '[RevisionManager] Error loading layer set by name:', error );
 				}
-				mw.notify(
-					this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
-					{ type: 'error' }
-				);
+				this.buildSetSelector();
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
+						{ type: 'error' }
+					);
+				}
+				return {
+					status: 'failed',
+					success: false,
+					failed: true,
+					error: error,
+					setName: setName || ''
+				};
 			}
+		}
+
+		/**
+		 * Switch layer set (alias for loadLayerSetByName)
+		 * @param {string} setName The name of the set to load
+		 * @param {Object} [options] Switch options
+		 * @return {Promise<Object>}
+		 */
+		async switchLayerSet( setName, options ) {
+			return this.loadLayerSetByName( setName, options );
 		}
 
 		/**
@@ -488,7 +540,18 @@
 		 * @return {boolean}
 		 */
 		hasUnsavedChanges() {
-			return !!( this.stateManager && this.stateManager.get( 'isDirty' ) );
+			if ( this.stateManager && this.stateManager.get( 'isDirty' ) ) {
+				return true;
+			}
+			if ( this.editor && typeof this.editor.hasUnsavedChanges === 'function' ) {
+				return this.editor.hasUnsavedChanges();
+			}
+			if ( this.editor && this.editor.pageBuffer && typeof this.editor.pageBuffer.isEmpty === 'function' ) {
+				if ( !this.editor.pageBuffer.isEmpty() ) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		/**

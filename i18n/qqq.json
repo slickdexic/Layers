@@ -517,6 +517,7 @@
 	"layers-revision-select-aria": "ARIA label for the revision dropdown selector",
 	"layers-revision-load-aria": "ARIA label for the load revision button",
 	"layers-switch-set-unsaved-confirm": "Confirmation dialog when switching sets with unsaved changes",
+	"layers-switch-newer-edits-preserved": "Warning notification when newer edits made during a layer set load are preserved and the switch is cancelled",
 	"layers-security-violation": "Error shown when malicious or dangerous content is detected in layer data",
 	"layers-invalid-layer-type": "Error shown when an unsupported layer type is encountered. $1 is the invalid type name.",
 	"layers-invalid-coordinates": "Error shown when layer coordinate data is malformed or out of bounds",

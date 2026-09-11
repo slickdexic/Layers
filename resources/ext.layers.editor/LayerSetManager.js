@@ -167,6 +167,9 @@
 			if ( this.editor && this.editor.dialogManager ) {
 				return this.editor.dialogManager.showConfirmDialog( options );
 			}
+			if ( this.uiManager && typeof this.uiManager.showConfirmDialog === 'function' ) {
+				return this.uiManager.showConfirmDialog( options );
+			}
 			// Fallback to native confirm
 			// eslint-disable-next-line no-alert
 			return window.confirm( options.message );
@@ -357,19 +360,158 @@
 		}
 
 		/**
-		 * Load a layer set by its name
-		 * @param {string} setName The name of the set to load
-		 * @return {Promise<void>}
+		/**
+		 * Restore the set selector dropdown value across available UI controllers
+		 * @param {string} setName Set name to restore
 		 */
-		async loadLayerSetByName( setName ) {
+		restoreSelectorDropdown( setName ) {
+			if ( !setName ) {
+				return;
+			}
+			this.buildSetSelector();
+
+			const selectEl = ( this.uiManager && this.uiManager.setSelectEl ) ||
+				( this.editor && this.editor.uiManager && this.editor.uiManager.setSelectEl );
+			if ( selectEl ) {
+				selectEl.value = setName;
+			}
+
+			if ( this.editor && this.editor.uiManager && this.editor.uiManager.setSelectorController ) {
+				const ctrl = this.editor.uiManager.setSelectorController;
+				const ctrlEl = typeof ctrl.getSelectElement === 'function' ?
+					ctrl.getSelectElement() : ctrl.setSelectEl;
+				if ( ctrlEl ) {
+					ctrlEl.value = setName;
+				}
+			}
+		}
+
+		/**
+		 * Capture a snapshot of edit state to detect changes made during async operations
+		 * @private
+		 * @return {Object}
+		 */
+		_captureEditSnapshot() {
+			let layersVersion = null;
+			if ( this.stateManager && typeof this.stateManager.getLayersVersion === 'function' ) {
+				layersVersion = this.stateManager.getLayersVersion();
+			}
+
+			let historyLength = null;
+			let historyIndex = null;
+			if ( this.editor && this.editor.historyManager ) {
+				if ( Array.isArray( this.editor.historyManager.history ) ) {
+					historyLength = this.editor.historyManager.history.length;
+				}
+				if ( typeof this.editor.historyManager.historyIndex === 'number' ) {
+					historyIndex = this.editor.historyManager.historyIndex;
+				}
+			}
+
+			const isDirty = this.hasUnsavedChanges();
+			const layersFingerprint = this._getLayersFingerprint();
+
+			return {
+				layersVersion,
+				historyLength,
+				historyIndex,
+				isDirty,
+				layersFingerprint
+			};
+		}
+
+		/**
+		 * Get a lightweight fingerprint of current layers
+		 * @private
+		 * @return {string}
+		 */
+		_getLayersFingerprint() {
 			try {
-				if ( !setName ) {
+				const layers = ( this.stateManager && this.stateManager.get( 'layers' ) ) ||
+					( this.editor && this.editor.layers ) || [];
+				if ( !Array.isArray( layers ) ) {
+					return 'empty';
+				}
+				return layers.length + ':' + layers.map( ( l ) => ( l && l.id ) || '' ).join( ',' );
+			} catch ( e ) {
+				return 'error';
+			}
+		}
+
+		/**
+		 * Check whether newer edits occurred since a snapshot was taken
+		 * @private
+		 * @param {Object} startSnapshot
+		 * @return {boolean}
+		 */
+		_hasNewerEdits( startSnapshot ) {
+			if ( !startSnapshot ) {
+				return false;
+			}
+
+			// 1. If StateManager layersVersion changed
+			if ( this.stateManager && typeof this.stateManager.getLayersVersion === 'function' && startSnapshot.layersVersion !== null ) {
+				if ( this.stateManager.getLayersVersion() !== startSnapshot.layersVersion ) {
+					return true;
+				}
+			}
+
+			// 2. If HistoryManager recorded new steps
+			if ( this.editor && this.editor.historyManager ) {
+				const hm = this.editor.historyManager;
+				if ( Array.isArray( hm.history ) && startSnapshot.historyLength !== null ) {
+					if ( hm.history.length !== startSnapshot.historyLength ) {
+						return true;
+					}
+				}
+				if ( typeof hm.historyIndex === 'number' && startSnapshot.historyIndex !== null ) {
+					if ( hm.historyIndex !== startSnapshot.historyIndex ) {
+						return true;
+					}
+				}
+			}
+
+			// 3. If work was clean when load started, but became dirty during load
+			if ( !startSnapshot.isDirty && this.hasUnsavedChanges() ) {
+				return true;
+			}
+
+			// 4. Fingerprint check fallback
+			const currentFingerprint = this._getLayersFingerprint();
+			if ( startSnapshot.layersFingerprint && currentFingerprint !== startSnapshot.layersFingerprint ) {
+				return true;
+			}
+
+			return false;
+		}
+
+		/**
+		 * Load a layer set by its name (authoritative switch operation)
+		 *
+		 * @param {string} setName The name of the set to load
+		 * @param {Object} [options={}] Switch options
+		 * @param {boolean} [options.skipConfirm=false] Skip unsaved changes confirmation
+		 * @return {Promise<Object>} Outcome object { status: 'success'|'cancelled'|'failed', ... }
+		 */
+		async loadLayerSetByName( setName, options = {} ) {
+			try {
+				if ( !setName || typeof setName !== 'string' || !setName.trim() ) {
 					this.errorLog( 'loadLayerSetByName: No set name provided' );
-					return;
+					return {
+						status: 'failed',
+						success: false,
+						failed: true,
+						setName: setName || '',
+						reason: 'invalid_name',
+						error: new Error( 'No set name provided' )
+					};
 				}
 
-				// Check for unsaved changes before switching
-				if ( this.hasUnsavedChanges() ) {
+				const targetSetName = setName.trim();
+				const currentSetName = this.getCurrentSetName();
+
+				// Check for unsaved changes before switching (single authoritative confirmation)
+				if ( !options.skipConfirm && this.hasUnsavedChanges() ) {
 					const confirmMsg = this.getMessage(
 						'layers-unsaved-changes-warning',
 						'You have unsaved changes. Switch sets without saving?'
@@ -382,38 +524,159 @@
 					} );
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
-						this.buildSetSelector();
-						return;
+						this.restoreSelectorDropdown( currentSetName );
+						return {
+							status: 'cancelled',
+							success: false,
+							cancelled: true,
+							setName: targetSetName
+						};
 					}
 				}
 
-				this.debugLog( 'Loading layer set: ' + setName );
+				// Monotonic sequence counter to guard against rapid out-of-order switches
+				this._switchGeneration = ( this._switchGeneration || 0 ) + 1;
+				const switchId = this._switchGeneration;
 
-				// Update current set name in state
-				this.stateManager.set( 'currentSetName', setName );
+				// Capture edit snapshot before async load to detect newer edits made during flight
+				const editSnapshot = this._captureEditSnapshot();
 
-				// Load the set via API
-				if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
-					await this.apiManager.loadLayersBySetName( setName );
+				this.debugLog( 'Loading layer set: ' + targetSetName );
+
+				const switchContext = {
+					setName: targetSetName,
+					switchId,
+					editSnapshot,
+					dataApplied: false,
+					newerEditsDetected: false
+				};
+				this._activeSwitch = switchContext;
+
+				// Load the set via API (keep currentSetName, layers, and dirty state intact until load succeeds)
+				let loadResult = null;
+				try {
+					if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
+						loadResult = await this.apiManager.loadLayersBySetName( targetSetName );
+					}
+				} finally {
+					if ( this._activeSwitch === switchContext ) {
+						this._activeSwitch = null;
+					}
+				}
+
+				// Check 1: Was this switch request superseded by a newer switch?
+				if ( switchId !== this._switchGeneration || ( loadResult && loadResult.superseded ) ) {
+					this.debugLog( 'Discarding load result for ' + targetSetName + ' because switch was superseded' );
+					return {
+						status: 'failed',
+						success: false,
+						failed: true,
+						reason: 'superseded',
+						setName: targetSetName
+					};
+				}
+
+				// Check 2: Were newer edits made while the load was in-flight?
+				const hasNewerEdits = switchContext.newerEditsDetected ||
+					( !switchContext.dataApplied && this._hasNewerEdits( editSnapshot ) );
+				if ( hasNewerEdits ) {
+					this.debugLog( 'Preserving newer edits made during load of ' + targetSetName );
+					this.restoreSelectorDropdown( currentSetName );
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							this.getMessage( 'layers-switch-newer-edits-preserved', 'Newer edits were preserved; set switch cancelled.' ),
+							{ type: 'warn' }
+						);
+					}
+					return {
+						status: 'failed',
+						success: false,
+						failed: true,
+						reason: 'newer_edits',
+						setName: targetSetName
+					};
+				}
+
+				// Load succeeded: update current set name in state
+				if ( this.stateManager ) {
+					this.stateManager.set( 'currentSetName', targetSetName );
+				}
+
+				// Clear discarded buffered pages for previous set if present
+				if ( this.editor && this.editor.pageBuffer && typeof this.editor.pageBuffer.clear === 'function' ) {
+					this.editor.pageBuffer.clear();
 				}
 
 				// Notify user
 				if ( typeof mw !== 'undefined' && mw.notify ) {
 					mw.notify(
-						this.getMessage( 'layers-set-loaded', 'Loaded layer set: ' + setName )
-							.replace( '$1', setName ),
+						this.getMessage( 'layers-set-loaded', 'Loaded layer set: ' + targetSetName )
+							.replace( '$1', targetSetName ),
 						{ type: 'info' }
 					);
 				}
+
+				return {
+					status: 'success',
+					success: true,
+					setName: targetSetName
+				};
 			} catch ( error ) {
 				this.errorLog( 'Error loading layer set by name:', error );
+
+				// Keep current layers, current set and dirty state intact
+				// Restore selector to current set
+				const activeSet = this.getCurrentSetName();
+				this.restoreSelectorDropdown( activeSet );
+
 				if ( typeof mw !== 'undefined' && mw.notify ) {
 					mw.notify(
 						this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
 						{ type: 'error' }
 					);
 				}
+
+				return {
+					status: 'failed',
+					success: false,
+					failed: true,
+					error: error,
+					setName: setName || ''
+				};
 			}
+		}
+
+		/**
+		 * Switch layer set (alias for loadLayerSetByName)
+		 * @param {string} setName The name of the set to load
+		 * @param {Object} [options] Switch options
+		 * @return {Promise<Object>}
+		 */
+		async switchLayerSet( setName, options ) {
+			return this.loadLayerSetByName( setName, options );
+		}
+
+		/**
+		 * Check whether an in-flight load can be applied to editor state
+		 * @param {string} setName
+		 * @return {boolean}
+		 */
+		canApplyLoadedSet( setName ) {
+			if ( !this._activeSwitch ) {
+				return true;
+			}
+			if ( this._activeSwitch.setName !== setName ) {
+				return false;
+			}
+			if ( this._switchGeneration !== this._activeSwitch.switchId ) {
+				return false;
+			}
+			if ( this._hasNewerEdits( this._activeSwitch.editSnapshot ) ) {
+				this._activeSwitch.newerEditsDetected = true;
+				return false;
+			}
+			this._activeSwitch.dataApplied = true;
+			return true;
 		}
 
 		/**
@@ -542,10 +805,18 @@
 		}
 
 		/**
-		 * Check if there are unsaved changes
+		 * Check if there are unsaved changes (document-level, including buffered pages)
 		 * @return {boolean}
 		 */
 		hasUnsavedChanges() {
+			if ( this.editor && typeof this.editor.hasUnsavedChanges === 'function' ) {
+				return this.editor.hasUnsavedChanges();
+			}
+			if ( this.editor && this.editor.pageBuffer && typeof this.editor.pageBuffer.isEmpty === 'function' ) {
+				if ( !this.editor.pageBuffer.isEmpty() ) {
+					return true;
+				}
+			}
 			if ( this.stateManager ) {
 				return !!this.stateManager.get( 'isDirty' );
 			}
@@ -611,6 +882,7 @@
 		 * Destroy and clean up
 		 */
 		destroy() {
+			this._switchGeneration = 0;
 			this.editor = null;
 			this.stateManager = null;
 			this.apiManager = null;

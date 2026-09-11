@@ -869,6 +869,15 @@
 				const cachedData = this._getCached( cacheKey );
 				if ( cachedData ) {
 					try {
+						const canApplyCached = typeof options.shouldApply === 'function' ?
+							options.shouldApply( setName, cachedData ) :
+							( !( this.editor && this.editor.layerSetManager && typeof this.editor.layerSetManager.canApplyLoadedSet === 'function' ) ||
+								this.editor.layerSetManager.canApplyLoadedSet( setName ) );
+
+						if ( !canApplyCached ) {
+							resolve( { superseded: true } );
+							return;
+						}
 						const result = this._processSetNameData( cachedData, setName, true );
 						resolve( result );
 						return;
@@ -908,6 +917,19 @@
 
 				// Cache the response
 				this._setCache( cacheKey, data );
+
+				const canApply = typeof options.shouldApply === 'function' ?
+					options.shouldApply( setName, data ) :
+					( !( this.editor && this.editor.layerSetManager && typeof this.editor.layerSetManager.canApplyLoadedSet === 'function' ) ||
+						this.editor.layerSetManager.canApplyLoadedSet( setName ) );
+
+				if ( !canApply ) {
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'isLoading', false );
+					}
+					resolve( { superseded: true } );
+					return;
+				}
 
 				const result = this._processSetNameData( data, setName, false );
 				resolve( result );

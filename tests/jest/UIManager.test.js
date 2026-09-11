@@ -389,17 +389,21 @@ describe( 'UIManager', () => {
 			expect( mockEditor.loadLayerSetByName ).toHaveBeenCalledWith( 'annotations' );
 		} );
 
-		it( 'should confirm before switching when dirty', async () => {
+		it( 'should delegate to loadLayerSetByName and restore previous selection on cancellation', async () => {
 			mockStateManager.get.mockImplementation( ( key ) => {
 				if ( key === 'isDirty' ) return true;
 				if ( key === 'currentSetName' ) return 'default';
 				return null;
 			} );
 
+			mockEditor.loadLayerSetByName.mockResolvedValue( {
+				status: 'cancelled',
+				cancelled: true,
+				setName: 'annotations'
+			} );
+
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
-			// Mock the confirm dialog helper to reject
-			uiManager.showConfirmDialog = jest.fn().mockResolvedValue( false );
 
 			// Add default and annotations options
 			const defaultOption = document.createElement( 'option' );
@@ -418,8 +422,7 @@ describe( 'UIManager', () => {
 			await Promise.resolve();
 			await Promise.resolve();
 
-			expect( uiManager.showConfirmDialog ).toHaveBeenCalled();
-			expect( mockEditor.loadLayerSetByName ).not.toHaveBeenCalled();
+			expect( mockEditor.loadLayerSetByName ).toHaveBeenCalledWith( 'annotations' );
 			expect( uiManager.setSelectEl.value ).toBe( 'default' );
 		} );
 	} );
