@@ -72,6 +72,11 @@
 			this.lastWriteFailed = false;
 			this.stateSubscription = null;
 			this.ambiguousLegacyRecord = null;
+			this.legacyNoticeElement = null;
+			this.legacyOverlayElement = null;
+			this.legacyDialogElement = null;
+			this.legacyDialogKeyHandler = null;
+			this.previousDialogFocus = null;
 
 			this.initialize();
 		}
@@ -79,13 +84,68 @@
 		/**
 		 * Identify the current wiki for draft key scoping.
 		 *
+		 * Standardizes discovery on MediaWiki's canonical wgWikiID (WikiMap::getCurrentWikiId(),
+		 * e.g. 'my_wiki-T01') with fallback to wgDBname and table prefix wgDBprefix.
+		 * For multiple wikis sharing an origin with different script paths, appends
+		 * wgScriptPath (e.g. 'my_wiki-T01:/wiki2') to guarantee origin-isolated scoping.
+		 *
 		 * @return {string} Stable wiki identifier ('default' when unknown)
 		 */
 		static getWikiScope() {
 			if ( typeof mw === 'undefined' || !mw.config || !mw.config.get ) {
 				return 'default';
 			}
-			return mw.config.get( 'wgWikiId' ) || mw.config.get( 'wgDBname' ) || 'default';
+			const wikiId = mw.config.get( 'wgWikiID' ) || mw.config.get( 'wgWikiId' );
+			let scope;
+			if ( wikiId ) {
+				scope = String( wikiId );
+			} else {
+				const dbName = mw.config.get( 'wgDBname' ) || 'default';
+				const dbPrefix = mw.config.get( 'wgDBprefix' );
+				scope = ( dbPrefix && dbName !== 'default' ) ? dbName + '-' + dbPrefix : dbName;
+			}
+			const scriptPath = mw.config.get( 'wgScriptPath' );
+			if ( scriptPath && typeof scriptPath === 'string' && scriptPath !== '' && scriptPath !== '/' ) {
+				scope = scope + ':' + scriptPath;
+			}
+			return scope;
+		}
+
+		/**
+		 * Get candidate wiki scopes for discovering drafts created under prior branches.
+		 *
+		 * @return {string[]} Array of candidate wiki scopes
+		 */
+		static getCandidateWikiScopes() {
+			const scopes = [];
+			const current = DraftManager.getWikiScope();
+			scopes.push( current );
+
+			if ( typeof mw !== 'undefined' && mw.config && mw.config.get ) {
+				const wikiId = mw.config.get( 'wgWikiID' ) || mw.config.get( 'wgWikiId' );
+				if ( wikiId && !scopes.includes( String( wikiId ) ) ) {
+					scopes.push( String( wikiId ) );
+				}
+				const dbName = mw.config.get( 'wgDBname' );
+				if ( dbName ) {
+					const dbStr = String( dbName );
+					if ( !scopes.includes( dbStr ) ) {
+						scopes.push( dbStr );
+					}
+					const dbPrefix = mw.config.get( 'wgDBprefix' );
+					if ( dbPrefix ) {
+						const prefixed = dbStr + '-' + String( dbPrefix );
+						if ( !scopes.includes( prefixed ) ) {
+							scopes.push( prefixed );
+						}
+					}
+				}
+			}
+
+			if ( !scopes.includes( 'default' ) ) {
+				scopes.push( 'default' );
+			}
+			return scopes;
 		}
 
 		/**
@@ -127,6 +187,8 @@
 
 		/**
 		 * Decode a versioned storage key into its identity tuple.
+		 * Validates tuple types strictly: 5 elements, all strings except page which
+		 * must be an integer >= 1.
 		 *
 		 * @param {string} key Storage key
 		 * @return {Object|null} Decoded tuple or null if not a valid v2 key
@@ -137,7 +199,13 @@
 			}
 			try {
 				const tuple = JSON.parse( key.slice( STORAGE_KEY_PREFIX_V2.length ) );
-				if ( Array.isArray( tuple ) && tuple.length === 5 ) {
+				if ( Array.isArray( tuple ) && tuple.length === 5 &&
+					typeof tuple[ 0 ] === 'string' && tuple[ 0 ].length > 0 &&
+					typeof tuple[ 1 ] === 'string' && tuple[ 1 ].length > 0 &&
+					typeof tuple[ 2 ] === 'string' &&
+					typeof tuple[ 3 ] === 'string' &&
+					Number.isInteger( tuple[ 4 ] ) && tuple[ 4 ] >= 1
+				) {
 					return {
 						wikiScope: tuple[ 0 ],
 						userScope: tuple[ 1 ],
@@ -183,7 +251,7 @@
 			this.sweepExpiredDrafts();
 
 			// Subscribe to layer changes to trigger auto-save
-			if ( this.editor.stateManager ) {
+			if ( this.editor.stateManager && typeof this.editor.stateManager.subscribe === 'function' ) {
 				this.stateSubscription = this.editor.stateManager.subscribe( 'layers', () => {
 					this.scheduleAutoSave();
 				} );
@@ -633,6 +701,26 @@
 			try {
 				let stored = localStorage.getItem( targetKey );
 
+				// Candidate wiki scope lookup fallback for prior review branch keys
+				if ( !stored && ( !options || options.wikiScope === undefined ) ) {
+					const candidateScopes = DraftManager.getCandidateWikiScopes();
+					for ( let i = 0; i < candidateScopes.length; i++ ) {
+						const cand = candidateScopes[ i ];
+						if ( cand === this.wikiScope ) {
+							continue;
+						}
+						const candKey = this.buildStorageKey( targetFilename, targetSetName, targetPage, {
+							wikiScope: cand,
+							userScope: this.userScope
+						} );
+						const candStored = localStorage.getItem( candKey );
+						if ( candStored ) {
+							stored = candStored;
+							break;
+						}
+					}
+				}
+
 				if ( !stored ) {
 					// Fallback to legacy key lookup
 					const legacyStored = localStorage.getItem( legacyKey );
@@ -648,10 +736,11 @@
 								if ( !hasFilename || !hasSetName || !hasPage ||
 									legacyDraft.wikiScope !== this.wikiScope ||
 									legacyDraft.userScope !== this.userScope ) {
-									this.ambiguousLegacyRecord = {
-										key: legacyKey,
-										draft: legacyDraft
-									};
+									this.recordLegacyDraft( legacyKey, legacyStored, {
+										targetFilename,
+										targetSetName,
+										targetPage
+									} );
 									if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 										mw.log.warn( '[DraftManager] Ambiguous legacy draft missing explicit tuple fields preserved at key:', legacyKey );
 									}
@@ -693,11 +782,19 @@
 									return legacyDraft;
 								}
 							} else {
-								this.ambiguousLegacyRecord = { key: legacyKey, raw: legacyStored };
+								this.recordLegacyDraft( legacyKey, legacyStored, {
+									targetFilename,
+									targetSetName,
+									targetPage
+								} );
 								return null;
 							}
 						} catch ( parseErr ) {
-							this.ambiguousLegacyRecord = { key: legacyKey, raw: legacyStored };
+							this.recordLegacyDraft( legacyKey, legacyStored, {
+								targetFilename,
+								targetSetName,
+								targetPage
+							} );
 							return null;
 						}
 					}
@@ -769,17 +866,17 @@
 			if ( draft.setName !== undefined && String( draft.setName ) !== expectedSet ) {
 				return false;
 			}
-			if ( draft.filename !== undefined ) {
-				const normDraft = String( draft.filename ).replace( / /g, '_' );
-				const normExpected = String( expectedFilename ).replace( / /g, '_' );
-				if ( normDraft !== normExpected ) {
-					return false;
-				}
+			// Exact filename equality; no normalizing spaces to underscores or vice-versa
+			if ( draft.filename !== undefined && String( draft.filename ) !== String( expectedFilename ) ) {
+				return false;
 			}
 			if ( draft.userScope !== undefined && String( draft.userScope ) !== this.userScope ) {
 				return false;
 			}
-			if ( draft.wikiScope !== undefined && String( draft.wikiScope ) !== this.wikiScope ) {
+			if ( draft.wikiScope !== undefined &&
+				String( draft.wikiScope ) !== this.wikiScope &&
+				!DraftManager.getCandidateWikiScopes().includes( String( draft.wikiScope ) )
+			) {
 				return false;
 			}
 			return true;
@@ -965,6 +1062,612 @@
 		}
 
 		/**
+		 * Retrieve a localized message text with a fallback.
+		 *
+		 * @param {string} key Message key
+		 * @param {string} fallback Fallback text
+		 * @return {string} Message text
+		 */
+		getMessage( key, fallback ) {
+			if ( typeof mw !== 'undefined' && mw.message ) {
+				const msg = mw.message( key );
+				if ( msg && typeof msg.exists === 'function' && msg.exists() ) {
+					return msg.text();
+				}
+				if ( msg && typeof msg.text === 'function' ) {
+					const text = msg.text();
+					if ( text && text !== key ) {
+						return text;
+					}
+				}
+			}
+			return fallback || '';
+		}
+
+		/**
+		 * Record a detected legacy draft for manual review and recovery.
+		 *
+		 * @param {string} key Storage key of the legacy record
+		 * @param {string} rawString Raw string from localStorage
+		 * @param {Object} [context] Optional target context
+		 * @return {Object} The recorded legacy info
+		 */
+		recordLegacyDraft( key, rawString, context ) {
+			let parsed = null;
+			let isMalformed = false;
+			try {
+				parsed = JSON.parse( rawString );
+				if ( !parsed || typeof parsed !== 'object' || !Array.isArray( parsed.layers ) ) {
+					isMalformed = true;
+				}
+			} catch ( e ) {
+				isMalformed = true;
+			}
+
+			this.ambiguousLegacyRecord = {
+				key: key,
+				raw: rawString,
+				draft: parsed,
+				isMalformed: isMalformed,
+				context: context || null
+			};
+
+			return this.ambiguousLegacyRecord;
+		}
+
+		/**
+		 * Detect whether an unscoped legacy draft exists in storage.
+		 *
+		 * @param {Object|number} [options] Target context options
+		 * @return {Object|null} The recorded legacy draft or null
+		 */
+		detectLegacyDraft( options ) {
+			if ( typeof localStorage === 'undefined' || !localStorage ||
+				typeof localStorage.getItem !== 'function'
+			) {
+				return null;
+			}
+			const legacyKey = this.getLegacyStorageKey( options );
+			try {
+				const legacyStored = localStorage.getItem( legacyKey );
+				if ( legacyStored !== null && legacyStored !== undefined ) {
+					return this.recordLegacyDraft( legacyKey, legacyStored );
+				}
+			} catch ( e ) {
+				// Storage access error
+			}
+			return null;
+		}
+
+		/**
+		 * Check if an unscoped or ambiguous legacy draft exists.
+		 *
+		 * @param {Object|number} [options] Target context options
+		 * @return {boolean} True if a legacy draft exists
+		 */
+		hasLegacyDraft( options ) {
+			if ( this.ambiguousLegacyRecord ) {
+				return true;
+			}
+			return this.detectLegacyDraft( options ) !== null;
+		}
+
+		/**
+		 * Show a localized, keyboard-accessible banner notice for preserved legacy draft.
+		 *
+		 * @param {Object} [record] Optional legacy record override
+		 * @return {HTMLElement|null} The notice element, or null if no record
+		 */
+		showLegacyNotice( record ) {
+			const rec = record || this.ambiguousLegacyRecord || this.detectLegacyDraft();
+			if ( !rec ) {
+				return null;
+			}
+
+			// Dismiss any existing notice first
+			this.dismissLegacyNotice();
+
+			if ( typeof document === 'undefined' || !document.createElement ) {
+				return null;
+			}
+
+			const notice = document.createElement( 'div' );
+			notice.className = 'layers-legacy-draft-notice';
+			notice.setAttribute( 'role', 'status' );
+			notice.setAttribute( 'aria-live', 'polite' );
+
+			const textSpan = document.createElement( 'span' );
+			textSpan.className = 'layers-legacy-draft-notice-text';
+			textSpan.textContent = this.getMessage(
+				'layers-legacy-draft-notice',
+				'Found a preserved legacy draft for this image from an earlier version.'
+			);
+			notice.appendChild( textSpan );
+
+			const actions = document.createElement( 'div' );
+			actions.className = 'layers-legacy-draft-notice-actions';
+
+			const reviewBtn = document.createElement( 'button' );
+			reviewBtn.type = 'button';
+			reviewBtn.className = 'layers-btn layers-btn-primary layers-legacy-review-btn';
+			reviewBtn.textContent = this.getMessage(
+				'layers-legacy-draft-review',
+				'Review & Recover'
+			);
+			reviewBtn.addEventListener( 'click', () => {
+				this.showLegacyRecoveryDialog( rec );
+			} );
+
+			const dismissBtn = document.createElement( 'button' );
+			dismissBtn.type = 'button';
+			dismissBtn.className = 'layers-btn layers-btn-secondary layers-legacy-dismiss-btn';
+			dismissBtn.textContent = this.getMessage(
+				'layers-legacy-draft-dismiss',
+				'Dismiss'
+			);
+			dismissBtn.addEventListener( 'click', () => {
+				this.dismissLegacyNotice();
+			} );
+
+			actions.appendChild( reviewBtn );
+			actions.appendChild( dismissBtn );
+			notice.appendChild( actions );
+
+			// Keyboard handler for notice: Escape dismisses notice
+			notice.addEventListener( 'keydown', ( e ) => {
+				if ( e.key === 'Escape' ) {
+					this.dismissLegacyNotice();
+				}
+			} );
+
+			// Mount notice
+			let mounted = false;
+			if ( this.editor && this.editor.uiManager && this.editor.uiManager.container ) {
+				const container = this.editor.uiManager.container;
+				if ( container.firstChild ) {
+					container.insertBefore( notice, container.firstChild );
+				} else {
+					container.appendChild( notice );
+				}
+				mounted = true;
+			}
+			if ( !mounted && document.body ) {
+				document.body.appendChild( notice );
+			}
+
+			this.legacyNoticeElement = notice;
+			return notice;
+		}
+
+		/**
+		 * Dismiss the legacy draft notice.
+		 */
+		dismissLegacyNotice() {
+			if ( this.legacyNoticeElement ) {
+				if ( this.legacyNoticeElement.parentNode ) {
+					this.legacyNoticeElement.parentNode.removeChild( this.legacyNoticeElement );
+				}
+				this.legacyNoticeElement = null;
+			}
+		}
+
+		/**
+		 * Show the explicit local export & recovery dialog for preserved legacy draft.
+		 *
+		 * @param {Object} [record] Legacy record
+		 * @return {HTMLElement|null} The dialog element
+		 */
+		showLegacyRecoveryDialog( record ) {
+			const rec = record || this.ambiguousLegacyRecord || this.detectLegacyDraft();
+			if ( !rec ) {
+				return null;
+			}
+
+			this.closeLegacyRecoveryDialog();
+
+			if ( typeof document === 'undefined' || !document.createElement ) {
+				return null;
+			}
+
+			// Capture focus origin
+			if ( document.activeElement &&
+				document.activeElement !== document.body &&
+				typeof document.activeElement.focus === 'function'
+			) {
+				this.previousDialogFocus = document.activeElement;
+			} else {
+				this.previousDialogFocus = null;
+			}
+
+			const overlay = document.createElement( 'div' );
+			overlay.className = 'layers-modal-overlay layers-legacy-dialog-overlay';
+
+			const dialog = document.createElement( 'div' );
+			dialog.className = 'layers-modal-dialog layers-legacy-dialog';
+			dialog.setAttribute( 'role', 'dialog' );
+			dialog.setAttribute( 'aria-modal', 'true' );
+			dialog.setAttribute( 'aria-labelledby', 'layers-legacy-dialog-title' );
+
+			const title = document.createElement( 'h2' );
+			title.id = 'layers-legacy-dialog-title';
+			title.className = 'layers-legacy-dialog-title';
+			title.textContent = this.getMessage(
+				'layers-legacy-draft-dialog-title',
+				'Preserved Legacy Draft Recovery'
+			);
+			dialog.appendChild( title );
+
+			const desc = document.createElement( 'p' );
+			desc.className = 'layers-legacy-dialog-desc';
+			desc.textContent = this.getMessage(
+				'layers-legacy-draft-dialog-desc',
+				'This draft was created before wiki scoping was introduced. Verify the metadata below before recovering into your current set. The original draft will remain preserved in your browser.'
+			);
+			dialog.appendChild( desc );
+
+			// Warning banner: unscoped wiki
+			const warning = document.createElement( 'div' );
+			warning.className = 'layers-legacy-warning';
+			warning.setAttribute( 'role', 'note' );
+			warning.textContent = this.getMessage(
+				'layers-legacy-draft-unscoped-warning',
+				'Note: This draft has no verified wiki ownership.'
+			);
+			dialog.appendChild( warning );
+
+			// Metadata container (escaped text via textContent only)
+			const metaContainer = document.createElement( 'div' );
+			metaContainer.className = 'layers-legacy-metadata';
+
+			const draftObj = rec.draft;
+			const isMalformed = rec.isMalformed || !draftObj;
+
+			const metaFilename = document.createElement( 'div' );
+			metaFilename.className = 'layers-legacy-meta-row';
+			const metaFilenameLabel = document.createElement( 'strong' );
+			metaFilenameLabel.textContent = 'File: ';
+			metaFilename.appendChild( metaFilenameLabel );
+			const metaFilenameVal = document.createElement( 'span' );
+			metaFilenameVal.className = 'layers-legacy-meta-filename';
+			metaFilenameVal.textContent = ( draftObj && draftObj.filename !== undefined && draftObj.filename !== null ) ?
+				String( draftObj.filename ) : ( this.filename || 'Unknown' );
+			metaFilename.appendChild( metaFilenameVal );
+			metaContainer.appendChild( metaFilename );
+
+			const metaSet = document.createElement( 'div' );
+			metaSet.className = 'layers-legacy-meta-row';
+			const metaSetLabel = document.createElement( 'strong' );
+			metaSetLabel.textContent = 'Set: ';
+			metaSet.appendChild( metaSetLabel );
+			const metaSetVal = document.createElement( 'span' );
+			metaSetVal.className = 'layers-legacy-meta-set';
+			metaSetVal.textContent = ( draftObj && draftObj.setName !== undefined && draftObj.setName !== null ) ?
+				String( draftObj.setName ) : 'Unknown';
+			metaSet.appendChild( metaSetVal );
+			metaContainer.appendChild( metaSet );
+
+			const metaPage = document.createElement( 'div' );
+			metaPage.className = 'layers-legacy-meta-row';
+			const metaPageLabel = document.createElement( 'strong' );
+			metaPageLabel.textContent = 'Page: ';
+			metaPage.appendChild( metaPageLabel );
+			const metaPageVal = document.createElement( 'span' );
+			metaPageVal.className = 'layers-legacy-meta-page';
+			metaPageVal.textContent = ( draftObj && draftObj.page !== undefined && draftObj.page !== null ) ?
+				String( draftObj.page ) : 'Unknown';
+			metaPage.appendChild( metaPageVal );
+			metaContainer.appendChild( metaPage );
+
+			const metaTime = document.createElement( 'div' );
+			metaTime.className = 'layers-legacy-meta-row';
+			const metaTimeLabel = document.createElement( 'strong' );
+			metaTimeLabel.textContent = 'Saved: ';
+			metaTime.appendChild( metaTimeLabel );
+			const metaTimeVal = document.createElement( 'span' );
+			metaTimeVal.className = 'layers-legacy-meta-time';
+			metaTimeVal.textContent = ( draftObj && draftObj.timestamp ) ?
+				new Date( draftObj.timestamp ).toLocaleString() : 'Unknown';
+			metaTime.appendChild( metaTimeVal );
+			metaContainer.appendChild( metaTime );
+
+			if ( isMalformed ) {
+				const malformedNotice = document.createElement( 'div' );
+				malformedNotice.className = 'layers-legacy-malformed-warning';
+				malformedNotice.textContent = this.getMessage(
+					'layers-legacy-draft-malformed',
+					'This draft record contains invalid or unparseable JSON data. It cannot be imported, but you may still export the raw data.'
+				);
+				metaContainer.appendChild( malformedNotice );
+			} else {
+				const metaLayers = document.createElement( 'div' );
+				metaLayers.className = 'layers-legacy-meta-row';
+				const metaLayersLabel = document.createElement( 'strong' );
+				metaLayersLabel.textContent = 'Layers: ';
+				metaLayers.appendChild( metaLayersLabel );
+				const metaLayersVal = document.createElement( 'span' );
+				metaLayersVal.className = 'layers-legacy-meta-layers';
+				metaLayersVal.textContent = Array.isArray( draftObj.layers ) ?
+					String( draftObj.layers.length ) : '0';
+				metaLayers.appendChild( metaLayersVal );
+				metaContainer.appendChild( metaLayers );
+			}
+
+			dialog.appendChild( metaContainer );
+
+			// Actions
+			const actions = document.createElement( 'div' );
+			actions.className = 'layers-modal-buttons layers-legacy-dialog-actions';
+
+			const exportBtn = document.createElement( 'button' );
+			exportBtn.type = 'button';
+			exportBtn.className = 'layers-btn layers-btn-secondary layers-legacy-export-btn';
+			exportBtn.textContent = this.getMessage(
+				'layers-legacy-draft-export',
+				'Export Original (JSON)'
+			);
+			exportBtn.addEventListener( 'click', () => {
+				this.exportLegacyRecord( rec );
+			} );
+			actions.appendChild( exportBtn );
+
+			const importBtn = document.createElement( 'button' );
+			importBtn.type = 'button';
+			importBtn.className = 'layers-btn layers-btn-primary layers-legacy-import-btn';
+			importBtn.textContent = this.getMessage(
+				'layers-legacy-draft-import',
+				'Import into Current Set'
+			);
+
+			const canImport = !isMalformed && draftObj && Array.isArray( draftObj.layers ) && draftObj.layers.length > 0;
+			if ( !canImport ) {
+				importBtn.disabled = true;
+				importBtn.setAttribute( 'aria-disabled', 'true' );
+			} else {
+				importBtn.addEventListener( 'click', () => {
+					this.importLegacyRecord( rec );
+					this.closeLegacyRecoveryDialog();
+					this.dismissLegacyNotice();
+				} );
+			}
+			actions.appendChild( importBtn );
+
+			const closeBtn = document.createElement( 'button' );
+			closeBtn.type = 'button';
+			closeBtn.className = 'layers-btn layers-btn-secondary layers-legacy-close-btn';
+			closeBtn.textContent = this.getMessage(
+				'layers-legacy-draft-close',
+				'Close'
+			);
+			closeBtn.addEventListener( 'click', () => {
+				this.closeLegacyRecoveryDialog();
+			} );
+			actions.appendChild( closeBtn );
+
+			dialog.appendChild( actions );
+
+			// Keyboard handler: Tab trap and Escape to close
+			const keyHandler = ( e ) => {
+				if ( e.key === 'Escape' ) {
+					this.closeLegacyRecoveryDialog();
+				} else if ( e.key === 'Tab' ) {
+					const focusable = dialog.querySelectorAll( 'button:not([disabled]), [tabindex]:not([tabindex="-1"])' );
+					if ( focusable.length > 0 ) {
+						const first = focusable[ 0 ];
+						const last = focusable[ focusable.length - 1 ];
+						if ( e.shiftKey && document.activeElement === first ) {
+							e.preventDefault();
+							last.focus();
+						} else if ( !e.shiftKey && document.activeElement === last ) {
+							e.preventDefault();
+							first.focus();
+						}
+					}
+				}
+			};
+			document.addEventListener( 'keydown', keyHandler );
+			this.legacyDialogKeyHandler = keyHandler;
+
+			if ( document.body ) {
+				document.body.appendChild( overlay );
+				document.body.appendChild( dialog );
+			}
+
+			this.legacyOverlayElement = overlay;
+			this.legacyDialogElement = dialog;
+
+			// Focus initial button
+			if ( exportBtn && typeof exportBtn.focus === 'function' ) {
+				exportBtn.focus();
+			}
+
+			return dialog;
+		}
+
+		/**
+		 * Close the legacy recovery dialog and restore focus.
+		 */
+		closeLegacyRecoveryDialog() {
+			if ( this.legacyDialogKeyHandler ) {
+				document.removeEventListener( 'keydown', this.legacyDialogKeyHandler );
+				this.legacyDialogKeyHandler = null;
+			}
+			if ( this.legacyOverlayElement && this.legacyOverlayElement.parentNode ) {
+				this.legacyOverlayElement.parentNode.removeChild( this.legacyOverlayElement );
+			}
+			if ( this.legacyDialogElement && this.legacyDialogElement.parentNode ) {
+				this.legacyDialogElement.parentNode.removeChild( this.legacyDialogElement );
+			}
+			this.legacyOverlayElement = null;
+			this.legacyDialogElement = null;
+
+			if ( this.previousDialogFocus && typeof this.previousDialogFocus.focus === 'function' ) {
+				if ( typeof document !== 'undefined' && document.body && document.body.contains( this.previousDialogFocus ) ) {
+					this.previousDialogFocus.focus();
+				}
+				this.previousDialogFocus = null;
+			}
+		}
+
+		/**
+		 * Export raw legacy record bytes as a client-side JSON download.
+		 * Never logs annotation content or transmits to any server.
+		 *
+		 * @param {Object} record Legacy draft record
+		 * @return {boolean} True if export was initiated
+		 */
+		exportLegacyRecord( record ) {
+			if ( !record || ( record.raw === undefined && record.draft === undefined ) ) {
+				return false;
+			}
+			const rawContent = ( typeof record.raw === 'string' ) ?
+				record.raw :
+				JSON.stringify( record.draft, null, 2 );
+
+			try {
+				let blob;
+				if ( typeof Blob !== 'undefined' ) {
+					blob = new Blob( [ rawContent ], { type: 'application/json;charset=utf-8' } );
+				} else {
+					blob = { content: rawContent, type: 'application/json;charset=utf-8' };
+				}
+
+				if ( typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function' &&
+					typeof document !== 'undefined' && typeof document.createElement === 'function'
+				) {
+					const url = URL.createObjectURL( blob );
+					const a = document.createElement( 'a' );
+					a.style.display = 'none';
+					a.href = url;
+					const safeName = ( this.filename || 'export' ).replace( /[^a-zA-Z0-9_.-]/g, '_' );
+					a.download = 'layers-legacy-draft-' + safeName + '.json';
+					document.body.appendChild( a );
+					a.click();
+					setTimeout( () => {
+						if ( a.parentNode ) {
+							a.parentNode.removeChild( a );
+						}
+						if ( typeof URL.revokeObjectURL === 'function' ) {
+							URL.revokeObjectURL( url );
+						}
+					}, 100 );
+				}
+
+				return true;
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn( '[DraftManager] Export failed:', e.message );
+				}
+				return false;
+			}
+		}
+
+		/**
+		 * Manually import a legacy draft record into the current active editor set.
+		 * Validates layers, marks editor dirty, updates canvas and panel,
+		 * and never auto-publishes or removes the legacy record.
+		 *
+		 * @param {Object} record Legacy draft record
+		 * @return {boolean} True if imported successfully
+		 */
+		importLegacyRecord( record ) {
+			if ( !record || record.isMalformed || !record.draft || !Array.isArray( record.draft.layers ) ) {
+				return false;
+			}
+
+			let layersToImport = null;
+
+			// Boundary validation: Use ImportExportManager if available
+			if ( this.editor && this.editor.importExportManager &&
+				typeof this.editor.importExportManager.parseLayersJSON === 'function' &&
+				typeof record.raw === 'string'
+			) {
+				try {
+					layersToImport = this.editor.importExportManager.parseLayersJSON( record.raw );
+				} catch ( e ) {
+					layersToImport = null;
+				}
+			}
+
+			if ( !layersToImport ) {
+				// Sanitized fallback validation
+				const validTypes = [
+					'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
+					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape',
+					'marker', 'dimension', 'angleDimension'
+				];
+				layersToImport = record.draft.layers.map( ( layer ) => {
+					const obj = { ...layer };
+					if ( !obj.id ) {
+						obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
+					}
+					if ( obj.type && !validTypes.includes( obj.type ) ) {
+						obj.type = 'rectangle';
+					}
+					if ( typeof obj.text === 'string' ) {
+						obj.text = obj.text.replace( /<[^>]*>/g, '' );
+					}
+					if ( typeof obj.name === 'string' ) {
+						obj.name = obj.name.replace( /<[^>]*>/g, '' );
+					}
+					delete obj.__proto__;
+					delete obj.constructor;
+					return obj;
+				} );
+			}
+
+			if ( !Array.isArray( layersToImport ) || layersToImport.length === 0 ) {
+				return false;
+			}
+
+			this.isRecoveryMode = true;
+			try {
+				if ( this.editor && this.editor.stateManager ) {
+					this.editor.stateManager.update( {
+						layers: layersToImport,
+						isDirty: true
+					} );
+				} else if ( this.editor ) {
+					this.editor.layers = layersToImport;
+				}
+
+				if ( this.editor && typeof this.editor.markDirty === 'function' ) {
+					this.editor.markDirty();
+				}
+
+				if ( this.editor && this.editor.canvasManager &&
+					typeof this.editor.canvasManager.renderLayers === 'function'
+				) {
+					this.editor.canvasManager.renderLayers( layersToImport );
+				}
+
+				if ( this.editor && this.editor.layerPanel &&
+					typeof this.editor.layerPanel.updateLayers === 'function'
+				) {
+					this.editor.layerPanel.updateLayers( layersToImport );
+				}
+
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify(
+						this.getMessage(
+							'layers-legacy-draft-imported',
+							'Legacy draft imported into current set. Changes are not published until saved.'
+						),
+						{ type: 'success' }
+					);
+				}
+
+				return true;
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( '[DraftManager] Failed to import legacy draft:', e.message );
+				}
+				return false;
+			} finally {
+				this.isRecoveryMode = false;
+			}
+		}
+
+		/**
 		 * Show the recovery dialog
 		 *
 		 * @return {Promise<boolean>} Resolves to true if user chose to recover
@@ -981,24 +1684,15 @@
 				const date = new Date( draftInfo.timestamp );
 				const timeStr = date.toLocaleString();
 
-				// Get message text
-				const getMessage = ( key, fallback ) => {
-					if ( typeof mw !== 'undefined' && mw.message ) {
-						const msg = mw.message( key );
-						return msg.exists() ? msg.text() : fallback;
-					}
-					return fallback;
-				};
-
-				const title = getMessage( 'layers-draft-recovery-title', 'Recover Unsaved Changes?' );
+				const title = this.getMessage( 'layers-draft-recovery-title', 'Recover Unsaved Changes?' );
 				// en.json uses $1/$2; the code substituted {time}/{count}, so the real
 				// message reached the user with its placeholders intact.
-				const message = getMessage( 'layers-draft-recovery-message',
+				const message = this.getMessage( 'layers-draft-recovery-message',
 					'Found unsaved changes from $1 with $2 layer(s). Would you like to recover them?' )
 					.replace( '$1', timeStr )
 					.replace( '$2', String( draftInfo.layerCount ) );
-				const recoverBtn = getMessage( 'layers-draft-recover', 'Recover' );
-				const discardBtn = getMessage( 'layers-draft-discard', 'Discard' );
+				const recoverBtn = this.getMessage( 'layers-draft-recover', 'Recover' );
+				const discardBtn = this.getMessage( 'layers-draft-discard', 'Discard' );
 
 				// Use OOUI dialog if available (OO is a MediaWiki global)
 				// eslint-disable-next-line no-undef
@@ -1028,34 +1722,43 @@
 		 * @return {Promise<boolean>} Resolves to true if draft was recovered
 		 */
 		async checkAndRecoverDraft() {
-			if ( !this.hasDraft() ) {
-				return false;
-			}
+			if ( this.hasDraft() ) {
+				const shouldRecover = await this.showRecoveryDialog();
 
-			const shouldRecover = await this.showRecoveryDialog();
+				if ( shouldRecover ) {
+					const recovered = this.recoverDraft();
+					if ( recovered ) {
+						// Clear the draft after successful recovery
+						this.clearDraft();
 
-			if ( shouldRecover ) {
-				const recovered = this.recoverDraft();
-				if ( recovered ) {
-					// Clear the draft after successful recovery
-					this.clearDraft();
-					
-					// Show notification
-					if ( typeof mw !== 'undefined' && mw.notify ) {
-						mw.notify(
-							mw.message( 'layers-draft-recovered' ).exists() ?
-								mw.message( 'layers-draft-recovered' ).text() :
-								'Draft recovered successfully',
-							{ type: 'success' }
-						);
+						// Show notification
+						if ( typeof mw !== 'undefined' && mw.notify ) {
+							mw.notify(
+								mw.message( 'layers-draft-recovered' ).exists() ?
+									mw.message( 'layers-draft-recovered' ).text() :
+									'Draft recovered successfully',
+								{ type: 'success' }
+							);
+						}
 					}
+					return recovered;
+				} else {
+					// User chose to discard v2 draft
+					this.clearDraft();
+					if ( this.hasLegacyDraft() ) {
+						this.showLegacyNotice();
+					}
+					return false;
 				}
-				return recovered;
-			} else {
-				// User chose to discard
-				this.clearDraft();
+			}
+
+			// If no current v2 draft, check for preserved legacy draft
+			if ( this.hasLegacyDraft() ) {
+				this.showLegacyNotice();
 				return false;
 			}
+
+			return false;
 		}
 
 		/**
@@ -1078,6 +1781,9 @@
 				this.stateSubscription();
 				this.stateSubscription = null;
 			}
+
+			this.dismissLegacyNotice();
+			this.closeLegacyRecoveryDialog();
 
 			// Clear references to allow GC
 			this.editor = null;

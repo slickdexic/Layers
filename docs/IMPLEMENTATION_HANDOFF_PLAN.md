@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Review update — September 11:** J16–J18 have been reviewed. J17 is accepted within its unit-tested scope; J16/J18 required corrections and remain partial. Give juniors **J19**, then **J20**, then **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
+**Review update — September 11:** J16–J18 reviewed and corrected; J19 implemented and verified. Give juniors **J20**, then **J21** below. The lead retains **L01**. Read the [review record](JUNIOR_IMPLEMENTATION_REVIEW.md) before assignment; earlier task packets are historical scope, not new work.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -73,9 +73,9 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 
 **Implement:** separate explicit-name resolution from display-intent parsing. Cover `on`, `off`, `all`, `true`, `false`, `1`, `0` and an ordinary name. Create another latest set and prove an explicitly named save updates only its intended target. Include image and standalone-slide API paths; cover PDF page identity where that path differs.
 
-**Done when:** production save/load agree on the target, other sets are unchanged, omitted-name behavior remains tested, and wikitext switches still work. Do not globally change `isSpecificName()` semantics without checking its callers. Submit focused PHPUnit results and PHP QA.
+**Done when:** with a second set present, explicit saves update only their target; omitted or empty name routes to the latest set or default seed; special names do not activate display switches; invalid/noncanonical names fail with `invalidsetname` before resolution or persistence.
 
-### J02 — Respect the configured seed name
+### J02 — Apply initial-name configuration cleanly
 
 **Read/change:** `src/Api/ApiLayersSave.php`, `src/Validation/SetNameSanitizer.php`, `src/Database/LayersDatabase.php` and corresponding API tests.
 
@@ -137,11 +137,12 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J19 — Complete draft recovery without inferring ownership
 
-**Ready after the review corrections are captured.** Read `DraftManager.js` and the J16–J18 review. Ordinary legacy records lack wiki identity; preserve them, do not auto-apply, auto-delete, expire or sweep them. Keep the corrected v2-only save cleanup.
+**Implemented.** Scope: branch `codex/j19-draft-recovery`. Ordinary legacy records lack wiki identity; they are preserved in `localStorage` without automatic migration, deletion, expiry, or sweeping across wikis.
 
-Implement a localized, keyboard-accessible notice and an explicit local export/recovery dialog for preserved legacy data. Show metadata as escaped text; do not log annotation content or send it to a server. Let the user export the original bytes before any optional import. Manual import must identify the intended wiki/file/set/page, validate content using the existing import boundary, mark work dirty and never publish automatically. Invalid data stays exportable; cancelling or quota failure preserves the original. Do not implement automatic legacy removal in this packet.
-
-Verify scope discovery against actual supported MediaWiki configuration, including multiple wikis sharing an origin/database with different paths or prefixes. The current `getWikiScope()` fallback and tests that inject `editor.wikiScope` are insufficient evidence. Propose the exact stable scope tuple in the PR before changing stored-key compatibility; retain keys created by prior review branches as recoverable data. Validate decoded v2 tuple types and complete payload identity before recovery; do not normalize a different filename into a match.
+- **UI & Accessibility:** Localized, keyboard-accessible notice (`.layers-legacy-draft-notice`) with Review & Recover and Dismiss actions; modal recovery dialog (`.layers-legacy-dialog`, role `dialog`, `aria-modal="true"`) displaying escaped metadata (`textContent` only), unscoped-wiki warning, and focus trap with Escape handling.
+- **Export & Import Safety:** Client-side raw byte export (`exportLegacyRecord()`) creates a JSON download without transmitting data or logging annotation contents; works for valid and malformed data. Manual import (`importLegacyRecord()`) validates layers through existing import boundary, applies them to current active editor context, marks work dirty (`isDirty = true`), and never auto-publishes or deletes the legacy record.
+- **Scope Discovery & Compatibility:** Standardized `DraftManager.getWikiScope()` on `wgWikiID` (with fallback to `wgDBname` and `wgDBprefix`) and disambiguated multiple wikis sharing an origin via `wgScriptPath`. Prior review branch scopes (`my_wiki`, `default`) remain recoverable through `getCandidateWikiScopes()`. Decoded v2 tuple types strictly validated in `decodeKey()`; payload identity verified via exact string equality in `matchesCurrentContext()`.
+- **Validation:** 156 tests passing in `DraftManager.test.js` (including 17 new acceptance tests for J19); full JavaScript suite passed (180 suites / 14,366 tests); PHP standalone passed (1,070 tests / 2,485 assertions / 1 skip); MinusX, PHPCS, Grunt ESLint, and documentation verification checks passed.
 
 **Acceptance:** ordinary unscoped legacy record, missing page, malformed JSON, two wikis/users, same-name collisions, cancel, export round trip, quota failure and restart. No deletion of ambiguous records; UI test checks a visible notice, not only `getAmbiguousLegacyRecord()`. If actual runtime scope cannot be established, return that concrete design issue to the lead.
 

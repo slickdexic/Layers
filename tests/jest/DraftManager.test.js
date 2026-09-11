@@ -2458,5 +2458,510 @@ describe( 'DraftManager', function () {
 				dm.destroy();
 			} );
 		} );
+
+		describe( 'J19 draft recovery without inferring ownership', function () {
+			beforeEach( function () {
+				document.body.innerHTML = '';
+				if ( !window.URL ) {
+					window.URL = {};
+				}
+				window.URL.createObjectURL = jest.fn( function () {
+					return 'blob:mock-url';
+				} );
+				window.URL.revokeObjectURL = jest.fn();
+			} );
+
+			afterEach( function () {
+				document.body.innerHTML = '';
+			} );
+
+			describe( 'MediaWiki runtime scope discovery and candidate fallback', function () {
+				it( 'standardizes on canonical wgWikiID with table prefix and script path', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgWikiID' ) {
+							return 'my_wiki-T01';
+						}
+						if ( key === 'wgScriptPath' ) {
+							return '/wiki';
+						}
+						return null;
+					} );
+
+					expect( DraftManager.getWikiScope() ).toBe( 'my_wiki-T01:/wiki' );
+
+					mw.config.get = origMwConfigGet;
+				} );
+
+				it( 'falls back to wgDBname and wgDBprefix when wgWikiID is absent', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgDBname' ) {
+							return 'shared_db';
+						}
+						if ( key === 'wgDBprefix' ) {
+							return 'site1';
+						}
+						return null;
+					} );
+
+					expect( DraftManager.getWikiScope() ).toBe( 'shared_db-site1' );
+
+					mw.config.get = origMwConfigGet;
+				} );
+
+				it( 'distinguishes multiple wikis sharing an origin with different script paths', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgWikiID' ) {
+							return 'shared_wiki';
+						}
+						if ( key === 'wgScriptPath' ) {
+							return '/w2';
+						}
+						return null;
+					} );
+
+					const scope1 = DraftManager.getWikiScope();
+
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgWikiID' ) {
+							return 'shared_wiki';
+						}
+						if ( key === 'wgScriptPath' ) {
+							return '/w3';
+						}
+						return null;
+					} );
+
+					const scope2 = DraftManager.getWikiScope();
+
+					expect( scope1 ).toBe( 'shared_wiki:/w2' );
+					expect( scope2 ).toBe( 'shared_wiki:/w3' );
+					expect( scope1 ).not.toBe( scope2 );
+
+					mw.config.get = origMwConfigGet;
+				} );
+
+				it( 'returns candidate scopes including prior review branch scopes', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgWikiID' ) {
+							return 'my_wiki-T01';
+						}
+						if ( key === 'wgDBname' ) {
+							return 'my_wiki';
+						}
+						if ( key === 'wgScriptPath' ) {
+							return '/wiki';
+						}
+						return null;
+					} );
+
+					const candidates = DraftManager.getCandidateWikiScopes();
+					expect( candidates ).toContain( 'my_wiki-T01:/wiki' );
+					expect( candidates ).toContain( 'my_wiki-T01' );
+					expect( candidates ).toContain( 'my_wiki' );
+					expect( candidates ).toContain( 'default' );
+
+					mw.config.get = origMwConfigGet;
+				} );
+
+				it( 'retains and recovers draft stored under prior candidate scope when primary key has no draft', function () {
+					const origMwConfigGet = mw.config.get;
+					mw.config.get = jest.fn( function ( key ) {
+						if ( key === 'wgWikiID' ) {
+							return 'my_wiki-T01';
+						}
+						if ( key === 'wgDBname' ) {
+							return 'my_wiki';
+						}
+						if ( key === 'wgScriptPath' ) {
+							return '/wiki';
+						}
+						return null;
+					} );
+
+					const dm = new DraftManager( mockEditor );
+					expect( dm.wikiScope ).toBe( 'my_wiki-T01:/wiki' );
+
+					// Draft stored under prior review branch scope 'my_wiki' without script path
+					const candidateKey = dm.buildStorageKey( dm.filename, 'default', 1, {
+						wikiScope: 'my_wiki',
+						userScope: dm.userScope
+					} );
+					mockLocalStorage[ candidateKey ] = JSON.stringify( {
+						version: 2,
+						wikiScope: 'my_wiki',
+						userScope: dm.userScope,
+						filename: dm.filename,
+						setName: 'default',
+						page: 1,
+						timestamp: Date.now() - 1000,
+						layers: [ { id: 'cand1', type: 'rectangle' } ]
+					} );
+
+					const loaded = dm.loadDraft();
+					expect( loaded ).not.toBeNull();
+					expect( loaded.layers ).toHaveLength( 1 );
+					expect( loaded.layers[ 0 ].id ).toBe( 'cand1' );
+
+					dm.destroy();
+					mw.config.get = origMwConfigGet;
+				} );
+			} );
+
+			describe( 'strict decoded v2 tuple types and complete payload identity', function () {
+				it( 'rejects tuple with non-integer, float, or invalid page numbers', function () {
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set",1.5]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set",0]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set",-1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set","1"]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set",null]' ) ).toBeNull();
+				} );
+
+				it( 'rejects tuple with invalid scope or filename types', function () {
+					expect( DraftManager.decodeKey( 'layers-draft-v2:[123,"user","file","set",1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki",123,"file","set",1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["","user","file","set",1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","","file","set",1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user",null,"set",1]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set"]' ) ).toBeNull();
+					expect( DraftManager.decodeKey( 'layers-draft-v2:["wiki","user","file","set",1,2]' ) ).toBeNull();
+				} );
+
+				it( 'strictly rejects payload filename normalization mismatches (spaces vs underscores)', function () {
+					const dm = new DraftManager( mockEditor ); // mockEditor filename is 'Test_Image.jpg'
+
+					// Payload has 'Test Image.jpg' with spaces instead of underscores
+					const mismatchedDraft = {
+						version: 2,
+						wikiScope: dm.wikiScope,
+						userScope: dm.userScope,
+						filename: 'Test Image.jpg',
+						setName: 'default',
+						page: 1,
+						timestamp: Date.now() - 1000,
+						layers: [ { id: 'mismatched' } ]
+					};
+
+					expect( dm.matchesCurrentContext( mismatchedDraft ) ).toBe( false );
+
+					// Exact match passes
+					const exactDraft = {
+						version: 2,
+						wikiScope: dm.wikiScope,
+						userScope: dm.userScope,
+						filename: 'Test_Image.jpg',
+						setName: 'default',
+						page: 1,
+						timestamp: Date.now() - 1000,
+						layers: [ { id: 'exact' } ]
+					};
+
+					expect( dm.matchesCurrentContext( exactDraft ) ).toBe( true );
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'visible legacy draft notice and dismissal', function () {
+				it( 'shows visible banner notice when ordinary unscoped legacy record is present and no v2 draft exists', async function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+
+					mockLocalStorage[ legacyKey ] = JSON.stringify( {
+						filename: dm.filename,
+						setName: 'default',
+						page: 1,
+						timestamp: Date.now() - 5000,
+						layers: [ { id: 'legacy-layer-1', type: 'rectangle' } ]
+					} );
+
+					// Editor opens and checks for drafts
+					const recovered = await dm.checkAndRecoverDraft();
+					expect( recovered ).toBe( false );
+
+					// Notice element must be present in DOM
+					const notice = document.querySelector( '.layers-legacy-draft-notice' );
+					expect( notice ).not.toBeNull();
+					expect( notice.getAttribute( 'role' ) ).toBe( 'status' );
+
+					const reviewBtn = notice.querySelector( '.layers-legacy-review-btn' );
+					const dismissBtn = notice.querySelector( '.layers-legacy-dismiss-btn' );
+					expect( reviewBtn ).not.toBeNull();
+					expect( dismissBtn ).not.toBeNull();
+
+					dm.destroy();
+				} );
+
+				it( 'dismisses banner notice when dismiss button is clicked and preserves legacy record in storage', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+
+					const raw = JSON.stringify( {
+						filename: dm.filename,
+						setName: 'default',
+						page: 1,
+						timestamp: Date.now() - 5000,
+						layers: [ { id: 'leg1' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					dm.showLegacyNotice();
+					expect( document.querySelector( '.layers-legacy-draft-notice' ) ).not.toBeNull();
+
+					const dismissBtn = document.querySelector( '.layers-legacy-dismiss-btn' );
+					dismissBtn.click();
+
+					// Notice removed from DOM
+					expect( document.querySelector( '.layers-legacy-draft-notice' ) ).toBeNull();
+
+					// Storage preserved intact
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.destroy();
+				} );
+
+				it( 'dismisses notice on Escape keydown', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					mockLocalStorage[ legacyKey ] = JSON.stringify( { layers: [ { id: 'l1' } ] } );
+
+					const notice = dm.showLegacyNotice();
+					expect( document.querySelector( '.layers-legacy-draft-notice' ) ).not.toBeNull();
+
+					const event = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } );
+					notice.dispatchEvent( event );
+
+					expect( document.querySelector( '.layers-legacy-draft-notice' ) ).toBeNull();
+					expect( mockLocalStorage[ legacyKey ] ).toBeDefined();
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'explicit local export and recovery dialog', function () {
+				it( 'renders dialog with escaped metadata text and unscoped warning', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+
+					const raw = JSON.stringify( {
+						filename: '<script>alert("xss")</script>',
+						setName: '<b>bold-set</b>',
+						page: 2,
+						timestamp: 1600000000000,
+						layers: [ { id: 'l1', type: 'text' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const dialog = document.querySelector( '.layers-legacy-dialog' );
+					expect( dialog ).not.toBeNull();
+					expect( dialog.getAttribute( 'role' ) ).toBe( 'dialog' );
+					expect( dialog.getAttribute( 'aria-modal' ) ).toBe( 'true' );
+
+					// Check unscoped warning
+					const warning = dialog.querySelector( '.layers-legacy-warning' );
+					expect( warning ).not.toBeNull();
+
+					// Check escaped metadata text
+					const metaFilename = dialog.querySelector( '.layers-legacy-meta-filename' );
+					expect( metaFilename.textContent ).toBe( '<script>alert("xss")</script>' );
+					// Ensure no script tag is parsed as an HTML element
+					expect( dialog.querySelector( 'script' ) ).toBeNull();
+
+					const metaSet = dialog.querySelector( '.layers-legacy-meta-set' );
+					expect( metaSet.textContent ).toBe( '<b>bold-set</b>' );
+					expect( dialog.querySelector( 'b' ) ).toBeNull();
+
+					const metaPage = dialog.querySelector( '.layers-legacy-meta-page' );
+					expect( metaPage.textContent ).toBe( '2' );
+
+					const metaLayers = dialog.querySelector( '.layers-legacy-meta-layers' );
+					expect( metaLayers.textContent ).toBe( '1' );
+
+					dm.closeLegacyRecoveryDialog();
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).toBeNull();
+
+					dm.destroy();
+				} );
+
+				it( 'closes dialog on Escape key and leaves legacy record intact', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( { layers: [ { id: 'esc' } ] } );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).not.toBeNull();
+
+					const event = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } );
+					document.dispatchEvent( event );
+
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).toBeNull();
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'raw byte export and malformed legacy data handling', function () {
+				it( 'exports raw bytes as JSON download for ordinary legacy draft', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( {
+						filename: dm.filename,
+						setName: 'default',
+						page: 1,
+						layers: [ { id: 'export-me', type: 'circle' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					const exported = dm.exportLegacyRecord( record );
+
+					expect( exported ).toBe( true );
+					expect( window.URL.createObjectURL ).toHaveBeenCalled();
+
+					dm.destroy();
+				} );
+
+				it( 'allows raw export of malformed unparseable data while disabling import', function () {
+					const dm = new DraftManager( mockEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const malformedRaw = 'INVALID_JSON{broken:';
+					mockLocalStorage[ legacyKey ] = malformedRaw;
+
+					const record = dm.recordLegacyDraft( legacyKey, malformedRaw );
+					expect( record.isMalformed ).toBe( true );
+
+					dm.showLegacyRecoveryDialog( record );
+
+					const dialog = document.querySelector( '.layers-legacy-dialog' );
+					expect( dialog ).not.toBeNull();
+
+					// Malformed warning shown
+					const malformedWarning = dialog.querySelector( '.layers-legacy-malformed-warning' );
+					expect( malformedWarning ).not.toBeNull();
+
+					// Import button must be disabled
+					const importBtn = dialog.querySelector( '.layers-legacy-import-btn' );
+					expect( importBtn.disabled ).toBe( true );
+					expect( importBtn.getAttribute( 'aria-disabled' ) ).toBe( 'true' );
+
+					// Export button must be enabled
+					const exportBtn = dialog.querySelector( '.layers-legacy-export-btn' );
+					expect( exportBtn.disabled ).toBe( false );
+
+					// Export works for malformed raw string
+					exportBtn.click();
+					expect( window.URL.createObjectURL ).toHaveBeenCalled();
+
+					// Legacy key is preserved in localStorage
+					expect( mockLocalStorage[ legacyKey ] ).toBe( malformedRaw );
+
+					dm.closeLegacyRecoveryDialog();
+					dm.destroy();
+				} );
+			} );
+
+			describe( 'manual import into current set', function () {
+				it( 'validates layers, sets dirty state, updates canvas and panel, and preserves legacy key', function () {
+					const markDirtyMock = jest.fn();
+					const renderLayersMock = jest.fn();
+					const updateLayersMock = jest.fn();
+
+					const customEditor = {
+						filename: 'Test_Image.jpg',
+						markDirty: markDirtyMock,
+						canvasManager: { renderLayers: renderLayersMock },
+						layerPanel: { updateLayers: updateLayersMock },
+						stateManager: {
+							get: jest.fn( function ( key ) {
+								if ( key === 'currentSetName' ) {
+									return 'custom-set';
+								}
+								return null;
+							} ),
+							update: jest.fn(),
+							subscribe: jest.fn( function () {
+								return jest.fn();
+							} )
+						}
+					};
+
+					const dm = new DraftManager( customEditor );
+					const legacyKey = dm.getLegacyStorageKey();
+					const raw = JSON.stringify( {
+						filename: 'Old_Name.jpg',
+						setName: 'old-set',
+						page: 1,
+						layers: [ { id: 'leg-1', type: 'rectangle', text: '<script>safe</script>' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					const record = dm.recordLegacyDraft( legacyKey, raw );
+					dm.showLegacyRecoveryDialog( record );
+
+					const importBtn = document.querySelector( '.layers-legacy-import-btn' );
+					expect( importBtn.disabled ).toBe( false );
+
+					importBtn.click();
+
+					// Applied to stateManager with isDirty: true
+					expect( customEditor.stateManager.update ).toHaveBeenCalledWith( expect.objectContaining( {
+						isDirty: true,
+						layers: expect.arrayContaining( [
+							expect.objectContaining( { id: 'leg-1', type: 'rectangle', text: 'safe' } )
+						] )
+					} ) );
+
+					expect( markDirtyMock ).toHaveBeenCalled();
+					expect( renderLayersMock ).toHaveBeenCalled();
+					expect( updateLayersMock ).toHaveBeenCalled();
+
+					// CRITICAL: legacy record in localStorage is NOT removed
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+
+					// Dialog and notice are closed after successful import
+					expect( document.querySelector( '.layers-legacy-dialog' ) ).toBeNull();
+					expect( document.querySelector( '.layers-legacy-draft-notice' ) ).toBeNull();
+
+					dm.destroy();
+				} );
+
+				it( 'preserves legacy draft across editor restart when import was cancelled', function () {
+					const dm1 = new DraftManager( mockEditor );
+					const legacyKey = dm1.getLegacyStorageKey();
+					const raw = JSON.stringify( {
+						filename: dm1.filename,
+						setName: 'default',
+						page: 1,
+						layers: [ { id: 'preserved-1' } ]
+					} );
+					mockLocalStorage[ legacyKey ] = raw;
+
+					// User opens dialog and clicks close
+					const record = dm1.detectLegacyDraft();
+					dm1.showLegacyRecoveryDialog( record );
+					const closeBtn = document.querySelector( '.layers-legacy-close-btn' );
+					closeBtn.click();
+
+					dm1.destroy();
+
+					// Restart editor session: new DraftManager instance
+					const dm2 = new DraftManager( mockEditor );
+					expect( mockLocalStorage[ legacyKey ] ).toBe( raw );
+					expect( dm2.hasLegacyDraft() ).toBe( true );
+
+					dm2.destroy();
+				} );
+			} );
+		} );
 	} );
 } );
