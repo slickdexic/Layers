@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-Prepared September 10, 2026 against `main` at `e03504ec` (manifest 1.5.95).
+Prepared September 10, 2026 against `main` at `e03504ec` (manifest 1.5.95). Review update is on `codex/j05-exact-draft-cleanup` at `9819921f` plus local corrections; it is not yet merged to main.
 
 This is the execution queue for the [product roadmap](../improvement_plan.md). It assigns bounded implementation work to junior engineers and retains architectural, authorization and data-migration decisions with the lead engineer. Tasks are **not started or assigned** merely because they appear here. No feature is enabled by this document.
 
@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-Give the first junior engineer **J01**, then **J02** and **J03**, one pull request at a time. These are useful, bounded fixes to current behavior while the lead completes **L01**. Another engineer can take **J04**, which changes tests rather than the same save implementation. Do not assign all tasks at once: subsequent packets explicitly depend on approved contracts or merged work.
+**Review update — September 10:** J01–J05 have been implemented and reviewed; corrections and remaining limits are recorded in [the junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md). Give the next junior engineer **J16**, then **J17**, then **J18**. J18 can run independently in an isolated test environment. The lead resumes **L01**. The original task packets below remain context; do not reassign them as untouched work.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -18,7 +18,7 @@ Copy this instruction together with the selected task packet:
 
 > Implement task [ID] from docs/IMPLEMENTATION_HANDOFF_PLAN.md. Read its dependencies and linked contracts first. Confirm that dependencies have merged; otherwise report the missing dependency without guessing its design. Work only within this packet, use a codex/ branch, and submit one reviewable pull request. Exercise production behavior and include the commands, results and remaining limitations. Preserve unrelated changes. Do not enable page-owned publishing, migrate real data, change release numbers or publish documentation externally as part of this task. Update this plan's progress ledger with evidence, not just a completion claim.
 
-Paths below are repository-relative. New files are explicitly described as proposed. Start from the then-current main branch, rather than permanently branching from this document's baseline. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
+Paths below are repository-relative. New files are explicitly described as proposed. For J16–J18, start from the reviewed corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
 
 ## What already exists
 
@@ -39,12 +39,12 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 
 | Order / ID | Owner | Deliverable | Dependency / assignment status |
 | --- | --- | --- | --- |
-| 1 J01 | Junior | Literal explicit set names (R6.09) | Ready now |
-| 2 J02 | Junior | Configured initial set name (R6.17) | J01; same save code |
-| 3 J03 | Junior | Slide creation rate limit (R6.14) | J02; same save code |
-| 4 J04 | Junior | Production rename regression tests (R6.15) | Ready now; may run alongside J01–J03 |
+| 1 J01 | Junior | Literal explicit set names (R6.09) | Reviewed and corrected; J17 follows |
+| 2 J02 | Junior | Configured initial set name (R6.17) | Reviewed and corrected |
+| 3 J03 | Junior | Slide creation rate limit (R6.14) | Reviewed; unit evidence |
+| 4 J04 | Junior | Production rename regression tests (R6.15) | Reviewed; live acceptance remains J18 |
 | 5 L01 | Lead | Alternate-path admission design and enforcement | Next lead task; independent of J01–J04 |
-| 6 J05 | Junior | Identity-specific draft cleanup (R6.10) | J01–J03; before editor refactoring |
+| 6 J05 | Junior | Identity-specific draft cleanup (R6.10) | Corrected; identity format remains J16 |
 | 7 J06 | Junior | Source and transport acceptance fixtures | L01 test registration contract |
 | 8 L02 | Lead | Historical read, asset delivery and controlled registration | L01 + J06; gate A |
 | 9 J07 | Junior | Page-owned API client adapter | Gate A and frozen read/write response contracts |
@@ -106,6 +106,32 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 **Implement:** permit explicit file/set/page identity when deleting a draft. Clear drafts for each successful buffered save and each explicitly discarded buffered entry; retain failed entries. A silent save must still perform persistence cleanup. Reuse existing key construction.
 
 **Done when:** a save from a different displayed page, partial failure, full discard and editor restart each produce the correct recovery choices. Include same-page/different-set isolation, and slide/image behavior wherever supported. Do not delete drafts through broad storage-prefix clearing or clear a newer draft created while an earlier save is in flight; test that race using the existing draft identity/version mechanism or request a lead decision if none exists.
+
+## Next junior batch after review
+
+### J16 — Make draft identities unambiguous
+
+**Ready now; first priority.** Read `resources/ext.layers.editor/DraftManager.js`, its recovery/load/clear methods, `LayersEditor.js`, and associated Jest tests. Existing keys collide for set `A B` versus `A_B`, Unicode names, and set `x-p2` on page 1 versus set `x` on page 2.
+
+**Approved design:** use a versioned key containing an injective encoding of the complete tuple (wiki scope, user scope, original filename, original set name, normalized page). An encoded JSON array is suitable; lossy replacement or a truncated hash alone is not. Capture scope at manager creation. All write/read/cleanup paths must share the same encoder. Preserve original strings and version the storage key independently of the publication document schema.
+
+For legacy lookup, check the stored payload's original file/set/page against the requested tuple before offering recovery or deletion. Ambiguous/missing identity must not be auto-deleted or applied to a different target. Define a visible recovery/report path for ambiguous legacy records. Write a successfully validated legacy recovery to the new key before any old-record cleanup; a quota failure must preserve the old data. Do not sweep all users' drafts. If the old format lacks wiki identity, do not infer ownership across wikis silently; document that limit and return any unresolved migration choice to the lead.
+
+**Acceptance:** exact tuple collision cases, multiple users/wikis, restart recovery, save/discard isolation, legacy matching/mismatch, malformed legacy payload and quota failure. Retain the newly added exact-value buffered-save guard. Also audit foreground save cleanup for the same stale completion problem; if it needs changes to the full editor save state machine, report it for lead design rather than claiming all races fixed. One focused PR, no publication schema changes.
+
+### J17 — Align mutation identifiers without silent rewriting
+
+**After J16 for the default single-engineer queue; technically independent.** Inspect `ApiLayersRename.php`, `ApiLayersDelete.php`, `ApiLayersInfo.php`, and the corrected save/resolver behavior. The lead decision is that a supplied canonical set identifier is literal; malformed or noncanonical identifiers fail before mutation. Only documented omission/empty-name paths may resolve a target implicitly. Wikitext display switches are separate.
+
+Add production-route tests first for stripping/truncation, empty/whitespace input, Unicode and `0`, with another set present to catch accidental redirection. Apply validation to both old and new rename identifiers and relevant delete scopes. Preserve documented omission behavior and do not reserve names. If normalizing read parameters disagrees with writes, return an explicit validation error rather than selecting another set. Reuse a small shared boundary helper if it eliminates duplicate policy; do not refactor unrelated APIs.
+
+**Acceptance:** invalid requests produce no rename/delete/save call; valid names round-trip and retain scope across images, PDF pages and slides. Update the API reference and compatibility notes. This task is not an excuse to redesign valid Unicode naming or migrate stored sets.
+
+### J18 — Prove the named-set workflow in a browser
+
+**Ready independently in an isolated test wiki.** Read `tests/e2e/named-sets.spec.js` and the actual set-selector/dialog components. Use a disposable image fixture and test account; never rename a user's real set. Verify creation, save, rename and reload against persisted state. Required controls must have unconditional assertions. Replace outdated assumptions such as a permanently undeletable literal `default` set with the actual documented policy.
+
+**Acceptance:** the test fails if a required control is removed or the rename does not persist; cleanup affects only test-owned sets; report the browser/MediaWiki version and exact command. If authentication/fixtures are unavailable, mark this task blocked rather than reporting a skipped suite as acceptance. Reuse current harness setup; no enabling experimental publishing.
 
 ## Lead-owned history work
 
@@ -256,14 +282,17 @@ Available entry points include `npm run test:js -- --runInBand <test-path>`, `ph
 
 Each PR should state: problem and resulting behavior; task ID/dependencies; actual test commands/results and environment; changed contract/docs; unresolved limits. A reviewer should be able to reproduce the decisive failure and success without reading the entire conversation. Record blocked work as blocked with a specific missing decision, not completed.
 
-| Task IDs | Status at plan creation | Evidence / next action |
+| Task IDs | Reviewed status (September 10, 2026) | Evidence / next action |
 | --- | --- | --- |
-| J01 | Completed on branch `codex/j01-explicit-set-names` | Separated explicit API set-name handling (`SetNameResolver::hasExplicitName()`, `resolveExplicit()`) from wikitext display intent parsing in `ApiLayersSave.php` and `ApiLayersInfo.php`. Tested literal set names (`on`, `off`, `all`, `true`, `false`, `1`, `0`, custom names) across image, slide and multi-page PDF routes. Target isolation verified against pre-existing latest sets. Unit tests: `SetNameResolverTest` (13 tests, 74 assertions), `ApiLayersSaveExplicitSetNameTest` (34 tests, 166 assertions). Standalone PHPUnit: 905 tests, 2,148 assertions, 1 skip, 0 failures. `npm run test:php`: clean (0 errors). Ready for review/merge. |
-| J02 | Completed on branch `codex/j02-configured-seed-name` | Reused validated `LayersDefaultSetName` configuration policy in `SetNameSanitizer::getDefaultName(?Config $config)`. Connected image and slide routes in `ApiLayersSave.php` and fallback in `LayersDatabase::saveLayerSet()`. Verified initial unnamed save with configured seed (e.g. `annotations`) seeds that name, subsequent unnamed saves preserve existing sets, explicit names are honored, and invalid configuration fails fast via `\ConfigException`. Unit tests: `SetNameSanitizerTest` (37 tests, 124 assertions), `ApiLayersSaveConfiguredSeedNameTest` (9 tests, 16 assertions), `LayersDatabaseTest` (56 tests, 110 assertions). Standalone PHPUnit: 924 tests, 2,179 assertions, 1 skip, 0 failures. `npm run test:php`: clean (0 errors). Ready for review/merge. |
-| J03 | Completed on branch `codex/j03-slide-creation-rate-limit` | Applied 'create' rate limit checks to slide creation in `ApiLayersSave::executeSlideSave()` via `RateLimiter::checkRateLimit( $user, 'create' )` when named set does not already exist in database. Preserved save-only rate limiting policy for updates to existing slide sets. Added `MediaWiki\Logger\LoggerFactory` stub to `bootstrap.php` and rate limit action unit tests in `RateLimiterTest` (22 tests, 83 assertions). Added 7 unit tests in `ApiLayersSaveSlideRateLimitTest` (18 assertions) covering new slide creation rejection when 'create' bucket exhausted, new set creation rejection on existing slide, allowed updates to existing sets under exhausted 'create' limit, and unnamed initial slide routes. Standalone PHPUnit: 932 tests, 2,203 assertions, 1 skip, 0 failures. `npm run test:php`: clean (0 errors). Ready for review/merge. |
-| J04 | Completed on branch `codex/j04-rename-regression-tests` | Replaced artificial 50-char ASCII `SetNameValidationHarness` in `ApiLayersRenameValidationTest.php` with direct tests of production `SetNameSanitizer::isValid()` and `ApiLayersRename` execution. Tested production validation for Unicode scripts (Cyrillic, Latin accented, CJK, Arabic), spaces, and 255-character length boundaries. Tested `ApiLayersRename` rejection of invalid/empty names, collision handling, missing source set, and unauthorized users. Tested valid Unicode and spaced names across file (single/all pages) and slide (`slidename` and `Slide:` prefix) routes. Updated `tests/e2e/named-sets.spec.js` rename test to assert presence of real controls (`.layers-set-select`, `.layers-set-rename-btn`, `.layers-modal-input`), fail when controls are missing, and verify persisted renamed set across page reload. Documented production finding: `ApiLayersRename` sanitizes before `isValid()`, silently stripping characters like `<script>` rather than rejecting upfront. Standalone PHPUnit: 957 tests, 2,253 assertions, 1 skip, 0 failures. `npm run test:php`: clean (0 errors). Ready for review/merge. |
+| J01 | Reviewed with corrections | `6486046f`; invalid explicit names now rejected before resolution; see review record |
+| J02 | Reviewed with corrections | `0ca2b3a4`; explicit configuration injection and failure propagation |
+| J03 | Reviewed | `9b8a0d5e`; production-route unit tests pass; live concurrency not claimed |
+| J04 | Unit work reviewed; browser acceptance pending | `be126dd6`; required button assertions strengthened; J18 remains |
+| J05 | Partially complete after corrections | `9819921f`; buffered snapshot/draft races corrected; storage identity remains J16 |
+| J16 | Ready; next junior task | Versioned collision-free draft keys and safe legacy recovery |
+| J17 | Ready after J16 in default queue | Remaining mutation identifier validation |
+| J18 | Ready with isolated browser prerequisites | Live rename persistence and named-set test corrections |
 | L01 | Next lead work; not implemented | Write and prove admission design |
-| J05 | Completed on branch `codex/j05-exact-draft-cleanup` | Implemented exact draft targeting in `DraftManager` (`buildStorageKey`, `getStorageKey` with `{filename, setName, page}`, `clearDraft`, `onSaveSuccess`), silent save cache invalidation and freshness cleanup in `APIManager` (`handleSilentSaveSuccess`), and exact buffered page draft cleanup and in-flight race protection in `LayersEditor` (`saveBufferedPages`, `discardPageChanges`, `cancel`). Verified multi-page isolation, exact targeting without broad prefix sweeps, and race protection preserving newer drafts (`maxTimestamp`). Unit tests: 119 in `DraftManager.test.js`, 425 in `APIManager.test.js`, 215 in `LayersEditor.test.js` (759 passed total). Full Jest suite: 180 suites, 14,328 tests passed. Standalone PHPUnit: 957 tests, 2,253 assertions passed. Grunt eslint and PHP linters clean (0 errors). Doc and version checks passed. Ready for review/merge. |
-| J06–J15, L02–L08 | Blocked on listed dependencies; unassigned | Split each ID into its own ledger row when assigned |
+| J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 
 When completing a task, record its PR/commit and specific evidence here, then update the active history contract or feature guide as appropriate. This plan is the assignment queue; those contracts remain the authority for implemented behavior.

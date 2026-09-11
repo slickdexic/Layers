@@ -154,3 +154,7 @@ Use the returned delivery URL; do not construct a path into the export cache. `S
 ## Integration boundaries
 
 No current parameter binds a set to a MediaWiki article revision, writes searchable annotation text, or creates Cargo annotation rows. These are proposals in [[Current Status]]. When integrating with a different deployed branch, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
+
+## Explicit save-name validation
+
+On the local J01–J05 review branch (not yet merged to main), `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. Rename/delete consistency is still tracked separately as J17.

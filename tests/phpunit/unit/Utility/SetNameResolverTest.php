@@ -76,12 +76,14 @@ class SetNameResolverTest extends \MediaWikiUnitTestCase {
 	 * @covers ::hasExplicitName
 	 */
 	public function testHasExplicitName(): void {
-		$explicit = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'default', '001', 'anatomy', '  on  ' ];
+		$explicit = [
+			'on', 'off', 'all', 'true', 'false', '1', '0', 'default', '001', 'anatomy', '  on  ', '///', "\x00"
+		];
 		foreach ( $explicit as $value ) {
 			$this->assertTrue( SetNameResolver::hasExplicitName( $value ), (string)$value );
 		}
 
-		$omittedOrInvalid = [ null, '', '   ', "\x00", '///' ];
+		$omittedOrInvalid = [ null, '' ];
 		foreach ( $omittedOrInvalid as $value ) {
 			$this->assertFalse( SetNameResolver::hasExplicitName( $value ), (string)$value );
 		}
@@ -92,7 +94,7 @@ class SetNameResolverTest extends \MediaWikiUnitTestCase {
 	 */
 	public function testResolveExplicitWithExplicitNames(): void {
 		$db = $this->makeDb( [ 'name' => 'latest-set' ] );
-		$literalNames = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'custom-name', '  trimmed-set  ' ];
+		$literalNames = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'custom-name', 'trimmed-set' ];
 		$expected = [ 'on', 'off', 'all', 'true', 'false', '1', '0', 'custom-name', 'trimmed-set' ];
 
 		foreach ( $literalNames as $idx => $literal ) {
@@ -109,7 +111,7 @@ class SetNameResolverTest extends \MediaWikiUnitTestCase {
 	 */
 	public function testResolveExplicitWithOmittedNames(): void {
 		$dbWithLatest = $this->makeDb( [ 'name' => 'latest-set' ] );
-		foreach ( [ null, '', '   ' ] as $omitted ) {
+		foreach ( [ null, '' ] as $omitted ) {
 			$this->assertSame(
 				'latest-set',
 				SetNameResolver::resolveExplicit( $dbWithLatest, 'Foo.jpg', 'sha1', $omitted )
@@ -125,6 +127,16 @@ class SetNameResolverTest extends \MediaWikiUnitTestCase {
 			'default',
 			SetNameResolver::resolveExplicit( $dbEmpty, 'Foo.jpg', 'sha1', null, 1 )
 		);
+	}
+
+	/**
+	 * @covers ::resolveExplicit
+	 */
+	public function testInvalidExplicitNameCannotResolveToLatest(): void {
+		$db = $this->makeDb( [ 'name' => 'latest-set' ] );
+		$db->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->expectException( \InvalidArgumentException::class );
+		SetNameResolver::resolveExplicit( $db, 'Foo.jpg', 'sha1', '///' );
 	}
 
 	/**

@@ -13,7 +13,6 @@ namespace MediaWiki\Extension\Layers\Validation;
 
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
-use MediaWiki\MediaWikiServices;
 
 /**
  * Provides sanitization for layer set names.
@@ -123,7 +122,7 @@ class SetNameSanitizer {
 	 * supplied none. This is an authoritative seed for a brand-new row, not a
 	 * name that is looked up or assumed to exist.
 	 *
-	 * When a Config instance is supplied (or when MediaWikiServices is available),
+	 * When a Config instance is supplied,
 	 * the value of $wgLayersDefaultSetName (LayersDefaultSetName) is consulted.
 	 * If omitted or set to the default, 'default' is returned.
 	 * If configured to a valid set name, that name is returned.
@@ -135,26 +134,11 @@ class SetNameSanitizer {
 	 * @throws \ConfigException When LayersDefaultSetName is configured with an invalid set name
 	 */
 	public static function getDefaultName( ?Config $config = null ): string {
-		if ( $config === null && class_exists( MediaWikiServices::class ) ) {
-			try {
-				$services = MediaWikiServices::getInstance();
-				if ( method_exists( $services, 'getMainConfig' ) ) {
-					$config = $services->getMainConfig();
-				}
-			} catch ( \Throwable $e ) {
-				$config = null;
-			}
-		}
-
 		if ( $config === null ) {
 			return LayersConstants::DEFAULT_SET_NAME;
 		}
 
-		try {
-			$raw = $config->get( 'LayersDefaultSetName' );
-		} catch ( \Throwable $e ) {
-			return LayersConstants::DEFAULT_SET_NAME;
-		}
+		$raw = $config->get( 'LayersDefaultSetName' );
 
 		if ( $raw === null || $raw === LayersConstants::DEFAULT_SET_NAME ) {
 			return LayersConstants::DEFAULT_SET_NAME;

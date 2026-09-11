@@ -179,11 +179,6 @@
 		}
 
 		/**
-		 * Generate a unique storage key for the current context
-		 *
-		 * @return {string} Storage key
-		 */
-		/**
 		 * Build a storage key for an explicit file, set name, and page.
 		 *
 		 * @param {string} [filename] Target filename
@@ -543,6 +538,21 @@
 		}
 
 		/**
+		 * Capture the exact stored draft before starting a save. Undefined means
+		 * storage could not be read; null means no draft existed.
+		 *
+		 * @param {Object} options Explicit target identity
+		 * @return {string|null|undefined} Stored value
+		 */
+		captureDraft( options ) {
+			try {
+				return localStorage.getItem( this.getStorageKey( options ) );
+			} catch ( e ) {
+				return undefined;
+			}
+		}
+
+		/**
 		 * Clear the stored draft for the current context or an explicit target.
 		 *
 		 * @param {Object|number} [options] Target context options or explicit page number
@@ -550,6 +560,7 @@
 		 * @param {string} [options.setName] Explicit set name
 		 * @param {number|string} [options.page] Explicit page number
 		 * @param {number} [options.maxTimestamp] Only delete if stored draft timestamp <= maxTimestamp
+		 * @param {string|null} [options.expectedDraft] Delete only this exact previously captured value
 		 */
 		clearDraft( options ) {
 			if ( !this.isStorageAvailable() ) {
@@ -558,6 +569,11 @@
 
 			try {
 				const targetKey = this.getStorageKey( options );
+				if ( options && Object.prototype.hasOwnProperty.call( options, 'expectedDraft' ) &&
+					( options.expectedDraft === undefined ||
+						localStorage.getItem( targetKey ) !== options.expectedDraft ) ) {
+					return;
+				}
 
 				if ( options && typeof options === 'object' && typeof options.maxTimestamp === 'number' ) {
 					const existing = localStorage.getItem( targetKey );

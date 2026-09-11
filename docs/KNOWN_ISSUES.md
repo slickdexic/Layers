@@ -1,6 +1,6 @@
 # Known issues — Layers 1.5.95 and subsequent main fixes
 
-Updated September 6, 2026. This is the current operational summary; dated reviews remain historical evidence.
+Updated September 10, 2026. This is the current operational summary; dated reviews remain historical evidence. J01–J05 corrections below are on the local review branch and are not yet merged to main.
 
 See [Current status](CURRENT_STATUS.md) for tested revisions, upgrade notes and capability boundaries, and [the R6 review](../codebase_review.md) for reproduction evidence.
 
@@ -9,12 +9,12 @@ See [Current status](CURRENT_STATUS.md) for tested revisions, upgrade notes and 
 | Corporate history (R6.19) | The optional null-edit audit path does not supply reliable page revisions. Do not claim controlled-document compliance |
 | Search | Text inside slides/images/PDF annotations is not explicitly indexed by MediaWiki; name filters are different |
 | Cargo | Current support selects gallery layer sets; annotation tables and linked fields are proposals |
-| Set naming (R6.09, R6.17) | Intent-like names such as on/off/1 can be interpreted inconsistently; use descriptive names and explicit API setname values. Some default-name paths remain inconsistent |
-| Drafts (R6.10) | Buffered save/discard can leave stale drafts. Check offered recovery data before restoring it |
+| Set naming | R6.09/R6.17 save targeting and configured seeds corrected. Remaining rename/delete identifier consistency is tracked as J17; malformed explicit saves now fail instead of redirecting |
+| Drafts (R6.10) | Buffered cleanup and save races corrected, but legacy draft keys can collide across set/page identities. J16 remains open; inspect offered recovery data |
 | Exports (R6.11–12) | Failed pages/overlays may be omitted; server rendering does not reproduce all background, rich-text and rotation settings. Compare exported output with the viewer |
 | Foreign files (R6.13) | A missing local File page can prevent backlink cache purges; refresh affected pages if overlays remain stale |
-| Slide rate limiting (R6.14) | Slide creation does not use the dedicated create bucket on all paths |
-| Test quality (R6.15) | Some substitute validation and optional-control E2E tests still provide weak evidence |
+| Slide rate limiting (R6.14) | Corrected on review branch: new slides/named slide sets use the creation bucket; existing updates retain save limits |
+| Test quality (R6.15) | Rename tests now exercise production behavior; live browser proof and remaining named-set false-pass patterns remain J18 |
 | Dependencies (R6.16) | A production-only dependency audit omits the vendored pdf.js dependency; check shipped assets as well |
 
 ## Recently fixed
@@ -26,3 +26,5 @@ R6.08 now rejects malformed JSON containers before writes while preserving expli
 ## Reporting
 
 For a normal bug, include branch/commit, MediaWiki/PHP/browser versions, image/PDF/slide type, minimal markup, expected/actual behavior and sanitized console/API errors. Use private reporting for security issues as described in [SECURITY.md](../SECURITY.md). Do not include confidential SOP content, tokens or database dumps in public issues.
+
+See the [junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md) for corrections, verification and remaining limits.

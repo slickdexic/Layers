@@ -271,6 +271,17 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 		SetNameSanitizer::getDefaultName( $config );
 	}
 
+	/**
+	 * @covers ::getDefaultName
+	 */
+	public function testConfigurationFailureDoesNotSilentlySelectDefault(): void {
+		$config = $this->createMock( \MediaWiki\Config\Config::class );
+		$config->method( 'get' )->willThrowException( new \RuntimeException( 'config unavailable' ) );
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'config unavailable' );
+		SetNameSanitizer::getDefaultName( $config );
+	}
+
 	public static function provideInvalidDefaultSetNameConfig(): array {
 		return [
 			'empty string' => [ '' ],

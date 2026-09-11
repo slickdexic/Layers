@@ -3219,7 +3219,8 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			inst.historyManager = { clearHistory: jest.fn(), saveInitialState: jest.fn() };
 			inst.selectionManager = { clearSelection: jest.fn() };
 			inst.toolbar = { updatePageNavState: jest.fn() };
-			inst.draftManager = { saveDraft: jest.fn(), clearDraft: jest.fn() };
+			inst.draftManager = { saveDraft: jest.fn(),
+				captureDraft: jest.fn().mockReturnValue( 'captured-draft' ), clearDraft: jest.fn() };
 			inst.syncPageInUrl = jest.fn();
 			inst.reloadAtPage = jest.fn();
 			inst.notifyUser = jest.fn();
@@ -3392,7 +3393,7 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			} );
 		} );
 
-		test( 'saveBufferedPages clears draft per page on success with maxTimestamp', async () => {
+		test( 'saveBufferedPages clears draft per page on success with captured draft', async () => {
 			const inst = pagedInstance( true );
 			await inst.performPageNavigation( 4 );
 			inst.isDirtyFlag = true;
@@ -3407,14 +3408,30 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 				filename: inst.filename,
 				setName: '001',
 				page: 1,
-				maxTimestamp: expect.any( Number )
+				expectedDraft: 'captured-draft'
 			} ) );
 			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
 				filename: inst.filename,
 				setName: '001',
 				page: 4,
-				maxTimestamp: expect.any( Number )
+				expectedDraft: 'captured-draft'
 			} ) );
+		} );
+
+		test( 'an older save cannot discard a replacement buffered snapshot', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			let finish;
+			inst.apiManager.savePageLayers.mockImplementation( () => new Promise( ( resolve ) => {
+				finish = resolve;
+			} ) );
+			const pending = inst.saveBufferedPages( [ 1 ] );
+			const newer = { page: 1, setName: '001', layers: [ { id: 'newer' } ] };
+			inst.pageBuffer.stash( 1, newer );
+			finish( {} );
+			expect( await pending ).toBe( false );
+			expect( inst.pageBuffer.get( 1 ) ).toBe( newer );
+			expect( inst.draftManager.clearDraft ).not.toHaveBeenCalled();
 		} );
 
 		test( 'a page that fails to save stays in the buffer and retains its draft', async () => {

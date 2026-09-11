@@ -479,6 +479,26 @@ describe( 'DraftManager', function () {
 			expect( mockLocalStorage[ currentKey ] ).toBeDefined();
 		} );
 
+		it( 'preserves changed drafts even when timestamps are equal', function () {
+			const target = { page: 3 };
+			const key = draftManager.getStorageKey( target );
+			localStorage.setItem( key, JSON.stringify( { timestamp: 5000, text: 'old' } ) );
+			const expectedDraft = draftManager.captureDraft( target );
+			const newer = JSON.stringify( { timestamp: 5000, text: 'new' } );
+			localStorage.setItem( key, newer );
+			draftManager.clearDraft( { ...target, expectedDraft } );
+			expect( localStorage.getItem( key ) ).toBe( newer );
+			draftManager.clearDraft( { ...target, expectedDraft: newer } );
+			expect( localStorage.getItem( key ) ).toBeNull();
+		} );
+
+		it( 'preserves drafts when no reliable pre-save value was captured', function () {
+			const key = draftManager.getStorageKey( { page: 3 } );
+			localStorage.setItem( key, 'recoverable' );
+			draftManager.clearDraft( { page: 3, expectedDraft: undefined } );
+			expect( localStorage.getItem( key ) ).toBe( 'recoverable' );
+		} );
+
 		it( 'should preserve newer drafts when maxTimestamp is older than stored draft', function () {
 			const targetKey = draftManager.getStorageKey( 3 );
 			mockLocalStorage[ targetKey ] = JSON.stringify( {

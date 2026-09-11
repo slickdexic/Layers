@@ -98,26 +98,22 @@ class SetNameResolver {
 	 * specify any valid layer set name, including literal names like "on", "off",
 	 * "all", "true", "false", "1", or "0".
 	 *
-	 * An explicit name is present if the value is non-null and, once sanitized,
-	 * is non-empty.
+	 * Presence is separate from validity: malformed input must not select latest.
 	 *
 	 * @param string|null $value Raw caller-supplied value
 	 * @return bool True if an explicit set name was provided
 	 */
 	public static function hasExplicitName( ?string $value ): bool {
-		if ( $value === null || trim( $value ) === '' ) {
-			return false;
-		}
-		return SetNameSanitizer::sanitize( $value ) !== '';
+		return $value !== null && $value !== '';
 	}
 
 	/**
 	 * Resolve an explicit set name supplied to API endpoints.
 	 *
-	 * If an explicit name is provided, it is sanitized and returned literally without
+	 * If an explicit name is provided, it is validated and returned literally without
 	 * being intercepted by wikitext display-intent checks (such as "on", "off", "1", etc.).
 	 *
-	 * If no explicit name is provided (null, empty, or whitespace-only), recency
+	 * If no explicit name is provided (null or empty), recency
 	 * resolution is used to find the latest existing set name for the target image
 	 * and page. If no set exists yet, $fallbackDefault or the configured seed name is used.
 	 *
@@ -138,7 +134,12 @@ class SetNameResolver {
 		?string $fallbackDefault = null
 	): string {
 		if ( self::hasExplicitName( $requested ) ) {
-			return SetNameSanitizer::sanitize( (string)$requested );
+			if ( !SetNameSanitizer::isValid( $requested ) ||
+				SetNameSanitizer::sanitize( $requested ) !== $requested
+			) {
+				throw new \InvalidArgumentException( 'Invalid explicit set name' );
+			}
+			return $requested;
 		}
 		return self::latestName( $db, $imgName, $sha1, $page )
 			?? $fallbackDefault

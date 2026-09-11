@@ -299,6 +299,34 @@ class ApiLayersSaveExplicitSetNameTest extends \MediaWikiUnitTestCase {
 		$this->assertSame( 'prior-latest', $savedSets[0]['setName'] );
 	}
 
+	/**
+	 * @dataProvider provideInvalidExplicitNames
+	 */
+	public function testMalformedNameCannotRedirectSave( string $filename, string $name ): void {
+		$db = $this->createMock( LayersDatabase::class );
+		$db->method( 'isSchemaReady' )->willReturn( true );
+		$db->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$db->expects( $this->never() )->method( 'saveLayerSet' );
+		$api = $this->createApiSaveMock( [
+			'filename' => $filename,
+			'setname' => $name,
+			'data' => '{"layers":[]}',
+		], $db );
+		$this->expectException( \ApiUsageException::class );
+		$this->expectExceptionMessage( 'layers-invalid-setname' );
+		$api->execute();
+	}
+
+	public static function provideInvalidExplicitNames(): array {
+		$cases = [];
+		foreach ( [ 'Photo.png', 'Document.pdf', 'Slide:MyDeck' ] as $file ) {
+			foreach ( [ '///', 'bad/name', '   ', 'a  b', str_repeat( 'a', 256 ) ] as $name ) {
+				$cases[] = [ $file, $name ];
+			}
+		}
+		return $cases;
+	}
+
 	public function testOmittedSetNameSeedsWithDefaultWhenNoPriorSetExists(): void {
 		$savedSets = [];
 		$db = $this->createMock( LayersDatabase::class );

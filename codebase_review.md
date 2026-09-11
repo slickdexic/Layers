@@ -7,6 +7,10 @@
 
 **Publication checkpoint, September 6, 2026:** The complete current change set passed `npm test` (180 suites, 14,310 tests, and repository guards), `npm run test:php`, and PHPUnit (686 tests, 1,475 assertions, one skipped). The remediation sections below retain their original working-tree status as historical context. The page-owned history, search and Cargo work remains a proposal; this checkpoint contains the existing fixes and documentation, not implementation of those larger features.
 
+## J01–J05 review follow-up — September 10, 2026
+
+R6.09/R6.17 save targeting/configured seeds and R6.14 slide creation limits are corrected. Review also closed malformed-name save redirection and buffered-save cleanup races. R6.10 remains partial because legacy draft keys can collide; R6.15 now has production rename tests but still lacks live browser acceptance. See [the review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md) and [updated assignment queue](docs/IMPLEMENTATION_HANDOFF_PLAN.md). Historical findings and counts below describe their original checkpoint, not current status.
+
 ## R6.08 follow-up — strict payload containers, September 6, 2026
 
 Implemented a shared production decoder guard: reject scalar/object-map payloads, missing or non-array `layers`, and non-object layer entries before persistence. Explicit empty arrays remain valid. Regression coverage includes 28 decoder cases and 88 execution cases across image, PDF and both slide routes, asserting zero writes on rejection. Full standalone PHPUnit: 802 tests / 1,878 assertions / one skipped; no live-wiki integration or coverage measurement claimed. See [the contract and implementation record](docs/SAVE_PAYLOAD_CONTRACT.md). This supersedes the original open R6.08 finding and earlier status below; R6.09–R6.17 and R6.19 remain open.

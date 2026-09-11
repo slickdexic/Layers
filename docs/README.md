@@ -12,7 +12,7 @@ Updated September 10, 2026. Current documentation covers images, PDFs and standa
 | Embed content and choose sets | [Wikitext](../wiki/Wikitext-Syntax.md) · [Named sets](../wiki/Named-Layer-Sets.md) |
 | Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) · [Save payload contract](SAVE_PAYLOAD_CONTRACT.md) |
 | Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
-| Assign implementation work | [Ordered junior/lead task packets](IMPLEMENTATION_HANDOFF_PLAN.md) · [Product roadmap](../improvement_plan.md) |
+| Assign implementation work | [Ordered junior/lead task packets](IMPLEMENTATION_HANDOFF_PLAN.md) · [J01–J05 review](JUNIOR_IMPLEMENTATION_REVIEW.md) · [Product roadmap](../improvement_plan.md) |
 | Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |
 | Plan revision-controlled visual content | [Implementation contract](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) · [Internal document format](PAGE_OWNED_DOCUMENT_FORMAT.md) · [Experimental API contract](PAGE_OWNED_API_CONTRACT.md) · [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
 | Maintain/publish docs | [Maintenance guide](DOCUMENTATION_UPDATE_GUIDE.md) · [Release guide](RELEASE_GUIDE.md) · [Wiki publishing](../wiki/README.md) |

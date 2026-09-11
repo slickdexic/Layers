@@ -4,6 +4,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Reviewed J01–J05: literal explicit save identifiers, configured initial set names, slide creation rate limits and production rename tests. Malformed explicit saves now fail instead of silently choosing another set.
+- Corrected buffered-save completion so newer buffered edits and changed drafts survive an earlier save response. Draft-key collisions and browser acceptance remain tracked follow-ups; page-owned history remains unregistered.
+
 ### Fixed
 
 - Rejected malformed save payload containers before persistence across image, PDF and slide routes; preserved explicit empty-list clears (R6.08).

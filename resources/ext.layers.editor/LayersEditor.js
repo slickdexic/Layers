@@ -2008,16 +2008,24 @@ class LayersEditor {
 			if ( !entry ) {
 				return writeNext( index + 1 );
 			}
-			const saveStartTime = Date.now();
+			const draftTarget = { filename: this.filename, setName: entry.setName, page: page };
+			const expectedDraft = this.draftManager &&
+				typeof this.draftManager.captureDraft === 'function' ?
+				this.draftManager.captureDraft( draftTarget ) : undefined;
 			return this.apiManager.savePageLayers( entry )
 				.then( () => {
-					this.pageBuffer.forget( page );
+					// Navigation may have stashed newer work under the same page
+					// while the saved snapshot was in flight. Release only that snapshot.
+					if ( this.pageBuffer.get( page ) === entry ) {
+						this.pageBuffer.forget( page );
+					} else if ( this.pageBuffer.get( page ) ) {
+						failed.push( page );
+						return;
+					}
 					if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
 						this.draftManager.clearDraft( {
-							filename: this.filename,
-							setName: entry.setName,
-							page: page,
-							maxTimestamp: saveStartTime
+							...draftTarget,
+							expectedDraft: expectedDraft
 						} );
 					}
 				} )

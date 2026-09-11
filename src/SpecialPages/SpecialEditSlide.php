@@ -95,7 +95,7 @@ class SpecialEditSlide extends SpecialPage {
 			$setName = (string)( $layerSet['name'] ?? $layerSet['setName'] ?? '' );
 		}
 		if ( $setName === '' ) {
-			$setName = SetNameSanitizer::getDefaultName();
+			$setName = SetNameSanitizer::getDefaultName( $this->getConfig() );
 		}
 		// Support both 'canvaswidth'/'canvasheight' (from JS) and 'width'/'height' (legacy)
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );

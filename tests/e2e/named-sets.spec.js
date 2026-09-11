@@ -342,11 +342,8 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await newSetInput.fill( originalName );
 
 			const newSetBtn = page.locator( '.layers-new-set-btn, [data-action="create-set"]' ).first();
-			if ( await newSetBtn.isVisible() ) {
-				await newSetBtn.click();
-			} else {
-				await newSetInput.press( 'Enter' );
-			}
+			await expect( newSetBtn ).toBeVisible();
+			await newSetBtn.click();
 
 			// Save the set to ensure it is persisted to the backend
 			await editorPage.selectTool( 'rectangle' );
@@ -364,13 +361,10 @@ test( 'a set is selected initially', async ( { page } ) => {
 			await expect( renameInput ).toBeVisible();
 			await renameInput.fill( newName );
 
-			// Confirm rename via dialog confirm button or Enter
+			// Confirm through the required dialog button
 			const confirmBtn = page.locator( '.layers-modal-buttons .layers-btn-primary, [data-action="confirm-rename"]' ).first();
-			if ( await confirmBtn.isVisible() ) {
-				await confirmBtn.click();
-			} else {
-				await renameInput.press( 'Enter' );
-			}
+			await expect( confirmBtn ).toBeVisible();
+			await confirmBtn.click();
 
 			// Verify rename was applied in current selector
 			await expect( selector ).toHaveValue( newName );

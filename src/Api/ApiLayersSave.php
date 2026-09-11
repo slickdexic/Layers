@@ -150,14 +150,16 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		$data = $params['data'];
-		// Explicit API set names are literal names (e.g. 'on', 'off', 'all', 'true',
-		// 'false', '1', '0', or any user-defined name). Wikitext display intents
-		// do not intercept explicit API identifiers. If omitted or unusable, treat
-		// as unnamed ('') so recency resolution chooses the target set.
+		// Only an omitted/empty name requests recency resolution. Never redirect
+		// a malformed explicit identifier to a different, sanitized or latest set.
 		$rawSetName = isset( $params['setname'] ) ? (string)$params['setname'] : null;
-		$setName = SetNameResolver::hasExplicitName( $rawSetName )
-			? SetNameSanitizer::sanitize( (string)$rawSetName )
-			: '';
+		if ( SetNameResolver::hasExplicitName( $rawSetName ) &&
+			( !SetNameSanitizer::isValid( $rawSetName ) ||
+				SetNameSanitizer::sanitize( $rawSetName ) !== $rawSetName )
+		) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+		$setName = $rawSetName ?? '';
 
 		// Size limit check
 		$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );

@@ -7,7 +7,7 @@
 
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work: 15 bounded junior-engineer packets, eight lead-owned milestones, dependencies and acceptance criteria. Start juniors with J01 (literal set names), followed by J02/J03; J04 (production rename tests) can proceed independently. The lead retains L01 (alternate save admission), then the architecture and security gates for history, search and Cargo. This is a task queue, not a claim that those changes are implemented.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. J01–J05 have been reviewed and corrected, with remaining limits in the [review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Next juniors: J16 (draft identity), J17 (mutation identifiers), J18 (browser acceptance). The lead retains L01 (alternate save admission), then the architecture and security gates for history, search and Cargo. Later packets remain dependency-gated; this queue does not announce implemented history/search features.
 
 ## Product improvement roadmap
 
