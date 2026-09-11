@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-Prepared September 10, 2026 against `main` at `e03504ec` (manifest 1.5.95). Latest review covers J16–J18 through `1baf0086` plus local corrections; it does not claim a merge to main.
+Prepared September 10, updated September 11, 2026. Original main baseline: `e03504ec` (manifest 1.5.95). Latest review covers J01–J24 through `651d9011`; it does not claim a merge to main.
 
 This is the execution queue for the [product roadmap](../improvement_plan.md). It assigns bounded implementation work to junior engineers and retains architectural, authorization and data-migration decisions with the lead engineer. Tasks are **not started or assigned** merely because they appear here. No feature is enabled by this document.
 
@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Latest lead review — J22/J23 and J24:** J22 post-confirmation destination check verified; J23 loading-state and fallback-ordering defects corrected; J24 shared cleanup helper, isolation unit tests, and two fresh isolated browser runs completed (13/13 passes each, zero leftovers, inventory preserved). J22, J23, and J24 are complete. **The next task is L01 for the lead.** Read the [lead review record](JUNIOR_IMPLEMENTATION_REVIEW.md).
+**Latest lead review through `651d9011`:** J01–J24 stabilization is closed. Fresh cleanup/API tests passed 28 tests; J24 records two 13/13 browser passes, not independently repeated in this review. Read the [evidence qualifications](JUNIOR_IMPLEMENTATION_REVIEW.md). **L01 design is complete; enforcement is not. Next: lead L01a → L01b, then junior J06.** The [admission decision record](PAGE_OWNED_ADMISSION_DESIGN.md) fixes the implementation boundary and acceptance matrix.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -18,7 +18,7 @@ Copy this instruction together with the selected task packet:
 
 > Implement task [ID] from docs/IMPLEMENTATION_HANDOFF_PLAN.md. Read its dependencies and linked contracts first. Confirm that dependencies have merged; otherwise report the missing dependency without guessing its design. Work only within this packet, use a codex/ branch, and submit one reviewable pull request. Exercise production behavior and include the commands, results and remaining limitations. Preserve unrelated changes. Do not enable page-owned publishing, migrate real data, change release numbers or publish documentation externally as part of this task. Update this plan's progress ledger with evidence, not just a completion claim.
 
-Paths below are repository-relative. New files are explicitly described as proposed. For the remaining J24 acceptance, start from the latest J22/J23/J24 lead corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
+Paths below are repository-relative. New files are explicitly described as proposed. The reviewed stabilization checkpoint is `651d9011`; preserve its corrections. For subsequent assignments use the then-current merged dependency base, not the older main checkpoint. Do not assume this review has merged the branch. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
 
 ## What already exists
 
@@ -43,7 +43,7 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 | 2 J02 | Junior | Configured initial set name (R6.17) | Reviewed and corrected |
 | 3 J03 | Junior | Slide creation rate limit (R6.14) | Reviewed; unit evidence |
 | 4 J04 | Junior | Production rename regression tests (R6.15) | Reviewed; live browser acceptance proven in J18 |
-| 5 L01 | Lead | Alternate-path admission design and enforcement | Next lead task; independent of J01–J04 |
+| 5 L01 | Lead | Alternate-path admission design and enforcement | Design recorded; L01a enforcement then L01b core proof pending |
 | 6 J05 | Junior | Identity-specific draft cleanup (R6.10) | Corrected; identity format remains J16 |
 | 7 J06 | Junior | Source and transport acceptance fixtures | L01 test registration contract |
 | 8 L02 | Lead | Historical read, asset delivery and controlled registration | L01 + J06; gate A |
@@ -111,7 +111,7 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 
 ### J16 — Make draft identities unambiguous
 
-**Ready now; first priority.** Read `resources/ext.layers.editor/DraftManager.js`, its recovery/load/clear methods, `LayersEditor.js`, and associated Jest tests. Existing keys collide for set `A B` versus `A_B`, Unicode names, and set `x-p2` on page 1 versus set `x` on page 2.
+**Historical packet; completed through J24 corrections.** Read `resources/ext.layers.editor/DraftManager.js`, its recovery/load/clear methods, `LayersEditor.js`, and associated Jest tests. Existing keys collide for set `A B` versus `A_B`, Unicode names, and set `x-p2` on page 1 versus set `x` on page 2.
 
 **Approved design:** use a versioned key containing an injective encoding of the complete tuple (wiki scope, user scope, original filename, original set name, normalized page). An encoded JSON array is suitable; lossy replacement or a truncated hash alone is not. Capture scope at manager creation. All write/read/cleanup paths must share the same encoder. Preserve original strings and version the storage key independently of the publication document schema.
 
@@ -162,7 +162,7 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J21 — Isolated named-set browser acceptance
 
-**Review qualification:** the submission below required safety corrections; J24 remains. Any reported passes predate the latest corrections.
+**Historical review qualification:** the submission below required safety corrections. Its passes predate the fixes; later J24 evidence is recorded in the current review.
 
 **Completed on `codex/j21-browser-acceptance`.** Executed end-to-end browser acceptance tests for named layer sets against live MediaWiki 1.45.3 on container `mediawiki-145` (PHP 8.4.11, port 8080).
 - **Isolated Fixtures & Safe Scoping:** Validates explicit `TEST_FILE` (`ImageTest03.png`), `MW_SERVER`, `MW_USERNAME` (`LayersQA`), and `MW_PASSWORD` prerequisites in `test.beforeAll`; reports blocked with explicit error rather than writing to an implicit default image. Sets use unique per-run prefixes (`j21_${RUN_ID}_*`). Tracked sets and test-owned identities are cleaned up in failure-safe post-run teardown (`test.afterAll`) via authenticated `mw.Api` `layersdelete` requests. Unrelated existing sets (`001`, `002`) are strictly preserved.
@@ -195,14 +195,15 @@ Then run two isolated browser acceptance passes against the corrected branch, us
 
 **Acceptance:** cleanup tests fail if broad prefix deletion is restored; two clean browser passes with zero current-run leftovers; prior-run/unrelated data intact. No claim that earlier J21 passes validate the corrected implementation.
 
-## Current junior handoff: finish J24
+## Current handoff: L01a → L01b → J06
 
-1. Capture the latest review corrections and the existing J24 helper/tests together on the working branch before testing; do not drop the untracked helper or overwrite in-progress test artifacts. Keep generated artifacts out of source commits unless deliberately selected as evidence.
-2. Run cleanup unit tests and two consecutive isolated named-set browser runs with a dedicated file/account supplied through environment settings. Use the shared cleanup helper through its browser API adapter. Never restore broad prefix sweeps, copied cleanup algorithms or literal credentials.
-3. Verify failed inventory queries fail teardown; the initial set inventory remains intact; each run leaves zero current-run sets. Record commit, MediaWiki/browser versions, command without secrets, actual counts and cleanup results. A missing fixture/environment is a blocker, not a pass.
-4. Update the review/status record with that evidence. Do not label L01 or page-owned history complete. Return any new behavioral defect to the lead before expanding scope.
+J24 is accepted at `651d9011` with the browser-evidence qualifications in the review record. Its packet above is retained for scope/history, not a request to repeat the completed runs.
 
-The lead now owns L01 and any further fallback-manager consistency work. Avoid adding more editor features while final acceptance is pending.
+1. **Lead L01a:** implement the scoped admission boundary and safe errors from the [decision record](PAGE_OWNED_ADMISSION_DESIGN.md), with test-only registration. Inventory core paths that bypass the hook.
+2. **Lead L01b:** prove the required real-core matrix and freeze the registration/fixture contract. No public feature enablement.
+3. **Junior J06, blocked until L01b:** implement real source and HTTP fixtures using the existing packet below. Record separate mocked, core-dispatch and HTTP results; never register the experimental API on the normal development wiki merely to run tests.
+
+There is no new ready junior product packet at this checkpoint. Do not restart J16–J24 from their historical instructions or invent authorization behavior to unblock J06.
 
 ## Lead-owned history work
 
@@ -210,9 +211,9 @@ The lead now owns L01 and any further fallback-manager consistency work. Avoid a
 
 **Primary files:** `src/Revision/PagePublicationService.php`, `PageRevisionWriter.php`, `PageHistoryAccess.php`, the content handler under `src/Content/`, and `tests/phpunit/core/`.
 
-Write an admission decision record before implementation. Installed MediaWiki inspection found that content `ValidationParams` lacks the original Authority and slot role, while `MultiContentSave` receives author UserIdentity rather than the original request Authority. Do not reconstruct unrestricted user authority from an author or assume the global request user represents a job or scoped API caller.
+Design step completed September 11; implement L01a and prove L01b before claiming L01 complete. Installed MediaWiki inspection found that content `ValidationParams` lacks the original Authority and slot role, while `MultiContentSave` receives author UserIdentity rather than the original request Authority. Do not reconstruct unrestricted user authority from an author or assume the global request user represents a job or scoped API caller.
 
-Evaluate a scoped publication context carrying the original Authority and exact owner/base/snapshot intent, checked at the core save hook. This is a candidate, not a settled API. Prove exception-safe cleanup, nested/repeated-save isolation, correct model/slot placement, creation, changed content and removal. An unrestricted boolean bypass is unacceptable.
+The [admission decision record](PAGE_OWNED_ADMISSION_DESIGN.md) now selects a scoped publication context carrying the original Authority and exact owner/base/snapshot intent, checked at the core save hook. The decision is settled for implementation; its correctness still requires L01b core evidence. Prove exception-safe cleanup, nested/repeated-save isolation, correct model/slot placement, creation, changed content and removal. An unrestricted boolean bypass is unacceptable.
 
 Distinguish a new/changed/removed Layers slot from an unchanged inherited snapshot: ordinary main-only edits must not require fresh access to an unavailable historical source merely to retain old Layers content. Specify trusted import/restore paths explicitly; do not accidentally permit them or block all maintenance forever.
 
@@ -353,23 +354,23 @@ Available entry points include `npm run test:js -- --runInBand <test-path>`, `ph
 
 Each PR should state: problem and resulting behavior; task ID/dependencies; actual test commands/results and environment; changed contract/docs; unresolved limits. A reviewer should be able to reproduce the decisive failure and success without reading the entire conversation. Record blocked work as blocked with a specific missing decision, not completed.
 
-| Task IDs | Reviewed status (September 10, 2026) | Evidence / next action |
+| Task IDs | Reviewed status (September 11, 2026) | Evidence / next action |
 | --- | --- | --- |
 | J01 | Reviewed with corrections | `6486046f`; invalid explicit names now rejected before resolution; see review record |
 | J02 | Reviewed with corrections | `0ca2b3a4`; explicit configuration injection and failure propagation |
 | J03 | Reviewed | `9b8a0d5e`; production-route unit tests pass; live concurrency not claimed |
-| J04 | Unit work reviewed; browser acceptance qualified | J18 reported a run; corrected switching/fixture acceptance remains J21 |
-| J05 | Partially complete after corrections | `9819921f`; buffered snapshot/draft races corrected; storage identity remains J16 |
-| J16 | Reviewed with safety corrections; partial | Unscoped/malformed legacy records preserved; recovery UI/scope proof remains J19 |
+| J04 | Reviewed; acceptance qualified | Rename tests reviewed; J24 supplies engineer-recorded corrected browser acceptance |
+| J05 | Reviewed with follow-up corrections | Exact buffered cleanup and storage identity/recovery addressed through J16/J19/J22 |
+| J16 | Reviewed with follow-up corrections | Tuple isolation plus preservation/recovery follow-ups in J19/J22 |
 | J17 | Reviewed; unit scope accepted | `f7a9a164`; shared canonical mutation/read validation |
-| J18 | Partial; prior run reported by engineer | `1baf0086`; unsafe dirty reset removed; J20/J21 remain |
-| J19 | Reviewed with corrections; partial | Validation bypass removed; destination/undo/failure UI remains J22 |
-| J20 | Reviewed with corrections; integration evidence pending | Request-bound response guard and content comparison; actual API tests remain J23 |
-| J21 | Reviewed with cleanup corrections | Broad cross-run deletion removed; reported browser results precede correction; J24 remains |
+| J18 | Reviewed with follow-up corrections | Dirty reset and switching corrected; later acceptance recorded in J24 |
+| J19 | Reviewed with follow-up corrections | Validation bypass and destination/undo/failure handling addressed through J22 |
+| J20 | Reviewed with follow-up corrections | Request-bound guards and content comparison; real API evidence in J23 and lead fixes |
+| J21 | Reviewed with follow-up corrections | Exact tracked cleanup now shared/tested; corrected browser runs recorded by J24 |
 | J22 | Lead-reviewed with correction | `aff63227`; destination/dialog rechecked after replacement confirmation |
 | J23 | Lead-reviewed; reported defects corrected | `a7eda34a`; real-component tests now require loading-state and stale-response protection |
-| J24 | Completed | Shared tested cleanup path, invalid-inventory rejection, safe reconciliation records; two fresh isolated browser runs passed (13/13 each) with zero leftovers and preserved inventory |
-| L01 | Next lead work; ready to begin | Write and prove admission design |
+| J24 | Accepted at `651d9011` | Fresh 28 cleanup/API tests; two engineer-recorded 13/13 browser passes; see review qualifications |
+| L01 | Design complete; enforcement pending | Decision record written; next L01a implementation then L01b core proof |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 
 When completing a task, record its PR/commit and specific evidence here, then update the active history contract or feature guide as appropriate. This plan is the assignment queue; those contracts remain the authority for implemented behavior.

@@ -4,6 +4,8 @@ Updated September 10, 2026. Feature status: **not available to users**. H1 provi
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
+L01 admission design was completed September 11 in the [decision record](PAGE_OWNED_ADMISSION_DESIGN.md). Enforcement and its required real-core tests remain pending; this does not advance H3 to production readiness.
+
 ## Outcome and non-negotiable invariants
 
 For assignment order and bounded junior-engineer tasks, use the [implementation handoff plan](IMPLEMENTATION_HANDOFF_PLAN.md). This document remains the authority for the history implementation and its evidence; planned assignments do not change milestone status.

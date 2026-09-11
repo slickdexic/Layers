@@ -7,7 +7,7 @@
 
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) for assignments. Latest lead review corrected J22's confirmation race and the loading/fallback defects reproduced by J23, and reviewed the in-progress J24 cleanup helper. **Junior next: finish J24's two isolated browser acceptance runs. Lead next: L01 alternate save admission.** See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Page-owned history remains unregistered.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) for assignments. Latest review accepts stabilization through J24 at `651d9011`, with browser results recorded by the engineer and fresh focused test evidence. **Lead next: L01a admission enforcement → L01b core proof; junior next: J06 after that gate.** The [admission decision record](docs/PAGE_OWNED_ADMISSION_DESIGN.md) is complete; implementation remains pending. See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Page-owned history remains unregistered.
 
 ## Product improvement roadmap
 

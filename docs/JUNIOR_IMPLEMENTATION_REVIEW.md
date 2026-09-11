@@ -1,6 +1,18 @@
 # Junior implementation review — J01–J24
 
-## Lead review of J22/J23 and in-progress J24 — September 11, 2026
+## J24 closure and L01 design review — September 11, 2026
+
+Reviewed `651d9011`, which commits the previous lead corrections and the J24 completion report. Working tree was clean at the start of this review. No additional production defect was identified in the cleanup and real-API switching scope. J01–J24 stabilization work is closed with the evidence qualifications below; this is not a new whole-extension audit or a merge/release claim.
+
+Fresh verification: `npm run test:js -- --runInBand --silent --verbose=false tests/jest/CleanupIsolation.test.js tests/jest/LayerSetSwitchingAPIManager.test.js` passed **2 suites / 28 tests**. The two 13-test browser passes below are engineer-recorded evidence, not browser runs independently repeated in this review. Browser teardown asserts preservation of initial set names and absence of current-run leftovers; preservation of all 32 pre-existing revisions is a reported supplementary check, not an assertion implemented by that teardown. Password rotation is also reported by the engineer, not independently verified here.
+
+Corrected stale J24-pending instructions in the active status, roadmap, documentation index and handoff plan. Earlier dated findings below remain historical. Their originally uncommitted corrections are now included in `651d9011`.
+
+Documentation validation: maintained-document/link/mirror checks and version consistency passed. The repository wiki status mirror was synchronized; the external GitHub wiki was not published. This review changes documentation only; PHP/core suites and full JavaScript coverage were not rerun.
+
+The lead completed the [L01 admission decision record](PAGE_OWNED_ADMISSION_DESIGN.md), based on the installed MediaWiki 1.45.3 hook and save code. It specifies single-use publication authority, unchanged-slot preservation, failure behavior, lifecycle limits and the required core test matrix. **Design complete; enforcement not implemented.** Next: lead L01a → L01b, then junior J06 once the test harness contract is frozen. No new junior editor batch is needed.
+
+## Earlier lead review of J22/J23 and in-progress J24 — September 11, 2026
 
 Reviewed commits `aff63227`, `a7eda34a`, `9cbae032` and the uncommitted J24 cleanup/browser files. The latter were already present when review began. Their test artifacts and deleted `test-results/.last-run.json` were left untouched. Corrections below are local, uncommitted review work; no merge, release, browser run or external wiki publication is claimed.
 
@@ -16,7 +28,7 @@ J22 is accepted with the post-confirmation correction. J23's two reported defect
 
 Validation: focused recovery/API/fallback/cleanup run passed 283 tests before an additional cleanup-inventory regression; final cleanup suite passed 14 tests. Full Jest passed **183 suites / 14,422 tests**. Documentation/version consistency and whitespace checks passed. Grunt ESLint/style/i18n passed. PHP/core suites were not rerun because this review changed no PHP/persistence implementation.
 
-Browser acceptance evidence: Two fresh isolated acceptance passes completed against live MediaWiki 1.45.3 (`mediawiki-145`) / Chromium on dedicated test file `ImageTest03.png` using user-environment credentials with pre-run password rotation:
+Engineer-recorded browser acceptance evidence: Two fresh isolated acceptance passes completed against live MediaWiki 1.45.3 (`mediawiki-145`) / Chromium on dedicated test file `ImageTest03.png` using user-environment credentials with pre-run password rotation:
 - Pass 1: 13/13 passed (7.7m); 7 test-owned sets deleted; zero leftovers on `ImageTest03.png`; all 32 revisions of pre-run sets `001` and `002` preserved intact.
 - Pass 2: 13/13 passed (7.0m); 7 test-owned sets deleted; zero leftovers on `ImageTest03.png`; all 32 revisions of pre-run sets `001` and `002` preserved intact.
 - Command executed: `$p = [Environment]::GetEnvironmentVariable('MW_PASSWORD', 'User'); $env:MW_SERVER="http://localhost:8080"; $env:TEST_FILE="ImageTest03.png"; $env:MW_USERNAME="LayersQA"; $env:MW_PASSWORD=$p; npx playwright test tests/e2e/named-sets.spec.js --workers=1`. Password was cleared immediately after verification. Zero secrets recorded.

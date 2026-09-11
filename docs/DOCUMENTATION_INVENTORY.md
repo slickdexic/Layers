@@ -117,6 +117,7 @@ The September 6 reconciliation used source checkpoint a3b20963 (manifest 1.5.95 
 | [docs/SAVE_PAYLOAD_CONTRACT.md](SAVE_PAYLOAD_CONTRACT.md) | Maintained implementation contract added September 6, 2026 |
 | [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1/H2 internal implementation, H3a access, H3b sources and H3c publication and H3d request boundary tested, remaining H3–H6 work pending |
 | [docs/PAGE_OWNED_DOCUMENT_FORMAT.md](PAGE_OWNED_DOCUMENT_FORMAT.md) | Internal H2 snapshot format and validation/retention contract; no public registration |
+| [docs/PAGE_OWNED_ADMISSION_DESIGN.md](PAGE_OWNED_ADMISSION_DESIGN.md) | L01 admission decision, implementation sequence and required core acceptance matrix; enforcement pending |
 | [docs/PAGE_OWNED_API_CONTRACT.md](PAGE_OWNED_API_CONTRACT.md) | Experimental unregistered API contract, test evidence and admission gates |
 | [docs/IMPLEMENTATION_HANDOFF_PLAN.md](IMPLEMENTATION_HANDOFF_PLAN.md) | Ordered junior task packets, lead design gates, dependencies and acceptance criteria; September 10 baseline e03504ec |
-| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J24 review, lead corrections, verification and remaining J24 browser acceptance |
+| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J24 closure, lead corrections and qualified verification evidence |
