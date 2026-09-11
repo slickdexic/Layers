@@ -7,7 +7,7 @@
 
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work. Latest J19–J21 review corrected import validation, set-response races and test cleanup. Next: **J22 (recovery behavior), J23 (actual API switch tests), J24 (cleanup proof and browser acceptance)**. See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). The lead retains L01; page-owned publication, search and Cargo remain gated.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) for assignments. Latest lead review corrected J22's confirmation race and the loading/fallback defects reproduced by J23, and reviewed the in-progress J24 cleanup helper. **Junior next: finish J24's two isolated browser acceptance runs. Lead next: L01 alternate save admission.** See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Page-owned history remains unregistered.
 
 ## Product improvement roadmap
 

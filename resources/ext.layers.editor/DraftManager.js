@@ -1598,6 +1598,11 @@
 						}
 					}
 
+					// Recheck after the asynchronous replacement confirmation.
+					if ( !this.isDestinationValid() || this.legacyDialogElement !== dialog ) {
+						return;
+					}
+
 					// 3. Import record
 					if ( this.importLegacyRecord( rec ) ) {
 						this.closeLegacyRecoveryDialog();

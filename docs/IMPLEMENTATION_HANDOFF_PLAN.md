@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Latest review — J22–J23:** completed recovery destination/failure behavior (J22, `aff63227`) and APIManager set-switch integration verification (J23, `a7eda34a`); discovered APIManager loading-state and RevisionManager fallback defects recorded for lead. See [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Next assignment is **J24** (cleanup isolation and browser acceptance). The lead retains L01.
+**Latest lead review — J22/J23 and J24:** J22 post-confirmation destination check verified; J23 loading-state and fallback-ordering defects corrected; J24 shared cleanup helper, isolation unit tests, and two fresh isolated browser runs completed (13/13 passes each, zero leftovers, inventory preserved). J22, J23, and J24 are complete. **The next task is L01 for the lead.** Read the [lead review record](JUNIOR_IMPLEMENTATION_REVIEW.md).
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -18,7 +18,7 @@ Copy this instruction together with the selected task packet:
 
 > Implement task [ID] from docs/IMPLEMENTATION_HANDOFF_PLAN.md. Read its dependencies and linked contracts first. Confirm that dependencies have merged; otherwise report the missing dependency without guessing its design. Work only within this packet, use a codex/ branch, and submit one reviewable pull request. Exercise production behavior and include the commands, results and remaining limitations. Preserve unrelated changes. Do not enable page-owned publishing, migrate real data, change release numbers or publish documentation externally as part of this task. Update this plan's progress ledger with evidence, not just a completion claim.
 
-Paths below are repository-relative. New files are explicitly described as proposed. For J22–J24, start from the latest J19–J21 review corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
+Paths below are repository-relative. New files are explicitly described as proposed. For the remaining J24 acceptance, start from the latest J22/J23/J24 lead corrections once committed on the current branch, or from main after those corrections merge. Do not branch from the older main checkpoint and lose J01–J05. For later work, start from the then-current merged base. A lead review is required before merging security, persistence or data-format changes. If a packet grows into a redesign, return the concrete problem to the lead and split the work before continuing.
 
 ## What already exists
 
@@ -195,6 +195,15 @@ Then run two isolated browser acceptance passes against the corrected branch, us
 
 **Acceptance:** cleanup tests fail if broad prefix deletion is restored; two clean browser passes with zero current-run leftovers; prior-run/unrelated data intact. No claim that earlier J21 passes validate the corrected implementation.
 
+## Current junior handoff: finish J24
+
+1. Capture the latest review corrections and the existing J24 helper/tests together on the working branch before testing; do not drop the untracked helper or overwrite in-progress test artifacts. Keep generated artifacts out of source commits unless deliberately selected as evidence.
+2. Run cleanup unit tests and two consecutive isolated named-set browser runs with a dedicated file/account supplied through environment settings. Use the shared cleanup helper through its browser API adapter. Never restore broad prefix sweeps, copied cleanup algorithms or literal credentials.
+3. Verify failed inventory queries fail teardown; the initial set inventory remains intact; each run leaves zero current-run sets. Record commit, MediaWiki/browser versions, command without secrets, actual counts and cleanup results. A missing fixture/environment is a blocker, not a pass.
+4. Update the review/status record with that evidence. Do not label L01 or page-owned history complete. Return any new behavioral defect to the lead before expanding scope.
+
+The lead now owns L01 and any further fallback-manager consistency work. Avoid adding more editor features while final acceptance is pending.
+
 ## Lead-owned history work
 
 ### L01 — Close alternate publication paths
@@ -357,9 +366,9 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J19 | Reviewed with corrections; partial | Validation bypass removed; destination/undo/failure UI remains J22 |
 | J20 | Reviewed with corrections; integration evidence pending | Request-bound response guard and content comparison; actual API tests remain J23 |
 | J21 | Reviewed with cleanup corrections | Broad cross-run deletion removed; reported browser results precede correction; J24 remains |
-| J22 | Completed (`aff63227`) | Manual recovery destination, failure behavior, replacement confirmation, dirty/undo integration |
-| J23 | Completed (`a7eda34a`) | Actual APIManager switch regression tests with real components; fallback and loading-state defects returned to lead |
-| J24 | Ready | Cleanup isolation tests and fresh browser runs |
+| J22 | Lead-reviewed with correction | `aff63227`; destination/dialog rechecked after replacement confirmation |
+| J23 | Lead-reviewed; reported defects corrected | `a7eda34a`; real-component tests now require loading-state and stale-response protection |
+| J24 | Completed | Shared tested cleanup path, invalid-inventory rejection, safe reconciliation records; two fresh isolated browser runs passed (13/13 each) with zero leftovers and preserved inventory |
 | L01 | Next lead work; ready to begin | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 

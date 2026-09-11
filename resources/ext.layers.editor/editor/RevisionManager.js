@@ -298,6 +298,9 @@
 				return this.editor.layerSetManager.loadLayerSetByName( setName );
 			}
 
+			this._switchGeneration = ( this._switchGeneration || 0 ) + 1;
+			const switchId = this._switchGeneration;
+
 			try {
 				if ( !setName || typeof setName !== 'string' || !setName.trim() ) {
 					if ( mw.log && mw.log.error ) {
@@ -335,6 +338,9 @@
 								'You have unsaved changes. Switch sets without saving?' )
 						);
 					}
+					if ( switchId !== this._switchGeneration ) {
+						return { status: 'failed', success: false, reason: 'superseded' };
+					}
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.buildSetSelector();
@@ -351,7 +357,12 @@
 
 				// Load the set via API
 				if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
-					await this.apiManager.loadLayersBySetName( targetSetName );
+					const result = await this.apiManager.loadLayersBySetName( targetSetName, {
+						shouldApply: () => switchId === this._switchGeneration
+					} );
+					if ( switchId !== this._switchGeneration || ( result && result.superseded ) ) {
+						return { status: 'failed', success: false, reason: 'superseded' };
+					}
 				}
 
 				// Update current set name in state only after successful load
@@ -374,6 +385,9 @@
 					setName: targetSetName
 				};
 			} catch ( error ) {
+				if ( switchId !== this._switchGeneration ) {
+					return { status: 'failed', success: false, reason: 'superseded' };
+				}
 				if ( mw.log && mw.log.error ) {
 					mw.log.error( '[RevisionManager] Error loading layer set by name:', error );
 				}

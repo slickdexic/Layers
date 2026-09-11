@@ -396,7 +396,7 @@ describe( 'RevisionManager', () => {
 			await revisionManager.loadLayerSetByName( 'anatomy' );
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'anatomy' );
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 			expect( mw.notify ).toHaveBeenCalled();
 		} );
 
@@ -422,7 +422,7 @@ describe( 'RevisionManager', () => {
 
 			await revisionManager.loadLayerSetByName( 'anatomy' );
 
-			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy' );
+			expect( mockApiManager.loadLayersBySetName ).toHaveBeenCalledWith( 'anatomy', expect.objectContaining( { shouldApply: expect.any( Function ) } ) );
 		} );
 
 		it( 'should delegate to layerSetManager if available', async () => {

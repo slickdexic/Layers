@@ -2,6 +2,10 @@
 
 Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manifest still reports **1.5.95**; fixes after the September 2 tag are on `main` and described under **Unreleased**. A checkout of the tag does not include those fixes.
 
+## Latest lead review — J22/J23/J24 (local branch)
+
+Recovery rechecks destination after asynchronous replacement confirmation. Set loading now prevents stale success/error/abort responses from clearing newer loading state or overwriting the fallback selection. Browser cleanup uses its tested shared helper and rejects malformed inventory. J24's two fresh isolated browser runs remain pending; L01 is next for the lead. Earlier submitted completion reports are superseded by the [lead review](https://github.com/slickdexic/Layers/blob/main/docs/JUNIOR_IMPLEMENTATION_REVIEW.md).
+
 ## Latest J19–J21 review (local branch)
 
 Recovery now fails closed if shared import validation rejects data. Primary-manager set loads carry request-specific response guards, and test cleanup is limited to exact current-run identities. Manual recovery destination/undo behavior, actual API switch integration and fresh browser acceptance remain J22–J24. Earlier reported J21 browser passes predate these corrections. See the [review record](https://github.com/slickdexic/Layers/blob/main/docs/JUNIOR_IMPLEMENTATION_REVIEW.md). No merge, release or external wiki publication is claimed.

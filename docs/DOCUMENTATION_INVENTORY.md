@@ -119,4 +119,4 @@ The September 6 reconciliation used source checkpoint a3b20963 (manifest 1.5.95 
 | [docs/PAGE_OWNED_DOCUMENT_FORMAT.md](PAGE_OWNED_DOCUMENT_FORMAT.md) | Internal H2 snapshot format and validation/retention contract; no public registration |
 | [docs/PAGE_OWNED_API_CONTRACT.md](PAGE_OWNED_API_CONTRACT.md) | Experimental unregistered API contract, test evidence and admission gates |
 | [docs/IMPLEMENTATION_HANDOFF_PLAN.md](IMPLEMENTATION_HANDOFF_PLAN.md) | Ordered junior task packets, lead design gates, dependencies and acceptance criteria; September 10 baseline e03504ec |
-| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J21 review, corrections, verification and remaining J22–J24 work |
+| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J24 review, lead corrections, verification and remaining J24 browser acceptance |

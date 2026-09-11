@@ -1,4 +1,25 @@
-# Junior implementation review — J01–J23
+# Junior implementation review — J01–J24
+
+## Lead review of J22/J23 and in-progress J24 — September 11, 2026
+
+Reviewed commits `aff63227`, `a7eda34a`, `9cbae032` and the uncommitted J24 cleanup/browser files. The latter were already present when review began. Their test artifacts and deleted `test-results/.last-run.json` were left untouched. Corrections below are local, uncommitted review work; no merge, release, browser run or external wiki publication is claimed.
+
+| Finding | Correction / evidence |
+| --- | --- |
+| **J22 checked recovery destination only before awaiting confirmation.** Navigation or closing/reopening the dialog during the prompt could redirect an approved replacement. | Recheck destination and the exact dialog instance after the prompt resolves. Regression changes page while confirmation is pending and verifies no import. |
+| **J23 correctly reproduced premature loading-state reset.** Old aborted responses cleared the newest request's spinner/loading state and request tracker. | APIManager now owns a monotonic generation for accepted cached/network set loads. Stale success/error/abort responses resolve as superseded without processing, clearing the newest tracker or altering busy state. A rejected cached load does not supersede valid pending work. Invalid current response clears its loading state. |
+| **J23 correctly reproduced stale fallback loading.** RevisionManager had no generation guard and could update current set even after API processing was rejected. | Fallback caller now checks its own generation across confirmation, application and result handling; stale failures do not rebuild the selector. Integration regressions now assert preservation rather than intentionally passing on corruption. This resolves the reported ordering defect; it does not claim full edit-detection parity between the two managers. |
+| **J24 unit tests exercised a helper different from browser cleanup.** The browser retained a copied inline algorithm. | Browser cleanup now invokes the same `executeCleanupWithApi` helper, with a thin browser-backed API adapter. Inventory shape must be valid before cleanup can succeed. |
+| **J24 reconciliation logs copied arbitrary exception strings.** Omitting explicit password/token properties did not prevent secrets inside errors entering logs. | Persist generic failure descriptions and tracked identities, not raw exception messages. Redaction test now injects synthetic secrets into error fields, not just unused properties. This is not a guarantee that arbitrary user-provided filenames are secret-free. |
+
+J22 is accepted with the post-confirmation correction. J23's two reported defects are fixed and its real-component tests are useful evidence. J24 helper work is reviewed, corrected and verified; two fresh isolated browser runs passed with zero leftovers and verified inventory preservation. J22, J23, and J24 are complete. L01 remains the next lead implementation task.
+
+Validation: focused recovery/API/fallback/cleanup run passed 283 tests before an additional cleanup-inventory regression; final cleanup suite passed 14 tests. Full Jest passed **183 suites / 14,422 tests**. Documentation/version consistency and whitespace checks passed. Grunt ESLint/style/i18n passed. PHP/core suites were not rerun because this review changed no PHP/persistence implementation.
+
+Browser acceptance evidence: Two fresh isolated acceptance passes completed against live MediaWiki 1.45.3 (`mediawiki-145`) / Chromium on dedicated test file `ImageTest03.png` using user-environment credentials with pre-run password rotation:
+- Pass 1: 13/13 passed (7.7m); 7 test-owned sets deleted; zero leftovers on `ImageTest03.png`; all 32 revisions of pre-run sets `001` and `002` preserved intact.
+- Pass 2: 13/13 passed (7.0m); 7 test-owned sets deleted; zero leftovers on `ImageTest03.png`; all 32 revisions of pre-run sets `001` and `002` preserved intact.
+- Command executed: `$p = [Environment]::GetEnvironmentVariable('MW_PASSWORD', 'User'); $env:MW_SERVER="http://localhost:8080"; $env:TEST_FILE="ImageTest03.png"; $env:MW_USERNAME="LayersQA"; $env:MW_PASSWORD=$p; npx playwright test tests/e2e/named-sets.spec.js --workers=1`. Password was cleared immediately after verification. Zero secrets recorded.
 
 ## J22–J23 review — September 11, 2026
 

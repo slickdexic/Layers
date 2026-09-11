@@ -335,8 +335,8 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 		} );
 	} );
 
-	describe( '2. Mutation-style proof: removing request closure allows stale overwrite', () => {
-		it( 'demonstrates that bypassing the shouldApply closure corrupts state with stale data', async () => {
+	describe( '2. API boundary rejects stale data even without caller closure', () => {
+		it( 'rejects stale data when the caller omits shouldApply', async () => {
 			stateManager.set( 'isDirty', false );
 
 			// Simulate legacy / defective caller that omits shouldApply closure
@@ -360,9 +360,9 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 			netReqA.resolve( makeApiResponse( 'set-a', layersA ) );
 			await loadA;
 
-			// PROOF: Without the closure, stale set-a overwrote set-b!
-			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-a' );
-			expect( stateManager.get( 'layers' ) ).toEqual( layersA );
+			// The API generation guard also protects callers without closures.
+			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-b' );
+			expect( stateManager.get( 'layers' ) ).toEqual( layersB );
 		} );
 
 		it( 'confirms LayerSetManager always supplies the protective closure preventing the defect', async () => {
@@ -649,7 +649,7 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 			expect( mockUiManager.hideSpinner ).toHaveBeenCalled();
 		} );
 
-		it( 'documents APIManager loading-state defect on abort: aborting older request clears isLoading while newer request is active', async () => {
+		it( 'keeps the newest request loading after an older request aborts', async () => {
 			stateManager.set( 'isDirty', false );
 
 			// Request 1 starts
@@ -663,12 +663,8 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 			const switch2 = layerSetManager.loadLayerSetByName( 'set-b' );
 			const req2 = pendingNetworkRequests[ 1 ];
 
-			// DEFECT REPRODUCTION FOR LEAD REPORT:
-			// In APIManager.js line 940-946:
-			// `if ( code === 'http' && result && result.textStatus === 'abort' ) { this.hideSpinner(); this.editor.stateManager.set( 'isLoading', false ); }`
-			// This premature reset clears loading state while request 2 is still actively loading.
 			expect( req1.abort ).toHaveBeenCalled();
-			expect( stateManager.get( 'isLoading' ) ).toBe( false );
+			expect( stateManager.get( 'isLoading' ) ).toBe( true );
 
 			// Complete request 2
 			req2.resolve( makeApiResponse( 'set-b', [] ) );
@@ -678,7 +674,7 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 	} );
 
 	describe( '12. RevisionManager fallback separate exercise (lead defect report)', () => {
-		it( 'exercises RevisionManager without LayerSetManager to document fallback limitations', async () => {
+		it( 'rejects stale fallback responses without LayerSetManager', async () => {
 			// Create an editor configuration where LayerSetManager is ABSENT (forcing RevisionManager fallback)
 			const fallbackEditor = {
 				filename: 'Fallback_Doc.png',
@@ -719,14 +715,8 @@ describe( 'LayerSetSwitching through Real APIManager (J23)', () => {
 			netReq1.resolve( makeApiResponse( 'set-a', layersA ) );
 			await switchPromise1;
 
-			// DEFECT DOCUMENTATION FOR LEAD REPORT:
-			// In RevisionManager.prototype.loadLayerSetByName fallback:
-			// 1. RevisionManager does NOT pass { shouldApply } closure to apiManager.loadLayersBySetName.
-			// 2. RevisionManager does NOT allocate or track monotonic _switchGeneration.
-			// 3. When layerSetManager is null, APIManager canApply fallback evaluates to true.
-			// Consequently, the stale request (set-a) overwrites the newer request (set-b).
-			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-a' );
-			expect( stateManager.get( 'layers' ) ).toEqual( layersA );
+			expect( stateManager.get( 'currentSetName' ) ).toBe( 'set-b' );
+			expect( stateManager.get( 'layers' ) ).toEqual( layersB );
 
 			revisionManager.destroy();
 		} );

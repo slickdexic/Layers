@@ -3084,6 +3084,22 @@ describe( 'DraftManager', function () {
 			} );
 
 			describe( 'destination change rejection guard', function () {
+				it( 'rechecks the destination after awaiting replacement permission', async function () {
+					const dm = new DraftManager( mockEditor );
+					mockEditor.hasUnsavedChanges = () => true;
+					let confirm;
+					dm.showConfirmDialog = jest.fn( () => new Promise( ( resolve ) => { confirm = resolve; } ) );
+					dm.importLegacyRecord = jest.fn();
+					const record = dm.recordLegacyDraft( dm.getLegacyStorageKey(), JSON.stringify( { layers: [ { id: 'old' } ] } ) );
+					dm.showLegacyRecoveryDialog( record );
+					document.querySelector( '.layers-legacy-import-btn' ).click();
+					mockEditor.page = 42;
+					confirm( true );
+					await Promise.resolve();
+					expect( dm.importLegacyRecord ).not.toHaveBeenCalled();
+					dm.destroy();
+				} );
+
 				it( 'rejects import and notifies error if destination page changes while dialog is open', async function () {
 					let currentPage = 1;
 					const editor = {

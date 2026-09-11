@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Lead review: recheck recovery destination after confirmation; isolate set-load busy state and fallback selection from stale responses; share browser cleanup with tested helper and reject malformed inventory. J24 browser acceptance remains pending.
+
 - J19–J21 review corrections: reject legacy imports when shared validation fails, retain rejected recovery UI, bind set responses to their originating request, and limit browser cleanup to exact tracked current-run names. Further recovery/integration acceptance remains tracked in J22–J24.
 
 - Executed isolated named-set browser acceptance testing (J21): verified named-set creation, single-confirmation set switching, canceled dirty switch restoration, deliberately failed set load recovery, rename persistence across reloads, independent sets, and deletion against live MediaWiki 1.45.3 on container `mediawiki-145`. Achieved two consecutive clean Playwright runs (13/13 passed) with per-run prefixing, failure-safe teardown asserting zero test-owned sets remain, and headroom preservation under `$wgLayersMaxNamedSets`.

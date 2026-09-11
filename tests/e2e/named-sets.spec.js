@@ -23,6 +23,7 @@
 
 const { test, expect } = require( '@playwright/test' );
 const { LayersEditorPage } = require( './fixtures' );
+const { recordInterruptedRun, executeCleanupWithApi } = require( './cleanupHelper' );
 
 // Unique per-run prefix to guarantee isolation across runs
 const RUN_ID = Date.now().toString( 36 ) + '_' + Math.random().toString( 36 ).slice( 2, 6 );
@@ -42,49 +43,13 @@ const createdSetNames = new Set();
  * @return {Promise<{success: boolean, deleted: string[], failed: Array<{setname: string, error: string}>}>}
  */
 async function cleanupTestSets( page, testFile, setsToDelete, prefix ) {
-	return await page.evaluate( async ( { filename, targetSets, runPrefix } ) => {
-		const deleted = [];
-		const failed = [];
-		try {
-			const api = new mw.Api();
-			const infoRes = await api.get( {
-				action: 'layersinfo',
-				filename: filename,
-				format: 'json'
-			} );
-			const namedSets = ( infoRes.layersinfo && infoRes.layersinfo.named_sets ) || [];
-
-			for ( const s of namedSets ) {
-				// Strictly preserve unrelated sets
-				if ( s.name === '001' || s.name === '002' || s.name === 'default' ) {
-					continue;
-				}
-				// Delete only exact registered identities in this run; unknown provenance is not ownership.
-				const isTracked = targetSets.includes( s.name );
-				const matchesPrefix = s.name.startsWith( runPrefix + '_' );
-
-				if ( isTracked && matchesPrefix ) {
-					try {
-						await api.postWithToken( 'csrf', {
-							action: 'layersdelete',
-							filename: filename,
-							setname: s.name
-						} );
-						deleted.push( s.name );
-					} catch ( err ) {
-						failed.push( { setname: s.name, error: String( err ) } );
-					}
-				}
-			}
-		} catch ( e ) {
-			return { success: false, error: String( e ), deleted, failed };
-		}
-		return { success: failed.length === 0, deleted, failed };
-	}, {
-		filename: testFile,
-		targetSets: setsToDelete,
-		runPrefix: prefix
-	} );
+	const api = {
+		get: ( params ) => page.evaluate( async ( request ) => new mw.Api().get( request ), params ),
+		postWithToken: ( tokenType, params ) => page.evaluate(
+			async ( request ) => new mw.Api().postWithToken( 'csrf', request ), params
+		)
+	};
+	return executeCleanupWithApi( api, testFile, setsToDelete, prefix );
 }
 
 test.describe( 'Named Layer Sets (J21)', () => {
@@ -139,6 +104,16 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 			if ( !cleanupResult.success ) {
 				console.error( '[Teardown] Cleanup failures encountered:', cleanupResult.failed );
+				const { logPath } = recordInterruptedRun( {
+					filename: process.env.TEST_FILE,
+					runPrefix: RUN_PREFIX,
+					targetSets: Array.from( createdSetNames ),
+					failedSets: cleanupResult.failed,
+					error: cleanupResult.error || 'Teardown failure'
+				} );
+				if ( logPath ) {
+					console.error( `[Teardown] Interrupted run reconciliation record written to: ${ logPath }` );
+				}
 				throw new Error( `Teardown cleanup failed for sets: ${ JSON.stringify( cleanupResult.failed ) }` );
 			}
 

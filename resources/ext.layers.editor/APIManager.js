@@ -309,6 +309,9 @@
 		const isCurrent = () => this.editor && !this.editor.isDestroyed &&
 			this.editor.pageNavigationGeneration === generation && this.pageLoadRequest === request;
 		return new Promise( ( resolve, reject ) => {
+			this._setLoadGeneration = ( this._setLoadGeneration || 0 ) + 1;
+			const loadId = this._setLoadGeneration;
+
 			// Set loading state to prevent user interactions during load
 			if ( this.editor.stateManager ) {
 				this.editor.stateManager.set( 'isLoading', true );
@@ -673,6 +676,9 @@
 				}
 			}
 
+			this._setLoadGeneration = ( this._setLoadGeneration || 0 ) + 1;
+			const loadId = this._setLoadGeneration;
+
 			// Set loading state to prevent user interactions during load
 			if ( this.editor.stateManager ) {
 				this.editor.stateManager.set( 'isLoading', true );
@@ -878,6 +884,7 @@
 							resolve( { superseded: true } );
 							return;
 						}
+						this._setLoadGeneration = ( this._setLoadGeneration || 0 ) + 1;
 						const result = this._processSetNameData( cachedData, setName, true );
 						resolve( result );
 						return;
@@ -887,6 +894,9 @@
 					}
 				}
 			}
+
+			this._setLoadGeneration = ( this._setLoadGeneration || 0 ) + 1;
+			const loadId = this._setLoadGeneration;
 
 			// Set loading state to prevent user interactions during load
 			if ( this.editor.stateManager ) {
@@ -907,10 +917,17 @@
 			this._trackRequest( 'loadSetByName', jqXHR );
 
 			jqXHR.then( ( data ) => {
+				if ( loadId !== this._setLoadGeneration ) {
+					resolve( { superseded: true } );
+					return;
+				}
 				this._clearRequest( 'loadSetByName' );
 				this.hideSpinner();
 
 				if ( !data || !data.layersinfo ) {
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'isLoading', false );
+					}
 					reject( new Error( 'Invalid API response' ) );
 					return;
 				}
@@ -935,6 +952,10 @@
 				resolve( result );
 
 			}, ( code, result ) => {
+				if ( loadId !== this._setLoadGeneration ) {
+					resolve( { superseded: true } );
+					return;
+				}
 				this._clearRequest( 'loadSetByName' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {

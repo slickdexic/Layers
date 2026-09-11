@@ -7,6 +7,10 @@
 
 **Publication checkpoint, September 6, 2026:** The complete current change set passed `npm test` (180 suites, 14,310 tests, and repository guards), `npm run test:php`, and PHPUnit (686 tests, 1,475 assertions, one skipped). The remediation sections below retain their original working-tree status as historical context. The page-owned history, search and Cargo work remains a proposal; this checkpoint contains the existing fixes and documentation, not implementation of those larger features.
 
+## J22/J23/J24 lead follow-up — September 11, 2026
+
+Corrected the recovery confirmation race and the stale-response/loading-state defects reproduced by J23. Reviewed in-progress cleanup tests and wired the tested helper into the browser path; malformed inventory and unsafe exception logging are corrected. J24 browser reruns remain pending. See [lead review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md).
+
 ## J19–J21 follow-up — September 11, 2026
 
 Review corrected a legacy import validation bypass, stale set-response application and cross-run test cleanup. See [the review record](docs/JUNIOR_IMPLEMENTATION_REVIEW.md) for evidence and J22–J24 for remaining acceptance work. Earlier completion statements are not current release claims.

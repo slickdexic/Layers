@@ -30,3 +30,5 @@ For a normal bug, include branch/commit, MediaWiki/PHP/browser versions, image/P
 See the [junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md) for corrections, verification and remaining limits.
 
 Latest J19–J21 review corrected import-validation bypass and stale set responses. Recovery destination/undo behavior and real API/browser acceptance remain J22–J24; see [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Earlier task references above are historical checkpoints.
+
+J22/J23 lead review corrected post-confirmation recovery destination changes, stale fallback responses and old-abort loading-state resets. J24 shared cleanup is reviewed; fresh browser acceptance remains outstanding. L01 remains unimplemented. See the latest review record for scope and evidence.
