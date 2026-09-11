@@ -480,6 +480,7 @@ class ApiLayersSave extends ApiBase {
 			$backgroundSettings = $validated['backgroundSettings'];
 			$rawData = $validated['rawData'];
 			$setName = $validated['setName'];
+			$rateLimiter = $validated['rateLimiter'];
 
 			// Extract slide-specific settings from raw data
 			$slideSettings = [];
@@ -512,6 +513,16 @@ class ApiLayersSave extends ApiBase {
 				$setName = SetNameResolver::latestName(
 					$db, $normalizedName, LayersConstants::TYPE_SLIDE
 				) ?? SetNameSanitizer::getDefaultName( $this->getConfig() );
+			}
+
+			// Creating a slide or a new named slide set is a different cost from
+			// updating an existing set: each new slide or new named set is a new
+			// revision series, so it gets its own creation bucket rather than
+			// sharing the looser save budget.
+			if ( !$db->namedSetExists( $normalizedName, LayersConstants::TYPE_SLIDE, $setName )
+				&& !$rateLimiter->checkRateLimit( $user, 'create' )
+			) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Merge slide settings into background settings for storage

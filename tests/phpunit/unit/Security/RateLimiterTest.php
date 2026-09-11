@@ -248,4 +248,27 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $limiter->isImageSizeAllowed( 1, 1 ) );
 		$this->assertTrue( $limiter->isImageSizeAllowed( 100, 100 ) );
 	}
+
+	/**
+	 * @covers ::checkRateLimit
+	 */
+	public function testCheckRateLimit(): void {
+		$limiter = $this->createRateLimiter();
+
+		$allowedUser = $this->createMock( \MediaWiki\User\User::class );
+		$allowedUser->method( 'pingLimiter' )->willReturn( false );
+		$allowedUser->method( 'getId' )->willReturn( 1 );
+
+		$this->assertTrue( $limiter->checkRateLimit( $allowedUser, 'save' ) );
+		$this->assertTrue( $limiter->checkRateLimit( $allowedUser, 'create' ) );
+		$this->assertTrue( $limiter->checkRateLimit( $allowedUser, 'delete' ) );
+
+		$limitedUser = $this->createMock( \MediaWiki\User\User::class );
+		$limitedUser->method( 'pingLimiter' )->willReturn( true );
+		$limitedUser->method( 'getId' )->willReturn( 2 );
+
+		$this->assertFalse( $limiter->checkRateLimit( $limitedUser, 'save' ) );
+		$this->assertFalse( $limiter->checkRateLimit( $limitedUser, 'create' ) );
+		$this->assertFalse( $limiter->checkRateLimit( $limitedUser, 'delete' ) );
+	}
 }

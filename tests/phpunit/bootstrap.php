@@ -207,7 +207,7 @@ namespace {
 				if ( is_array( $message ) ) {
 					$message = json_encode( $message );
 				}
-				throw new \RuntimeException( (string)$message );
+				throw new ApiUsageException( (string)$message );
 			}
 
 			public function getResult() {
@@ -676,6 +676,16 @@ namespace {
 namespace MediaWiki\Api {
 	if ( !class_exists( ApiMain::class ) ) {
 		class ApiMain {
+		}
+	}
+}
+
+namespace MediaWiki\Logger {
+	if ( !class_exists( LoggerFactory::class ) ) {
+		class LoggerFactory {
+			public static function getInstance( string $channel ) {
+				return new \Psr\Log\NullLogger();
+			}
 		}
 	}
 }
