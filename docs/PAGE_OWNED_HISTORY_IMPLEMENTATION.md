@@ -1,10 +1,115 @@
 # Page-owned Layers history: implementation contract
 
+## Direct source rewrite implemented and independently reviewed — September 25, 2026
+
+Lead implemented internal DirectEmbeddingRewriter for a conservative raw-wikitext subset. It records complete top-level literal file/slide spans with UTF-8 byte offsets and ordered raw options, distinguishes repeated identical embeds, excludes nested/template/comment/opaque-tag content, and requires exact original bytes and start position before replacement. It replaces one legacy selector with a canonical binding (or appends one if absent), retaining all other bytes. Duplicate selectors, already-bound targets, control bytes, malformed nesting and unsupported source structures reject.
+
+Delegated adversarial review found an opaque-tag name-prefix defect (nowiki-x/ref:custom recognized as approved tags). Lead tightened the delimiter and added regressions, plus mixed nesting, quoted slashes and comment-contained closers. Fresh combined source-rewriter/binding verification passed **123 unit tests / 283 assertions**. Native namespace/filename normalization passed **2 tests / 6 assertions** including the harness check. Changed PHP style, references (92 classes) and compatibility checks pass.
+
+**Explicit initial limits:** selected captions/options must be literal without nested markup. Unknown HTML containers and single-bracket/external-link syntax cause whole-page refusal; opaque tag support is allowlisted. This is conservative manipulation, not full MediaWiki parsing or evidence that every scanner candidate corresponds to the native rendered embed. Native Title normalization is supplied by a trusted caller; owner/source permissions remain separate. No parser hooks/public routes changed.
+
+**Next remains lead-owned:** tie exact source span and normalized target/PDF page/set to the exact legacy revision, prepare the bound main text from the authorized base, and invoke atomic adoption only after rendering gates. J64/J65 remain blocked; delegated review in this turn is complete. No ordinary page-history testing readiness or commit/push is claimed. No user wiki data/configuration changed. Docker remains only the test host.
+
+## Exact source preparation reviewed and verified — September 25, 2026
+
+Resumed and reviewed the interrupted delegated LegacyMediaResolver work. Corrected its PNG fixture expectation from 200x100 to the documented 1x1 and added integrated image-preparation coverage. The resolver now supplies exact authorized source metadata and selected-page dimensions through the existing SourceVersionResolver; it checks MIME, refuses invalid/oversized geometry, never scales coordinates and never derives upload time from the annotation timestamp. Native tests resolve archived PDF page two after a replacement upload and reject hash/time/page/MIME/permission mismatches with fixed errors.
+
+Lead connected LegacyAdoptionPreparationService: authorize owner PageID/base before reading any legacy row, read only the explicit legacy revision ID, resolve media where applicable, generate a new surface ID, perform strict conversion and recheck owner/base after potentially slow storage/media work. Slides require no file. It returns a server-prepared proposal, never saves, and must not trust a proposal returned through the browser. A missing/pruned revision cannot fall back to latest.
+
+Fresh combined native regression passed **80 tests / 407 assertions** across media resolution, preparation, atomic adoption, publication, PageID preflight, API publication and admission. Tests include exact image preparation, unchanged owner revision during preparation, denial before legacy lookup, missing exact revision and intervening main-text conflict. Changed PHP style, references (91 classes) and compatibility checks passed. No browser acceptance is claimed here.
+
+The delegated source-span audit found no existing raw-source walker suitable for adoption: current image handling uses expanded text/occurrence queues and slide arguments lose duplicate/source-span information. **Next lead task is the conservative direct-embedding source scanner/rewrite**, preserving exact bytes and rejecting ambiguous/template-generated targets. Public exposure also remains gated on rendering support and ordinary editor integration. J64/J65 remain blocked. No user wiki content/configuration, runtime registration, commit or push changed. Docker is only the test host; the original wiki remains the manual testing environment.
+
+## Exact legacy capture and structural conversion implemented — September 24, 2026
+
+Lead delegated a read-only storage/geometry audit and a bounded exact-row reader, then reviewed the implementation. LayersDatabase::getLayerSetForAdoption now reads the selected row ID from the primary database without cache/latest fallback, retains raw JSON bytes and includes filename/hash/MIME/page/revision metadata. Missing, non-string and oversized rows reject. This is an internal data primitive with no authority of its own; callers must authorize owner/source before use or exposure.
+
+Lead implemented LegacySurfaceConverter against that raw-record contract. It checks exact envelope fields and metadata consistency, rejects duplicate JSON keys, copies layer values without sanitizing them, preserves set name as label, emits no invented reading order, and strictly validates the one-surface output. Slides retain stored dimensions/background. Images/PDFs require independently supplied exact source metadata and page geometry matching the row's filename/hash/page; file-version timestamp never comes from annotation save time. Oversized canvases and lossy/unknown data reject without scaling or stripping.
+
+Fresh verification: **81 tests / 240 assertions** across database and converter suites, including all eight J62 stored rows, source mismatches, false/zero data, duplicate JSON keys, byte limits, selected PDF pages and oversized slides. Changed PHP style, references (89 classes) and compatibility checks passed. These are unit/structural tests; no new native/browser acceptance is claimed in this checkpoint.
+
+**Next is lead-owned:** authorize and resolve the exact media version/geometry, prepare syntax-aware direct-embedding edits, and connect the reader/converter to the atomic adoption transaction with rendering gates. Converter success is not permission to adopt unrenderable groups/resources or media. Image/PDF white-background composition still requires visual parity. J64/J65 remain blocked; bounded delegated work in this turn is complete. No public registration, user-page/configuration changes or commit/push. Original-wiki manual testing and Docker-only-as-test-host rules remain unchanged.
+
+## Atomic prepared-surface adoption connected — September 24, 2026
+
+Lead added internal PageOwnedAdoptionService::publishPreparedSurface, connecting PageID edit preflight to expected-PageID publication. It reads the authoritative base revision, requires visible wikitext main content, loads the existing Layers snapshot from that revision (or starts an empty document before first adoption), validates exactly one proposed surface, rejects duplicate identity, appends without replacing existing surfaces, validates aggregate limits, and publishes the snapshot and prepared main text together. It never accepts replacement copies of existing surfaces from the caller.
+
+Fresh native regression passed **71 tests / 337 assertions** across adoption, publication, identity, API publication and admission. Tests verify first/second appends, unchanged older snapshots and retained drawing data, actor/page/parent identity, and rejection of duplicate IDs, empty additions, stale bases and unresolved image sources without changing either slot. Changed PHP style, references (88 classes) and compatibility checks pass.
+
+**Boundary:** this is an internal transaction component for trusted server-prepared data, not the complete legacy adoption workflow. It does not yet resolve a legacy row, prove an embedding source span, generate a surface ID, or enforce rendering availability. A future caller must perform those checks before invoking it; raw client main text is not proof of a valid binding. No public registration or user-page changes occurred. Ordinary image/PDF adoption remains unavailable.
+
+**Next lead work:** immutable legacy selection/conversion and syntax-aware direct-embedding edits, followed by pinned source delivery and ordinary editor wiring. J64/J65 remain blocked until real integration callbacks exist. No commit/push or new manual-testing invitation. Docker remains solely the test environment.
+
+## Expected PageID enforced by publication — September 24, 2026
+
+Lead extended PagePublicationService::publish with an optional final expectedPageId argument for the upcoming binding-based workflow. When supplied, it requires an existing positive supported-range owner and nonzero base revision; checks current title identity before source work and after source preparation; then checks both the current title and the actual prepared page's ID/namespace/key before granting publication admission. Native revision compare-and-swap, authority checks and atomic main/Layers slot saving remain intact. Existing title-based callers remain compatible and do not yet supply this new argument; this is not public PageID routing or completed adoption.
+
+Fresh native regression passed **65 tests / 311 assertions** across publication, identity preflight, API publication and admission. Added tests cover bound two-slot publication/no-op, wrong identity rejection before source work, forbidden bound-page creation, a real move during source preparation preserving the moved page and old-title redirect, and an injected mismatched prepared page that never reaches the commit callback. Changed PHP style, references (87 classes) and compatibility checks pass.
+
+**Next remains lead-owned:** connect identity resolution and this mandatory expected ID in the adoption service, implement exact direct-embedding source edits, and deliver pinned image/PDF sources before exposing adoption. Do not remove lifecycle guards or expose an unrenderable snapshot. J64/J65 remain blocked. Ordinary embedded Layers saves still do not create owner-page history; there is no new user testing invitation or commit/push readiness. No wiki configuration, user content, manifest or runtime routing was changed. Docker remains only the test environment.
+
+## B01 binding boundary implemented; J63 ready — September 24, 2026
+
+Lead froze an internal separate layersbinding value, v1:<pageId>:<surfaceId>, and implemented PageOwnedBinding::parse. It preserves case-sensitive drawing identity and rejects malformed/coerced/oversized input with fixed errors. Parsing proves syntax only, never page existence or authority. It is not registered or connected to ordinary embeds yet. The binding plan now specifies native revision context, PageID route/draft migration, move/copy behavior and the requirement to replace title-based guards together.
+
+Fresh verification: **31 tests / 63 assertions** passed for the binding boundary; changed PHP style, class references (85 extension classes) and compatibility checks passed. No browser/runtime change is claimed. Existing image/PDF/slide editing still needs adoption and ordinary-path integration.
+
+**Junior J63 is ready** for the ordered-option adapter using the frozen value parser; the exact interface, conflict rules, allowed files and tests are at the top of the [handoff plan](../docs/IMPLEMENTATION_HANDOFF_PLAN.md). Lead retains native parser/source-span integration, PageID authority/lifecycle and atomic adoption. J64/J65 remain blocked. No commit/push occurred. Docker is only the test host; manual acceptance remains on the original wiki.
+
+## Current direction: ordinary page-owned drawings — September 23, 2026
+
+**User acceptance exposed the missing integration:** editing File:ImageTest02.jpg on DeleteMe004 still uses shared Layers storage and creates no DeleteMe004 revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
+
+The [page ownership implementation plan](PAGE_OWNED_BINDING_PLAN.md) defines identity, atomic adoption, move/copy behavior, source pinning, implementation order and acceptance gates. Ownership uses native PageID plus stable surface identity; names are labels. Adoption copies an exact shared revision and commits the embedding binding and complete snapshot in one native page revision. Existing shared sets are preserved. Proposed ownership=page syntax is not implemented or available for use yet.
+
+**Junior J62 is ready** for synthetic conversion fixtures and a loss/compatibility matrix. Lead B01/B02 retain the binding contract, title-to-PageID transition and atomic adoption. J63–J65 are explicitly blocked until their lead interfaces exist; see the handoff plan. Current title-scoped move guards and slide-only editor admission must be addressed, not bypassed. No ordinary image/PDF history readiness or commit/push readiness is claimed. The original wiki remains the manual testing environment. History first, searchable text second, Cargo third.
+
+## Stable native editor entry — September 23, 2026
+
+The registered editor route now accepts explicit `revid=current` alongside owner and surface. The shared pilot validates owner scope and the original authority, resolves the current page revision, then performs the same exact snapshot/source authorization as a numbered editor request. Bootstrap always contains a concrete numeric base revision. Missing, malformed and stale numeric revisions are not silently replaced. Exact historical reads/viewing remain unchanged. A concurrent publication can still produce a controlled conflict; this entry does not merge or retry writes.
+
+Native verification passed 27 tests / 335 assertions across the editor entry and pilot suites. The original localhost:8080 wiki now has two bounded owners: Layers_history_test for manual work and Layers_browser_acceptance for automation. A native wiki page links to the stable current-editor entry; no alternate wiki or wrapper script is needed. See CURRENT_STATUS.md for the latest browser acceptance result. Earlier paragraphs describe earlier checkpoints.
+
+## Guarded editor entry — September 20, 2026
+
+`Special:EditLayersPage` is registered but page-owned editing remains disabled by default. It requires LayersPageOwnedPilotEnabled, an exact retained owner entry in LayersPageOwnedPilotOwners, a registered user authorized to read/edit/editlayers, an existing Layers slot and a selected slide surface in the explicit current revision. Supply owner, revid and surface query parameters; no default/latest fallback or automatic creation is provided. Responses are not cacheable. Asset-backed surfaces, migration and historical viewing are not enabled by this entry. Do not enable it for production; see the current handoff/status for browser acceptance gates. Docker is not required by this route.
+
+**R01 implementation update:** a default-off, owner-scoped exact-revision read API now reuses the native history reader. Real core tests verify older slide content, hidden/wrong-owner rejection and safe responses; full result is 351 tests / 2,557 assertions / one existing skip. Registration, lifecycle admission and actual HTTP/editor/viewer wiring remain unfinished. See the [read boundary](PAGE_OWNED_READ_CONTRACT.md#r01-exact-revision-api-boundary--september-13-2026). This is extension work; no container supervisor is involved.
+
+**Current delivery plan — September 13, 2026:** follow the [MediaWiki-native recovery plan](IMPLEMENTATION_HANDOFF_PLAN.md#active-recovery-plan--mediawiki-native-revision-history). Lead R01 implements guarded native registration/read/lifecycle admission; J42 builds the unregistered publish client; lead R02 integrates the first complete slide history/editor/viewer path. Images/PDFs, adoption and full lifecycle release gates follow. The container-supervisor direction is abandoned and supplies no feature dependency. Earlier milestones below remain evidence records, not current assignments.
+
+**September 12 continuation:** internal `PageAssetService::prepare()` now binds raster preparation to an exact authorized owner/revision/surface and rechecks revision visibility and all sources after rendering. See the [delivery contract](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md) for the implemented boundary and remaining gates. This is not an HTTP endpoint or production enablement; resource/configuration and lifecycle work remains lead-owned. Earlier checkpoint notes below retain their historical scope.
+
 Updated September 10, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary; H3b adds exact local source-version validation. H3c connects these components in an internal publication service; H3d adds a tested, unregistered request boundary. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
-L01 admission design was completed September 11 in the [decision record](PAGE_OWNED_ADMISSION_DESIGN.md). Enforcement and its required real-core tests remain pending; this does not advance H3 to production readiness.
+L01 internal PageUpdater admission and J06 phase 1 real-source fixtures are accepted with lead corrections. Fresh core tests pass 121 tests / 515 assertions. Current/archived image bytes, real PDF page-count bounds, source-free slides and preservation after actual source loss are verified in isolated core tests. J27 extends archived PDF geometry evidence; public registration, HTTP transport, historical delivery and lifecycle gates remain open. See the [admission record](PAGE_OWNED_ADMISSION_DESIGN.md).
+
+L02 internal exact-revision reading was added September 12; [read contract](PAGE_OWNED_READ_CONTRACT.md). The full core suite now passes 125 tests / 618 assertions. Authorized asset delivery, caching, HTTP and lifecycle gates remain open; this does not close gate A.
+
+J28 reader acceptance is complete (130 core tests / 663 assertions). The [private asset delivery design](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md) now defines lead L02a/L02b and the later junior acceptance gate. Rendering/delivery implementation is still pending.
+
+L02a now has an internal private raster renderer and real handler/cleanup evidence (132 core tests / 717 assertions). J29a extends acceptance; L02b authorization, budgets/configuration, HTTP and lifecycle gates remain pending. See the [renderer contract](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md).
+
+## User testing checkpoint — not ready yet (September 12)
+
+Current public editor saves still use `layer_sets`; they do not add owner-page revisions. The internal writer, admission checks, exact-revision reader, source validation and private renderer have core-test evidence. The experimental API still needs guarded MediaWiki registration, actual HTTP/editor/viewer integration and lifecycle protection. The abandoned supervisor work is not a prerequisite. Automated internal tests are not a user-testing release.
+
+The first planned browser checkpoint is an **isolated page-owned slide pilot**, followed by images and multi-page PDFs before broader acceptance. Source-free slides let the first pilot exercise revision behavior without treating source rendering as complete. Slides remain universal canvases, not an SOP-specific feature. This is a proposed scope reduction for early feedback, not permission to register the production feature or bypass admission/lifecycle guards.
+
+Before inviting the user, the lead must provide a disposable test wiki/page, controlled registration limited to that environment, working save/read transport and editor/viewer wiring, and protection against alternate save/import/undelete and legacy mutation paths affecting adopted content. Unsupported operations must be blocked explicitly. Main production registration stays disabled. The lead will supply the exact URL and supported/blocked operations when this exists; no test URL is available yet.
+
+The user acceptance script will be:
+
+1. Create a slide with a textbox and callout; publish and verify one new owner-page revision.
+2. Change text, geometry and ordering; publish and verify a distinct revision.
+3. Open the earlier revision and confirm its original text and layout remain unchanged after refresh.
+4. Open two editors on the same base; save one, then verify the stale editor cannot overwrite it and retains its work.
+5. Verify denied access and unsupported mutation routes cannot silently change revision-controlled content.
+6. In the later asset checkpoint, repeat history/navigation checks with an image and a multi-page PDF, including source replacement and old-revision access.
+
+Restoration, adoption/migration and full lifecycle acceptance remain separate release gates even after this pilot. The testing invitation must state any remaining restrictions explicitly.
 
 ## Outcome and non-negotiable invariants
 
@@ -61,7 +166,7 @@ The server response must ultimately distinguish stale-base conflict, commit-time
 | --- | --- | --- |
 | H1: core persistence proof | Internal writer, genuine core/database tests, no public registration | Implemented; detailed evidence below |
 | H2: content model | Versioned schema, strict whole-document validation, canonicalization and custom content model | Internal implementation tested; direct core saves reject invalid snapshots. Production model/normal-slot registration deferred until H3 authority checks are ready |
-| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a/H3b access/source gates and H3c publication service tested internally; request boundary tested internally; alternate-path admission, registration and further source/lifecycle acceptance pending |
+| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a/H3b access/source gates and H3c publication service tested internally; request boundary tested internally; L01 alternate-path admission enforced and core-verified; production registration and further source/lifecycle acceptance pending |
 | H4: editor and historical viewer | Owner/revision context across editor, inline view, lightbox and export; stable IDs and pinned assets | Pending; oldid works for images, PDFs and slides with no latest-state fallback |
 | H5: adoption and lifecycle | Copy/adopt/pin workflow, legacy-route isolation, move/delete/undelete/rollback/suppression/import/export and repair tooling | Pending; one authority and round-trip recovery proven |
 | H6: release readiness | Browser and operational tests, feature flag, upgrade/rollback documentation, support matrix, staged rollout | Pending; no compliance claim until all required gates pass |

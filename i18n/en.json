@@ -1,4 +1,29 @@
 {
+	"layers-page-draft-dialog-title": "Recover local Layers edits",
+	"layers-page-draft-dialog-select": "Choose a local draft",
+	"layers-page-draft-dialog-number": "Draft $1",
+	"layers-page-draft-dialog-restore": "Restore local edits",
+	"layers-page-draft-dialog-review": "Review this draft",
+	"layers-page-draft-dialog-cancel": "Keep drafts unchanged",
+	"layers-page-draft-dialog-unavailable": "This draft could not be read. It has been left unchanged.",
+	"layers-page-draft-dialog-local": "These are local edits. Restoring them does not publish a page revision.",
+	"layers-page-draft-choose": "There are $1 independent drafts for this page revision. Enter a draft number from 1 to $1 to review, or Cancel to keep all drafts unchanged.",
+	"layers-page-draft-recover": "A local draft exists for this page revision. Restore it? Cancel keeps the saved revision.",
+	"layers-page-draft-failed": "Your local draft could not be saved. Keep this editor open to avoid losing changes.",
+	"layers-page-draft-blocked": "Your local draft is preserved and saving is blocked. Reopen to restore the draft, or review page history and reconcile an interrupted save before publishing.",
+	"layers-editor-unavailable": "The page-owned Layers editor is unavailable for this page, revision, surface, or account.",
+	"layers-page-revision-check-button": "Check saved page",
+	"layers-page-revision-check-checking": "Checking saved page while keeping local edits…",
+	"layers-page-revision-check-backup-failed": "Local backup failed; keep the editor open.",
+	"layers-page-revision-check-invalid-edits": "Retained edits need correction before saving.",
+	"layers-page-revision-check-ready": "Local changes can be saved explicitly.",
+	"layers-page-revision-check-matched": "Local content matches the saved page.",
+	"layers-page-revision-check-conflict": "This content changed on the server; keep your draft and resolve differences before saving.",
+	"layers-page-revision-check-failed": "Could not check the saved page; the local draft remains available.",
+	"layers-page-history-link": "View Layers: $1",
+	"layers-page-history-title": "Layers revision view",
+	"layers-page-history-caption": "Page $1, revision $2 — $3",
+	"layers-page-history-render-failed": "This saved drawing could not be displayed.",
 	"@metadata": {
 		"authors": [
 			"Paul Vodrazka"
@@ -959,5 +984,10 @@
 	"apihelp-layerspublish-param-baserevid": "Expected owner revision ID; zero for page creation.",
 	"apihelp-layerspublish-param-data": "Complete versioned Layers snapshot as JSON.",
 	"apihelp-layerspublish-param-maintext": "Optional simultaneous wikitext edit; required for a new owner page.",
-	"apihelp-layerspublish-param-summary": "Edit summary, at most 500 UTF-8 bytes."
+	"apihelp-layerspublish-param-summary": "Edit summary, at most 500 UTF-8 bytes.",
+	"layers-admission-unauthorized": "Direct or unauthorized changes to the Layers revision slot are not permitted.",
+	"layers-slot-removal-denied": "Removing the Layers revision slot is not supported.",
+	"layers-reading-disabled": "Page-owned Layers reading is not enabled.",
+	"layers-revision-unavailable": "This Layers revision is unavailable.",
+	"layers-reading-failed": "The Layers revision could not be loaded."
 }

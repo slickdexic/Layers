@@ -3,15 +3,16 @@
 namespace MediaWiki\Extension\Layers\Tests\Core;
 
 use MediaWiki\Content\WikitextContent;
-use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
-use MediaWiki\Extension\Layers\Content\LayersDocumentContentHandler;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
+use MediaWiki\Extension\Layers\Revision\PublicationAdmissionContext;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\SlotRecord;
+
+require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
 /**
  * @covers \MediaWiki\Extension\Layers\Revision\PagePublicationService
@@ -20,19 +21,22 @@ use MediaWiki\Revision\SlotRecord;
  * @group Database
  */
 class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
+	private ?PublicationAdmissionContext $context = null;
+
 	protected function setUp(): void {
 		parent::setUp();
-		$this->getServiceContainer()->getContentHandlerFactory()->defineContentHandler(
-			LayersDocumentContent::MODEL, LayersDocumentContentHandler::class );
-		$this->getServiceContainer()->getSlotRoleRegistry()->defineRoleWithModel(
-			PageRevisionWriter::SLOT, LayersDocumentContent::MODEL, [ 'display' => 'none' ], false );
+		$registered = TestingAdmissionRegistration::install( $this );
+		$this->context = $registered['context'];
 	}
 
-	private function service( ?SourceVersionResolver $sources = null ): PagePublicationService {
+	private function service( ?SourceVersionResolver $sources = null,
+		?PageRevisionWriter $writer = null
+	): PagePublicationService {
 		$s = $this->getServiceContainer();
 		return new PagePublicationService( $s->getWikiPageFactory(), new PageHistoryAccess( $s->getRevisionLookup() ),
 			$sources ?? new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ),
-			new PageRevisionWriter() );
+			$writer ?? new PageRevisionWriter(),
+			$this->context );
 	}
 
 	private function snapshot( string $label = 'Ideas' ): string {
@@ -209,5 +213,108 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 			->withConsecutive( [ 'editlayers', $page->getTitle() ], [ 'edit', $page->getTitle() ] )->willReturn( true );
 		$this->assertGreaterThan( $page->getLatest(),
 			$this->service()->publish( $page->getTitle(), $authority, $page->getLatest(), $this->snapshot(), '' ) );
+	}
+
+	public function testBoundPublicationCommitsBothSlotsAndPreservesNoOp(): void {
+		$page = $this->getExistingTestPage();
+		$actor = $this->actor();
+		$base = $page->getLatest();
+		$id = $page->getId();
+		$main = new WikitextContent( 'Bound drawing reference' );
+		$next = $this->service()->publish( $page->getTitle(), $actor, $base, $this->snapshot(),
+			'Adopt drawing', $main, $id );
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $next );
+		$this->assertSame( $id, $revision->getPageId() );
+		$this->assertSame( $base, $revision->getParentId() );
+		$this->assertSame( $main->getText(), $revision->getContent( SlotRecord::MAIN )->getText() );
+		$this->assertTrue( $revision->hasSlot( PageRevisionWriter::SLOT ) );
+		$this->assertSame( $next, $this->service()->publish( $page->getTitle(), $actor, $next,
+			$this->snapshot(), 'Unchanged', $main, $id ) );
+	}
+
+	public function testWrongBoundIdentityRejectsBeforeSourceWork(): void {
+		$page = $this->getExistingTestPage();
+		$other = $this->getExistingTestPage( 'Different bound owner' );
+		$base = $page->getLatest();
+		$sources = $this->createMock( SourceVersionResolver::class );
+		$sources->expects( $this->never() )->method( 'resolve' );
+		try {
+			$this->service( $sources )->publish( $page->getTitle(), $this->actor(), $base,
+				$this->snapshot(), '', null, $other->getId() );
+			$this->fail( 'Expected identity rejection' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+		$this->assertSame( $base, $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionByTitle( $page->getTitle() )->getId() );
+	}
+
+	public function testBoundPublicationCannotCreateAnOwner(): void {
+		$page = $this->getNonexistingTestPage();
+		try {
+			$this->service()->publish( $page->getTitle(), $this->actor(), 0, $this->snapshot(), '',
+				new WikitextContent( 'Must not create' ), 123 );
+			$this->fail( 'Expected bound creation rejection' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-invalid-publication-request', $e->getMessage() );
+		}
+		$this->assertFalse( $page->getTitle()->exists( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST ) );
+	}
+
+	public function testWrongPreparedPageCannotOpenAdmissionOrCommit(): void {
+		$page = $this->getExistingTestPage();
+		$other = $this->getExistingTestPage( 'Wrong prepared page' );
+		$base = $page->getLatest();
+		$prepared = $this->createMock( \MediaWiki\Storage\PreparedUpdate::class );
+		$prepared->method( 'getPage' )->willReturn( $other->getTitle() );
+		$prepared->expects( $this->never() )->method( 'getRawContent' );
+		$writer = $this->createMock( PageRevisionWriter::class );
+		$writer->expects( $this->once() )->method( 'save' )->willReturnCallback(
+			function ( $updater, $baseId, $content, $summary, $main, $scope ) use ( $prepared ) {
+				return $scope( $prepared, function () {
+					$this->fail( 'A mismatched prepared page must never reach commit' );
+				} );
+			}
+		);
+		try {
+			$this->service( null, $writer )->publish( $page->getTitle(), $this->actor(), $base,
+				$this->snapshot(), '', null, $page->getId() );
+			$this->fail( 'Expected prepared identity rejection' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+		$this->assertSame( $base, $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionByTitle( $page->getTitle() )->getId() );
+	}
+
+	public function testMoveDuringSourcePreparationDoesNotPublishToOldTitle(): void {
+		$page = $this->getExistingTestPage();
+		$old = $page->getTitle();
+		$new = $this->getNonexistingTestPage()->getTitle();
+		$id = $page->getId();
+		$base = $page->getLatest();
+		$actor = $this->actor();
+		$this->overrideUserPermissions( $actor->getUser(), [ 'read', 'edit', 'editlayers', 'move', 'createpage' ] );
+		$s = $this->getServiceContainer();
+		$sources = $this->createMock( SourceVersionResolver::class );
+		$sources->method( 'resolve' )->willReturnCallback( function () use ( $s, $old, $new, $actor ) {
+			$status = $s->getMovePageFactory()->newMovePage( $old, $new )->moveIfAllowed( $actor, 'Concurrent move' );
+			$this->assertTrue( $status->isOK(), json_encode( $status->getErrors() ) );
+			return [];
+		} );
+		try {
+			$this->service( $sources )->publish( $old, $actor, $base, $this->snapshot(), '',
+				new WikitextContent( 'Must not replace redirect' ), $id );
+			$this->fail( 'Expected moved identity rejection' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+		$moved = $s->getRevisionLookup()->getRevisionByTitle( $new );
+		$redirect = $s->getRevisionLookup()->getRevisionByTitle( $old );
+		$this->assertSame( $id, $moved->getPageId() );
+		$this->assertNotSame( $id, $redirect->getPageId() );
+		$this->assertFalse( $moved->hasSlot( PageRevisionWriter::SLOT ) );
+		$this->assertFalse( $redirect->hasSlot( PageRevisionWriter::SLOT ) );
+		$this->assertStringContainsString( '#REDIRECT', $redirect->getContent( SlotRecord::MAIN )->getText() );
 	}
 }

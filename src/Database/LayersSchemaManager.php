@@ -33,7 +33,9 @@ class LayersSchemaManager {
 
 		// Prefer per-table files to avoid re-running a monolithic schema multiple times
 		$tablesDir = "$base/tables";
-		if ( is_dir( $tablesDir ) && file_exists( "$tablesDir/layer_sets.sql" ) ) {
+		if ( $dbType === 'sqlite' ) {
+			$updater->addExtensionTable( 'layer_sets', "$tablesDir/sqlite/layer_sets.sql" );
+		} elseif ( is_dir( $tablesDir ) && file_exists( "$tablesDir/layer_sets.sql" ) ) {
 			$updater->addExtensionTable( 'layer_sets', "$tablesDir/layer_sets.sql" );
 		} else {
 			// Fallback: run the monolithic schema once, anchored on layer_sets

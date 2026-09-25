@@ -1,13 +1,25 @@
 # Layers Extension — Improvement Plan
 
+## Layers is a MediaWiki extension — Docker is only the test environment
+
+**Layers is a MediaWiki extension. It is not Docker-based. Docker is used only to host our development/test MediaWiki installation.** Docker, containers, PowerShell, .NET, host supervisors and container orchestration are not Layers runtime architecture, deployment requirements or feature backends. Do not add them as required or optional Layers capabilities.
+
+The container-supervisor direction was an engineering mistake and is **abandoned, not paused**. J35 and the associated container dispatch/recovery milestones are cancelled, not blockers for page history. Earlier prototype code and test records are retained solely as records of abandoned work, not as approved implementation or an optional-backend proposal. Their test counts are not progress toward a deployable MediaWiki feature.
+
+All active work must use MediaWiki extension mechanisms and respect the supported MediaWiki/PHP/database environment and normal media-handler requirements. Revision history, search, Cargo integration and image/PDF/slide support must not depend on this project's test-host setup. This rule overrides every earlier supervisor/container instruction in this document.
+
 > **Current guidance — September 6, 2026:** Layers supports image annotations, PDF annotations and standalone slides as equal content types. Slides are a general-purpose canvas for presentations, diagrams, educational material, infographics, visual documents, dashboards and more. SOPs are one application, not the definition of the product. The agreed foundation priorities remain **page revision history, MediaWiki search, then Cargo query/filter support**. See [the architecture proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md) for technical context; its SOP examples illustrate one use case rather than restricting scope. Post-1.5.95 fixes are not yet verified/backported to REL1_43; this plan does not announce a release.
 
 **Version:** 1.5.95
 **Last updated:** September 10, 2026 — ordered implementation handoff plan
 
+## Current execution plan — September 13, 2026
+
+The [active MediaWiki-native recovery plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md#active-recovery-plan--mediawiki-native-revision-history) is the current task authority. Start lead R01 (native registration/read/lifecycle boundary) and junior J42 (unregistered publish client), then lead R02 (complete slide history/editor/viewer). Gated UI/browser acceptance, image/PDF integration and adoption/release follow. Search and Cargo remain next priorities after history. The plan specifies reusable code, ownership, exact J42 scope and the first user-testing gate. Older task directions below are superseded.
+
 ## Implementation assignments
 
-Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) for assignments. Latest review accepts stabilization through J24 at `651d9011`, with browser results recorded by the engineer and fresh focused test evidence. **Lead next: L01a admission enforcement → L01b core proof; junior next: J06 after that gate.** The [admission decision record](docs/PAGE_OWNED_ADMISSION_DESIGN.md) is complete; implementation remains pending. See the [review evidence](docs/JUNIOR_IMPLEMENTATION_REVIEW.md). Page-owned history remains unregistered.
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) for assignments. The supervisor journal now preserves unfinished capacity across process death and blocks competing supervisors. **J34 is lead-reviewed with corrections. An internal recovery coordinator now has scripted-runtime acceptance. Read-only Docker inventory now has live diagnostic evidence. Version 2 durable create/start intent and pending-command recovery guards are implemented. J36 is lead-reviewed with corrections. J37 is lead-reviewed with corrections. The bounded host command runner is implemented with finite acceptance; J38 is accepted with lead test corrections; J39 is accepted with lead assertion corrections; no new junior packet is ready until bounded stream framing and the host dispatcher exist. The internal journaled launch coordinator now has scripted-runtime tests. Local Windows journal/runner invocation now has disposable process-death evidence. Lead next: implement a bounded structured host bridge retaining one PHP journal owner, connect it to a verified runtime adapter and prove actual launch/crash recovery and quiescence handling across crash windows, then private source staging and real rendering. J35 is blocked until the reviewed runtime interface and harness exist.** See the [delivery contract](docs/PAGE_OWNED_ASSET_DELIVERY_DESIGN.md). Production history remains gated.
 
 ## Product improvement roadmap
 
@@ -3056,3 +3068,28 @@ When an issue is fixed:
 | 2026-02-08 | v29: Added Phases 5-6, infrastructure items, 42 doc issues. |
 | 2026-02-08 | v28: Restructured from v27 findings. |
 | 2026-02-07 | v27: Initial improvement plan. |
+
+
+### September 13 lead transport checkpoint
+
+The first bounded bidirectional host transport is implemented, with 35 real-process framing/deadline/failure scenarios passing on Windows/PowerShell 7. This does not enable page-owned saves or establish PHP journal/Docker integration. The next lead deliverable is persistent journal-owner composition and interrupted-exchange acceptance, followed by the junior transport adversity packet and fixed host dispatch. J35 remains blocked. See the [implementation and evidence limits](docs/PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#bounded-session-transport-checkpoint--september-13-2026).
+
+
+### September 13 persistent-owner checkpoint
+
+The real PHP journal/launcher/codec now run through bounded framed IO under one persistent owner. Sixteen local composition scenarios and 310 core tests / 2,437 assertions / one existing skip pass. J40 has since been accepted with lead corrections; see the current checkpoint below. Lead retains fixed host dispatch, verified runtime reconciliation and abrupt host/daemon death acceptance. This remains internal; J35 and public page-history testing are blocked. See the [handoff packet](docs/IMPLEMENTATION_HANDOFF_PLAN.md#j40--php-stream-framing-and-owner-startup-rejection-acceptance-accepted-with-lead-corrections).
+
+
+### September 13 J40 lead review checkpoint
+
+J40 is accepted with corrected fixture ownership/resource lifetime, exact failure-path IO assertions and raw-byte startup preservation. Fresh verification: 334 core tests / 2,506 assertions / one existing skip and 20 local journal session scenarios. No new junior packet is ready. Lead next implements host request validation and fixed Docker dispatch, then verified runtime reconciliation and real failure-window acceptance; J35 and browser testing remain blocked. See the [implementation order](docs/IMPLEMENTATION_HANDOFF_PLAN.md#next-lead-implementation-order-after-j40).
+
+
+### September 13 host protocol checkpoint
+
+Implemented host request/state validation before future Docker dispatch. Fresh Windows/PowerShell 7 evidence: 51 focused protocol scenarios and 20 integrated PHP journal sessions, all with simulated host outcomes. J41 has since been accepted with lead corrections; lead retains fixed Docker operations, verified outcomes and recovery. No public save/history behavior changed. See the [handoff](docs/IMPLEMENTATION_HANDOFF_PLAN.md#j41--host-launch-protocol-validation-acceptance-accepted-with-lead-corrections).
+
+
+### September 13 J41 lead acceptance
+
+J41 is accepted with corrected completion-abort assertions, targeted mutation detection and expanded null/version coverage. Fresh evidence: 368 protocol and 20 integrated journal-session scenarios. No production behavior changed. The next work is lead-owned fixed host dispatch and verified runtime outcomes; no new junior packet is ready. J35 and browser testing remain blocked. See the [lead deliverable](docs/IMPLEMENTATION_HANDOFF_PLAN.md#immediate-lead-deliverable-after-j41).

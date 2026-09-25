@@ -331,13 +331,28 @@
 			return; // Already set up
 		}
 		if ( typeof window !== 'undefined' ) {
-			window.addEventListener( 'beforeunload', cleanupGlobalEditorInstance );
+			// beforeunload can be cancelled. Destroying there loses the live editor
+			// even when the user chooses to stay on the page.
+			let editorLeftPage = false;
+			window.addEventListener( 'pagehide', () => {
+				editorLeftPage = Boolean( window.layersEditorInstance );
+				cleanupGlobalEditorInstance();
+			} );
+			window.addEventListener( 'pageshow', ( event ) => {
+				if ( event.persisted && editorLeftPage ) {
+					// A cached document contains a disposed editor. Reload the same URL
+					// to reauthorize it and offer recovery of its saved local draft.
+					window.location.reload();
+				}
+			} );
 
 			// MediaWiki page navigation cleanup
 			if ( typeof mw !== 'undefined' && mw.hook ) {
 				mw.hook( 'wikipage.content' ).add( function () {
 					// Only cleanup if we're not on a layers editor page
-					const isEditLayersPage = mw.config.get( 'wgAction' ) === 'editlayers';
+					const specialPage = mw.config.get( 'wgCanonicalSpecialPageName' );
+					const isEditLayersPage = mw.config.get( 'wgAction' ) === 'editlayers' ||
+						specialPage === 'EditLayersPage' || specialPage === 'EditSlide';
 					if ( !isEditLayersPage ) {
 						cleanupGlobalEditorInstance();
 					}
@@ -397,6 +412,7 @@
 				// Fire the hook for initialization
 				mw.hook( 'layers.editor.init' ).fire( {
 					filename: init.filename,
+					pageOwned: init.pageOwned || null,
 					imageUrl: init.imageUrl,
 					initialSetName: init.initialSetName || null,
 					autoCreate: init.autoCreate || false,
@@ -434,6 +450,7 @@
 
 					const editor = new LayersEditor( {
 						filename: init.filename,
+					pageOwned: init.pageOwned || null,
 						imageUrl: init.imageUrl,
 						initialSetName: init.initialSetName || null,
 						autoCreate: init.autoCreate || false,

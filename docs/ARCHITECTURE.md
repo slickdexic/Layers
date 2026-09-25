@@ -1,5 +1,7 @@
 # Layers architecture
 
+**Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
+
 Reviewed September 6, 2026. The current architecture supports images, PDF pages and standalone slides. It does not yet store annotations as MediaWiki article revisions.
 
 ## Data and authority

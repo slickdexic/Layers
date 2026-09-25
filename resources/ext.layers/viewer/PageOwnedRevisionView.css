@@ -1,0 +1,24 @@
+/**
+ * Scoped styling for page-owned accessible historical revision view host.
+ */
+.ext-layers-historical-view {
+	margin: 0;
+	padding: 0;
+}
+
+.ext-layers-historical-view .ext-layers-historical-caption {
+	font-weight: bold;
+	margin-bottom: 0.5em;
+}
+
+.ext-layers-historical-view .ext-layers-historical-canvas {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+.ext-layers-historical-view .ext-layers-historical-status {
+	color: #72777d;
+	font-size: 0.875em;
+	margin-top: 0.5em;
+}

@@ -21,8 +21,11 @@ class PageHistoryAccessTest extends \MediaWikiIntegrationTestCase {
 		parent::setUp();
 		$this->getServiceContainer()->getContentHandlerFactory()->defineContentHandler(
 			LayersDocumentContent::MODEL, LayersDocumentContentHandler::class );
-		$this->getServiceContainer()->getSlotRoleRegistry()->defineRoleWithModel(
-			PageRevisionWriter::SLOT, LayersDocumentContent::MODEL, [ 'display' => 'none' ], false );
+		$roles = $this->getServiceContainer()->getSlotRoleRegistry();
+		if ( !$roles->isDefinedRole( PageRevisionWriter::SLOT ) ) {
+			$roles->defineRoleWithModel(
+				PageRevisionWriter::SLOT, LayersDocumentContent::MODEL, [ 'display' => 'none' ], false );
+		}
 	}
 
 	private function access(): PageHistoryAccess {

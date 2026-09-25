@@ -1,0 +1,176 @@
+<?php
+
+declare( strict_types=1 );
+
+namespace MediaWiki\Extension\Layers\Revision;
+
+/** Conservative raw-source subset, not a general MediaWiki parser. No expansion or writes. */
+class DirectEmbeddingRewriter {
+	/**
+	 * Find complete top-level literal embeds; all offsets are UTF-8 byte offsets.
+	 * Resolver must use native Title namespace rules and return canonical File: DB-key text,
+	 * or null for a non-file target. No filename occurrence queues are used.
+	 * @param string $text Exact base-revision main text
+	 * @param callable $resolveFile Trusted native namespace normalizer
+	 * @return array
+	 */
+	public function scan( string $text, callable $resolveFile ): array {
+		if ( preg_match( '/[\x00-\x08\x0b\x0e-\x1f\x7f]/', $text ) ) {
+			$this->reject();
+		}
+		$result = [];
+		$length = strlen( $text );
+		for ( $i = 0; $i < $length; ) {
+			if ( substr( $text, $i, 1 ) === '<' ) {
+				$i = $this->skipLiteral( $text, $i );
+				continue;
+			}
+			$open = $this->opener( $text, $i );
+			if ( $open === null ) {
+				if ( $text[$i] === '[' || $text[$i] === ']' || substr( $text, $i, 2 ) === '}}' ) {
+					$this->reject();
+				}
+				$i++;
+				continue;
+			}
+			$end = $this->balancedEnd( $text, $i, $open, 0 );
+			$raw = substr( $text, $i, $end - $i );
+			$body = substr( $raw, strlen( $open ), -strlen( $open ) );
+			// Nested links/templates, comments and tags require a native source adapter.
+			if ( $open !== '{{{' && !preg_match( '/[\[\]{}<>]/', $body ) ) {
+				$parts = explode( '|', $body );
+				$head = trim( array_shift( $parts ) );
+				$kind = null;
+				$target = null;
+				if ( $open === '[[' && $head !== '' && $head[0] !== ':' ) {
+					$target = $resolveFile( $head );
+					$kind = $target !== null ? 'file' : null;
+				} elseif ( $open === '{{' && preg_match( '/\A#slide\s*:(.+)\z/iD', $head, $match ) ) {
+					$target = trim( $match[1] );
+					$kind = $target !== '' ? 'slide' : null;
+				}
+				if ( $kind !== null ) {
+					$result[] = [ 'start' => $i, 'length' => $end - $i, 'raw' => $raw,
+						'kind' => $kind, 'target' => $target, 'options' => $parts ];
+				}
+			}
+			$i = $end;
+		}
+		return $result;
+	}
+
+	/**
+	 * Replace selectors in one scanner-verified candidate, retaining all other bytes.
+	 * Does not prove selected legacy row/source identity; the adoption caller must do that.
+	 * @param string $text
+	 * @param int $start
+	 * @param string $expected Original complete embedding bytes from the same base
+	 * @param string $binding Canonical server-generated binding
+	 * @param callable $resolveFile
+	 * @return string
+	 */
+	public function rewrite( string $text, int $start, string $expected, string $binding,
+		callable $resolveFile
+	): string {
+		PageOwnedBinding::parse( $binding );
+		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
+			if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
+				continue;
+			}
+			$parts = explode( '|', substr( $expected, 2, -2 ) );
+			$head = array_shift( $parts );
+			$kept = [];
+			$selectors = 0;
+			foreach ( $parts as $part ) {
+				$key = strtolower( trim( explode( '=', $part, 2 )[0], " \t\r\n\f" ) );
+				if ( $key === 'layersbinding' ) {
+					$this->reject();
+				}
+				if ( in_array( $key, [ 'layerset', 'layers', 'layer', 'layersetid' ], true ) ) {
+					if ( ++$selectors > 1 ) {
+						$this->reject();
+					}
+					$kept[] = 'layersbinding=' . $binding;
+				} else {
+					$kept[] = $part;
+				}
+			}
+			if ( !$selectors ) {
+				$kept[] = 'layersbinding=' . $binding;
+			}
+			PageOwnedBindingOptions::extract( $kept );
+			$replacement = substr( $expected, 0, 2 ) . $head . '|' . implode( '|', $kept ) .
+				substr( $expected, -2 );
+			return substr( $text, 0, $start ) . $replacement . substr( $text, $start + strlen( $expected ) );
+		}
+		$this->reject();
+	}
+
+	/** @param string $text @param int $offset @return string|null */
+	private function opener( string $text, int $offset ): ?string {
+		foreach ( [ '{{{', '{{', '[[' ] as $open ) {
+			if ( substr( $text, $offset, strlen( $open ) ) === $open ) {
+				return $open;
+			}
+		}
+		return null;
+	}
+
+	/** @param string $text @param int $start @param string $open @param int $depth @return int */
+	private function balancedEnd( string $text, int $start, string $open, int $depth ): int {
+		if ( $depth > 64 ) {
+			$this->reject();
+		}
+		$close = $open === '[[' ? ']]' : str_repeat( '}', strlen( $open ) );
+		for ( $i = $start + strlen( $open ), $length = strlen( $text ); $i < $length; ) {
+			$nested = $this->opener( $text, $i );
+			if ( substr( $text, $i, strlen( $close ) ) === $close ) {
+				return $i + strlen( $close );
+			}
+			if ( $text[$i] === '<' ) {
+				$i = $this->skipLiteral( $text, $i );
+			} elseif ( $nested !== null ) {
+				$i = $this->balancedEnd( $text, $i, $nested, $depth + 1 );
+			} elseif ( substr( $text, $i, 2 ) === '}}' || substr( $text, $i, 2 ) === ']]' ) {
+				$this->reject();
+			} else {
+				$i++;
+			}
+		}
+		$this->reject();
+	}
+
+	/** @param string $text @param int $offset @return int */
+	private function skipLiteral( string $text, int $offset ): int {
+		if ( substr( $text, $offset, 4 ) === '<!--' ) {
+			$end = strpos( $text, '-->', $offset + 4 );
+			if ( $end === false ) {
+				$this->reject();
+			}
+			return $end + 3;
+		}
+		// Only explicitly opaque bodies are skipped. Unknown/HTML containers reject.
+		if ( !preg_match( '/\G<(nowiki|pre|source|syntaxhighlight|math|ref|gallery)(?=[ \t\r\n\f\/>])' .
+			'(?:[^<>"\']|"[^"]*"|\'[^\']*\')*>/i', $text, $match, 0, $offset ) ) {
+			$this->reject();
+		}
+		$after = $offset + strlen( $match[0] );
+		if ( preg_match( '/\/\s*>\z/', $match[0] ) ) {
+			return $after;
+		}
+		$tag = preg_quote( $match[1], '/' );
+		if ( !preg_match( '/<\/' . $tag . '\s*>/i', $text, $close, PREG_OFFSET_CAPTURE, $after ) ) {
+			$this->reject();
+		}
+		$end = $close[0][1];
+		if ( preg_match( '/<' . $tag . '\b/i', substr( $text, $after, $end - $after ) ) ) {
+			$this->reject();
+		}
+		return $end + strlen( $close[0][0] );
+	}
+
+	/** @return never */
+	private function reject(): void {
+		throw new \InvalidArgumentException( 'layers-embedding-source-unavailable' );
+	}
+}

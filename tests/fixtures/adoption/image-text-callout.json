@@ -1,0 +1,240 @@
+{
+    "caseName": "image-text-callout",
+    "description": "Legacy image annotation on File:Diagram.png with text and callout layers, including Unicode and fractional layer coordinates.",
+    "syntheticNonResolvableNotes": "The SHA-1 '0123456789abcdef0123456789abcde' and timestamp '20260924000001' are synthetic test values marked non-resolvable. SourceVersionResolver will reject resolution unless matching physical files exist in the local repo.",
+    "legacyRecord": {
+        "database": {
+            "table": "layer_sets",
+            "row": {
+                "ls_id": 101,
+                "ls_img_name": "Diagram.png",
+                "ls_img_major_mime": "image",
+                "ls_img_minor_mime": "png",
+                "ls_img_sha1": "0123456789abcdef0123456789abcde",
+                "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000001\",\"layers\":[{\"id\":\"layer_txt_1\",\"type\":\"text\",\"x\":120.5,\"y\":80.25,\"text\":\"Architecture Diagram — 概要 (CJK & Symbol: ⚙️)\",\"fontSize\":24,\"fontFamily\":\"Arial\",\"color\":\"#202122\"},{\"id\":\"layer_callout_1\",\"type\":\"callout\",\"x\":300,\"y\":200,\"width\":240,\"height\":90,\"text\":\"Critical cache invalidation boundary\",\"fontSize\":16,\"fontFamily\":\"sans-serif\",\"color\":\"#000000\",\"fill\":\"#ffffff\",\"stroke\":\"#0066cc\",\"strokeWidth\":2,\"tailDirection\":\"bottom\",\"tailPosition\":0.333,\"tailSize\":20,\"tailStyle\":\"triangle\",\"tailTipX\":420.5,\"tailTipY\":310}],\"backgroundVisible\":true,\"backgroundOpacity\":1}",
+                "ls_user_id": 1001,
+                "ls_timestamp": "20260924000001",
+                "ls_revision": 1,
+                "ls_name": "default",
+                "ls_page": 1,
+                "ls_size": 650,
+                "ls_layer_count": 2
+            },
+            "codeReferences": {
+                "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245, insertId)",
+                "ls_img_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::normalizeImageName (line 99)",
+                "ls_img_major_mime": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 227)",
+                "ls_img_minor_mime": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 227)",
+                "ls_img_sha1": "MediaWiki\\Extension\\Layers\\Api\\Traits\\ForeignFileHelperTrait::getFileSha1 (line 347)",
+                "ls_json_blob": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (lines 192-217)",
+                "ls_user_id": "MediaWiki\\User\\User::getId (ApiLayersSave line 389)",
+                "ls_timestamp": "Wikimedia\\Rdbms\\IDatabase::timestamp (LayersDatabase line 190)",
+                "ls_revision": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::getNextRevisionForSet (line 189)",
+                "ls_name": "MediaWiki\\Extension\\Layers\\Utility\\SetNameResolver::latestName / SetNameSanitizer::getDefaultName (ApiLayersSave line 371)",
+                "ls_page": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::resolvePageParam (line 336)",
+                "ls_size": "strlen($jsonBlob) (LayersDatabase line 240)",
+                "ls_layer_count": "count($layersData) (LayersDatabase line 241)"
+            }
+        },
+        "fileMetadata": {
+            "fileTitle": "File:Diagram.png",
+            "canonicalDbKey": "Diagram.png",
+            "width": 1920,
+            "height": 1080,
+            "mime": "image/png",
+            "mediaType": "BITMAP",
+            "pageCount": 1,
+            "repo": "local",
+            "sha1": "0123456789abcdef0123456789abcde",
+            "timestamp": "20260924000001",
+            "codeReferences": {
+                "fileTitle": "MediaWiki\\Title\\Title::getPrefixedText (ApiLayersSave line 295)",
+                "canonicalDbKey": "MediaWiki\\Title\\Title::getDBkey (ApiLayersSave line 302)",
+                "width": "MediaWiki\\FileRepo\\File\\File::getWidth (ApiLayersSave line 338)",
+                "height": "MediaWiki\\FileRepo\\File\\File::getHeight (ApiLayersSave line 339)",
+                "mime": "MediaWiki\\FileRepo\\File\\File::getMimeType (ApiLayersSave line 348)",
+                "mediaType": "MediaWiki\\FileRepo\\File\\File::getMediaType (SourceVersionResolver line 73)",
+                "pageCount": "MediaWiki\\FileRepo\\File\\File::pageCount (ApiLayersInfo line 170)",
+                "repo": "MediaWiki\\FileRepo\\File\\File::getRepo (SourceVersionResolver line 59)",
+                "sha1": "MediaWiki\\FileRepo\\File\\File::getSha1 (SourceVersionResolver line 61)",
+                "timestamp": "MediaWiki\\FileRepo\\File\\File::getTimestamp (SourceVersionResolver line 61)"
+            }
+        },
+        "apiEnvelope": {
+            "endpoint": "action=layerssave",
+            "requestParams": {
+                "filename": "File:Diagram.png",
+                "page": 1,
+                "setname": "default",
+                "data": "{\"layers\":[{\"id\":\"layer_txt_1\",\"type\":\"text\",\"x\":120.5,\"y\":80.25,\"text\":\"Architecture Diagram — 概要 (CJK & Symbol: ⚙️)\",\"fontSize\":24,\"fontFamily\":\"Arial\",\"color\":\"#202122\"},{\"id\":\"layer_callout_1\",\"type\":\"callout\",\"x\":300.0,\"y\":200.0,\"width\":240,\"height\":90,\"text\":\"Critical cache invalidation boundary\",\"fontSize\":16,\"fontFamily\":\"sans-serif\",\"color\":\"#000000\",\"fill\":\"#ffffff\",\"stroke\":\"#0066cc\",\"strokeWidth\":2,\"tailDirection\":\"bottom\",\"tailPosition\":0.333,\"tailSize\":20,\"tailStyle\":\"triangle\",\"tailTipX\":420.5,\"tailTipY\":310.0}],\"backgroundVisible\":true,\"backgroundOpacity\":1.0}"
+            },
+            "responseEnvelope": {
+                "layerssave": {
+                    "success": 1,
+                    "layersetid": 101,
+                    "result": "Success"
+                }
+            },
+            "codeReferences": {
+                "endpoint": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::execute (line 244)",
+                "response": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::execute (lines 407-413)"
+            }
+        },
+        "drawingPayload": {
+            "revision": 1,
+            "ownerId": 1001,
+            "schema": 1,
+            "created": "20260924000001",
+            "backgroundVisible": true,
+            "backgroundOpacity": 1,
+            "layers": [
+                {
+                    "id": "layer_txt_1",
+                    "type": "text",
+                    "x": 120.5,
+                    "y": 80.25,
+                    "text": "Architecture Diagram — 概要 (CJK & Symbol: ⚙️)",
+                    "fontSize": 24,
+                    "fontFamily": "Arial",
+                    "color": "#202122"
+                },
+                {
+                    "id": "layer_callout_1",
+                    "type": "callout",
+                    "x": 300,
+                    "y": 200,
+                    "width": 240,
+                    "height": 90,
+                    "text": "Critical cache invalidation boundary",
+                    "fontSize": 16,
+                    "fontFamily": "sans-serif",
+                    "color": "#000000",
+                    "fill": "#ffffff",
+                    "stroke": "#0066cc",
+                    "strokeWidth": 2,
+                    "tailDirection": "bottom",
+                    "tailPosition": 0.333,
+                    "tailSize": 20,
+                    "tailStyle": "triangle",
+                    "tailTipX": 420.5,
+                    "tailTipY": 310
+                }
+            ]
+        }
+    },
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "note": "Ownership is stored at the MediaWiki page/revision level; no 'owner' field exists in DocumentSchema v1.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "diagram_surface",
+                    "kind": "image",
+                    "label": "Architecture Diagram",
+                    "canvas": {
+                        "width": 1920,
+                        "height": 1080,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "layer_txt_1",
+                            "type": "text",
+                            "x": 120.5,
+                            "y": 80.25,
+                            "text": "Architecture Diagram — 概要 (CJK & Symbol: ⚙️)",
+                            "fontSize": 24,
+                            "fontFamily": "Arial",
+                            "color": "#202122"
+                        },
+                        {
+                            "id": "layer_callout_1",
+                            "type": "callout",
+                            "x": 300,
+                            "y": 200,
+                            "width": 240,
+                            "height": 90,
+                            "text": "Critical cache invalidation boundary",
+                            "fontSize": 16,
+                            "fontFamily": "sans-serif",
+                            "color": "#000000",
+                            "fill": "#ffffff",
+                            "stroke": "#0066cc",
+                            "strokeWidth": 2,
+                            "tailDirection": "bottom",
+                            "tailPosition": 0.333,
+                            "tailSize": 20,
+                            "tailStyle": "triangle",
+                            "tailTipX": 420.5,
+                            "tailTipY": 310
+                        }
+                    ],
+                    "source": {
+                        "repository": "local",
+                        "fileTitle": "File:Diagram.png",
+                        "timestamp": "20260924000001",
+                        "sha1": "0123456789abcdef0123456789abcde",
+                        "page": 1
+                    }
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "unknown_layer_property",
+            "description": "Layer contains an unknown experimental property not in ServerSideLayerValidator::ALLOWED_PROPERTIES.",
+            "inputMutation": {
+                "calloutGlowEffect": true,
+                "customTooltip": "Inspect here"
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::layers",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-or-lossy-layer-data",
+            "failureMechanism": "ServerSideLayerValidator drops unknown properties. DocumentSchema compares JsonSnapshotCodec::encode($surface->layers) against JsonSnapshotCodec::encode($sanitizedResult); because properties were stripped, they do not match, failing validation without silent data loss."
+        },
+        {
+            "exampleId": "invalid_tail_direction_enum",
+            "description": "Callout layer contains an unapproved tailDirection enum value.",
+            "inputMutation": {
+                "tailDirection": "diagonal-down-left"
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateStringProperty",
+            "expectedException": "ApiUsageException",
+            "expectedErrorCode": "validationfailed",
+            "failureMechanism": "VALUE_CONSTRAINTS['tailDirection'] enforces one of ['bottom', 'top', 'left', 'right', 'bottom-left', 'bottom-right', 'top-left', 'top-right']. Non-matching value fails validation."
+        },
+        {
+            "exampleId": "fractional_canvas_dimension",
+            "description": "Canvas width is specified as a floating point number rather than an integer.",
+            "inputMutation": {
+                "canvas": {
+                    "width": 1920.5,
+                    "height": 1080
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::integer",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-canvas-dimension",
+            "failureMechanism": "DocumentSchema::integer requires is_int($value). Floats fail the integer type check even if numeric."
+        },
+        {
+            "exampleId": "historical_renderer_surface_gate",
+            "description": "The page-owned revision renderer currently blocks image surfaces.",
+            "inputMutation": [],
+            "failingSubsystem": "resources/ext.layers/viewer/PageOwnedRevisionRenderer.js (line 44)",
+            "expectedException": "Error",
+            "expectedErrorCode": "Unsupported historical surface",
+            "failureMechanism": "PageOwnedRevisionRenderer line 44 explicitly checks if (surface.kind !== 'slide') and throws, because pinned source delivery for image assets is not yet integrated."
+        }
+    ]
+}

@@ -1,5 +1,11 @@
 # Action API reference
 
+## Experimental page-owned revision APIs
+
+`layersread` and `layerspublish` are now registered by the native extension callback, but disabled by default. They use an explicit retained owner scope. Normal editor saves still use legacy storage. The core merge API is replaced by a guarded adapter only with retained pilot owners. See [Current Status](Current-Status.md) for acceptance limits; this is not a production enablement guide.
+
+The read contract requires an exact owner/revision and private zero-age caching. Publication requires native POST/CSRF handling and optimistic revision matching. Authenticated publication and historical reading now pass in the disposable SQLite HTTP harness; editor/history UI integration remains pending.
+
 Reviewed September 6, 2026 against the six modules in `extension.json`, their PHP implementations and the local wiki's `action=paraminfo` output. This describes current code, not the proposed page-owned API.
 
 Use MediaWiki's `api.php` with `format=json`. From ResourceLoader JavaScript, wait for `mediawiki.api` and create `new mw.Api()`. Read endpoints require the applicable read access; writes require `editlayers`, applicable File-page edit authority, a CSRF token and rate-limit checks. Delete/rename additionally require creator ownership or **`layers-admin`**, not the ordinary `delete` right. Slides are not yet bound to SOP-page permissions; see [[Permissions]].

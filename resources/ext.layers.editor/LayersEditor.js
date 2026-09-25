@@ -234,7 +234,7 @@ class LayersEditor {
 		// Initialize draft manager for auto-save and recovery
 		const DraftManager = ( window.Layers && window.Layers.Editor &&
 			window.Layers.Editor.DraftManager ) || window.DraftManager;
-		if ( DraftManager ) {
+		if ( DraftManager && !this.config.pageOwned ) {
 			this.draftManager = new DraftManager( this );
 		}
 	}
@@ -543,7 +543,7 @@ class LayersEditor {
 		// Check for deep link: load specific set if initialSetName is provided
 		const initialSetName = this.config.initialSetName;
 		const autoCreate = this.config.autoCreate || false;
-		const loadPromise = initialSetName
+		const loadPromise = !this.config.pageOwned && initialSetName
 			? this.apiManager.loadLayersBySetName( initialSetName )
 			: this.apiManager.loadLayers();
 
@@ -555,6 +555,10 @@ class LayersEditor {
 		loadPromise.then( ( data ) => {
 			if ( this.isDestroyed ) {
 				return;
+			}
+
+			if ( this.config.pageOwned ) {
+				return; // The page-owned bridge initializes exact state, rendering and undo.
 			}
 
 			this.debugLog( '[LayersEditor] API loadLayers completed' );
@@ -619,9 +623,15 @@ class LayersEditor {
 				return;
 			}
 			this.debugLog( '[LayersEditor] API loadLayers failed:', error );
+			if ( this.config.pageOwned ) {
+				if ( this.uiManager ) {
+					this.uiManager.hideSpinner();
+				}
+				return; // Never replace unavailable historical data with a blank editable document.
+			}
 
 			// If autoCreate is enabled and we failed to load, try to auto-create
-			if ( autoCreate && initialSetName ) {
+			if ( !this.config.pageOwned && autoCreate && initialSetName ) {
 				this.debugLog( '[LayersEditor] Load failed, attempting auto-create:', initialSetName );
 				this.autoCreateLayerSet( initialSetName );
 				return;
@@ -2140,6 +2150,9 @@ class LayersEditor {
 		// it is safe to leave, and an unhandled rejection is not an answer.
 		return this.apiManager.saveLayers()
 			.then( ( result ) => {
+				if ( this.config.pageOwned ) {
+					return !result.dirty && result.editorStateValid && result.draftPersisted !== false;
+				}
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
 				return true;
 			} )

@@ -5,12 +5,12 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
-use MediaWiki\Extension\Layers\Content\LayersDocumentContentHandler;
-use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
-use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
+use MediaWiki\Extension\Layers\Revision\PublicationAdmissionContext;
 use MediaWiki\Request\FauxRequest;
+
+require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
 /**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersPublish
@@ -20,28 +20,23 @@ use MediaWiki\Request\FauxRequest;
 class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private bool $enabled = true;
 	private bool $posted = true;
+	private array $ownerKeys = [];
 	private ?PagePublicationService $publisher = null;
+	private ?PublicationAdmissionContext $context = null;
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->context = new PublicationAdmissionContext();
 		$s = $this->getServiceContainer();
-		$this->overrideConfigValue( 'APIModules', $s->getMainConfig()->get( 'APIModules' ) + [
+		$this->overrideConfigValue( 'APIModules', array_replace( $s->getMainConfig()->get( 'APIModules' ), [
 			'layerspublish' => [ 'class' => ApiLayersPublish::class, 'factory' => function ( $main, $name ) {
 				$s = $this->getServiceContainer();
-				$s->getContentHandlerFactory()->defineContentHandler(
-					LayersDocumentContent::MODEL, LayersDocumentContentHandler::class );
-				if ( !$s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) ) {
-					$s->getSlotRoleRegistry()->defineRoleWithModel(
-						PageRevisionWriter::SLOT, LayersDocumentContent::MODEL, [ 'display' => 'none' ], false );
-				}
-
-				$publisher = $this->publisher ?? new PagePublicationService( $s->getWikiPageFactory(),
-					new PageHistoryAccess( $s->getRevisionLookup() ),
-					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ),
-					new PageRevisionWriter() );
-				return new ApiLayersPublish( $main, $name, $publisher, $s->getTitleFactory(), $this->enabled );
+				$registered = TestingAdmissionRegistration::install( $this, $this->context );
+				$publisher = $this->publisher ?? $registered['publisher'];
+				return new ApiLayersPublish( $main, $name, $publisher, $s->getTitleFactory(),
+					$this->enabled, $this->ownerKeys );
 			} ]
-		] );
+		] ) );
 	}
 
 	/** @inheritDoc */
@@ -57,6 +52,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	private function request(): array {
 		$page = $this->getExistingTestPage();
+		$this->ownerKeys = [ $page->getTitle()->getPrefixedDBkey() ];
 		return [ 'action' => 'layerspublish', 'owner' => $page->getTitle()->getPrefixedText(),
 			'baserevid' => $page->getLatest(), 'data' => '{"schemaVersion":1,"surfaces":[]}' ];
 	}
@@ -86,6 +82,15 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		switch ( $reason ) {
 			case 'disabled':
 				$this->enabled = false;
+				break;
+			case 'empty-scope':
+				$this->ownerKeys = [];
+				break;
+			case 'other-owner':
+				$this->ownerKeys = [ $this->getNonexistingTestPage()->getTitle()->getPrefixedDBkey() ];
+				break;
+			case 'prefix-only':
+				$this->ownerKeys = [ substr( $this->ownerKeys[0], 0, -1 ) ];
 				break;
 			case 'get':
 				$this->posted = false;
@@ -133,6 +138,9 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	public static function provideBoundaryFailures(): array {
 		return [
 			[ 'disabled', 'layers-publication-disabled' ], [ 'get', 'mustbeposted' ],
+			[ 'empty-scope', 'layers-publication-disabled' ],
+			[ 'other-owner', 'layers-publication-disabled' ],
+			[ 'prefix-only', 'layers-publication-disabled' ],
 			[ 'token', 'missingparam' ], [ 'badtoken', 'badtoken' ],
 			[ 'owner', 'missingparam' ], [ 'base', 'missingparam' ], [ 'negative', 'outofrange' ],
 			[ 'fragment', 'layers-invalid-publication-request' ],
@@ -180,6 +188,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public function testCreateOwnerWithMainText(): void {
 		$page = $this->getNonexistingTestPage();
+		$this->ownerKeys = [ $page->getTitle()->getPrefixedDBkey() ];
 		$response = $this->doApiRequestWithToken( [
 			'action' => 'layerspublish', 'owner' => $page->getTitle()->getPrefixedText(),
 			'baserevid' => 0, 'data' => '{"schemaVersion":1,"surfaces":[]}', 'maintext' => 'New visual page'
@@ -203,9 +212,10 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$this->getServiceContainer()->getTitleFactory()->newFromText( $params['owner'] ) )->getId() );
 	}
 
-	public function testExperimentalApiIsNotRegisteredForNormalRequests(): void {
+	public function testExperimentalApiDefaultsToDisabled(): void {
 		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
-		$this->assertArrayNotHasKey( 'layerspublish', $manifest['APIModules'] );
+		$this->assertFalse( $manifest['config']['LayersPageOwnedPilotEnabled']['value'] );
+		$this->assertSame( [], $manifest['config']['LayersPageOwnedPilotOwners']['value'] );
 		$this->assertArrayNotHasKey( LayersDocumentContent::MODEL, $manifest['ContentHandlers'] ?? [] );
 	}
 }

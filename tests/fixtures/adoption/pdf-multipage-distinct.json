@@ -1,0 +1,292 @@
+{
+    "caseName": "pdf-multipage-distinct",
+    "description": "Multi-page PDF file with at least two distinct pages having different canvas dimensions and separate layer sets, showing the real per-page legacy storage arrangement.",
+    "syntheticNonResolvableNotes": "The file SHA-1 '2222222222222222222222222222222' and timestamp '20260924000003' are synthetic test values marked non-resolvable. SourceVersionResolver requires a physical PDF in the local repository with valid page count.",
+    "legacyStorageArchitecture": {
+        "arrangementNote": "In legacy MediaWiki Layers, there is NO combined multi-page document envelope in storage or API. Each page of a multi-page PDF is saved, queried, and stored as an INDEPENDENT row in the layer_sets table keyed by (ls_img_name, ls_img_sha1, ls_name, ls_page). Dimensions are queried separately per page from MediaWiki's File object via File::getWidth($page) and File::getHeight($page).",
+        "pages": [
+            {
+                "pageNumber": 1,
+                "database": {
+                    "table": "layer_sets",
+                    "row": {
+                        "ls_id": 301,
+                        "ls_img_name": "SpecificationDocument.pdf",
+                        "ls_img_major_mime": "application",
+                        "ls_img_minor_mime": "pdf",
+                        "ls_img_sha1": "2222222222222222222222222222222",
+                        "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000003\",\"layers\":[{\"id\":\"p1_title\",\"type\":\"text\",\"x\":72,\"y\":100,\"text\":\"Specification: Section 1 - Cover\",\"fontSize\":24,\"fontFamily\":\"Arial\",\"color\":\"#111111\"}],\"backgroundVisible\":true,\"backgroundOpacity\":1}",
+                        "ls_user_id": 1001,
+                        "ls_timestamp": "20260924000003",
+                        "ls_revision": 1,
+                        "ls_name": "default",
+                        "ls_page": 1,
+                        "ls_size": 267,
+                        "ls_layer_count": 1
+                    },
+                    "codeReferences": {
+                        "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                        "ls_page": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 98, $page from imgMetadata['page'])",
+                        "ls_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 104)",
+                        "ls_json_blob": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 217)"
+                    }
+                },
+                "pageDimensions": {
+                    "width": 800,
+                    "height": 1131,
+                    "orientation": "portrait (A4)",
+                    "codeReferences": {
+                        "width": "MediaWiki\\FileRepo\\File\\File::getWidth(1) (ApiLayersInfo line 171)",
+                        "height": "MediaWiki\\FileRepo\\File\\File::getHeight(1) (ApiLayersInfo line 172)"
+                    }
+                },
+                "drawingPayload": {
+                    "revision": 1,
+                    "ownerId": 1001,
+                    "schema": 1,
+                    "created": "20260924000003",
+                    "backgroundVisible": true,
+                    "backgroundOpacity": 1,
+                    "layers": [
+                        {
+                            "id": "p1_title",
+                            "type": "text",
+                            "x": 72,
+                            "y": 100,
+                            "text": "Specification: Section 1 - Cover",
+                            "fontSize": 24,
+                            "fontFamily": "Arial",
+                            "color": "#111111"
+                        }
+                    ]
+                }
+            },
+            {
+                "pageNumber": 2,
+                "database": {
+                    "table": "layer_sets",
+                    "row": {
+                        "ls_id": 302,
+                        "ls_img_name": "SpecificationDocument.pdf",
+                        "ls_img_major_mime": "application",
+                        "ls_img_minor_mime": "pdf",
+                        "ls_img_sha1": "2222222222222222222222222222222",
+                        "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000003\",\"layers\":[{\"id\":\"p2_schematic_box\",\"type\":\"rectangle\",\"x\":50,\"y\":60,\"width\":1000,\"height\":680,\"stroke\":\"#cc0000\",\"strokeWidth\":3,\"fill\":\"none\",\"fillOpacity\":0,\"opacity\":1,\"rotation\":0},{\"id\":\"p2_notes\",\"type\":\"textbox\",\"x\":100,\"y\":120,\"width\":400,\"height\":180,\"text\":\"Landscape circuit schematic note\",\"fontSize\":14,\"fontFamily\":\"monospace\",\"color\":\"#222222\",\"textAlign\":\"left\",\"verticalAlign\":\"top\",\"padding\":10}],\"backgroundVisible\":true,\"backgroundOpacity\":1}",
+                        "ls_user_id": 1001,
+                        "ls_timestamp": "20260924000003",
+                        "ls_revision": 1,
+                        "ls_name": "default",
+                        "ls_page": 2,
+                        "ls_size": 529,
+                        "ls_layer_count": 2
+                    },
+                    "codeReferences": {
+                        "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                        "ls_page": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 98, $page = 2)",
+                        "ls_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 104)",
+                        "ls_json_blob": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 217)"
+                    }
+                },
+                "pageDimensions": {
+                    "width": 1131,
+                    "height": 800,
+                    "orientation": "landscape (A4 rotated)",
+                    "codeReferences": {
+                        "width": "MediaWiki\\FileRepo\\File\\File::getWidth(2) (ApiLayersInfo line 171)",
+                        "height": "MediaWiki\\FileRepo\\File\\File::getHeight(2) (ApiLayersInfo line 172)"
+                    }
+                },
+                "drawingPayload": {
+                    "revision": 1,
+                    "ownerId": 1001,
+                    "schema": 1,
+                    "created": "20260924000003",
+                    "backgroundVisible": true,
+                    "backgroundOpacity": 1,
+                    "layers": [
+                        {
+                            "id": "p2_schematic_box",
+                            "type": "rectangle",
+                            "x": 50,
+                            "y": 60,
+                            "width": 1000,
+                            "height": 680,
+                            "stroke": "#cc0000",
+                            "strokeWidth": 3,
+                            "fill": "none",
+                            "fillOpacity": 0,
+                            "opacity": 1,
+                            "rotation": 0
+                        },
+                        {
+                            "id": "p2_notes",
+                            "type": "textbox",
+                            "x": 100,
+                            "y": 120,
+                            "width": 400,
+                            "height": 180,
+                            "text": "Landscape circuit schematic note",
+                            "fontSize": 14,
+                            "fontFamily": "monospace",
+                            "color": "#222222",
+                            "textAlign": "left",
+                            "verticalAlign": "top",
+                            "padding": 10
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    "fileMetadata": {
+        "fileTitle": "File:SpecificationDocument.pdf",
+        "canonicalDbKey": "SpecificationDocument.pdf",
+        "mime": "application/pdf",
+        "mediaType": "OFFICE",
+        "pageCount": 5,
+        "repo": "local",
+        "sha1": "2222222222222222222222222222222",
+        "timestamp": "20260924000003",
+        "codeReferences": {
+            "fileTitle": "MediaWiki\\Title\\Title::getPrefixedText (ApiLayersSave line 295)",
+            "mime": "MediaWiki\\FileRepo\\File\\File::getMimeType (SourceVersionResolver line 69)",
+            "pageCount": "MediaWiki\\FileRepo\\File\\File::pageCount (SourceVersionResolver line 69)",
+            "repo": "MediaWiki\\FileRepo\\File\\File::getRepo (SourceVersionResolver line 59)",
+            "sha1": "MediaWiki\\FileRepo\\File\\File::getSha1 (SourceVersionResolver line 61)",
+            "timestamp": "MediaWiki\\FileRepo\\File\\File::getTimestamp (SourceVersionResolver line 61)"
+        }
+    },
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "decisionPending": "Lead B01 must determine whether adoption of a PDF embedding imports only the specific referenced page or assembles all annotated pages of the legacy set into distinct surfaces within one document.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "spec_doc_page1",
+                    "kind": "pdf",
+                    "label": "Page 1 - Cover",
+                    "canvas": {
+                        "width": 800,
+                        "height": 1131,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "p1_title",
+                            "type": "text",
+                            "x": 72,
+                            "y": 100,
+                            "text": "Specification: Section 1 - Cover",
+                            "fontSize": 24,
+                            "fontFamily": "Arial",
+                            "color": "#111111"
+                        }
+                    ],
+                    "source": {
+                        "repository": "local",
+                        "fileTitle": "File:SpecificationDocument.pdf",
+                        "timestamp": "20260924000003",
+                        "sha1": "2222222222222222222222222222222",
+                        "page": 1
+                    }
+                },
+                {
+                    "id": "spec_doc_page2",
+                    "kind": "pdf",
+                    "label": "Page 2 - Schematic",
+                    "canvas": {
+                        "width": 1131,
+                        "height": 800,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "p2_schematic_box",
+                            "type": "rectangle",
+                            "x": 50,
+                            "y": 60,
+                            "width": 1000,
+                            "height": 680,
+                            "stroke": "#cc0000",
+                            "strokeWidth": 3,
+                            "fill": "none",
+                            "fillOpacity": 0,
+                            "opacity": 1,
+                            "rotation": 0
+                        },
+                        {
+                            "id": "p2_notes",
+                            "type": "textbox",
+                            "x": 100,
+                            "y": 120,
+                            "width": 400,
+                            "height": 180,
+                            "text": "Landscape circuit schematic note",
+                            "fontSize": 14,
+                            "fontFamily": "monospace",
+                            "color": "#222222",
+                            "textAlign": "left",
+                            "verticalAlign": "top",
+                            "padding": 10
+                        }
+                    ],
+                    "source": {
+                        "repository": "local",
+                        "fileTitle": "File:SpecificationDocument.pdf",
+                        "timestamp": "20260924000003",
+                        "sha1": "2222222222222222222222222222222",
+                        "page": 2
+                    }
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "page_number_exceeds_page_count",
+            "description": "Source page is set to 10 when the underlying PDF file has only 5 pages.",
+            "inputMutation": {
+                "source": {
+                    "page": 10
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\SourceVersionResolver::resolve (lines 69-72)",
+            "expectedException": "DomainException",
+            "expectedErrorCode": "layers-source-unavailable",
+            "failureMechanism": "SourceVersionResolver checks $pages = $file->pageCount(); if (!is_int($pages) || $pages < $source->page) throw new DomainException('layers-source-unavailable')."
+        },
+        {
+            "exampleId": "page_number_zero",
+            "description": "Source page is set to 0 (page numbers must be 1-based integers).",
+            "inputMutation": {
+                "source": {
+                    "page": 0
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::integer (line 121)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-source-page",
+            "failureMechanism": "DocumentSchema::source enforces minimum integer value of 1 for source->page ($this->integer($source->page, 1, 100000, 'source-page'))."
+        },
+        {
+            "exampleId": "historical_renderer_pdf_gate",
+            "description": "Historical viewer pilot PageOwnedRevisionRenderer currently rejects all PDF surfaces.",
+            "inputMutation": [],
+            "failingSubsystem": "resources/ext.layers/viewer/PageOwnedRevisionRenderer.js (line 44)",
+            "expectedException": "Error",
+            "expectedErrorCode": "Unsupported historical surface",
+            "failureMechanism": "PageOwnedRevisionRenderer line 44 explicitly throws if surface.kind !== 'slide'."
+        }
+    ]
+}

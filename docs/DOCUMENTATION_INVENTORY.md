@@ -115,9 +115,17 @@ The September 6 reconciliation used source checkpoint a3b20963 (manifest 1.5.95 
 | [wiki/Wikitext-Syntax.md](../wiki/Wikitext-Syntax.md) | Wiki source: maintained reference or navigation |
 | [wiki/_Sidebar.md](../wiki/_Sidebar.md) | Wiki source: maintained reference or navigation |
 | [docs/SAVE_PAYLOAD_CONTRACT.md](SAVE_PAYLOAD_CONTRACT.md) | Maintained implementation contract added September 6, 2026 |
+| [docs/PAGE_OWNED_BINDING_PLAN.md](PAGE_OWNED_BINDING_PLAN.md) | Maintained implementation plan / active ownership and adoption queue |
 | [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1/H2 internal implementation, H3a access, H3b sources and H3c publication and H3d request boundary tested, remaining H3–H6 work pending |
 | [docs/PAGE_OWNED_DOCUMENT_FORMAT.md](PAGE_OWNED_DOCUMENT_FORMAT.md) | Internal H2 snapshot format and validation/retention contract; no public registration |
-| [docs/PAGE_OWNED_ADMISSION_DESIGN.md](PAGE_OWNED_ADMISSION_DESIGN.md) | L01 admission decision, implementation sequence and required core acceptance matrix; enforcement pending |
+| [docs/PAGE_OWNED_ASSET_DELIVERY_DESIGN.md](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md) | Internal renderer, authorized preparation and staging validator evidence; resource/HTTP gates remain open |
+| [docs/PAGE_OWNED_READ_CONTRACT.md](PAGE_OWNED_READ_CONTRACT.md) | Internal exact-revision bundle, geometry units, authorization and remaining delivery gates |
+| [docs/PAGE_OWNED_ADMISSION_DESIGN.md](PAGE_OWNED_ADMISSION_DESIGN.md) | L01 internal admission design, reviewed core evidence and remaining production gates |
 | [docs/PAGE_OWNED_API_CONTRACT.md](PAGE_OWNED_API_CONTRACT.md) | Experimental unregistered API contract, test evidence and admission gates |
 | [docs/IMPLEMENTATION_HANDOFF_PLAN.md](IMPLEMENTATION_HANDOFF_PLAN.md) | Ordered junior task packets, lead design gates, dependencies and acceptance criteria; September 10 baseline e03504ec |
-| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J24 closure, lead corrections and qualified verification evidence |
+| [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J26 review, internal L01 acceptance, lead corrections and qualified verification evidence |
+
+
+## Engineering architecture rule
+
+[AGENTS.md](../AGENTS.md) is maintained project policy: Layers is a MediaWiki extension; Docker is only the development/test environment. The README, architecture guide, active handoff, current-status mirror and MediaWiki source guides state the same requirement. Supervisor investigation records are retained as abandoned history.

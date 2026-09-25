@@ -1,0 +1,152 @@
+/** Connect draft storage to a loaded editor; recovery always requires an explicit choice. */
+( function () {
+	'use strict';
+	const keys = [ 'layers', 'slideCanvasWidth', 'slideCanvasHeight', 'slideBackgroundColor',
+		'backgroundVisible', 'backgroundOpacity' ];
+
+	class PageOwnedDraftLifecycle {
+		/**
+		 * @param {Object} bridge Loaded editor bridge
+		 * @param {Object} controller Draft controller
+		 * @param {Object} ui Injected async confirmRecovery and notifyFailure/notifyBlocked callbacks
+		 */
+		constructor( bridge, controller, ui ) {
+			this.bridge = bridge;
+			this.controller = controller;
+			this.ui = ui;
+			this.ready = false;
+			this.checking = false;
+			this.disposed = false;
+			this.timer = null;
+			this.unsubscribers = [];
+			this.onPageHide = () => this.flush();
+		}
+
+		/** @return {Promise<void>} Authorization/exact revision loading must already have succeeded */
+		async initialize() {
+			const candidates = this.controller.listCandidates();
+			if ( candidates.length ) {
+				const selected = candidates.length === 1 ? 0 :
+					await this.ui.chooseDraft( this.controller.describeCandidates( candidates ) );
+				if ( this.disposed ) {
+					return;
+				}
+				if ( !Number.isInteger( selected ) || selected < 0 || selected >= candidates.length ) {
+					this.ui.notifyBlocked();
+					return;
+				}
+				this.controller.selectRecovery( candidates[ selected ] );
+			}
+			const candidate = this.controller.inspectRecovery();
+			if ( candidate && ( candidate.publicationBlocked ||
+				JSON.stringify( candidate.editorState ) !== JSON.stringify( this.bridge.getLiveState() ) ) ) {
+				const recover = await this.ui.confirmRecovery( candidate );
+				if ( this.disposed ) {
+					return;
+				}
+				if ( recover ) {
+					await this.bridge.session.revalidate();
+					if ( this.disposed ) {
+						return;
+					}
+					this.bridge.restoreDraft( candidate );
+					if ( candidate.publicationBlocked ) {
+						this.ui.notifyBlocked();
+					}
+				} else {
+					// Cancel is not permission to overwrite the stored draft with server content.
+					this.bridge.session.blockPublication();
+					this.ui.notifyBlocked();
+					return;
+				}
+			}
+			this.ready = true;
+			for ( const key of keys ) {
+				this.unsubscribers.push( this.bridge.editor.stateManager.subscribe( key, () => {
+					clearTimeout( this.timer );
+					this.timer = setTimeout( () => this.flush(), 1000 );
+				} ) );
+			}
+			window.addEventListener( 'pagehide', this.onPageHide );
+		}
+
+		/** @return {boolean} A failed backup never replaces or clears current editor data */
+		flush() {
+			clearTimeout( this.timer );
+			if ( !this.ready || this.disposed ) {
+				return false;
+			}
+			try {
+				this.controller.persist();
+				return true;
+			} catch ( error ) {
+				this.ui.notifyFailure();
+				return false;
+			}
+		}
+
+		/** @param {string} summary History summary @return {Promise<Object>} */
+		async save( summary = '' ) {
+			if ( !this.ready || this.disposed || this.checking ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			let result;
+			try {
+				result = await this.bridge.save( summary, () => this.controller.persist() );
+			} finally {
+				// Persist the confirmed new base or the conflict/uncertain state plus latest edits.
+				const persisted = this.flush();
+				if ( result ) {
+					result.draftPersisted = persisted;
+				}
+			}
+			return result;
+		}
+
+		/**
+		 * Preserve the draft before discovering and comparing the current server revision.
+		 * @param {Function} resolveRevision Read-only current revision discovery
+		 * @return {Promise<Object>} Reconciliation status; never publishes
+		 */
+		async reconcile( resolveRevision ) {
+			if ( !this.ready || this.disposed || this.checking ||
+				this.bridge.session.getStatus().phase === 'saving' ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			this.checking = true;
+			let result;
+			try {
+				if ( !this.flush() ) {
+					throw new Error( 'layers-draft-storage-failed' );
+				}
+				const revisionId = await resolveRevision();
+				if ( this.disposed ) {
+					throw new Error( 'layers-editor-session-unavailable' );
+				}
+				result = await this.bridge.reconcile( revisionId );
+				return result;
+			} finally {
+				this.checking = false;
+				const persisted = this.flush();
+				if ( result ) {
+					result.draftPersisted = persisted;
+				}
+			}
+		}
+
+		/** Flush before disposing the bridge. */
+		dispose() {
+			this.flush();
+			this.disposed = true;
+			clearTimeout( this.timer );
+			this.unsubscribers.forEach( ( unsubscribe ) => unsubscribe() );
+			window.removeEventListener( 'pagehide', this.onPageHide );
+		}
+	}
+	window.Layers = window.Layers || {};
+	window.Layers.Editor = window.Layers.Editor || {};
+	window.Layers.Editor.PageOwnedDraftLifecycle = PageOwnedDraftLifecycle;
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = PageOwnedDraftLifecycle;
+	}
+}() );

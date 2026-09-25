@@ -13,16 +13,18 @@ use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
 
-/** Unregistered experimental API; enabled only in isolated core tests. */
+/** Experimental page revision publication API; disabled by default. */
 class ApiLayersPublish extends ApiBase {
 	private PagePublicationService $publisher;
 	private TitleFactory $titles;
 	private bool $enabled;
+	private array $ownerKeys;
 
 	private const PUBLIC_ERRORS = [
 		'layers-owner-edit-denied', 'layers-invalid-publication-request',
 		'layers-main-model-change-denied', 'layers-invalid-snapshot',
-		'layers-source-unavailable', 'layers-edit-conflict', 'layers-revision-save-failed'
+		'layers-source-unavailable', 'layers-edit-conflict', 'layers-revision-save-failed',
+		'layers-admission-unauthorized', 'layers-slot-removal-denied'
 	];
 
 	/**
@@ -31,14 +33,16 @@ class ApiLayersPublish extends ApiBase {
 	 * @param PagePublicationService $publisher
 	 * @param TitleFactory $titles
 	 * @param bool $enabled Explicit experimental gate; defaults to disabled
+	 * @param string[] $ownerKeys Exact prefixed DB keys; empty permits no pilot pages
 	 */
 	public function __construct( ApiMain $main, string $name, PagePublicationService $publisher,
-		TitleFactory $titles, bool $enabled = false
+		TitleFactory $titles, bool $enabled = false, array $ownerKeys = []
 	) {
 		parent::__construct( $main, $name );
 		$this->publisher = $publisher;
 		$this->titles = $titles;
 		$this->enabled = $enabled;
+		$this->ownerKeys = $ownerKeys;
 	}
 
 	public function execute() {
@@ -56,6 +60,9 @@ class ApiLayersPublish extends ApiBase {
 		$owner = $this->titles->newFromText( $params['owner'] );
 		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ) {
 			$this->dieWithError( 'layers-invalid-publication-request', 'layers-invalid-publication-request' );
+		}
+		if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+			$this->dieWithError( 'layers-publication-disabled', 'layers-publication-disabled' );
 		}
 		try {
 			$id = $this->publisher->publish( $owner, $this->getAuthority(), $params['baserevid'],

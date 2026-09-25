@@ -1,3 +1,5 @@
+'''Layers is a MediaWiki extension. Docker is only our development/test environment; it is not part of Layers' runtime architecture or deployment requirements. No Docker worker or host supervisor is required or planned.'''
+
 = Layers user guide =
 Documentation reviewed September 6, 2026 for version 1.5.95 and subsequent fixes on main. Layers supports '''images, PDF pages and standalone slides'''.
 

@@ -827,20 +827,20 @@ describe( 'EditorBootstrap', () => {
 
 		describe( 'with fresh module', () => {
 			let _freshModule;
-			let beforeUnloadHandlers;
+			let pageHideHandlers;
 			let originalAddEventListener;
 			let hookAddHandlers;
 
 			beforeEach( () => {
 				jest.resetModules();
 
-				beforeUnloadHandlers = [];
+				pageHideHandlers = [];
 				hookAddHandlers = {};
 				originalAddEventListener = window.addEventListener;
 
 				window.addEventListener = jest.fn( ( type, handler ) => {
-					if ( type === 'beforeunload' ) {
-						beforeUnloadHandlers.push( handler );
+					if ( type === 'pagehide' ) {
+						pageHideHandlers.push( handler );
 					}
 				} );
 
@@ -890,16 +890,24 @@ describe( 'EditorBootstrap', () => {
 				expect( mockDestroy ).toHaveBeenCalled();
 			} );
 
+			it.each( [ 'EditLayersPage', 'EditSlide' ] )( 'keeps the editor on Special:%s when content hooks fire', ( specialPage ) => {
+				mw.config.get = jest.fn( ( key ) => key === 'wgCanonicalSpecialPageName' ? specialPage : 'view' );
+				const destroy = jest.fn();
+				window.layersEditorInstance = { destroy };
+				hookAddHandlers[ 'wikipage.content' ][ 0 ]();
+				expect( destroy ).not.toHaveBeenCalled();
+			} );
+
 			it( 'should not cleanup editor when on editlayers page', () => {
 				jest.resetModules();
 
 				// Re-setup mocks with editlayers action
-				beforeUnloadHandlers = [];
+				pageHideHandlers = [];
 				hookAddHandlers = {};
 
 				window.addEventListener = jest.fn( ( type, handler ) => {
-					if ( type === 'beforeunload' ) {
-						beforeUnloadHandlers.push( handler );
+					if ( type === 'pagehide' ) {
+						pageHideHandlers.push( handler );
 					}
 				} );
 
@@ -939,8 +947,14 @@ describe( 'EditorBootstrap', () => {
 				expect( mockDestroy ).not.toHaveBeenCalled();
 			} );
 
-			it( 'should register beforeunload handler', () => {
-				expect( beforeUnloadHandlers.length ).toBeGreaterThan( 0 );
+			it( 'destroys only on pagehide, never on cancellable beforeunload', () => {
+				expect( pageHideHandlers.length ).toBeGreaterThan( 0 );
+				expect( window.addEventListener.mock.calls.some( ( [ type ] ) => type === 'beforeunload' ) ).toBe( false );
+				const destroy = jest.fn();
+				window.layersEditorInstance = { destroy };
+				pageHideHandlers[ 0 ]();
+				expect( destroy ).toHaveBeenCalledTimes( 1 );
+				expect( window.layersEditorInstance ).toBeNull();
 			} );
 		} );
 	} );

@@ -15,6 +15,7 @@
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
+	"callback": "MediaWiki\\Extension\\Layers\\Hooks\\PageOwnedPilotRegistration::onRegistration",
 	"ServiceWiringFiles": [
 		"services.php"
 	],
@@ -47,6 +48,14 @@
 		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport": "src/SpecialPages/SpecialLayersExport.php"
 	},
 	"config": {
+		"LayersPageOwnedPilotEnabled": {
+			"description": "Experimental page-owned revision APIs; keep disabled until pilot acceptance. Does not enable editor integration.",
+			"value": false
+		},
+		"LayersPageOwnedPilotOwners": {
+			"description": "Retained exact canonical owner DB keys for the experimental revision pilot. Never remove owners while current or archived pilot revisions exist.",
+			"value": []
+		},
 		"LayersEnable": {
 			"description": "Master switch for Layers extension functionality",
 			"value": true
@@ -186,6 +195,9 @@
 		}
 	},
 	"HookHandlers": {
+		"LayersPageOwnedPilotRegistration": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\PageOwnedPilotRegistration"
+		},
 		"LayersHooks": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks"
 		},
@@ -203,6 +215,7 @@
 		}
 	},
 	"Hooks": {
+		"MediaWikiServices": "LayersPageOwnedPilotRegistration",
 		"BeforePageDisplay": "LayersHooks",
 		"ChangeTagsAllowedAdd": "LayersHooks",
 		"FileDeleteComplete": "LayersHooks",
@@ -224,6 +237,14 @@
 		"editlayers": "MediaWiki\\Extension\\Layers\\Action\\EditLayersAction"
 	},
 	"SpecialPages": {
+		"ViewLayersPage": {
+			"class": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialViewLayersPage",
+			"services": [ "LayersPageOwnedPilot" ]
+		},
+		"EditLayersPage": {
+			"class": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditLayersPage",
+			"services": [ "LayersPageOwnedPilot" ]
+		},
 		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
 		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide",
 		"LayersExport": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport"
@@ -246,9 +267,22 @@
 		]
 	},
 	"ExtensionMessagesFiles": {
+		"LayersAliases": "Layers.alias.php",
 		"LayersMagic": "Layers.i18n.magic.php"
 	},
 	"ResourceModules": {
+		"ext.layers.history": {
+			"localBasePath": "resources",
+			"remoteExtPath": "Layers/resources",
+			"dependencies": [ "jquery", "ext.layers.shared" ],
+			"scripts": [
+				"ext.layers.editor/PageOwnedSnapshotAdapter.js",
+				"ext.layers/viewer/PageOwnedRevisionView.js",
+				"ext.layers/viewer/PageOwnedRevisionRenderer.js",
+				"ext.layers/viewer/PageOwnedRevisionBootstrap.js"
+			],
+			"messages": [ "layers-page-history-caption", "layers-page-history-render-failed" ]
+		},
 		"ext.layers.shared": {
 			"localBasePath": "resources/ext.layers.shared",
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
@@ -406,6 +440,16 @@
 				"APIErrorHandler.js",
 				"ExportController.js",
 				"APICacheManager.js",
+				"PageOwnedReadClient.js",
+				"PageOwnedPublishClient.js",
+				"PageOwnedSnapshotAdapter.js",
+				"PageOwnedEditorSession.js",
+				"PageOwnedEditorBridge.js",
+				"PageOwnedDraftStore.js",
+				"PageOwnedDraftController.js",
+				"PageOwnedDraftLifecycle.js",
+				"PageOwnedRecoveryDialog.js",
+				"PageOwnedRevisionControl.js",
 				"APIManager.js",
 				"ValidationManager.js",
 				"ModuleRegistry.js",
@@ -475,7 +519,8 @@
 			"styles": [
 				"editor-fixed.css",
 				"presets/presets.css",
-				"editor/HelpDialog.css"
+				"editor/HelpDialog.css",
+				"PageOwnedRecoveryDialog.css"
 			],
 			"messages": [
 				"layers-editor-title",
@@ -514,6 +559,26 @@
 				"layers-transparent",
 				"layers-tool-marquee",
 				"layers-saving",
+				"layers-page-draft-dialog-title",
+				"layers-page-revision-check-button",
+				"layers-page-revision-check-checking",
+				"layers-page-revision-check-backup-failed",
+				"layers-page-revision-check-invalid-edits",
+				"layers-page-revision-check-ready",
+				"layers-page-revision-check-matched",
+				"layers-page-revision-check-conflict",
+				"layers-page-revision-check-failed",
+				"layers-page-draft-dialog-select",
+				"layers-page-draft-dialog-number",
+				"layers-page-draft-dialog-restore",
+				"layers-page-draft-dialog-review",
+				"layers-page-draft-dialog-cancel",
+				"layers-page-draft-dialog-unavailable",
+				"layers-page-draft-dialog-local",
+				"layers-page-draft-recover",
+				"layers-page-draft-choose",
+				"layers-page-draft-failed",
+				"layers-page-draft-blocked",
 				"layers-save-success",
 				"layers-save-error",
 				"layers-session-expired",

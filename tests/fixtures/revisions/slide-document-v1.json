@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "surfaces": [
+    {
+      "id": "presentation",
+      "kind": "slide",
+      "label": "Welcome Slide",
+      "canvas": {
+        "width": 800,
+        "height": 600,
+        "backgroundColor": "#ffffff",
+        "backgroundVisible": true,
+        "backgroundOpacity": 1
+      },
+      "layers": [
+        {
+          "id": "title",
+          "type": "text",
+          "x": 40,
+          "y": 60,
+          "text": "Visual ideas — 世界",
+          "fontSize": 24,
+          "color": "#000000"
+        }
+      ],
+      "readingOrder": [
+        "title"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+/** Maps a page-owned slide session to the existing editor state without legacy API calls. */
+( function () {
+	'use strict';
+
+	const canvasFields = {
+		width: 'slideCanvasWidth', height: 'slideCanvasHeight',
+		backgroundColor: 'slideBackgroundColor', backgroundVisible: 'backgroundVisible',
+		backgroundOpacity: 'backgroundOpacity'
+	};
+
+	class PageOwnedEditorBridge {
+		/**
+		 * @param {Object} editor Existing editor with StateManager and optional rendering components
+		 * @param {Object} session PageOwnedEditorSession
+		 */
+		constructor( editor, session ) {
+			this.editor = editor;
+			this.session = session;
+			this.disposed = false;
+			this.loaded = false;
+			this.saving = false;
+		}
+
+		/** @return {Promise<Object>} Loaded selected surface, with no legacy normalization or draft recovery */
+		async load() {
+			const state = await this.session.load();
+			this._requireActive();
+			const draft = this.session.getDraft();
+			const surface = draft.snapshot.surfaces.find( ( item ) => item.id === draft.surfaceId );
+			// Source-media rendering is a separate integration gate; never render it as a blank slide.
+			if ( surface.kind !== 'slide' ) {
+				throw this._error( 'layers-editor-surface-unavailable' );
+			}
+			this._applyState( state );
+			this.editor.stateManager.set( 'isDirty', false );
+			this.loaded = true;
+			return state;
+		}
+
+		/**
+		 * Apply an inspected, explicitly accepted draft without changing server identity.
+		 * @param {Object} candidate Validated draft-controller recovery candidate
+		 */
+		restoreDraft( candidate ) {
+			this._requireActive();
+			if ( !this.loaded || this.session.getStatus().readOnly || this.session.getStatus().phase !== 'ready' ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
+			this._applyState( candidate.editorState );
+			if ( candidate.publicationBlocked ) {
+				this.session.blockPublication();
+			}
+			this.editor.stateManager.set( 'isDirty', true );
+		}
+
+		/** @param {Object} state Canvas/layers pair @private */
+		_applyState( state ) {
+			const store = this.editor.stateManager;
+			store.set( 'isSlide', true );
+			for ( const [ field, key ] of Object.entries( canvasFields ) ) {
+				store.set( key, state.canvas[ field ] );
+			}
+			store.set( 'baseWidth', state.canvas.width );
+			store.set( 'baseHeight', state.canvas.height );
+			store.set( 'layers', state.layers );
+			if ( this.editor.canvasManager ) {
+				this.editor.canvasManager.setBaseDimensions( state.canvas.width, state.canvas.height );
+				this.editor.canvasManager.renderLayers( state.layers );
+			}
+			if ( this.editor.layerPanel ) {
+				this.editor.layerPanel.updateLayers( state.layers );
+			}
+			if ( this.editor.historyManager ) {
+				this.editor.historyManager.saveInitialState();
+			}
+		}
+
+		/** Capture current editor values while retaining unexposed canvas fields. */
+		capture() {
+			this.session.update( this.getLiveState() );
+		}
+
+		/** @return {Object} Live editor data, including edits not yet valid for publication */
+		getLiveState() {
+			this._requireActive();
+			if ( !this.loaded ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
+			const state = this.session.getEditorState();
+			for ( const [ field, key ] of Object.entries( canvasFields ) ) {
+				const value = this.editor.stateManager.get( key );
+				if ( value !== undefined ) {
+					state.canvas[ field ] = value;
+				}
+			}
+			state.layers = this.editor.stateManager.get( 'layers' );
+			return state;
+		}
+
+		/**
+		 * @param {string} summary Explicit page-history summary
+		 * @param {Function} [beforePublish] Persist a saving-phase draft before dispatch
+		 * @return {Promise<Object>} Confirmed save state, including whether newer editor data is valid
+		 */
+		async save( summary = '', beforePublish ) {
+			this._requireActive();
+			if ( this.saving || this.session.getStatus().phase !== 'ready' ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
+			this.capture();
+			this.saving = true;
+			let editorStateValid = true;
+			try {
+				await this.session.save( summary, beforePublish );
+			} finally {
+				this.saving = false;
+				if ( !this.disposed ) {
+					// The canvas can change while the POST is pending. Do not mark those edits saved.
+					try {
+						this.capture();
+					} catch ( error ) {
+						// A confirmed write remains confirmed. Keep newer invalid editor data intact/dirty.
+						editorStateValid = false;
+					}
+					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
+				}
+			}
+			this._requireActive();
+			return {
+				...this.session.getStatus(),
+				dirty: this.editor.stateManager.get( 'isDirty' ),
+				editorStateValid
+			};
+		}
+
+		/**
+		 * @param {number} revisionId Exact server revision to compare
+		 * @return {Promise<Object>} Reconciled status; newer live edits remain dirty
+		 */
+		async reconcile( revisionId ) {
+			this.capture();
+			let editorStateValid = true;
+			try {
+				await this.session.reconcile( revisionId );
+			} finally {
+				if ( !this.disposed ) {
+					try {
+						this.capture();
+					} catch ( error ) {
+						editorStateValid = false;
+					}
+					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
+				}
+			}
+			this._requireActive();
+			return { ...this.session.getStatus(), dirty: this.editor.stateManager.get( 'isDirty' ), editorStateValid };
+		}
+
+		/** Call only after the owning UI has preserved any draft it needs. */
+		dispose() {
+			this.disposed = true;
+			this.loaded = false;
+			this.session.dispose();
+			this.editor = null;
+		}
+
+		/** @private */
+		_requireActive() {
+			if ( this.disposed ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
+		}
+
+		/** @param {string} code @return {Error} @private */
+		_error( code ) {
+			const error = new Error( code );
+			error.code = code;
+			return error;
+		}
+	}
+
+	window.Layers = window.Layers || {};
+	window.Layers.Editor = window.Layers.Editor || {};
+	window.Layers.Editor.PageOwnedEditorBridge = PageOwnedEditorBridge;
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = PageOwnedEditorBridge;
+	}
+}() );

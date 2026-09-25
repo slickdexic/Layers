@@ -374,6 +374,52 @@ class LayersDatabase {
 	}
 
 	/**
+	 * Read one exact legacy revision for adoption, without cache or JSON normalization.
+	 *
+	 * Internal data primitive: this does not authorize access. The caller MUST authorize
+	 * the owner and source before using or exposing this result, and strictly validate
+	 * the retained JSON before adoption. Missing revisions never fall back to latest.
+	 *
+	 * @param int $layerSetId Exact legacy layer set row ID
+	 * @return ?array Raw revision and source metadata, or null when unavailable
+	 */
+	public function getLayerSetForAdoption( int $layerSetId ): ?array {
+		if ( $layerSetId <= 0 ) {
+			return null;
+		}
+		$dbw = $this->getWriteDb();
+		if ( !$dbw ) {
+			return null;
+		}
+		$row = $dbw->selectRow(
+			'layer_sets',
+			[
+				'ls_id', 'ls_img_name', 'ls_img_sha1', 'ls_img_major_mime', 'ls_img_minor_mime',
+				'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name', 'ls_page'
+			],
+			[ 'ls_id' => $layerSetId ],
+			__METHOD__
+		);
+		if ( !$row || !is_string( $row->ls_json_blob ) ||
+			strlen( $row->ls_json_blob ) > (int)$this->config->get( 'LayersMaxBytes' )
+		) {
+			return null;
+		}
+		return [
+			'id' => (int)$row->ls_id,
+			'imgName' => $row->ls_img_name,
+			'userId' => (int)$row->ls_user_id,
+			'timestamp' => $row->ls_timestamp,
+			'revision' => (int)$row->ls_revision,
+			'name' => $row->ls_name,
+			'page' => (int)$row->ls_page,
+			'sha1' => $row->ls_img_sha1,
+			'mime' => $row->ls_img_major_mime . '/' . $row->ls_img_minor_mime,
+			'json' => $row->ls_json_blob
+		];
+	}
+
+	/**
 	 * Get the latest layer set for an image, optionally filtered by set name
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash

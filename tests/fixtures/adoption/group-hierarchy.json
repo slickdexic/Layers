@@ -1,0 +1,246 @@
+{
+    "caseName": "group-hierarchy",
+    "description": "Nested group hierarchy demonstrating valid DocumentSchema graph references alongside the historical viewer pilot rendering gate.",
+    "syntheticNonResolvableNotes": "Slide surface with synthetic timestamp '20260924000006' and sha1 'slide'. No physical file lookup is performed for slide surfaces.",
+    "legacyRecord": {
+        "database": {
+            "table": "layer_sets",
+            "row": {
+                "ls_id": 501,
+                "ls_img_name": "Slide:GroupedDiagram",
+                "ls_img_major_mime": "application",
+                "ls_img_minor_mime": "x-layers-slide",
+                "ls_img_sha1": "slide",
+                "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000006\",\"isSlide\":true,\"canvasWidth\":1024,\"canvasHeight\":768,\"backgroundColor\":\"#ffffff\",\"backgroundVisible\":true,\"backgroundOpacity\":1,\"layers\":[{\"id\":\"grp_root\",\"type\":\"group\",\"x\":50,\"y\":50,\"children\":[\"grp_sub\",\"layer_header\"],\"expanded\":true},{\"id\":\"grp_sub\",\"type\":\"group\",\"x\":60,\"y\":100,\"children\":[\"layer_icon\",\"layer_card\"],\"parentGroup\":\"grp_root\",\"expanded\":false},{\"id\":\"layer_card\",\"type\":\"rectangle\",\"x\":60,\"y\":100,\"width\":300,\"height\":180,\"fill\":\"#f0f0f0\",\"stroke\":\"#333333\",\"strokeWidth\":1,\"parentGroup\":\"grp_sub\"},{\"id\":\"layer_icon\",\"type\":\"circle\",\"x\":80,\"y\":120,\"radius\":20,\"fill\":\"#0066cc\",\"parentGroup\":\"grp_sub\"},{\"id\":\"layer_header\",\"type\":\"text\",\"x\":60,\"y\":60,\"text\":\"Component Cluster\",\"fontSize\":22,\"fontFamily\":\"Arial\",\"color\":\"#111111\",\"parentGroup\":\"grp_root\"}]}",
+                "ls_user_id": 1001,
+                "ls_timestamp": "20260924000006",
+                "ls_revision": 1,
+                "ls_name": "default",
+                "ls_page": 1,
+                "ls_size": 849,
+                "ls_layer_count": 5
+            },
+            "codeReferences": {
+                "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                "ls_img_name": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 507)",
+                "children_validation": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateArrayProperty (line 850)",
+                "parentGroup_validation": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateStringProperty (line 520)"
+            }
+        },
+        "drawingPayload": {
+            "revision": 1,
+            "ownerId": 1001,
+            "schema": 1,
+            "created": "20260924000006",
+            "isSlide": true,
+            "canvasWidth": 1024,
+            "canvasHeight": 768,
+            "backgroundColor": "#ffffff",
+            "backgroundVisible": true,
+            "backgroundOpacity": 1,
+            "layers": [
+                {
+                    "id": "grp_root",
+                    "type": "group",
+                    "x": 50,
+                    "y": 50,
+                    "children": [
+                        "grp_sub",
+                        "layer_header"
+                    ],
+                    "expanded": true
+                },
+                {
+                    "id": "grp_sub",
+                    "type": "group",
+                    "x": 60,
+                    "y": 100,
+                    "children": [
+                        "layer_icon",
+                        "layer_card"
+                    ],
+                    "parentGroup": "grp_root",
+                    "expanded": false
+                },
+                {
+                    "id": "layer_card",
+                    "type": "rectangle",
+                    "x": 60,
+                    "y": 100,
+                    "width": 300,
+                    "height": 180,
+                    "fill": "#f0f0f0",
+                    "stroke": "#333333",
+                    "strokeWidth": 1,
+                    "parentGroup": "grp_sub"
+                },
+                {
+                    "id": "layer_icon",
+                    "type": "circle",
+                    "x": 80,
+                    "y": 120,
+                    "radius": 20,
+                    "fill": "#0066cc",
+                    "parentGroup": "grp_sub"
+                },
+                {
+                    "id": "layer_header",
+                    "type": "text",
+                    "x": 60,
+                    "y": 60,
+                    "text": "Component Cluster",
+                    "fontSize": 22,
+                    "fontFamily": "Arial",
+                    "color": "#111111",
+                    "parentGroup": "grp_root"
+                }
+            ]
+        }
+    },
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "structuralValidationNote": "DocumentSchema structurally validates this hierarchy cleanly (valid reciprocal parentGroup references, single parent per child, no cycles). However, PageOwnedRevisionRenderer currently throws an explicit failure on any layer with parentGroup or type group.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "slide_grouped_surface",
+                    "kind": "slide",
+                    "label": "Group Hierarchy Example",
+                    "canvas": {
+                        "width": 1024,
+                        "height": 768,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "grp_root",
+                            "type": "group",
+                            "x": 50,
+                            "y": 50,
+                            "children": [
+                                "grp_sub",
+                                "layer_header"
+                            ],
+                            "expanded": true
+                        },
+                        {
+                            "id": "grp_sub",
+                            "type": "group",
+                            "x": 60,
+                            "y": 100,
+                            "children": [
+                                "layer_icon",
+                                "layer_card"
+                            ],
+                            "parentGroup": "grp_root",
+                            "expanded": false
+                        },
+                        {
+                            "id": "layer_card",
+                            "type": "rectangle",
+                            "x": 60,
+                            "y": 100,
+                            "width": 300,
+                            "height": 180,
+                            "fill": "#f0f0f0",
+                            "stroke": "#333333",
+                            "strokeWidth": 1,
+                            "parentGroup": "grp_sub"
+                        },
+                        {
+                            "id": "layer_icon",
+                            "type": "circle",
+                            "x": 80,
+                            "y": 120,
+                            "radius": 20,
+                            "fill": "#0066cc",
+                            "parentGroup": "grp_sub"
+                        },
+                        {
+                            "id": "layer_header",
+                            "type": "text",
+                            "x": 60,
+                            "y": 60,
+                            "text": "Component Cluster",
+                            "fontSize": 22,
+                            "fontFamily": "Arial",
+                            "color": "#111111",
+                            "parentGroup": "grp_root"
+                        }
+                    ]
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "cyclic_group_reference",
+            "description": "Group A lists Group B as a child, and Group B lists Group A as a child, creating a graph cycle.",
+            "inputMutation": {
+                "grp_root": {
+                    "children": [
+                        "grp_sub"
+                    ],
+                    "parentGroup": "grp_sub"
+                },
+                "grp_sub": {
+                    "children": [
+                        "grp_root"
+                    ],
+                    "parentGroup": "grp_root"
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::references (lines 177-185)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "cyclic-group",
+            "failureMechanism": "DocumentSchema::references traverses ancestor chain ($parents[$cursor]) with a $seen set; encountering an already-seen ancestor throws 'cyclic-group'."
+        },
+        {
+            "exampleId": "inconsistent_parent_group_pointer",
+            "description": "Child layer specifies parentGroup 'grp_root', but 'grp_root' does not list the layer in its children array.",
+            "inputMutation": {
+                "layer_header": {
+                    "parentGroup": "grp_unrelated"
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::references (lines 173-176)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "inconsistent-group-parent",
+            "failureMechanism": "DocumentSchema::references verifies that ($layer->parentGroup ?? null) === ($parents[$id] ?? null). A mismatch throws 'inconsistent-group-parent'."
+        },
+        {
+            "exampleId": "children_on_non_group_layer",
+            "description": "A layer of type 'rectangle' or 'text' declares a 'children' property.",
+            "inputMutation": {
+                "layer_card": {
+                    "type": "rectangle",
+                    "children": [
+                        "layer_icon"
+                    ]
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::references (lines 159-162)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "children-require-group",
+            "failureMechanism": "DocumentSchema::references checks if ($layer->type !== 'group') when isset($layer->children) and throws 'children-require-group'."
+        },
+        {
+            "exampleId": "historical_renderer_group_block",
+            "description": "Historical viewer pilot PageOwnedRevisionRenderer explicitly rejects all group layers and grouped child layers.",
+            "inputMutation": [],
+            "failingSubsystem": "resources/ext.layers/viewer/PageOwnedRevisionRenderer.js (lines 44-47)",
+            "expectedException": "Error",
+            "expectedErrorCode": "Unsupported historical surface",
+            "failureMechanism": "PageOwnedRevisionRenderer line 45 checks layer.parentGroup || !supported.has(layer.type) and throws 'Unsupported historical surface' because group layout and nested transforms are not yet implemented in the historical viewer adapter."
+        }
+    ]
+}

@@ -1,5 +1,7 @@
 # Contributing to MediaWiki Layers
 
+**Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
+
 > **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. The next priorities are page revision history, MediaWiki search and Cargo projection; do not document proposals as shipped behavior.
 
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.

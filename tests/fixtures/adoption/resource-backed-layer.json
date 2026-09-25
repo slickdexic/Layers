@@ -1,0 +1,195 @@
+{
+    "caseName": "resource-backed-layer",
+    "description": "Resource-backed layers (embedded image, custom shape, and numbered marker) demonstrating schema validation rules and the current historical viewer pilot block.",
+    "syntheticNonResolvableNotes": "Slide surface with synthetic timestamp '20260924000007' and sha1 'slide'. The embedded image layer uses an in-memory 1x1 PNG data URL with valid PNG header bytes.",
+    "legacyRecord": {
+        "database": {
+            "table": "layer_sets",
+            "row": {
+                "ls_id": 601,
+                "ls_img_name": "Slide:AssetRichSlide",
+                "ls_img_major_mime": "application",
+                "ls_img_minor_mime": "x-layers-slide",
+                "ls_img_sha1": "slide",
+                "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000007\",\"isSlide\":true,\"canvasWidth\":1280,\"canvasHeight\":720,\"backgroundColor\":\"#ffffff\",\"backgroundVisible\":true,\"backgroundOpacity\":1,\"layers\":[{\"id\":\"layer_embedded_img\",\"type\":\"image\",\"x\":50,\"y\":50,\"width\":160,\"height\":160,\"src\":\"data:image\\/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\",\"originalWidth\":100,\"originalHeight\":100,\"preserveAspectRatio\":true,\"opacity\":1},{\"id\":\"layer_custom_chevron\",\"type\":\"customShape\",\"x\":300,\"y\":100,\"width\":120,\"height\":80,\"shapeId\":\"arrows\\/chevron\",\"path\":\"M 0 0 L 50 25 L 0 50 Z\",\"fill\":\"#0066cc\",\"fillRule\":\"nonzero\",\"stroke\":\"#003366\",\"strokeWidth\":2},{\"id\":\"layer_step_marker\",\"type\":\"marker\",\"x\":250,\"y\":80,\"value\":1,\"style\":\"circled\",\"size\":28,\"color\":\"#ffffff\",\"fill\":\"#cc0000\"}]}",
+                "ls_user_id": 1001,
+                "ls_timestamp": "20260924000007",
+                "ls_revision": 1,
+                "ls_name": "default",
+                "ls_page": 1,
+                "ls_size": 851,
+                "ls_layer_count": 3
+            },
+            "codeReferences": {
+                "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                "image_layer_src_validation": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateImageSrc (lines 626-676)",
+                "image_magic_bytes": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::matchesImageSignature (lines 685-701)",
+                "custom_shape_path_validation": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateSvgPath (lines 712-740)",
+                "marker_validation": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateProperty / VALUE_CONSTRAINTS['style'] (lines 178-210)"
+            }
+        },
+        "drawingPayload": {
+            "revision": 1,
+            "ownerId": 1001,
+            "schema": 1,
+            "created": "20260924000007",
+            "isSlide": true,
+            "canvasWidth": 1280,
+            "canvasHeight": 720,
+            "backgroundColor": "#ffffff",
+            "backgroundVisible": true,
+            "backgroundOpacity": 1,
+            "layers": [
+                {
+                    "id": "layer_embedded_img",
+                    "type": "image",
+                    "x": 50,
+                    "y": 50,
+                    "width": 160,
+                    "height": 160,
+                    "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                    "originalWidth": 100,
+                    "originalHeight": 100,
+                    "preserveAspectRatio": true,
+                    "opacity": 1
+                },
+                {
+                    "id": "layer_custom_chevron",
+                    "type": "customShape",
+                    "x": 300,
+                    "y": 100,
+                    "width": 120,
+                    "height": 80,
+                    "shapeId": "arrows/chevron",
+                    "path": "M 0 0 L 50 25 L 0 50 Z",
+                    "fill": "#0066cc",
+                    "fillRule": "nonzero",
+                    "stroke": "#003366",
+                    "strokeWidth": 2
+                },
+                {
+                    "id": "layer_step_marker",
+                    "type": "marker",
+                    "x": 250,
+                    "y": 80,
+                    "value": 1,
+                    "style": "circled",
+                    "size": 28,
+                    "color": "#ffffff",
+                    "fill": "#cc0000"
+                }
+            ]
+        }
+    },
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "renderingFidelityGate": "DocumentSchema accepts these layers as valid layer types with verified base64 magic bytes and whitelisted path characters. However, PageOwnedRevisionRenderer currently throws 'Unsupported historical surface' on image, customShape, and marker layers because asynchronous asset loading, SVG asset caching, and canvas marker drawing are not yet integrated into the historical viewer adapter.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "slide_asset_rich_surface",
+                    "kind": "slide",
+                    "label": "Asset Rich Slide",
+                    "canvas": {
+                        "width": 1280,
+                        "height": 720,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "layer_embedded_img",
+                            "type": "image",
+                            "x": 50,
+                            "y": 50,
+                            "width": 160,
+                            "height": 160,
+                            "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                            "originalWidth": 100,
+                            "originalHeight": 100,
+                            "preserveAspectRatio": true,
+                            "opacity": 1
+                        },
+                        {
+                            "id": "layer_custom_chevron",
+                            "type": "customShape",
+                            "x": 300,
+                            "y": 100,
+                            "width": 120,
+                            "height": 80,
+                            "shapeId": "arrows/chevron",
+                            "path": "M 0 0 L 50 25 L 0 50 Z",
+                            "fill": "#0066cc",
+                            "fillRule": "nonzero",
+                            "stroke": "#003366",
+                            "strokeWidth": 2
+                        },
+                        {
+                            "id": "layer_step_marker",
+                            "type": "marker",
+                            "x": 250,
+                            "y": 80,
+                            "value": 1,
+                            "style": "circled",
+                            "size": 28,
+                            "color": "#ffffff",
+                            "fill": "#cc0000"
+                        }
+                    ]
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "svg_data_url_xss_prevention",
+            "description": "Image layer src uses an SVG data URL (data:image/svg+xml;base64,...), which is strictly forbidden due to script execution risks.",
+            "inputMutation": {
+                "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48L3N2Zz4="
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateImageSrc (lines 648-651)",
+            "expectedException": "ApiUsageException",
+            "expectedErrorCode": "validationfailed",
+            "failureMechanism": "validateImageSrc enforces strict MIME whitelist: image/png, image/jpeg, image/gif, image/webp. SVG is excluded because SVG data URLs can contain executable JavaScript."
+        },
+        {
+            "exampleId": "corrupted_image_magic_bytes",
+            "description": "Image layer declares data:image/png;base64, but payload bytes do not start with the PNG file signature (\\x89PNG\\r\\n\\x1a\\n).",
+            "inputMutation": {
+                "src": "data:image/png;base64,SGVsbG8gV29ybGQ="
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::matchesImageSignature (lines 687-688)",
+            "expectedException": "ApiUsageException",
+            "expectedErrorCode": "validationfailed",
+            "failureMechanism": "matchesImageSignature verifies that decoded binary starts with 8-byte PNG signature. Spoofed MIME types fail validation."
+        },
+        {
+            "exampleId": "unsafe_custom_shape_svg_path",
+            "description": "Custom shape path contains forbidden characters (HTML tags or quotes).",
+            "inputMutation": {
+                "path": "M 0 0 <script>alert(1)</script>"
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateSvgPath (lines 722-724)",
+            "expectedException": "ApiUsageException",
+            "expectedErrorCode": "validationfailed",
+            "failureMechanism": "validateSvgPath checks regex /^[MmLlHhVvCcSsQqTtAaZz0-9\\s,.\\-+eE]+$/. Forbidden characters fail validation."
+        },
+        {
+            "exampleId": "historical_renderer_resource_block",
+            "description": "Historical viewer pilot PageOwnedRevisionRenderer explicitly rejects image, customShape, and marker layers.",
+            "inputMutation": [],
+            "failingSubsystem": "resources/ext.layers/viewer/PageOwnedRevisionRenderer.js (lines 44-47)",
+            "expectedException": "Error",
+            "expectedErrorCode": "Unsupported historical surface",
+            "failureMechanism": "PageOwnedRevisionRenderer line 45 asserts supported.has(layer.type). The supported set includes only text and basic synchronous vector shapes; image, customShape, and marker layers throw 'Unsupported historical surface'."
+        }
+    ]
+}

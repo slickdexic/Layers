@@ -407,6 +407,82 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	}
 
 	// =========================================================================
+	// Exact adoption read tests
+	// =========================================================================
+
+	/** @covers ::getLayerSetForAdoption */
+	public function testAdoptionReadsExactPrimaryRevisionWithoutNormalizationOrCache(): void {
+		$json = " {\n\"layers\":[],\"layers\":[{\"text\":\"é\"}],\"visible\":false} ";
+		$row = $this->createLayerSetRow( [
+			'id' => '42', 'imgName' => 'Test.pdf', 'sha1' => 'source-sha1',
+			'majorMime' => 'application', 'minorMime' => 'pdf', 'json' => $json,
+			'userId' => '123', 'revision' => '5', 'name' => 'Drawing_A', 'page' => '2'
+		] );
+		$changed = clone $row;
+		$changed->ls_json_blob = '{"changed":true}';
+		$this->loadBalancer->expects( $this->never() )->method( 'getReplicaDatabase' );
+		$this->dbr->expects( $this->never() )->method( 'selectRow' );
+		$this->dbw->expects( $this->exactly( 2 ) )->method( 'selectRow' )->with(
+			'layer_sets',
+			[
+				'ls_id', 'ls_img_name', 'ls_img_sha1', 'ls_img_major_mime', 'ls_img_minor_mime',
+				'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name', 'ls_page'
+			],
+			[ 'ls_id' => 42 ],
+			LayersDatabase::class . '::getLayerSetForAdoption'
+		)->willReturnOnConsecutiveCalls( $row, $changed );
+		$db = $this->createLayersDatabase();
+		$this->assertSame( [
+			'id' => 42, 'imgName' => 'Test.pdf', 'userId' => 123, 'timestamp' => '20231209120000',
+			'revision' => 5, 'name' => 'Drawing_A', 'page' => 2, 'sha1' => 'source-sha1',
+			'mime' => 'application/pdf', 'json' => $json
+		], $db->getLayerSetForAdoption( 42 ) );
+		$this->assertSame( $changed->ls_json_blob, $db->getLayerSetForAdoption( 42 )['json'] );
+	}
+
+	/** @covers ::getLayerSetForAdoption */
+	public function testAdoptionMissingRevisionDoesNotFallBack(): void {
+		$this->loadBalancer->expects( $this->never() )->method( 'getReplicaDatabase' );
+		$this->dbw->expects( $this->once() )->method( 'selectRow' )
+			->with( 'layer_sets', $this->anything(), [ 'ls_id' => 999 ], $this->anything() )
+			->willReturn( false );
+		$this->assertNull( $this->createLayersDatabase()->getLayerSetForAdoption( 999 ) );
+	}
+
+	/** @covers ::getLayerSetForAdoption */
+	public function testAdoptionInvalidIdsNeverAcquireConnection(): void {
+		$this->loadBalancer->expects( $this->never() )->method( 'getPrimaryDatabase' );
+		$this->loadBalancer->expects( $this->never() )->method( 'getReplicaDatabase' );
+		$db = $this->createLayersDatabase();
+		$this->assertNull( $db->getLayerSetForAdoption( 0 ) );
+		$this->assertNull( $db->getLayerSetForAdoption( -1 ) );
+	}
+
+	/** @covers ::getLayerSetForAdoption */
+	public function testAdoptionUnavailablePrimaryReturnsNull(): void {
+		$provider = $this->createMock( LoadBalancer::class );
+		$provider->expects( $this->once() )->method( 'getPrimaryDatabase' )->willReturn( null );
+		$provider->expects( $this->never() )->method( 'getReplicaDatabase' );
+		$db = new LayersDatabase( $provider, $this->config, $this->logger, $this->schemaManager );
+		$this->assertNull( $db->getLayerSetForAdoption( 42 ) );
+	}
+
+	/** @covers ::getLayerSetForAdoption */
+	public function testAdoptionEnforcesByteLimitAndStringWithoutDecoding(): void {
+		$this->config = new \HashConfig( [ 'LayersMaxBytes' => 4 ] );
+		$row = $this->createLayerSetRow( [ 'id' => 42, 'json' => 'éé' ] );
+		$this->dbw->expects( $this->exactly( 7 ) )->method( 'selectRow' )->willReturn( $row );
+		$db = $this->createLayersDatabase();
+		$this->assertSame( 'éé', $db->getLayerSetForAdoption( 42 )['json'] );
+		foreach ( [ 'ééx', null, false, 123, [] ] as $invalid ) {
+			$row->ls_json_blob = $invalid;
+			$this->assertNull( $db->getLayerSetForAdoption( 42 ) );
+		}
+		$row->ls_json_blob = '';
+		$this->assertSame( '', $db->getLayerSetForAdoption( 42 )['json'] );
+	}
+
+	// =========================================================================
 	// getLatestLayerSet Tests
 	// =========================================================================
 

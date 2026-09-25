@@ -1,5 +1,15 @@
 # Configuration reference
 
+## Guarded editor entry — September 20, 2026
+
+`Special:EditLayersPage` is registered but page-owned editing remains disabled by default. It requires LayersPageOwnedPilotEnabled, an exact retained owner entry in LayersPageOwnedPilotOwners, a registered user authorized to read/edit/editlayers, an existing Layers slot and a selected slide surface in the explicit current revision. Supply owner, revid and surface query parameters; no default/latest fallback or automatic creation is provided. Responses are not cacheable. Asset-backed surfaces, migration and historical viewing are not enabled by this entry. Do not enable it for production; see the current handoff/status for browser acceptance gates. Docker is not required by this route.
+
+## Experimental page-owned revision pilot
+
+`$wgLayersPageOwnedPilotEnabled` defaults to `false`. It gates the experimental read/publication APIs; it does not connect editor saves or enable a historical viewer. Keep it disabled outside lead-controlled acceptance.
+
+`$wgLayersPageOwnedPilotOwners` defaults to `[]`. Entries are exact canonical local prefixed DB keys. A retained scope installs the native content role and save/import/move/restore/merge guards even with publication disabled. Never remove retained owners while current or archived pilot revisions exist. These pilot restrictions are not completed production lifecycle support. See [Current Status](Current-Status.md) before considering enablement. No Docker runtime is involved.
+
 Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
 
 ## Registered settings

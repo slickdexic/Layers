@@ -1,5 +1,7 @@
 # Layers
 
+**Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
+
 Layers adds editable annotations to **images and PDF pages** and creates **standalone slides**. Use it for diagrams, visual instructions, labels and markup without changing uploaded originals.
 
 **Documentation updated: September 6, 2026.** This guide describes `main`, including fixes made after the 1.5.95 release.

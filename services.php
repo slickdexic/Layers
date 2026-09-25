@@ -12,9 +12,17 @@ declare( strict_types=1 );
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
 use MediaWiki\Extension\Layers\Logging\LayersLogger;
+use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\MediaWikiServices;
 
 return [
+	// Shared composition; native registration keeps the pilot disabled by default.
+	'LayersPageOwnedPilot' => static function ( MediaWikiServices $services ): PageOwnedPilot {
+		$config = $services->getMainConfig();
+		return new PageOwnedPilot( $services,
+			$config->has( 'LayersPageOwnedPilotEnabled' ) ? $config->get( 'LayersPageOwnedPilotEnabled' ) : false,
+			$config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [] );
+	},
 	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
 		return new LayersLogger();
 	},

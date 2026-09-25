@@ -1,0 +1,30 @@
+.layers-page-recovery {
+	max-width: min( 38rem, 90vw );
+	max-height: 85vh;
+	overflow: auto;
+	padding: 1.5rem;
+	border: 1px solid #72777d;
+	border-radius: 4px;
+}
+
+.layers-page-recovery::backdrop {
+	background: rgba( 0, 0, 0, 0.5 );
+}
+
+.layers-page-recovery select {
+	display: block;
+	margin: 0.5rem 0;
+	max-width: 100%;
+}
+
+.layers-page-recovery pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	max-height: 14rem;
+	overflow: auto;
+}
+
+.layers-page-recovery button {
+	margin-inline-end: 0.75rem;
+	padding: 0.5rem 1rem;
+}

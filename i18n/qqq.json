@@ -1,4 +1,29 @@
 {
+	"layers-page-draft-dialog-title": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-select": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-number": "Page-owned draft recovery dialog message.  $1 is the draft number.",
+	"layers-page-draft-dialog-restore": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-review": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-cancel": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-unavailable": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-dialog-local": "Page-owned draft recovery dialog message.",
+	"layers-page-draft-choose": "Prompt for choosing a recovery record. $1 is the number of independent drafts.",
+	"layers-page-draft-recover": "Page-owned editor draft message: layers-page-draft-recover",
+	"layers-page-draft-failed": "Page-owned editor draft message: layers-page-draft-failed",
+	"layers-page-draft-blocked": "Page-owned editor draft message: layers-page-draft-blocked",
+	"layers-editor-unavailable": "Shown when page-owned editor initialization is denied or unavailable. Deliberately does not reveal the specific access failure.",
+	"layers-page-revision-check-button": "Button label for checking the current saved page revision in page-owned edit mode.",
+	"layers-page-revision-check-checking": "Status message displayed while checking the saved page revision.",
+	"layers-page-revision-check-backup-failed": "Status message shown when local draft backup failed while checking the saved page revision.",
+	"layers-page-revision-check-invalid-edits": "Status message shown when retained local edits need correction before saving.",
+	"layers-page-revision-check-ready": "Status message shown when local changes are ready to be saved explicitly.",
+	"layers-page-revision-check-matched": "Status message shown when local content matches the saved page revision.",
+	"layers-page-revision-check-conflict": "Status message shown when the selected surface changed on the server and requires reconciliation before saving.",
+	"layers-page-revision-check-failed": "Status message shown when checking the saved page revision fails.",
+	"layers-page-history-link": "Link on a page-history revision row to view the exact saved Layers surface. $1 is the surface label, escaped by LinkRenderer.",
+	"layers-page-history-title": "Title of the read-only page displaying an exact historical Layers surface.",
+	"layers-page-history-caption": "Caption identifying the page, revision, and surface label of an exact historical drawing view. Parameters:\n* $1 - Page title\n* $2 - Page revision ID\n* $3 - Surface label",
+	"layers-page-history-render-failed": "Status message shown when an exact historical drawing fails to render. Must not suggest falling back to the latest revision.",
 	"@metadata": {
 		"authors": [
 			"Your Name"
@@ -953,5 +978,10 @@
 	"apihelp-layerspublish-param-baserevid": "Used by the unregistered experimental page-owned publishing API. Expected owner revision ID; zero for page creation.",
 	"apihelp-layerspublish-param-data": "Used by the unregistered experimental page-owned publishing API. Complete versioned Layers snapshot as JSON.",
 	"apihelp-layerspublish-param-maintext": "Used by the unregistered experimental page-owned publishing API. Optional simultaneous wikitext edit; required for a new owner page.",
-	"apihelp-layerspublish-param-summary": "Used by the unregistered experimental page-owned publishing API. Edit summary, at most 500 UTF-8 bytes."
+	"apihelp-layerspublish-param-summary": "Used by the unregistered experimental page-owned publishing API. Edit summary, at most 500 UTF-8 bytes.",
+	"layers-admission-unauthorized": "Error message shown when a revision save attempts to add or mutate the Layers slot without passing through the authorized publication service boundary.",
+	"layers-slot-removal-denied": "Error message shown when a revision save attempts to remove the Layers slot from an existing page.",
+	"layers-reading-disabled": "Error from the experimental page-owned read API when disabled.",
+	"layers-revision-unavailable": "Generic error for missing, denied, wrong-owner or unavailable historical Layers content. Does not distinguish permission from existence.",
+	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed."
 }

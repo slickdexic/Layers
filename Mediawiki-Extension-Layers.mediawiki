@@ -1,3 +1,5 @@
+'''Layers is a MediaWiki extension. Docker is only our development/test environment; it is not part of Layers' runtime architecture or deployment requirements. No Docker worker or host supervisor is required or planned.'''
+
 {{Extension
 |image           = ExtensionLayersEditor.png
 |name            = Layers

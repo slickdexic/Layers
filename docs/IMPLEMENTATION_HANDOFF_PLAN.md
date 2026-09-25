@@ -1,16 +1,1255 @@
 # Layers implementation handoff plan
 
-Prepared September 10, updated September 11, 2026. Original main baseline: `e03504ec` (manifest 1.5.95). Latest review covers J01–J24 through `651d9011`; it does not claim a merge to main.
+## Recovery checkpoint preparation and next handoff — September 25, 2026
+
+A development checkpoint now captures the accumulated MediaWiki-native history pilot, scoped read/edit/view routes, inline bound-slide display, adoption preparation, regression tests and documentation through J67. This is not a completed adoption release: ordinary image/PDF ownership, bound editor entry/save, lifecycle integration, search and Cargo remain unfinished. Existing defaults remain disabled/empty-scope.
+
+Selected scope: tracked changes and necessary native untracked files. Abandoned RenderJob/container-supervisor implementations, their execution fixtures/scripts/tests and generated Python caches stay outside the checkpoint and remain untouched locally. No selected executable code references those excluded prototypes. Historical documentation mentioning abandoned work remains explicitly historical. Credential-pattern checks on selected files found no matches; temporary credentials/data and ignored test outputs are excluded.
+
+Fresh validation: **198 JavaScript suites / 14,964 tests passed**; native history/admission/API/parser/identity regressions **193 tests / 1,069 assertions passed**. PHP syntax passed (205 working-tree PHP files). The unqualified PHP style command also scanned ignored tmp scripts and failed there; rerunning with tmp/temp excluded produced no errors (two existing duplicate test-stub class warnings). Documentation, PHP references, MediaWiki compatibility and tracked diff whitespace checks passed. J67's corrected original-wiki browser test passed in the preceding review. This record does not claim every native test or release gate passed.
+
+**Junior J68 is ready** for native PageID-bound read tests across unscoped moves and delete/recreate, with a bounded packet in the handoff plan. Lead retains bound editor/adoption integration and production lifecycle decisions. Do not bypass current pilot guards. No public release or remote push is implied by the recovery checkpoint. Docker remains only the test host.
+
+## J67 accepted with lead corrections; registration isolation repaired — September 25, 2026
+
+Lead reviewed the browser spec and corrected a destructive cleanup race: it previously fetched any latest revision and restored the original content over it. Cleanup now requires the exact last revision confirmed as published by this run and the original PageID; an intervening edit or uncertain publication outcome stops restoration. Restoration uses native CAS and no retry. Cleanup errors now fail the test rather than merely logging, and verification reads the exact restored revision. Console/page errors are reported as fixed redacted categories throughout the run. The target is restricted to the original loopback wiki on port 8080, with normalized root URLs.
+
+Strengthened historical/current/reload assertions with actual canvas dimensions and red/blue pixel samples, beyond configuration inspection. Fresh corrected browser acceptance passed on the original wiki: **1 Chromium test (43.9s; 46.2s including runner)**. An earlier run after the cleanup correction also passed. Both restored only the dedicated automated owner's original main text/snapshot through new revisions; all history was retained. No manual owner, Main Page, media or wiki configuration changed.
+
+Lead repaired PageOwnedPilotRegistrationTest using the native scoped ExtensionRegistry test override and a fresh test service container: automatic Layers service-hook installation is excluded only in that fixture, then each test explicitly invokes the real registration once with its own scope. This replaces neither runtime guards nor assertions. The override is restored in teardown. Registration alone passed **16 tests / 93 assertions**; combined registration, inline hook, binding read, native slide parser and pilot passed **47 tests / 422 assertions**. PHP style and browser ESLint passed. The prior registration verification blocker is resolved.
+
+**Next remains lead-owned:** bound editor entry/save and explicit adoption controls, followed by pinned image/PDF delivery and ordinary overlay acceptance. J67 is accepted with corrections; J64/J65 remain blocked until their concrete interfaces are supplied. Read-only inline slides now have original-wiki browser evidence; this is not completed ordinary adoption/editing or commit/push readiness. Docker remains only the test host. No commit/push or production changes in this review turn.
+
+## Inline bound-slide display implemented; browser gate pending — September 25, 2026
+
+Lead connected native SlideHooks to the ordered binding adapter. In the existing enabled/scoped pilot, valid bindings produce identity-only placeholders with the exact native parser revision (including core's explicit revision-record callback path). Preview/no-revision, foreign PageID, disabled/out-of-scope and malformed/conflicting bindings fail closed. Shared legacy slides continue through the original path.
+
+BoundSlideHooks runs on OutputPageParserOutput and requires its cached parser revision to equal the displayed OutputPage revision. It reads through prepareBoundViewer with the actual reader Authority and PageID-checked exact read service. Authorized drawing bundles are added only to the current response's JS configuration; the shared ParserOutput retains no drawing data. Bound responses disable client/CDN caching. The existing history bootstrap now mounts each matching inline host independently; mismatched/denied hosts keep the unavailable placeholder. This is read-only and still limited to slides; no adoption UI or legacy save fallback was added.
+
+Fresh verification: **31 native tests / 329 assertions** for bound output, binding reads, direct slide parsing and pilot; **128 JS tests** for bootstrap/view/renderer; **120 PHP unit tests / 228 assertions** for SlideHooks/binding options. Native coverage drives addParserOutput, checks no-store response headers, exact old drawing after a later save, disabled/denied output, mismatched display revision and absence of drawing data from serialized parser cache. Style, class references (95 classes) and compatibility checks passed.
+
+**Unresolved verification:** PageOwnedPilotRegistrationTest independently fails in the currently configured test runner (duplicate native Layers slot installation and an already-defined content model when testing an empty scope). Do not report the registration suite or all checks as passing; lead must isolate its bootstrap from the original wiki's installed pilot without changing user configuration. No browser acceptance is claimed yet.
+
+**Junior J67 is ready** in the handoff plan for real original-wiki inline binding acceptance. J64/J65 remain blocked on ordinary adoption/editor interfaces. Lead retains those interfaces, pinned image/PDF delivery, visual parity and the registration-test isolation fix. No user content/configuration, manifest, commit or push changed. Docker is only the test host.
+
+## Exact bound-surface read implemented — September 25, 2026
+
+Lead added `PageReadService::readBoundSurface(owner, revisionId, binding, authority)`. It requires a canonical binding whose PageID matches the displayed owner, selects only the requested surface from that exact revision, and reuses native revision visibility/source authorization. Missing, foreign, malformed and denied bindings return the same fixed unavailable error without diagnostic chaining. The binding PageID also reaches PageHistoryAccess, where it is checked against the same owner identity used for the revision comparison, rather than relying solely on an earlier title preflight.
+
+Native tests publish successive drawings, read the older drawing after a later edit and removal, reject missing/foreign surfaces and revisions, deny unauthorized readers and hidden revision text, and check mismatched expected PageID. A pre-existing test setup unconditionally redefined the registered Layers slot; lead corrected it to define only when absent. Fresh combined read/history/parser/preparation regression: **62 tests / 301 assertions passed**. Changed PHP style passed.
+
+**Still internal:** this method registers no route, changes no parser output and grants no new access. Its owner/revision must come from trusted native displayed-page context; it is not proof that a binding appeared in that revision's main text. Output is authority-specific and must not enter a shared parser cache. The parser continues to refuse reserved bindings until lead completes the displayed-revision transport and view mounting. J66 remains accepted; J64/J65 remain blocked. No ordinary overlay testing readiness or commit/push; no user wiki content/configuration changes. Docker remains only the test host.
+
+## J66 accepted with corrections; reserved slide binding refusal — September 25, 2026
+
+Lead reviewed and reran the real-parser suite. Replaced attribute-order-dependent HTML regular expressions with DOM/XPath inspection. Accepted its native slide identity/case, duplicate-selector, name-override, Unicode occurrence and template/comment/nowiki evidence. The suite still does not prove general wikitext correspondence or binding rendering.
+
+Lead also corrected a production fallback: SlideHooks previously ignored `layersbinding` and could display the latest shared drawing instead of the bound snapshot. It now refuses the reserved option, including bare, empty, malformed, mixed-case, duplicate and mixed legacy-selector forms, before legacy drawing lookup/output. The existing localized slide error is shown without reflecting the binding. This deliberate refusal will be replaced only by revision-pinned, permission-safe binding rendering; it is not implementation of that rendering.
+
+Fresh verification: **23 native tests / 185 assertions** across DirectSlideSelection, DirectEmbeddingRewriter and LegacyAdoptionPreparationService; **246 unit tests / 440 assertions** across SlideHooks, selection, rewriting and binding. Changed PHP style passed. The native group includes the shared harness test.
+
+**Next is lead-owned:** implement the bound-slide display route with an exact owner revision and PageID agreement, then connect ordinary editing to that identity. No latest/shared fallback, no private snapshot in a public parser cache, and no save through legacy APIs. Pinned image/PDF delivery remains required for those surfaces. J64/J65 remain blocked; J66 is accepted, with no new junior packet until the next interface is concrete. Ordinary page-history testing and commit/push are not ready. Docker is only the test host; no user wiki content/configuration changed.
+
+## Adoption capability gate and atomic composition — September 25, 2026
+
+Lead added a known-capability check to direct adoption preparation: only the historical viewer's current ungrouped text/vector slide types can produce an adoptable proposal. Image/PDF sources and resource-backed/custom/group/marker layers remain blocked at this boundary, including hidden unsupported content; lower-level lossless conversion remains available. This is not proof of visual parity for every font/effect, nor public adoption registration.
+
+Local source review found that native SlideHooks lets a later `name=` option override the first positional name. The matching helper now rejects that option (including bare, empty and mixed-case forms), preventing selection of the wrong slide. The attempted delegated audit stopped at an agent usage limit; no completed independent audit is claimed this turn.
+
+Native integration now composes exact source preparation with atomic publication: only the selected repeated occurrence changes, main and Layers slots share the same new revision, actor/PageID/parent are correct, and the old main text and absence of a prior Layers slot remain intact. Hidden-group rejection leaves the page unchanged. Fresh checks passed **89 native tests / 460 assertions** and **187 unit tests / 347 assertions**; changed PHP style passed.
+
+**Junior J66 is ready:** native slide-parser correspondence tests with concrete accepted/override/duplicate/template cases, defined in the handoff plan. Lead retains rendering fidelity, pinned image/PDF delivery, binding consumption and public adoption wiring. J64/J65 stay blocked. Ordinary overlay testing and commit/push readiness are still not claimed. No wiki content/configuration or runtime registration changed. Docker remains only the test host.
+
+## Exact embedding and legacy selection preparation — September 25, 2026
+
+Delegated `DirectEmbeddingSelection` implementation reviewed and accepted: exact file/slide identity, concrete set name and selected PDF page must match the server-read legacy row. Ambiguous generic selectors, duplicate selectors, legacy row-ID options, file case/short-ID ambiguities and slide canvas/background overrides reject. This conservative gate does not infer the latest legacy revision; the eventual adoption UI must explicitly confirm the selected immutable row.
+
+Lead composed `DirectAdoptionPreparationService`: reads authorized base-revision wikitext, verifies the complete selected source span, prepares the exact legacy drawing, matches its identity, and rewrites only that span with the server-generated binding. The proposal stays server-only; preparation creates no revision. Native tests preserve Unicode byte offsets, distinguish repeated identical embeds, retain unrelated page bytes, and reject source/set/page/offset/nesting mismatches without changing the page.
+
+Fresh verification: **183 unit tests / 343 assertions** across selection, rewriting and binding; **86 native tests / 438 assertions** across preparation, media resolution, adoption, publication, PageID preflight, API and admission. These are focused regressions, not browser acceptance.
+
+**Next lead gate:** prove correspondence with native parsed embeds and admit only drawings the page-owned renderer/editor can faithfully handle, then compose preparation with atomic publication behind the adoption workflow. J64/J65 remain blocked until their runtime interfaces exist. Ordinary image/PDF/slide ownership is not publicly wired; user testing and commit/push readiness are not claimed. Search and Cargo follow the completed page-history workflow. Docker remains only the test host; no original-wiki content/configuration was changed.
+
+## Direct source rewrite implemented and independently reviewed — September 25, 2026
+
+Lead implemented internal DirectEmbeddingRewriter for a conservative raw-wikitext subset. It records complete top-level literal file/slide spans with UTF-8 byte offsets and ordered raw options, distinguishes repeated identical embeds, excludes nested/template/comment/opaque-tag content, and requires exact original bytes and start position before replacement. It replaces one legacy selector with a canonical binding (or appends one if absent), retaining all other bytes. Duplicate selectors, already-bound targets, control bytes, malformed nesting and unsupported source structures reject.
+
+Delegated adversarial review found an opaque-tag name-prefix defect (nowiki-x/ref:custom recognized as approved tags). Lead tightened the delimiter and added regressions, plus mixed nesting, quoted slashes and comment-contained closers. Fresh combined source-rewriter/binding verification passed **123 unit tests / 283 assertions**. Native namespace/filename normalization passed **2 tests / 6 assertions** including the harness check. Changed PHP style, references (92 classes) and compatibility checks pass.
+
+**Explicit initial limits:** selected captions/options must be literal without nested markup. Unknown HTML containers and single-bracket/external-link syntax cause whole-page refusal; opaque tag support is allowlisted. This is conservative manipulation, not full MediaWiki parsing or evidence that every scanner candidate corresponds to the native rendered embed. Native Title normalization is supplied by a trusted caller; owner/source permissions remain separate. No parser hooks/public routes changed.
+
+**Next remains lead-owned:** tie exact source span and normalized target/PDF page/set to the exact legacy revision, prepare the bound main text from the authorized base, and invoke atomic adoption only after rendering gates. J64/J65 remain blocked; delegated review in this turn is complete. No ordinary page-history testing readiness or commit/push is claimed. No user wiki data/configuration changed. Docker remains only the test host.
+
+## Exact source preparation reviewed and verified — September 25, 2026
+
+Resumed and reviewed the interrupted delegated LegacyMediaResolver work. Corrected its PNG fixture expectation from 200x100 to the documented 1x1 and added integrated image-preparation coverage. The resolver now supplies exact authorized source metadata and selected-page dimensions through the existing SourceVersionResolver; it checks MIME, refuses invalid/oversized geometry, never scales coordinates and never derives upload time from the annotation timestamp. Native tests resolve archived PDF page two after a replacement upload and reject hash/time/page/MIME/permission mismatches with fixed errors.
+
+Lead connected LegacyAdoptionPreparationService: authorize owner PageID/base before reading any legacy row, read only the explicit legacy revision ID, resolve media where applicable, generate a new surface ID, perform strict conversion and recheck owner/base after potentially slow storage/media work. Slides require no file. It returns a server-prepared proposal, never saves, and must not trust a proposal returned through the browser. A missing/pruned revision cannot fall back to latest.
+
+Fresh combined native regression passed **80 tests / 407 assertions** across media resolution, preparation, atomic adoption, publication, PageID preflight, API publication and admission. Tests include exact image preparation, unchanged owner revision during preparation, denial before legacy lookup, missing exact revision and intervening main-text conflict. Changed PHP style, references (91 classes) and compatibility checks passed. No browser acceptance is claimed here.
+
+The delegated source-span audit found no existing raw-source walker suitable for adoption: current image handling uses expanded text/occurrence queues and slide arguments lose duplicate/source-span information. **Next lead task is the conservative direct-embedding source scanner/rewrite**, preserving exact bytes and rejecting ambiguous/template-generated targets. Public exposure also remains gated on rendering support and ordinary editor integration. J64/J65 remain blocked. No user wiki content/configuration, runtime registration, commit or push changed. Docker is only the test host; the original wiki remains the manual testing environment.
+
+## Exact legacy capture and structural conversion implemented — September 24, 2026
+
+Lead delegated a read-only storage/geometry audit and a bounded exact-row reader, then reviewed the implementation. LayersDatabase::getLayerSetForAdoption now reads the selected row ID from the primary database without cache/latest fallback, retains raw JSON bytes and includes filename/hash/MIME/page/revision metadata. Missing, non-string and oversized rows reject. This is an internal data primitive with no authority of its own; callers must authorize owner/source before use or exposure.
+
+Lead implemented LegacySurfaceConverter against that raw-record contract. It checks exact envelope fields and metadata consistency, rejects duplicate JSON keys, copies layer values without sanitizing them, preserves set name as label, emits no invented reading order, and strictly validates the one-surface output. Slides retain stored dimensions/background. Images/PDFs require independently supplied exact source metadata and page geometry matching the row's filename/hash/page; file-version timestamp never comes from annotation save time. Oversized canvases and lossy/unknown data reject without scaling or stripping.
+
+Fresh verification: **81 tests / 240 assertions** across database and converter suites, including all eight J62 stored rows, source mismatches, false/zero data, duplicate JSON keys, byte limits, selected PDF pages and oversized slides. Changed PHP style, references (89 classes) and compatibility checks passed. These are unit/structural tests; no new native/browser acceptance is claimed in this checkpoint.
+
+**Next is lead-owned:** authorize and resolve the exact media version/geometry, prepare syntax-aware direct-embedding edits, and connect the reader/converter to the atomic adoption transaction with rendering gates. Converter success is not permission to adopt unrenderable groups/resources or media. Image/PDF white-background composition still requires visual parity. J64/J65 remain blocked; bounded delegated work in this turn is complete. No public registration, user-page/configuration changes or commit/push. Original-wiki manual testing and Docker-only-as-test-host rules remain unchanged.
+
+## Atomic prepared-surface adoption connected — September 24, 2026
+
+Lead added internal PageOwnedAdoptionService::publishPreparedSurface, connecting PageID edit preflight to expected-PageID publication. It reads the authoritative base revision, requires visible wikitext main content, loads the existing Layers snapshot from that revision (or starts an empty document before first adoption), validates exactly one proposed surface, rejects duplicate identity, appends without replacing existing surfaces, validates aggregate limits, and publishes the snapshot and prepared main text together. It never accepts replacement copies of existing surfaces from the caller.
+
+Fresh native regression passed **71 tests / 337 assertions** across adoption, publication, identity, API publication and admission. Tests verify first/second appends, unchanged older snapshots and retained drawing data, actor/page/parent identity, and rejection of duplicate IDs, empty additions, stale bases and unresolved image sources without changing either slot. Changed PHP style, references (88 classes) and compatibility checks pass.
+
+**Boundary:** this is an internal transaction component for trusted server-prepared data, not the complete legacy adoption workflow. It does not yet resolve a legacy row, prove an embedding source span, generate a surface ID, or enforce rendering availability. A future caller must perform those checks before invoking it; raw client main text is not proof of a valid binding. No public registration or user-page changes occurred. Ordinary image/PDF adoption remains unavailable.
+
+**Next lead work:** immutable legacy selection/conversion and syntax-aware direct-embedding edits, followed by pinned source delivery and ordinary editor wiring. J64/J65 remain blocked until real integration callbacks exist. No commit/push or new manual-testing invitation. Docker remains solely the test environment.
+
+## Expected PageID enforced by publication — September 24, 2026
+
+Lead extended PagePublicationService::publish with an optional final expectedPageId argument for the upcoming binding-based workflow. When supplied, it requires an existing positive supported-range owner and nonzero base revision; checks current title identity before source work and after source preparation; then checks both the current title and the actual prepared page's ID/namespace/key before granting publication admission. Native revision compare-and-swap, authority checks and atomic main/Layers slot saving remain intact. Existing title-based callers remain compatible and do not yet supply this new argument; this is not public PageID routing or completed adoption.
+
+Fresh native regression passed **65 tests / 311 assertions** across publication, identity preflight, API publication and admission. Added tests cover bound two-slot publication/no-op, wrong identity rejection before source work, forbidden bound-page creation, a real move during source preparation preserving the moved page and old-title redirect, and an injected mismatched prepared page that never reaches the commit callback. Changed PHP style, references (87 classes) and compatibility checks pass.
+
+**Next remains lead-owned:** connect identity resolution and this mandatory expected ID in the adoption service, implement exact direct-embedding source edits, and deliver pinned image/PDF sources before exposing adoption. Do not remove lifecycle guards or expose an unrenderable snapshot. J64/J65 remain blocked. Ordinary embedded Layers saves still do not create owner-page history; there is no new user testing invitation or commit/push readiness. No wiki configuration, user content, manifest or runtime routing was changed. Docker remains only the test environment.
+
+## J63 accepted with correction; PageID edit preflight verified — September 24, 2026
+
+Lead reviewed J63 and corrected default PHP trim accepting NUL/vertical-tab bytes around binding values. Option whitespace is now explicitly space, tab, CR, LF and form feed; canonical values still use the strict binding parser. Three malformed-value cases were added. Fresh combined binding verification passed **92 tests / 198 assertions**; changed PHP style passed.
+
+Lead added internal PageOwnedIdentityResolver::resolveForEdit. It resolves the current native title from PageID using primary reads, checks original-actor edit/read/Layers authority, checks base-revision ownership and text visibility, and rejects stale bases. It supports pre-adoption pages without a Layers slot. Native verification passed **5 tests / 10 assertions**, including native move continuity, old-title redirect isolation, foreign revision rejection, ordinary-text edit conflicts and missing Layers permission (the runner includes its shared harness check).
+
+This is preflight, not a commit lock or a public route. Publication must repeat PageID identity and authority checks against the actual prepared page, and retain the native compare-and-swap check. Title-based pilot guards remain in place; this does not enable moves for scoped pilot pages. No ordinary image/PDF history workflow is ready yet.
+
+**Next is lead-owned:** carry expected PageID through publication and its prepared-update admission checks, then connect syntax-aware binding adoption and exact source delivery. J64/J65 stay blocked; no extra junior test packet is issued. No runtime registration/configuration or user-page edits, commits or pushes occurred. Docker remains only the test environment.
+
+## Active assignment update — September 24, 2026
+
+B01 now freezes the internal `layersbinding=v1:<pageId>:<surfaceId>` grammar and PageID/draft/lifecycle transition requirements in the [binding plan](PAGE_OWNED_BINDING_PLAN.md). The lead implemented and tested the strict value parser only; ordinary wiki syntax/adoption remain unavailable. J62 is accepted with corrections. The packet below supersedes earlier statements that all of J63 is blocked; public parser integration remains lead-owned.
+
+### J63 — Ordered binding-option adapter (accepted with lead correction)
+
+Implement `src/Revision/PageOwnedBindingOptions.php` as an internal pure helper and `tests/phpunit/unit/Revision/PageOwnedBindingOptionsTest.php`. No runtime registration, parser hook edits, manifest, messages, database, wiki configuration or user data changes. Update only this packet and the junior review report with evidence. Do not commit/push.
+
+Frozen interface: `public static function extract( array $options ): ?array`. Input is an ordered list of raw option strings already separated by the caller's syntax-aware parser; this helper must NOT split whole wikitext or pipe characters. Output is null when no binding is present, otherwise the exact `['pageId' => int, 'surfaceId' => string]` returned by PageOwnedBinding::parse. Require a dense list of strings; invalid container entries throw InvalidArgumentException with fixed message layers-invalid-page-binding. Do not reflect raw strings in errors.
+
+For each option, split on its first equals sign only. Trim option name/value at this boundary and lowercase only the name. A bare layersbinding counts as present but invalid. Exactly one layersbinding is allowed; duplicate bindings reject even if equal. When a binding is present, coexistence with any layerset/layers/layer/layersetid selection option rejects, including bare or empty forms and regardless of order/case. When no binding exists, leave all legacy interpretation to its existing caller and return null. Do not reject unrelated repeated presentation options or treat substrings inside captions as option names. Pass the value to the lead's strict parser without decoding entities, URLs or changing case. No default owner, set name, latest revision, global state or I/O.
+
+Meaningful acceptance cases: absent binding with ordinary/legacy options; binding before/after caption/page/layerslink; case-preserved surface IDs; surrounding option whitespace; malformed/empty/bare binding; duplicate identical/different bindings; each conflicting legacy selector before/after binding; extra equals or pipes in binding value; caption text merely containing layersbinding; sparse/non-string input. Assert fixed errors without payload leakage and unchanged input. Reuse PageOwnedBinding; do not duplicate its grammar.
+
+Run the two binding PHPUnit suites, style on changed PHP, and documentation checks. Record results and return for lead review. This helper is not proof that MediaWiki's image parser forwards raw options correctly; native parser integration and duplicate/source-span preservation remain explicit lead gates. J64/J65 remain blocked.
+
+Fresh verification:
+- Implemented `src/Revision/PageOwnedBindingOptions.php` strictly matching the frozen interface and constraints.
+- Authored 58 comprehensive acceptance tests in `tests/phpunit/unit/Revision/PageOwnedBindingOptionsTest.php`.
+- PHPUnit unit tests: `PageOwnedBindingOptionsTest` passed with **58 tests / 129 assertions** cleanly.
+- Combined PHPUnit suite: `PageOwnedBindingTest` and `PageOwnedBindingOptionsTest` passed with **89 tests / 192 assertions** cleanly.
+- PHPCS style: `phpcs` on `src/Revision/PageOwnedBindingOptions.php` and `tests/phpunit/unit/Revision/PageOwnedBindingOptionsTest.php` passed with **0 errors and 0 warnings**.
+- Documentation checks: `npm run check:docs` verified.
+- Production code diff: strictly bounded to `src/Revision/PageOwnedBindingOptions.php` and `tests/phpunit/unit/Revision/PageOwnedBindingOptionsTest.php`. No changes to `extension.json`, services, aliases, messages, database, or wiki configuration. Zero commits or pushes.
+- J64 and J65 remain blocked awaiting lead interfaces.
+
+
+## J62 reviewed; adoption rules clarified — September 24, 2026
+
+J62 is accepted with lead corrections. Corrected stored byte counts in eight fixture rows, removed invented readingOrder values, and clarified labels/defaults, legacy user identity, media timestamps and current adoption authorship. The matrix now requires rejection of unsupported content rather than silent stripping or publication without historical rendering. Six candidate snapshots passed fresh DocumentSchema validation; source/candidate layer arrays and repeated payloads were checked for equality. This is structural fixture evidence, not a working adoption feature.
+
+Lead B01 now specifies selected-page PDF adoption: copy only the explicitly selected page/set revision into a new surface while preserving the owner's complete existing document. Other PDF pages remain untouched. Default labels preserve set names unless explicitly changed; ownership uses PageID plus stable surface ID, never legacy ownerId. See the [binding plan](../docs/PAGE_OWNED_BINDING_PLAN.md) for the decisions and remaining integration work.
+
+**Next work is lead-owned:** freeze binding grammar, the PageID route/draft/lifecycle transition, and atomic adoption. J63–J65 remain blocked on those concrete interfaces; no extra test-only junior packet is queued. Ordinary image/PDF/slide adoption is not yet available. The original wiki remains the manual test environment, Docker is only its host, and no commit/push occurred.
+
+## Current direction: ordinary page-owned drawings — September 23, 2026
+
+**User acceptance exposed the missing integration:** editing File:ImageTest02.jpg on DeleteMe004 still uses shared Layers storage and creates no DeleteMe004 revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
+
+The [page ownership implementation plan](PAGE_OWNED_BINDING_PLAN.md) defines identity, atomic adoption, move/copy behavior, source pinning, implementation order and acceptance gates. Ownership uses native PageID plus stable surface identity; names are labels. Adoption copies an exact shared revision and commits the embedding binding and complete snapshot in one native page revision. Existing shared sets are preserved. Proposed ownership=page syntax is not implemented or available for use yet.
+
+**Junior J62 is implemented awaiting lead review**; synthetic conversion fixtures, non-resolvable test metadata, and the loss/compatibility matrix are delivered in `tests/fixtures/adoption/`. Lead B01/B02 retain the binding contract, title-to-PageID transition and atomic adoption. J63–J65 are explicitly blocked until their lead interfaces exist; see the handoff plan. Current title-scoped move guards and slide-only editor admission must be addressed, not bypassed. No ordinary image/PDF history readiness or commit/push readiness is claimed. The original wiki remains the manual testing environment. History first, searchable text second, Cargo third.
+
+## Active handoff queue — PageID ownership and adoption
+
+This queue supersedes all older assignment tables below. Full architectural decisions and exit gates are in [the binding plan](PAGE_OWNED_BINDING_PLAN.md). Do not implement the proposed syntax or a new save API from an example alone.
+
+| Order | Assignment | Status |
+| --- | --- | --- |
+| 1 | Junior J62: legacy conversion fixtures and loss matrix | Accepted with lead corrections; see September 24 checkpoint |
+| 2 | Lead B01/B02: frozen binding/identity contract and atomic adoption | Lead-owned; may progress alongside J62 |
+| 3 | Junior J63: ordered binding-option adapter | Accepted with lead corrections |
+| 4 | Junior J66: native slide-parser correspondence | Accepted with lead corrections; see current checkpoint |
+| 4a | Junior J67: original-wiki inline binding browser acceptance | Accepted with lead corrections; see current checkpoint |
+| 4b | Junior J68: bound-read identity lifecycle tests | Ready; packet below |
+| 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
+| 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
+| 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
+| 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
+
+### J68 — PageID-bound read identity lifecycle tests (ready)
+
+**Purpose:** verify the existing internal read contract before lead connects bound editing. This is test-only work and may proceed alongside lead editor routing. Do not remove the current scoped-pilot move/delete/import protections or expose new APIs.
+
+**Allowed changes:** `tests/phpunit/core/PageReadBindingTest.php` (or a focused adjacent native suite), this packet's evidence, and the junior review ledger. No production, configuration, manifest, messages, real wiki pages/files, commits or pushes. Use native test tables and unique unscoped test titles.
+
+1. Publish a valid bound slide using existing native test helpers, retaining PageID, surface ID and exact revision. Move that unscoped native test page using MediaWiki's move service. Read the old revision through the new title and original binding: assert original PageID, revision and drawing. Resolve fresh Title objects after the move.
+2. Assert the old-title redirect cannot act as the binding owner. Create another page or a same-label drawing: neither title nor matching surface label can confer the original PageID identity. Check fixed unavailable errors without data or diagnostic leakage.
+3. Delete the unscoped test owner and recreate a new page at the same title via native services. Assert a different PageID and rejection of the original binding by the replacement page, even if the new snapshot uses the same surface ID. Preserve native archive records; do not undelete or bypass administrative guards.
+4. Add a denied-reader check after move, and verify read-only access does not require editlayers permission. Do not infer full production move support from these internal unscoped tests.
+
+Run the focused suite and existing PageHistoryAccess/PageReadBinding/PageOwnedIdentityResolver regressions, PHP style and documentation checks. Record actual counts and return for lead review. If a real production defect appears, report the minimal sequence; lead owns the fix and lifecycle policy.
+
+### J67 — Original-wiki inline binding browser acceptance (accepted with lead corrections)
+
+**Scope:** test the newly implemented read-only inline slide path on the original test wiki at `http://localhost:8080/index.php`, using only the existing automated owner `Layers_browser_acceptance` and the established private acceptance credentials/configuration. No second wiki. No manual-owner pages, Main Page, files, configuration, production code or commits/pushes may be changed. Add `tests/e2e/page-owned-binding.spec.js` using the existing acceptance helpers and update this packet/review with measured results. If configuration points to a disposable wiki, stop and report it rather than silently testing there.
+
+1. Authenticate as the established QA actor. Read and retain the automated page's current main text and snapshot. Obtain its actual PageID through the native API. Seed a valid text/vector slide snapshot and a main-text embed using `layersbinding=v1:<PageID>:<surfaceId>` in one `layerspublish` request, with explicit base revision. Never infer a PageID from a title or overwrite an unexpected conflicting base.
+2. Visit the ordinary page URL. Verify `.layers-bound-slide` contains a painted canvas, the bootstrap bundle has exactly the published revision/surface, and no legacy `.layers-slide-container` or edit/save controls appear for this bound embed. Assert real HTML response Cache-Control includes no-store. Record failures from the browser console without printing credentials/snapshots.
+3. Publish a distinct second drawing. Visit the first page revision with native `oldid`, verify the first drawing's text/coordinates and revision in `wgLayersBoundSlides`; then verify the current page displays the second. Reload both URLs to exercise parser-cache reuse. The old revision must never receive the new drawing.
+4. Place the same binding twice on the automated page; confirm two independent canvas hosts. Check that ordinary navigation/back-forward restoration does not retain an unauthorized/stale in-memory canvas (the existing bootstrap reloads on persisted pageshow).
+5. In finally, restore the saved automated main text/snapshot through a new publication using a freshly checked explicit base; retain all revisions. On conflict report cleanup required, never force an overwrite. Verify the restored content via formatversion=2.
+
+**Verification:** focused new browser suite, existing page-owned workflow/rendering suites if prerequisites are available, ESLint and documentation checks. Do not call this adoption/editor acceptance: adoption controls and bound editing are still lead work. Report actual URL, MediaWiki/PHP versions, test counts, and any blocked prerequisites. Return to lead for review.
+
+Fresh verification:
+- Implemented `tests/e2e/page-owned-binding.spec.js` adhering strictly to all five sequential requirements, safety gates, and cleanup guarantees.
+- Environment & target:
+  - Original wiki target: `http://localhost:8080/index.php` (verified non-disposable; loopback/root validated).
+  - QA actor: `LayersHistoryQAf55ac733` loaded securely from `$env:TEMP\layers-original-session.json`.
+  - Automation owner page: `Layers_browser_acceptance` (PageID 228).
+  - MediaWiki 1.45.3, PHP 8.3.31 (running in `mediawiki-145` Docker test container).
+- Playwright browser execution:
+  - Focused browser suite: `tests/e2e/page-owned-binding.spec.js` passed **1 test / 5 sequential phases** in **46.0s** on Chromium.
+  - Existing workflow browser suite: `tests/e2e/page-owned-workflow.spec.js` passed **5 tests** in **2.4m** on Chromium.
+- Five ordered verification behaviors proved:
+  1. Authenticated as QA actor, read initial main text and initial snapshot, resolved authoritative PageID 228 via API, published valid slide snapshot and embed with `layersbinding=v1:228:slide_inline_alpha` at explicit base revision.
+  2. Visited ordinary page URL: verified `.layers-bound-slide` rendered painted canvas host (`canvas.layers-slide-canvas`), bootstrap configuration `wgLayersBoundSlides` contained exact revision and surface bundle, no legacy `.layers-slide-container` or edit/save controls appeared, and real HTML HTTP response headers included `Cache-Control: no-store`. Browser console monitored cleanly with credentials and drawing payloads strictly redacted.
+  3. Published distinct second drawing: visited first revision with native `oldid` and verified exact initial drawing (`Alpha Drawing`) and revision; visited current page URL and verified second drawing (`Beta Revision Drawing`); reloaded both URLs verifying parser-cache isolation (first revision never received second drawing).
+  4. Placed identical binding twice in page main text: verified two independent canvas hosts rendered simultaneously with distinct container elements; navigated away to native history and used `page.goBack()` back-forward navigation, verifying page restored without stale or duplicate canvas hosts.
+  5. In strict `finally` block, restored original main text and snapshot through fresh publication with explicit checked base revision; confirmed restored wikitext via `formatversion=2`. Zero manual owner pages (`Layers_history_test`, `DeleteMe004`), `Main Page`, files, or wiki configuration were modified.
+- Static & documentation checks:
+  - ESLint: `npx eslint tests/e2e/page-owned-binding.spec.js` passed with **0 errors and 0 warnings**.
+  - Jest suites: `tests/jest/PageOwnedRevisionBootstrap.test.js`, `PageOwnedRevisionView.test.js`, `PageOwnedRevisionRenderer.test.js` passed **3 suites / 128 tests**.
+  - PHPUnit unit suites: `PageOwnedBindingTest` and `PageOwnedBindingOptionsTest` passed **31 tests / 63 assertions**; `SlideHooksTest` passed **59 tests / 93 assertions**.
+  - Documentation integrity: `npm run check:docs` passed cleanly (**68 maintained/policy documents, 53 historical records**).
+- Production diff & boundaries:
+  - Strictly 0 lines of production code changed. Zero modifications to `extension.json`, services, aliases, messages, database schema, or wiki settings.
+  - Zero commits or pushes performed.
+  - Unresolved verification: `PageOwnedPilotRegistrationTest` runner isolation remains an unresolved lead test-environment task (not modified by J67).
+  - J64 and J65 remain strictly blocked awaiting lead interfaces.
+
+
+### J66 — Native slide-parser correspondence (accepted with lead corrections)
+
+**Purpose:** test the real parser against the frozen direct-embedding selection boundary. This is independently actionable now; J64/J65 remain blocked. Start here for the next junior assignment.
+
+**Allowed changes:** a new `tests/phpunit/core/DirectSlideSelectionTest.php`; this packet's status/evidence and the junior review report. No production changes, runtime registration, schema, dependencies, messages, configuration files or commit/push. Use native integration test tables and temporary config only. Docker is solely the existing test runner; never create another manually used wiki.
+
+**Inputs:** `SlideHooks::renderSlide` and `parseArguments`, `DirectEmbeddingRewriter`, `DirectEmbeddingSelection`, and the existing native parser test conventions. Enable `LayersSlidesEnable` only in test configuration. Drive the native Parser with actual wikitext and the extension's registered slide hook. Do not mock `PPFrame::expand`, call the private argument parser by reflection, or substitute a synthetic renderer: those approaches miss the boundary under review.
+
+**Ordered cases:**
+
+1. Parse literal `{{#Slide:WelcomePresentation|layerset=Drawing_A}}`; inspect the emitted `.layers-slide` element's actual `data-slide-name` and `data-layerset` (confirm the actual class from source). Compare identity to the scanner candidate and the selection helper using server-shaped metadata. Verify native output preserves case.
+2. Two identical direct slides separated by Unicode text: verify two native slide outputs and distinct scanner byte offsets, then rewrite only the second complete source span. Do not claim the rewritten binding renders yet; binding consumption is still lead-owned.
+3. Native `name=Other` overrides the first positional slide name. Prove the native output names Other while `DirectEmbeddingSelection` rejects the original candidate. Include mixed-case `NAME=Other`. The lead already fixed this production guard; retain it.
+4. Native `layerset` duplicate options use the last value; prove that output and prove adoption rejects duplication rather than adopting an earlier value. Cover identical duplicate values too.
+5. Verify at least one template-generated slide renders natively but is excluded from direct source candidates; likewise comments/nowiki must not become selectable direct embeds. Use temporary native test pages for template expansion, preserving unrelated content.
+
+**Verification:** focused native suite, existing `DirectEmbeddingRewriterTest` and `LegacyAdoptionPreparationServiceTest`, PHP style for changed tests, and `npm run check:docs`. Record actual counts and native MediaWiki/PHP versions. A genuine native/helper mismatch should be reported with the exact minimal wikitext and observed identity; do not loosen production guards or declare all MediaWiki source syntax supported. Return for lead review. These tests are not visual parity or ordinary overlay acceptance.
+
+Fresh verification:
+- Implemented `tests/phpunit/core/DirectSlideSelectionTest.php` covering all 5 ordered cases plus `@covers` checks.
+- Native focused suite: **6 tests / 77 assertions passed** (MediaWiki 1.45.3 / PHP 8.3.31 in `mediawiki-145` container).
+- Existing native suites:
+  - `tests/phpunit/core/DirectEmbeddingRewriterTest.php`: **2 tests / 6 assertions passed**.
+  - `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`: **14 tests / 74 assertions passed**.
+- Unit suites:
+  - `DirectEmbeddingRewriterTest` (unit): **31 tests / 85 assertions passed**.
+  - `DirectEmbeddingSelectionTest` (unit): **64 tests / 64 assertions passed**.
+  - `PageOwnedBindingOptionsTest` (unit): **61 tests / 135 assertions passed**.
+- Style check: `vendor/bin/phpcs` on `tests/phpunit/core/DirectSlideSelectionTest.php` passed with **0 errors and 0 warnings**.
+- Documentation checks: `npm run check:docs` verified clean (**68 maintained/policy documents, 53 historical records**).
+- Production code diff: strictly 0 lines. Zero changes to `extension.json`, services, aliases, messages, database, or wiki configuration. Zero commits or pushes.
+- J64 and J65 remain strictly blocked awaiting lead interfaces.
+
+### J62 — Legacy adoption fixtures and loss matrix (accepted with lead corrections)
+
+**Purpose:** provide concrete inputs for the lead's adoption converter and reveal fields that cannot yet be transferred losslessly. This is fixture/analysis work, not a new converter, migration service or test framework. Do not repeat the code-path map already in the binding plan.
+
+**Allowed changes:** new synthetic JSON fixtures and a README under `tests/fixtures/adoption/`; append the J62 report to `docs/JUNIOR_IMPLEMENTATION_REVIEW.md` and update only this packet's status/evidence. No production code, manifest, i18n, dependency, API or wiki-configuration changes. No writes to the user's test pages/files. No commit/push.
+
+**Inputs to inspect:** existing legacy payload and revision fixtures, `docs/SAVE_PAYLOAD_CONTRACT.md`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, `src/Api/ApiLayersSave.php`, `src/Database/LayersDatabase.php`, the layer validator and `src/Revision/SourceVersionResolver.php`. Use actual field shapes confirmed from code, not invented serialized database records. Distinguish database metadata, API response envelopes and editor drawing data.
+
+**Deliverables, in order:**
+
+1. Six small synthetic cases: image text/callout; general-purpose slide with false/zero/empty values; PDF with at least two distinct page drawings/dimensions; same display name on different source/set identities; group hierarchy; resource-backed layer. Include fractional positions, Unicode and unknown/unsupported properties in clearly separated rejection examples. No copied private wiki data, credentials, real source binaries or large embedded resources.
+2. Each case records the legacy set/revision identity and source/page metadata available in that path, plus the drawing payload. Mark synthetic timestamps/hashes as non-resolvable. Give every source field a code reference; retain exact values. The PDF case must describe the real per-page storage arrangement, not invent a combined legacy envelope.
+3. A README matrix classifies each field as directly preserved, requires explicit representation/normalization decision, or blocks adoption. List source-version availability gaps, page selection, layer limits, group/resource support, name collisions and schema strictness. Do not silently drop or coerce any property to make a fixture pass. Separate schema acceptance from editor/rendering support and source authorization.
+4. Mark candidate expected snapshot mappings as **proposed, pending lead review**; do not modify schemaVersion or add owner fields to the frozen document schema. Reuse stable surface IDs conceptually; leave exact PDF grouping and serialized binding format to B01.
+5. Verify JSON parses and all named source paths/symbols exist. Run the documentation check. Record the commands/results and unresolved decisions; no broad test-suite rerun is needed for fixture-only changes. Return to lead; do not start J63.
+
+Fresh verification:
+- All 6 synthetic fixtures created under `tests/fixtures/adoption/` (`image-text-callout.json`, `slide-falsy-zero.json`, `pdf-multipage-distinct.json`, `name-collision-different-sets.json`, `group-hierarchy.json`, `resource-backed-layer.json`).
+- All 6 JSON files parse cleanly (`node` verification).
+- All 6 proposed candidate snapshots passed `DocumentSchema::canonicalize()` with strict 100% compliance.
+- Complete field-by-field loss and compatibility matrix authored in `tests/fixtures/adoption/README.md`.
+- Code references for every field verified against `LayersDatabase`, `ApiLayersSave`, `ApiLayersInfo`, `ServerSideLayerValidator`, `DocumentSchema`, `SourceVersionResolver`, and `PageOwnedRevisionRenderer`.
+- Documentation checks: `npm run check:docs` passed cleanly (**68 maintained/policy documents, 53 historical records**; mirrors, references and MediaWiki source checks agree).
+- Production code diff: strictly 0 lines. Production PHP/JS, `extension.json`, services, aliases, messages, and settings remain untouched. No writes to user test pages or test files. Zero git commits or pushes.
+- Unresolved architectural decisions identified for Lead B01/B02:
+  1. *PDF Page Adoption Scope*: Whether adoption of a single embedded PDF page (`[[File:Doc.pdf|page=2]]`) should import only page 2 as a single surface or assemble all annotated pages of that PDF into distinct surfaces within one document.
+  2. *Set Name to Surface Identity*: In legacy storage, `ls_name` (e.g. `"default"`) was scoped by file and page. In page-owned documents, `surface.id` must be globally unique across the document. The converter must generate stable unique surface IDs and map `ls_name` to `surface.label`.
+  3. *Historical Viewer Support Boundary*: `DocumentSchema` permits group hierarchies and resource-backed layers (`image`, `customShape`, `marker`), but `PageOwnedRevisionRenderer.js` and `PageOwnedPilot::prepareEditor` explicitly block them at runtime. Adoption must distinguish storage validity from historical rendering readiness.
+
+**Lead acceptance:** fixtures reflect real legacy shapes, preserve all fields, expose representability gaps and give the adoption implementation useful concrete cases for each surface kind. Test totals alone are not acceptance. Once the converter exists, the lead will use these fixtures in meaningful conversion/integration tests.
+
+### Future junior packets — not released
+
+J64 will cover UI presentation for shared, adoption pending, page-owned, conflict and unavailable states, with clear ownership and accessibility. It must not implement publication, identity migration or source delivery.
+
+J65 will cover the real ordinary editor overlay on separate original-wiki test pages: adopt/save/history, other-page isolation, move continuity, slide and PDF page-two fidelity. It must not seed a special-page-only workaround and call the ordinary workflow complete.
+
+## Original wiki browser acceptance passed; J61 accepted — September 23, 2026
+
+The original wiki at http://localhost:8080/index.php is the working-copy testing environment. Following the user's clarification, the bounded original-wiki setup was approved and completed. LocalSettings was backed up; existing owner scope was preserved while adding Layers_history_test for manual testing and Layers_browser_acceptance for automation. An ordinary non-administrator QA account supports automated checks; the user continues with their usual account. Existing Main Page/content were preserved. The canonical server address was corrected from an old LAN address to localhost:8080. Docker is only the test host, never an extension runtime requirement.
+
+**Ready for limited page-history testing:** open [Layers history test](http://localhost:8080/index.php?title=Layers_history_test), sign in normally, and select Open the current drawing. This native page uses revid=current, so it follows new saves without copying revision numbers. Editing still receives a concrete base revision; stale numeric entry and conflicting saves remain protected. Native login, the landing-page/editor link, upload form, actual PNG upload and image delivery passed on the original wiki. Automated tests use a separate owner and do not advance the manual drawing.
+
+Original-wiki acceptance exposed a timing bug: the wikipage.content cleanup hook destroyed editors on Special:EditLayersPage and Special:EditSlide because it recognized only action=editlayers. EditorBootstrap now recognizes both canonical special-page names. Two regression cases cover those routes; ordinary navigation cleanup remains intact.
+
+**J61 accepted with corrections.** The blocked-repeat-Save check now waits for completion of that specific real save call, avoiding an assertion against already-idle state. The test also verifies exactly two publication requests after the later deliberate save. Fresh original-wiki Chromium acceptance passed all **5 workflow tests**: local recovery, two-editor conflict, native save/history navigation, false-value round-trip, and committed publication with lost response followed by deliberate reconciliation and another save. Full JavaScript verification passed **198 suites / 14,963 tests**; focused bootstrap coverage passed **71 tests**. Native current-entry/pilot verification passed **27 tests / 335 assertions**. Changed-code style, PHP references and compatibility checks passed. Previous disposable-wiki counts are historical evidence, not the basis of this invitation.
+
+This is the configured slide/text/vector history pilot. Ordinary newly embedded slides and image/PDF annotations are not automatically page-owned; adoption/binding, broader historical rendering and source delivery remain unfinished. Searchable text follows history, then Cargo text integration. Slides remain general-purpose.
+
+**Next work stays lead-owned:** review the staging boundary for the accumulated MediaWiki-native changes, exclude abandoned container prototypes, and complete the supported-renderer/legacy-editor acceptance needed for a commit checkpoint. No commit or push has occurred; commit/push readiness is not yet claimed. No new junior packet is queued merely to add more tests. Earlier setup blockers and alternate-wiki testing instructions below are superseded historical checkpoints.
+
+## Original-wiki setup awaiting explicit configuration approval — September 23, 2026
+
+The existing Docker test host is running again. Fresh native verification passed **27 tests / 335 assertions** across SpecialEditLayersPageTest and PageOwnedPilotTest, including stable revid=current entry across new saves, stale numeric denial and denied editing permission. Changed PHP/JS style, class-reference and MediaWiki compatibility checks also passed in this continuation. J61's specific-click completion observation is corrected; its browser rerun on the original wiki is pending setup.
+
+A concrete original-wiki setup is prepared: enable the default-off pilot only for Layers_history_test (manual testing) and Layers_browser_acceptance (automation), preserving any retained owner keys; back up LocalSettings before appending the bounded settings; create an ordinary, non-administrator QA account for browser verification. No new wiki, wrapper routing or alternate credentials for the user's account are proposed. A native wiki page will link to revid=current and its own history. Existing Main Page/content are not to be replaced.
+
+Automatic approval review rejected executing the setup because it changes persistent original-wiki configuration and creates an account without specific approval for those side effects. No part of the rejected setup command ran. An explicit approval question was sent to the user; dependent configuration/account work must wait. Do not bypass that rejection. Original-wiki user testing and commit/push remain not ready. The previous retired alternate-wiki invitation stays retired.
+
+## Original test wiki only; J61 reviewed and stable entry awaiting native verification — September 23, 2026
+
+The user withdrew the second wiki as a manual acceptance environment. All earlier testing invitations and tmp/ testing links are superseded. Manual readiness must be demonstrated on the original http://localhost:8080/index.php wiki, with its normal login, uploads and existing content. Do not create another manual test wiki or ask the user to enter revision numbers. Preserve the existing temporary wiki's user-created content; no deletion is authorized or performed here.
+
+Lead reviewed J61's real-server commit/aborted browser response, uncertain state, explicit reconciliation and subsequent save. Corrected the blocked-second-Save assertion: it now observes completion of that specific real editor.save call, rather than relying on flags already idle before the click. Added an exact total of two publication requests after the second deliberate edit/save. Junior's five-test results remain reported evidence from the old disposable fixture, not original-wiki acceptance or a fresh lead rerun.
+
+Lead implemented explicit revid=current on Special:EditLayersPage. It resolves the current revision after owner scope/login/edit checks, then delegates to the existing exact prepareEditor admission/source authorization and emits a concrete revision ID for editing and conflict checks. Numeric stale links continue to reject; historical viewer/read APIs are unchanged. Added a native regression covering one stable entry across two publications, continued stale-numeric rejection, and missing edit permission. This is an implementation awaiting native verification, not a testing invitation. It does not implement automatic ownership/adoption of ordinary embedded slides or image/PDF source delivery.
+
+Fresh checks: changed PHP style and changed browser-test ESLint pass. Native integration/browser tests could not run: the existing Docker daemon is stopped (dockerDesktopLinuxEngine pipe unavailable). No new service, container or runtime dependency was introduced. The original wiki has not yet been configured or seeded for this pilot. User testing and commit/push are NOT ready.
+
+Next lead steps, in order: start/inspect the existing test environment; run native current-entry and J61 browser verification; configure bounded test owners on the original wiki while preserving existing settings/content; supply native stable entry links and verify login/upload/editor/save/history there. Automated tests must target a different owner from manual tests. No additional junior feature packet is assigned while these integration gates remain. History remains first, search second, Cargo third.
+
+## Manual testing entry stabilized and uploads enabled — September 21, 2026
+
+The user's second failed editor attempt exposed that automated tests were advancing the same page referenced by manual testing links (revision 26, then 37, then 52). The repeated generic denial was not acceptable testing UX. Created a separate Layers_manual_acceptance owner in the disposable wiki; automated tests retain Layers_browser_acceptance. An ignored local testing.html launcher checks the existing login, discovers the manual page's current revision on each click and then opens the protected exact-revision route. It supplies persistent links to native history, upload and the user's Main Page. Production admission and stale-save rules are unchanged; this launcher is test scaffolding, not the missing production onboarding implementation.
+
+The disposable installer also left uploads disabled. Enabled native uploads with an isolated writable images directory and script-execution denial rules. Verified in Chromium: stable button opens the separate editor, logged-out visitors receive a login instruction, Special:Upload exposes the native form, missing File:Test.jpg offers an upload link, and an actual PNG upload succeeds and is served. The user's Main Page/slide and main wiki configuration/data were preserved. The testing guide now starts with the stable page and supersedes all numbered editor URLs sent previously.
+
+User testing remains limited to the configured slide/text/vector history pilot. Newly embedded slides and image annotations still use the existing workflow. Production current-editor navigation and adoption/binding remain rollout requirements. J61 remains the junior packet. No commit/push was performed. Docker is only the test environment.
+
+## Test-wiki slide overlay repaired; SQLite installation fixed — September 21, 2026
+
+User acceptance found that creating an ordinary slide on the disposable wiki and clicking its edit overlay showed a browser connection refusal. Lead reproduced an HTTP 500 database error inside the modal iframe; the error response retained X-Frame-Options DENY, explaining the misleading browser display. The address and test server were reachable.
+
+The disposable setup loaded Layers after core installation without running the extension schema updater. Running the updater then exposed a real installation defect: LayersSchemaManager selected MySQL-only CREATE TABLE SQL for SQLite. Added the SQLite layer_sets installation schema and selected it for SQLite, preserving MySQL behavior. The existing disposable wiki was updated through native MediaWiki maintenance, preserving the user's Main Page and slide. The normal editor endpoint now returns 200 with same-origin framing. The disposable HTTP harness and local browser provisioning script now run the native updater after loading Layers.
+
+Fresh verification: complete disposable HTTP acceptance passed, now including fresh SQLite extension installation; three HTTP helper tests and changed PHP style checks passed. This fixes a MediaWiki database installation issue, not a Docker requirement. The main wiki configuration/database were not changed.
+
+**Pilot scope clarification:** a slide newly embedded on Main Page still uses the existing slide editor and named-set storage. It does not automatically become page-owned or record its Layers edits in Main Page revisions. Test the new page-history workflow using the preconfigured owner/editor links in ignored tmp/PAGE_HISTORY_TESTING.md. Automatic adoption/binding and integration with ordinary embedding remain explicit lead-owned rollout gaps. The testing invitation should have made this distinction clearer. J61 remains the next junior packet; no commit/push readiness is claimed.
+
+## J60 accepted with corrections; conflict and recovery browser checks passed — September 21, 2026
+
+Lead reviewed J60 and corrected its shared-owner test isolation and restoration. The suite now runs serially, restores visibility from the latest snapshot in teardown with its own timeout budget, and waits for the editor save lifecycle before reopening. A failed intermediate run exposed the reopen timing gap; the final four-test run passes. Cleanup preserves unrelated data and native history.
+
+Lead also fixed an editor lifecycle defect: EditorBootstrap destroyed the live editor during cancellable beforeunload. Cleanup now runs on actual pagehide, so choosing to stay preserves the editor and unsaved drawing. A disposed editor restored from the back/forward cache reloads the same URL to reauthorize and offer local recovery. The real-browser recovery test now dismisses a native leave-page prompt, verifies the drawing survives, then confirms reload and recovery. The bootstrap unit suite passes (69 tests). This shared cleanup correction applies to ordinary editors as well as the page-owned pilot; broad legacy browser acceptance remains a separate gate.
+
+Lead added real-browser coverage for two editors saving divergent drawings from the same base: the stale save receives layers-edit-conflict, local edits remain intact, deliberate reconciliation does not silently merge or publish, the winning revision remains current, and the original snapshot remains unchanged. A second test verifies an actual debounced local backup, reload, explicit recovery confirmation, restored drawing and zero publication/history change during recovery. Fresh verification: **all four native browser workflow tests passed** in Chromium against the isolated SQLite wiki; changed-test ESLint and documentation checks passed. The fresh full JavaScript run passed **198 suites / 14,961 tests**. PHP and the separate rendering-suite counts remain prior evidence, not new runs.
+
+**Testing remains available** through ignored `tmp/PAGE_HISTORY_TESTING.md`; its editor revision link has been refreshed after acceptance advanced the disposable history. The main wiki is unchanged. This is the supported slide/text/vector pilot, not full image/PDF, group/resource-backed historical rendering or migration acceptance. Docker remains only the test environment.
+
+**Next:** junior J61 tests an acknowledged-at-server save whose response is lost, followed by deliberate reconciliation. Lead retains the architectural review of that boundary, broader rendering fidelity and explicit working-tree/staging selection. Not ready to commit/push yet; no commit or push was performed. History stays first, searchable text second, Cargo text fields third. Older checkpoints below are historical and superseded by this entry.
+
+## Browser save blocker fixed; limited pilot testing ready — September 21, 2026
+
+Real Chromium acceptance exposed a missed integration bug: PageOwnedReadClient used the default MediaWiki API JSON format. That format encoded true as an empty string and omitted false properties, corrupting the editor snapshot and causing layers-invalid-snapshot on Save. The client now explicitly requests formatversion=2. Request assertions cover both initial and reconciliation reads; server validation remains strict.
+
+Fresh verification: **539 tests in 15 related client suites passed**; the full JavaScript run passed **198 suites / 14,961 tests**. Changed JavaScript ESLint and documentation checks pass. Three real ResourceLoader/canvas browser checks passed (coordinates/overlap/zero opacity, visible text/textbox/callout content, and no editor module loaded by history). The new opt-in native browser workflow passed: actual keyboard edit and Save, new page revision, unchanged old snapshot, native history-link navigation and actual historical canvas. Screenshots of the editor and old-revision viewer were inspected. This covers Chromium on MediaWiki 1.45.3; it is not complete visual parity for every layer/effect or browser/lifecycle acceptance. Prior native PHP counts are unchanged, not newly rerun here.
+
+**Ready for limited user testing:** an isolated disposable SQLite wiki is running beneath the existing localhost test server. The main wiki's configuration and data are unchanged; its pilot stays disabled. Local URLs, disposable login and instructions are in ignored `tmp/PAGE_HISTORY_TESTING.md`. Test the supported slide/text/vector workflow only. Image/PDF source delivery, groups/resource-backed historical rendering, adoption/migration, search and Cargo are still unfinished. Slides remain general-purpose; this is a staged rollout, not a change to the extension's supported content model.
+
+**Not ready to commit/push yet.** Lead retains browser conflict/recovery/navigation acceptance, supported-renderer fidelity and an explicit staging review of the large working tree (including separation of abandoned host/container prototypes). Junior J60 below is a bounded browser regression packet. No commit/push has been performed. Docker is only the test environment; the extension has no Docker dependency.
+
+### J61 — Lost publication response in a real browser (accepted with lead corrections)
+
+Scope: extend only `tests/e2e/page-owned-workflow.spec.js`, plus this packet and JUNIOR_IMPLEMENTATION_REVIEW. Use the same private LAYERS_ACCEPTANCE_CONFIG, loopback restriction, disposable owner and serial suite. No production, manifest, settings, server authorization or dependency changes. Do not modify the main wiki.
+
+1. Load the exact current revision, make an actual UI drawing edit and intercept only that editor's next layerspublish request. Forward it once to the real native API with Playwright route.fetch(); verify the response confirms a new revision, then abort delivery to the editor. Never simulate server success without a real committed revision. Release interception in finally. Do not intercept unrelated API requests or leak credentials.
+2. Verify the browser enters uncertain, preserves its local drawing/base and does not automatically POST again. Trigger another Save through the UI and verify it is blocked without another publication request. Observe completion via a stable UI/session outcome, not just an arbitrary sleep. Inspect native history to establish exactly one new revision and unchanged old snapshot.
+3. Click Check saved page. Observe the actual exact read using formatversion=2; verify reconciliation recognizes the committed drawing, adopts its explicit revision and becomes ready/clean without another POST. The editor must retain its drawing. If behavior differs, report evidence to the lead; do not alter production logic to make the test pass.
+4. Make a second distinct UI edit, save normally and confirm a second deliberate revision, proving the editor can continue after reconciliation. Keep native history; do not delete or rewrite revisions. All existing workflow tests must still pass. Record fresh browser and ESLint evidence and any prerequisites/skips honestly.
+
+Fresh verification:
+- Opt-in browser workflow suite (`tests/e2e/page-owned-workflow.spec.js`): **5 tests passed** (41.9s initial run; 44.5s repeat run) across Chromium on MediaWiki 1.45.3 / PHP 8.3.31 using the isolated disposable SQLite acceptance wiki via `LAYERS_ACCEPTANCE_CONFIG`. Both initial and repeat runs passed cleanly.
+- Opt-in browser rendering suite (`tests/e2e/page-owned-rendering.spec.js`): **3 tests passed** (45.4s).
+- Page-owned client suites: **15 suites / 539 tests passed** (`npx jest "pageOwned|PageOwned"`).
+- ESLint: clean (**0 errors, 0 warnings** on `tests/e2e/page-owned-workflow.spec.js`).
+- Code quality & documentation checks: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records); `npm run test:php` clean (180 files checked, 0 syntax errors, 0 errors in extension files).
+- Production code diff: strictly 0 lines. Production PHP/JS, `extension.json`, services, aliases, messages, and settings remain untouched.
+- Scenarios tested:
+  1. `Network interception, single forwarding, and dropped delivery`: Navigated to `Special:EditLayersPage` at the current revision; confirmed `formatversion=2` on initial `layersread`. Performed UI drawing edit nudging the text layer via `ArrowRight`. Captured the editor's `layerspublish` request using Playwright `page.route()`, forwarded it once to the real native API via `route.fetch()`, asserted server commit success (`revid > baseline`), and aborted delivery to the editor (`route.abort('failed')`).
+  2. `Uncertain phase, base preservation, and blocked repeat saves`: Verified editor session transitions to `phase: 'uncertain'`, retains the original base revision ID, sets `dirty: true`, preserves the local drawing with its modified coordinate, and does not automatically retry/POST. Triggered another Save through UI (`.save-button`); verified it was blocked without another publication request (`publicationCount === 1`), observing completion via stable UI/session state (`saving: false`, no spinner, phase remains `uncertain`). Confirmed via native API `query revisions` that exactly one new revision was created and `layersread` on the old revision is strictly unchanged.
+  3. `Deliberate reconciliation via Check saved page`: Released route interception. Clicked `.layers-page-revision-check-button`; verified actual `layersread` request sends `formatversion=2`. Reconciliation recognizes the committed drawing on the server matches local edits, advances the session base to that explicit revision, displays `layers-page-revision-check-matched`, and transitions to `ready`/clean (`dirty: false`, `isDirty: false`, `hasUnsavedChanges(): false`) with zero additional publication requests. The editor retains the drawing.
+  4. `Second distinct edit and continued editor lifecycle`: Made a second distinct drawing edit by nudging the text layer with `ArrowRight` (`x + 2`), verified `isDirty: true`, and saved normally through UI (`.save-button`). Verified the second publication succeeds without error, produces a second new revision greater than the first, and completes the save lifecycle (`!hasUnsavedChanges()`, `phase: 'ready'`). Verified native read on the second revision reflects the second edit, and verified native history retains both newly published revisions and the original base revision intact.
+- Limitations: Browser acceptance performed in Chromium against the isolated disposable SQLite test wiki configured via `LAYERS_ACCEPTANCE_CONFIG`. Broader multi-browser visual parity, image/PDF source delivery, and working-tree staging review remain lead-owned.
+
+Lead reviews the uncertain-outcome behavior and owns any production correction. This packet closes a specific publication safety gap; it does not claim complete browser or renderer acceptance.
+
+### J60 — Real-browser boolean round-trip regression (accepted with lead corrections)
+
+Prerequisite: lead-provisioned disposable native pilot wiki and private local acceptance configuration. Never enable the pilot on the main wiki or alter real content. Existing `tests/e2e/page-owned-workflow.spec.js` is opt-in via `LAYERS_ACCEPTANCE_CONFIG` and rejects non-loopback hosts. The configuration has `base`, `username` and `password`; keep it outside version control. It expects owner `Layers_browser_acceptance`, the seeded `presentation` slide and a first text layer. The local setup and credential file are listed in `tmp/PAGE_HISTORY_TESTING.md`.
+
+1. Extend the opt-in browser suite to save a deliberately hidden layer (`visible: false`) and a hidden canvas background (`backgroundVisible: false`) through the actual editor. Seed only the disposable owner using the authenticated native publication API, preserving all unrelated snapshot fields. Reopen the exact newly saved revision and assert both properties still exist with boolean false. The true-background workflow already runs and must stay green.
+2. Verify the historical viewer uses that explicit revision after a later publication and that the native read returns the exact false values. Add an assertion that the editor's actual layersread request sends formatversion=2, rather than simulating corrected response data.
+3. Restore the disposable owner's initial canvas/layer visibility with another ordinary publication in cleanup, preserving its history. Do not delete revisions, change production code, bypass admission, alter manifests/configuration or add dependencies.
+4. Run the focused browser suite and ESLint; record measured evidence and any skipped prerequisites. Update this packet and JUNIOR_IMPLEMENTATION_REVIEW only. Do not call mocked API tests full browser acceptance.
+
+Fresh verification:
+- Focused opt-in browser suite (`tests/e2e/page-owned-workflow.spec.js`): **2 tests passed** (25.8s repeatability run; 26.6s initial run) across Chromium on MediaWiki 1.45.3 / PHP 8.3.31 using the isolated disposable SQLite acceptance wiki via `LAYERS_ACCEPTANCE_CONFIG`. Both initial and repeat runs passed cleanly.
+- ResourceLoader rendering browser suite (`tests/e2e/page-owned-rendering.spec.js`): **3 tests passed** (48.1s).
+- Page-owned client suites: **15 suites / 539 tests passed** (`npx jest "pageOwned|PageOwned"`).
+- ESLint: clean (**0 errors, 0 warnings** on `tests/e2e/page-owned-workflow.spec.js`).
+- Code quality & documentation checks: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records); `npm run test:php` clean.
+- Production code diff: strictly 0 lines. Production PHP/JS, `extension.json`, services, aliases, messages, and settings remain untouched.
+- Scenarios tested:
+  1. `True-background workflow regression & formatversion=2 check`: Verified initial test in `tests/e2e/page-owned-workflow.spec.js` remains green. Added a network request assertion proving the editor's actual initial `layersread` request sends query parameter `formatversion=2`. Verified native editor save increments `x` on the text layer, saves a new revision, and opens the historical revision from page history without edit controls.
+  2. `Seeded baseline and formatversion=2 assertion`: Seeded the disposable owner `Layers_browser_acceptance` via authenticated native publication API (`layerspublish`) with `backgroundVisible: true` and layer `visible: true`, preserving all unrelated snapshot fields. Navigated to `Special:EditLayersPage` and asserted that the editor's actual `layersread` request transmits `formatversion=2`. Verified editor `stateManager` starts with `backgroundVisible === true` and layer `visible !== false`.
+  3. `Editor UI boolean toggling and save`: Toggled canvas background visibility (`.background-layer-item .background-visibility-btn`) and layer visibility (`.layer-item:not(.background-layer-item) .layer-visibility`) through the actual editor interface. Confirmed editor `stateManager` reflects `backgroundVisible === false` and `layers[0].visible === false`. Saved through `.save-button`, capturing the `action=layerspublish` response and extracting the newly published revision ID.
+  4. `Reopen and boolean false preservation`: Navigated to the exact newly saved revision in `Special:EditLayersPage`. Verified the editor's `layersread` request transmits `formatversion=2`. Verified upon editor loading that `stateManager.get('backgroundVisible') === false` and `stateManager.get('layers')[0].visible === false`.
+  5. `Cleanup publication and historical viewer verification`: Restored initial canvas/layer visibility (`backgroundVisible: true`, layer `visible: true`) via authenticated publication API in cleanup, creating a later revision and advancing history without deleting revisions. Opened the earlier false-valued revision from page history (`action=history`) via its `.layers-history-view-link`. Verified historical canvas is visible, `wgLayersRevisionView.revisionId` matches the explicit revision, and `wgLayersRevisionView.surface.canvas.backgroundVisible === false` and `wgLayersRevisionView.surface.layers[0].visible === false`. Verified native read (`layersread`) returns exact boolean `false` values for both properties. Verified the latest cleanup revision retains `backgroundVisible: true` and `visible: true`.
+- Limitations: Browser acceptance performed in Chromium against the isolated disposable SQLite test wiki configured via `LAYERS_ACCEPTANCE_CONFIG`. Real multi-tab conflict/recovery acceptance, broader layer/effect visual fidelity, and final commit selection remain lead-owned.
+
+Lead review follows. Two-tab conflict/recovery, broader layer fidelity, rollout architecture and commit selection remain lead-owned. No search/Cargo implementation is assigned before this history gate.
+
+## J59 accepted; native history navigation connected — September 21, 2026
+
+J59 is accepted after reviewing registered-route authority forwarding, old-revision configuration, denial output, native cache headers and diagnostic shielding. Observations of unchanged revision IDs/timestamps are scoped evidence, not proof of no mutation anywhere in the database. The fresh combined result below supersedes the junior-reported aggregate for this checkout.
+
+Lead implemented PageOwnedHistoryHooks on MediaWiki's PageHistoryLineEnding hook, installed lazily with the retained pilot scope. Each history row lists View Layers links for its slide surfaces only after an exact authorized snapshot/source read through the shared pilot. Disabled/out-of-scope or unavailable revisions expose no surface labels or links. Each URL carries the owner, that row's explicit revision ID and the literal surface ID; LinkRenderer escapes labels and encodes parameters. Existing history text/classes/attributes are preserved. Unexpected failures are logged server-side without breaking or exposing diagnostics in the history row. The viewer repeats authorization when a link is opened.
+
+Fresh verification: **127 native tests / 838 assertions passed** across J59, the new history-hook tests and the established regression group. The disposable HTTP harness passed, now also requesting the actual native history page and verifying that its two Layers links target the two exact revisions with the correct owner/surface. New native tests check original-authority forwarding, label escaping and untouched history on unavailable data. Changed PHP style, references (84 classes), compatibility and documentation checks pass. No JavaScript changed in this checkpoint.
+
+**Next phase is lead-owned:** browser rendering/navigation/lifecycle acceptance and supported-layer visual parity. No new junior packet is queued. The local pilot remains disabled, and user testing/commit/push readiness is not yet claimed. Groups and resource-backed layer/surface rendering still have the documented explicit failure gates. History navigation is now implemented for the current slide pilot; this does not constitute full corporate-wiki rollout or migration support. Search and Cargo follow page history. Docker remains only the test environment.
+
+## J58 accepted; standalone historical viewer connected — September 21, 2026
+
+J58 is accepted after review and a fresh 536-test client run. Lead connected the separate Special:ViewLayersPage and ext.layers.history module. The page uses the original request authority and prepareViewer for the explicit owner/revid/surface, with fixed denial/error output and non-cacheable/noindex responses. It emits wgLayersRevisionView and a dedicated container, never wgLayersEditorInit or the editor module. The module loads only the shared painter, snapshot-copy utility, view host, historical painter adapter and startup script; it does not load legacy viewer fallback or editable overlays. Page exit disposes rendering; back/forward cache restoration reloads the same URL to reauthorize it.
+
+Fresh lead verification: **15 related client suites / 539 tests passed** (three new startup regressions); **PageOwnedPilotTest: 20 tests / 183 assertions passed**, including native registered historical output for a reader without edit rights. The disposable HTTP harness now verifies both authenticated and anonymous requests for the first revision after the second exists, exact surface/config identity, no-store headers and absence of editor code/config; all harness assertions passed. This is HTTP and mocked client startup evidence, not real browser drawing/visual acceptance. Changed PHP/JS lint, i18n wiring and docs checks pass; 72 existing unused-message warnings remain.
+
+**Limits and next work:** the historical renderer still explicitly rejects groups, group membership, image/custom-shape/marker layers and unknown types. Image/PDF surfaces still need pinned source delivery. Supported text/vector snapshots now have a registered read-only route, but history-page links and actual browser visual/lifecycle acceptance are unfinished. Junior J59 verifies the viewer route's denial/cache/authority boundary. Lead owns history links and real-renderer/browser acceptance. The local pilot remains disabled; no user testing invitation or commit/push readiness is claimed. Page history remains first, text search second, Cargo third; Docker is only the test host.
+
+## J57 accepted; historical painter adapter — September 21, 2026
+
+J57 is accepted with one lead correction: an explicitly empty surface label is preserved; only an absent/non-string label falls back to the surface ID. Added a regression and corrected the old test name (it exercised only a missing label). The view host keeps failure output text-only, removes failed canvases, isolates the renderer's snapshot copy and disposes late resources without reviving removed views.
+
+Lead implemented unregistered `renderPageOwnedRevision` in PageOwnedRevisionRenderer.js. It uses an injected shared LayerRenderer at zoom 1/original dimensions, reverses the stored panel order for painting, skips hidden layers, preserves explicit background false/zero/empty values, and redraws the same snapshot when fonts become ready. Cleanup is idempotent; drawing failures signal the host without raw diagnostics. Eight focused painter regressions cover ordering, coordinates/zero opacity, unsupported types, drawing/cleanup errors and font completion/disposal.
+
+**Explicit current renderer limits:** only the listed synchronous text/vector layer types are admitted. Image/custom-shape/marker layers, groups and group membership are rejected before painting because their resource errors/group fidelity have not been integrated. These restrictions apply only to this new unregistered historical painter, not the existing Layers viewer/editor. A rejected document must show a fixed display failure, never a partial success or latest fallback. No claim of full visual parity follows from injected-painter tests.
+
+Fresh verification: **14 page-owned-related Jest suites / 498 tests passed**; changed JavaScript ESLint and documentation parity checks pass. No PHP changed in this checkpoint; prior native evidence is unchanged, not a fresh native run. Host and painter remain unregistered; no historical page URL is exposed. Junior J58 extends painter/host failure integration tests while lead owns the standalone route/module, real-renderer parity and history navigation. User browser testing and commit/push are not ready. Priorities remain history, text search, Cargo; Docker remains a test host only.
+
+## J56 accepted; historical-view display contract — September 21, 2026
+
+J56 is accepted without production corrections. Lead reviewed the input/scope/visibility tests, read-only and anonymous access, original-authority spy, exact old/new canonical surfaces and whole-document source-authorization cases. A fresh run of the seven-class native regression group passed **118 tests / 615 assertions**. This is service and native request/output coverage; it is not evidence of historical canvas rendering. The HTTP result recorded in the junior report remains junior evidence for this checkpoint.
+
+**Architectural decision:** historical viewing will use a separate read-only page and ResourceLoader module. It will not instantiate LayersEditor, APIManager, draft storage, save clients, legacy SlideController initialization or freshness/latest fallback. The route must obtain prepareViewer's exact authorized bundle and use non-cacheable output. A dedicated view host will show the owner/revision identity, accessible canvas and fixed errors; the lead-owned rendering adapter will reuse the shared layer painter and own visual parity, layer/group visibility, asynchronous resources and cleanup. No success state may show an empty canvas after a rendering failure.
+
+Junior J57 can implement the isolated accessible view host now under the frozen contract below. Lead retains painter integration, server route, history links, browser acceptance and eventual registration. Images/PDFs remain on the same page-history architecture but need pinned source delivery before view exposure; slides remain general-purpose. No historical-view URL or browser-test invitation is available yet. The local pilot remains disabled and no commit/push was performed. Priorities remain history, text search, then Cargo.
+
+## J55 accepted; exact historical viewer boundary — September 21, 2026
+
+J55 is accepted with lead corrections. The HTTP harness now decodes the value immediately following wgLayersEditorInit instead of scanning forward to an arbitrary object, rejects non-object/ambiguous/malformed bootstrap values, confines requests and redirects to the exact HTTP loopback origin, and does not print rejected URLs. It re-fetches page history and both snapshots after the stale publication attempt; the pre-attempt response cannot establish that the failed write left history unchanged. Three helper regression tests cover parsing and URL/redirect boundaries.
+
+Lead added internal `PageOwnedPilot::prepareViewer(ownerText, revisionId, surfaceId, authority)`. Unlike editor preparation it accepts an authorized historical revision and does not require login or edit rights. It uses the same owner scope, exact snapshot/visibility/source checks and literal surface selection, returning only owner, revisionId and the selected surface. It returns no editor configuration, draft identity or publication control. This initial rendering boundary admits slides; pinned asset delivery remains necessary before exposing image/PDF surfaces. It never substitutes latest content. Native verification proves an old surface retains its original text after a later revision changes it, even for a reader without edit rights.
+
+Fresh verification: corrected disposable HTTP harness **passed**, including all seven editor GET scenarios and fresh post-conflict history/snapshot reads; **3 Python helper tests passed**; **114 native tests / 547 assertions passed** across the established seven-class regression group. Changed PHP style, Python compilation, PHP references and MediaWiki compatibility checks pass. Documentation/current-status parity checks pass. The first new historical test compared noncanonical fixture key order to canonical storage; the corrected test compares canonical snapshots with strict equality.
+
+**Next:** junior J56 expands historical-viewer boundary rejection and read-only authority tests. Lead owns the separate read-only rendering page/module, its registration/history links and browser acceptance. The viewer boundary is internal; no historical-view URL or rendering UI exists yet. The editor route remains disabled by default, and the local pilot has not been enabled. No user browser-test invitation, commit or push is claimed. Priorities remain page history, searchable textbox/callout data, then Cargo text fields. Docker remains only the test environment.
+
+## J54 accepted; guarded editor route registered — September 20, 2026
+
+J54 is accepted with lead corrections. The test context now preserves the original Authority via setAuthority instead of reconstructing it from the user. A regression verifies identity forwarding for a restricted authority. Row-count checks establish unchanged totals, not an audit proving zero value mutations; earlier wording claiming the latter is corrected below.
+
+Lead registered Special:EditLayersPage with dependency injection of LayersPageOwnedPilot and a canonical English alias. The shared pilot remains disabled by default, with an empty owner allowlist; the page is unlisted and cannot initialize an editor outside its existing permission/scope/current-revision checks. Parameters are owner, revid and surface. Registration does not create, adopt or migrate content and does not enable the pilot. The ordinary legacy editor remains unchanged.
+
+Fresh verification: **113 native tests / 541 assertions passed**, covering J54 and the complete named six-class regression group. Changed PHP style checks pass. A real HTTP GET against localhost:8080 reached the registered route and confirmed its current denied state: status 200 with the fixed unavailable message, Cache-Control no-cache/no-store/max-age=0/must-revalidate, no wgLayersEditorInit and no editor container. This HTTP probe made no writes or setting changes. It verifies disabled-route behavior, not authenticated browser editing or historical viewing.
+
+**Next:** junior J55 extends the existing disposable SQLite HTTP harness to verify registered enabled/denied editor requests. Lead retains the exact historical viewer and complete browser workflow. Do not invite user acceptance or commit/push yet; no historical-view URL is implemented and the local pilot has not been enabled. History remains the priority, followed by searchable textbox/callout content and Cargo text fields. Docker is only the existing test host, never a runtime dependency.
+
+## J53 accepted; protected editor entry composition — September 20, 2026
+
+J53 is accepted after review, with evidence wording corrected. Its database counts establish unchanged row totals, not unchanged contents of every row. The authority spy proves no authorizeRead call after denied preflight; it does not instrument every lookup. The reported 13-test regression run did not establish execution of the complete named suites. Lead ran all six named classes through core.xml: **106 tests / 375 assertions passed** before further lead changes.
+
+Lead implemented the unregistered native `SpecialEditLayersPage` class. It accepts explicit owner/revid/surface parameters, rejects malformed/noncanonical revision IDs and unsupported subpaths, calls the shared prepareEditor boundary with the request authority, and emits the editor module/configuration only on success. Expected denial and unexpected failure return a fixed localized message; unexpected errors are logged server-side. Output disables client caching, sets CDN max-age zero and noindex/nofollow before validation. Native RequestContext/OutputPage tests cover successful bootstrap and malformed revisions with no editor configuration/module on rejection. It performs no creation, publication, automatic retries or legacy set lookup.
+
+Fresh final verification: **107 tests / 393 assertions passed** across PageOwnedPilotTest, PagePublicationServiceTest, PageHistoryAccessTest, ApiLayersPublishTest, ApiLayersReadTest and PageOwnedPilotRegistrationTest, using the existing MediaWiki Docker test host. Changed PHP style checks, PHP-reference checks (82 classes), MediaWiki compatibility, i18n wiring and documentation checks pass. The i18n check retains 72 existing unused-message warnings. No JavaScript changed in this checkpoint.
+
+**Current gate:** the special page is deliberately absent from SpecialPages registration and has no public URL yet. Junior J54 verifies the remaining native request/output/cache boundaries. Lead retains registration/aliases, exact historical viewing and complete browser acceptance; no browser test invitation or commit/push readiness is claimed. Page history remains first, textbox/callout search second, Cargo text support third. Docker remains a test environment only.
+
+## J52 accepted; server editor preparation boundary — September 20, 2026
+
+J52 is accepted after lead review and fresh verification. UIManager captures page-owned mode from configuration, skips legacy set-controller construction and set/revision header controls, retains Close, and displays the configured owner using textContent. Ordinary editors retain their existing header behavior. This is presentation isolation; it does not make the complete editor read-only.
+
+Lead added internal `PageOwnedPilot::prepareEditor(ownerText, revisionId, surfaceId, authority)`. It requires the enabled pilot, retained owner scope, a registered request user, page read/edit/editlayers preflight and an authorized exact snapshot/source read. It rejects stale revisions instead of falling back to current content. Only an existing selected slide surface is admitted at this delivery stage; image/PDF rendering still requires pinned asset delivery. Returned initialization binds the owner, revision and literal surface, derives wiki/user draft identity server-side, disables automatic creation, and contains no snapshot or source URL. No public route or registration was added. The eventual route must use private/no-store output, handle expected denial with fixed messages, and recheck writes through the existing publisher; preparation is not write authorization.
+
+Fresh lead verification: **22 focused editor/UIManager/page-owned suites, 1,549 tests passed**. **Native PageOwnedPilotTest: 10 tests / 38 assertions passed** on the existing MediaWiki test host. The new native scenario covers valid configuration, server identity, edit-preflight denial, disabled/empty scope, missing surface and stale-base rejection. JavaScript lint and changed PHP style checks pass; the repository PHP check passed (new warnings were subsequently corrected). Junior-reported full-suite counts are not a fresh full-suite lead run.
+
+**Next:** junior J53 extends native editor-boundary rejection coverage without changing production behavior. Lead retains the protected browser route, historical viewer, remaining mutation/read-only restrictions and browser acceptance. No test URL is ready and no commit/push occurred. Page history remains first, search second, Cargo third. Layers has no Docker runtime dependency; Docker hosts this project's tests only.
+
+## J51 accepted and revision control connected — September 20, 2026
+
+J51 is accepted with a lead accessibility correction: completion of an asynchronous check must not steal focus from another control the user moved to. The original control restored focus unconditionally when it had focus at invocation. It now restores only focus lost to the document body, with a regression test for movement to another input.
+
+Lead registered PageOwnedRevisionControl and all eight localized messages in the editor ResourceLoader module. APIManager mounts the control after exact loading and successful draft initialization in writable page-owned mode, injects the explicit checkPageOwnedRevision callback, and disposes it with the editor. Historical read-only sessions skip it. Initialization itself performs no revision check or publication. New integration tests cover mounting, the click callback, cleanup and the historical read-only exclusion.
+
+Fresh verification: **20 focused editor/bootstrap/API/page-owned suites, 1,414 tests passed**. Changed JavaScript ESLint and i18n wiring checks pass; the i18n verifier still reports 72 existing unused-message warnings. Documentation checks and the Current-Status mirror pass. This is client integration evidence, not native-browser focus/layout or full end-to-end page-history acceptance.
+
+**Next work:** junior J52 removes legacy set/revision header controls from page-owned mode. Lead retains the protected server editor entry point, full editing/read-only restrictions and exact historical viewer. The revision-check control is connected, but the server still does not emit a page-owned editor URL. Browser testing is not ready. Before commit/push readiness, finish that usable pilot, run native and browser acceptance, and review the large existing working tree to separate active MediaWiki work from retained abandoned prototypes. No commit or push was performed. Priorities remain page history, searchable textbox/callout data, then Cargo text support. Docker is only the test environment.
+
+## R02 explicit revision reconciliation — September 20, 2026
+
+The lead implemented a read-only reconciliation path through APIManager, the draft lifecycle, editor bridge and session. It persists the local draft before querying the owner's current native page revision, then reads that exact revision through layersread to check owner identity, visibility and source access. No check publishes or retries a save. A later deliberate save still uses the confirmed base revision and the server's conflict check.
+
+Reconciliation advances the base only when the selected surface is unchanged from the previous confirmed base or already matches the local selected surface. Object property order is ignored; array order remains significant. Conflicting changes to selected-surface content or metadata remain blocked with the draft/base intact. Unrelated newer server surfaces and document fields are retained. Edits made during the read remain dirty; duplicate checks and concurrent publication are blocked. Failed discovery, denied/malformed reads and disposal cannot replace the base. Failed backup prevents discovery; failed backup after a successful check is reported separately and must not authorize navigation away.
+
+Fresh verification: **19 focused editor/bootstrap/API/page-owned suites, 1,350 tests passed**, including 28 new reconciliation scenarios. Changed JavaScript passes ESLint. These are unit/integration tests with mocked transport; no new native PHP or browser acceptance is claimed.
+
+**Current gate:** the callable APIManager.checkPageOwnedRevision() path exists, but its user-facing control is not mounted. The server still does not emit a page-owned editor URL; normal editing remains on the existing route. J51 is now ready for junior implementation of the isolated accessible status/check control. Lead retains runtime wiring, protected server entry, legacy/read-only controls, exact historical viewer and browser acceptance. Page history remains first, searchable textbox/callout content second, Cargo text integration third. Layers remains a MediaWiki extension; Docker is only the test environment.
+
+### J59 — Registered historical viewer request boundary (accepted)
+
+**Purpose:** add concise native request tests for SpecialViewLayersPage using the registered SpecialPageFactory and existing shared pilot fixture. Keep tests parameterized where behavior is identical; do not copy the entire 600-line editor suite.
+
+1. On a page with two revisions, request the first as a reader lacking edit rights and verify exact old bundle, ext.layers.history and historical container, with no editor config/module or draft metadata. Existing lead smoke covers success; extend it or use a focused SpecialViewLayersPageTest for the following rejection boundaries.
+2. Cover disabled pilot, out-of-scope owner, foreign revision, denied page read, hidden text, missing surface and malformed/array revision parameters. Rejection must omit wgLayersRevisionView, wgLayersEditorInit, history/editor modules and both containers, and show only the fixed unavailable message without request/exception diagnostics. Preserve original Authority via RequestContext.setAuthority; assert restricted authority is not replaced by its user.
+3. Exercise native sendCacheControl on success and denial; assert no-store/max-age=0 and noindex,nofollow. Verify registered canonical alias resolves. Force unexpected failure with a pilot double only for diagnostic/logging checks; do not substitute doubles for the native permission cases. GET checks may verify unchanged revision IDs/contents but must not claim a full database audit from row counts.
+4. Run focused native tests, the existing regression group plus the new class, changed PHP style/syntax and docs checks. Report exact counts and limitations; mark implemented awaiting lead review. No browser visual acceptance claim and no subsequent packet.
+
+Fresh verification:
+- Focused native SpecialViewLayersPageTest suite: **6 tests / 207 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --bootstrap /var/www/html/extensions/Layers/tests/phpunit/core-bootstrap.php /var/www/html/extensions/Layers/tests/phpunit/core/SpecialViewLayersPageTest.php`).
+- Core regression group (8 classes): **124 tests / 828 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --configuration /var/www/html/extensions/Layers/tests/phpunit/core.xml --filter "(PageOwnedPilot|PagePublicationService|PageHistoryAccess|ApiLayersPublish|ApiLayersRead|PageOwnedPilotRegistration|SpecialEditLayersPage|SpecialViewLayersPage)Test"`).
+- Page-owned client suites: **15 suites / 539 tests passed** (`npx jest "pageOwned|PageOwned"`).
+- Code quality & documentation checks: `npm run test:php` clean (0 errors, 0 warnings on `SpecialViewLayersPageTest.php`, 0 syntax errors across 175 files); `npm run check:phprefs` (83 files, 83 extension classes) and `npm run check:mw-compat` (0 errors, 0 warnings); `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: strictly 0 lines. Production PHP/JS, `extension.json`, services, aliases, messages, and settings remain untouched.
+- Scenarios tested:
+  1. `Registered entry resolution, canonical alias, and Authority spy`: Verified `SpecialPageFactory::getPage('ViewLayersPage')` instantiates `SpecialViewLayersPage` with `Special:ViewLayersPage`. Verified canonical alias resolution via `SpecialPageFactory::resolveAlias('ViewLayersPage')` and `getTitleForAlias('ViewLayersPage')`. Verified via an `Authority` spy that `SpecialViewLayersPage::execute()` passes the exact `Authority` instance set via `RequestContext::setAuthority()` directly to `PageOwnedPilot::prepareViewer()`, proving restricted authorities are not reconstructed from the underlying `User`.
+  2. `Authorized historical revision viewing and metadata shape`: Published 2 distinct revisions to an in-scope pilot owner. Requested revision 1 as a registered reader possessing only `read` permission (lacking `edit` and `editlayers`). Verified output page title set to localized `layers-page-history-title`; `wgLayersRevisionView` JS config variable has the exact shape `[ 'owner', 'revisionId', 'surface' ]` matching revision 1's canonical data; complete omission of `wgLayersEditorInit`, `ext.layers.editor`, `#layers-editor-container`, and draft metadata; presence of ResourceLoader module `ext.layers.history` and historical viewer container `#layers-history-container`; and verified revision timestamps/IDs in page history remained strictly unchanged after the GET request.
+  3. `Request rejection boundaries and parameter validation matrix`: Tested 21 distinct parameter and access rejection cases covering missing, non-string, or raw-array `owner` (including XSS payloads `<script>`, `<img...>`); missing, non-string, or raw-array `surface`; missing, non-canonical, or coerced `revid` (`0`, `-1`, `1.5`, `12junk`, `2147483648`, `""`, and raw array); unsupported subpages (`subpath`, `unsupported/nested`); out-of-scope owner (`Unconfigured_Owner`); foreign revision; nonexistent surface ID; disabled pilot (`LayersPageOwnedPilotEnabled = false`); denied page read permission (`GroupPermissions['*']['read'] = false` and user lacking `read`); and hidden revision text (`rev_deleted = RevisionRecord::DELETED_TEXT` without `deletedtext` permission). Proved all rejection cases fail closed: strictly omit `wgLayersRevisionView`, `wgLayersEditorInit`, `ext.layers.history`, `ext.layers.editor`, `#layers-history-container`, and `#layers-editor-container`; display the fixed localized message `layers-revision-unavailable`; and leak no request inputs, exception strings, or diagnostic sentinels into HTML or config vars.
+  4. `Cache control headers and robot policy`: Drove native `OutputPage::sendCacheControl()` across both success and denial paths on `FauxResponse`. Asserted `Cache-Control: no-cache, no-store, max-age=0, must-revalidate`, zero-epoch `Expires: Thu, 01 Jan 1970 00:00:00 GMT`, `mCdnMaxage === 0`, and robot policy set to `noindex,nofollow` (verified both on OutputPage and via `<meta name="robots" content="noindex,nofollow">` in head links). Explicitly noted that this drives native output generation on `FauxResponse`, not real HTTP/browser acceptance.
+  5. `Fault injection, exception shielding, and server-side error logging`: Forced a `DomainException` containing a diagnostic sentinel string from a pilot double and verified fail-closed behavior with fixed `layers-revision-unavailable` and zero sentinel leakage. Forced an unexpected `RuntimeException` with a distinct sentinel string; verified fail-closed shielding and verified via MediaWiki's `TestLogger` attached to the `'Layers'` channel that the unexpected exception was logged server-side at error level with the exception context, while user-facing HTML/config leaked zero diagnostic information.
+- Limitations: Internal special page execution tested via `RequestContext`/`OutputPage`/`FauxRequest` against native MediaWiki services in the test environment; history navigation links, groups/resource-backed layers integration, real canvas rendering, and browser acceptance remain lead-owned.
+
+**Allowed changes:** relevant tests/phpunit/core files and this packet/review report only. No production PHP/JS, manifest, messages, dependencies, runtime settings or normal wiki content. Lead owns any fixes, history links, visual parity and browser acceptance.
+
+### J58 — Historical painter and view-host integration tests (accepted)
+
+**Goal:** verify the lead's injected-renderer adapter and accepted J57 host together without widening supported rendering behavior. Add tests only to PageOwnedRevisionRenderer.test.js and/or a focused PageOwnedRevisionView integration suite.
+
+1. Mount the real PageOwnedRevisionView with the real snapshot adapter and renderPageOwnedRevision, injecting a painter double. Check exact dimensions/order, selected revision caption, text/vector calls and no snapshot mutation. A painter failure or unavailable canvas context must remove the canvas and show the fixed host failure message; caption remains, no raw diagnostic appears, cleanup occurs once. Include a constructor throw and teardown throw.
+2. Verify explicit backgroundVisible false and 0, opacity 0, empty/transparent/none color, and absent defaults. Check context save/restore stays balanced if painting fails. Invisible layers (false/0) are not drawn. Groups/group membership and resource-backed/unknown types must fail before painter construction even if hidden; this is the current conservative limit, not permission to silently skip unsupported content. No production support changes.
+3. Use deferred fonts.ready success and rejection. Successful readiness redraws the same isolated snapshot; rejection fails the host. Disposal before either settlement makes completion inert, with no unhandled rejection or DOM recreation. Verify multiple instances do not share cleanup or failure state. No timing sleeps or network requests.
+4. Run focused, combined page-owned Jest tests, changed-file ESLint and docs checks. Report precise counts and limitations. Mock painter calls do not prove real canvas visual parity. Report any failing regression to the lead rather than changing production behavior.
+
+Fresh verification:
+- Focused Jest test suite: **46 tests passed** (`npx jest tests/jest/PageOwnedRevisionRenderer.test.js --verbose`), covering 8 preserved unit tests and 38 new view-host integration scenarios.
+- Combined page-owned client suites: **14 suites / 536 tests passed** (`npx jest "pageOwned|PageOwned"`).
+- Full JavaScript test suite: **197 suites / 14,958 tests passed** (`npm run test:js`).
+- ESLint: clean (**0 errors, 0 warnings** in `tests/jest/PageOwnedRevisionRenderer.test.js`).
+- Native core regression group: **118 tests / 615 assertions passed** on MediaWiki 1.45.3 / PHP 8.3.31 (`core.xml`).
+- Code quality & documentation checks: `npm run test:php` clean (173 files checked, 0 syntax errors, 0 errors in extension files); `npm run check:phprefs` (82 files, 82 extension classes) and `npm run check:mw-compat` (0 errors, 0 warnings); `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: strictly 0 lines. Production PHP/JS, `extension.json`, services, aliases, messages, and settings remain untouched.
+- Scenarios tested:
+  1. `Mounting, dimensions, caption, painter calls, and snapshot immutability`: Verified real `PageOwnedRevisionView` mounts with real `PageOwnedSnapshotAdapter` and `renderPageOwnedRevision`. Verified exact canvas dimensions (960x540), baseWidth/baseHeight, responsive CSS `max-width: 100%; height: auto;`, zoom 1, accessible `aria-label`, and reverse paint order. Confirmed all 14 supported synchronous text and vector layer types render successfully in reverse order. Proved caller bundle and surface remain strictly immutable across mount and draw even if painter mutates layer objects. Confirmed caption fallback to surface ID when label is absent or non-string, and preservation of explicitly empty label.
+  2. `Painter errors, context failures, constructor throw, and teardown throw`: Verified that a `painter.drawLayer` throw, an unavailable canvas context (`getContext('2d') === null`), or `getContext` throwing an unexpected error cleanly removes the canvas, displays `layers-page-history-render-failed` in the status element, preserves the caption, leaks zero error diagnostics/stacks, and invokes cleanup once. Verified `Renderer` constructor throw and painter teardown throw during failure or disposal are caught and suppressed without preventing DOM removal or leaking error text.
+  3. `Background visibility, opacity, colors, and context save/restore balance`: Verified explicit `backgroundVisible: false` and `backgroundVisible: 0` skip `fillRect` and `save`/`restore`. Verified `backgroundOpacity: 0` paints with `globalAlpha = 0`. Verified `backgroundColor` empty string, `'transparent'`, and `'none'` skip `fillRect`. Verified omitted background properties default to `#ffffff` and opacity 1. Verified that `context.save()` and `context.restore()` remain strictly balanced when `fillRect` or `drawLayer` throws.
+  4. `Invisible layers, unsupported types, and group membership`: Verified invisible layers with `visible: false` or `visible: 0` are skipped during drawing. Verified unsupported types (`'image'`, `'customShape'`, `'group'`, `'marker'`, unknown) fail before painter construction even when hidden (`visible: false` or `visible: 0`). Verified group membership (`parentGroup` or `parentId`) fails before painter construction even when hidden (`visible: false` or `visible: 0`).
+  5. `Deferred fonts.ready settlement and disposal races`: Verified deferred `fonts.ready` success redraws the exact same isolated snapshot. Verified deferred `fonts.ready` rejection fails the host cleanly (canvas removed, status set, caption preserved, cleanup once) with no unhandled promise rejections. Verified disposal before resolution or rejection makes settlement completely inert (no second draw, no DOM recreation, no failure callback).
+  6. `Multiple instances and isolation`: Verified multiple independent view instances mount, render, and dispose independently without sharing painter, cleanup, or failure state. Verified that failure in one instance does not affect another live instance.
+- Limitations: Injected painter doubles verify lifecycle and contract integration; real canvas visual parity, groups/resource-backed layers integration, standalone viewer route, history navigation links, and browser acceptance remain lead-owned.
+
+**Allowed scope:** tests/jest files relevant to this packet and this packet/review report. No production JS/PHP, manifest, messages, dependencies, renderer support expansion, settings or wiki data changes. Lead owns real-renderer integration, fonts/assets/group fidelity, module/route registration, history links and browser acceptance. Return for review before another packet.
+
+### J57 — Accessible read-only historical view host (accepted with lead correction)
+
+**Purpose:** build the presentation/lifecycle component for an already-authorized exact snapshot. This component never fetches data, chooses a revision, renders individual layer types or edits content. Lead supplies the renderer, route and registration.
+
+1. Add `resources/ext.layers/viewer/PageOwnedRevisionView.js`, exported as window.Layers.Viewer.PageOwnedRevisionView and CommonJS. Constructor accepts `{bundle, adapter, render, message}`. Bundle is `{owner, revisionId, surface}` from prepareViewer. Require a nonempty owner string, positive integer revision at most 2147483647 and a selected slide surface. Capture immutable owner/revision values. Adapter is an injected PageOwnedSnapshotAdapter-compatible instance; validate and deep-copy the surface by wrapping it in `{schemaVersion:1,surfaces:[surface]}` and using its toEditorState/withEditorState pair. Preserve complete finite-JSON metadata and do not mutate caller data. Reject invalid arguments with a fresh fixed Error/code `layers-invalid-revision-view`; do not expose adapter diagnostics. No global mw, APIs, editor instances, storage or draft access.
+2. Implement `mount(parent)` once per instance and idempotent `dispose()`. Mount creates an owned figure, figcaption, canvas and a role=status/aria-live=polite status element. Caption uses injected message('layers-page-history-caption', owner, revisionId, label), with label defaulting to the surface ID only if absent. Insert all text with textContent, never innerHTML. Canvas gets an accessible label using the same caption and width/height from the validated canvas. Reject non-positive/non-integer dimensions before allocating a canvas; maximum per dimension 16384 and maximum area 16777216 pixels for this host. Larger valid documents must produce fixed unavailable output/exception, not silently downscale coordinates. CSS display scaling may use max-width:100%; height:auto; do not alter stored coordinates or aspect ratio. No editing buttons, links, key handlers or editor mode flags.
+3. `render(canvas, surfaceCopy, onFailure)` is an injected synchronous renderer factory returning a required cleanup function. Call once after mounting, passing a separate deep copy so a painter cannot mutate the retained bundle or caller data. The callback signals later resource/render failure. On throw, non-function cleanup return or onFailure, hide/remove the canvas and display only message('layers-page-history-render-failed') in the status element; retain the caption. Do not display thrown text, stack, arbitrary callback arguments or draft data. Invoke cleanup once when available, including if failure occurred synchronously before the factory returned. Cleanup exceptions must not prevent owned DOM removal or cause diagnostic leakage. Disposal removes only this component's DOM, invokes cleanup once, and makes late callbacks inert. Reject repeated mount/mount-after-disposal without changing another instance's DOM. No automatic retries or new data requests.
+4. Add en/qqq messages for layers-page-history-caption (identify owner, exact page revision and surface label) and layers-page-history-render-failed (this saved drawing could not be displayed; no suggestion of latest fallback). Add scoped CSS only if needed; no manifest registration. Lead will wire localization and ResourceLoader once reviewed.
+5. Add Jest tests using the real snapshot adapter and an injected renderer spy. Cover exact identity/canvas dimensions, literal markup-like captions, caller/render-copy isolation, no implicit transport/storage/editor work, false/zero retained values, dimension/area rejection, callback and thrown failures, synchronous failure before cleanup return, missing cleanup, cleanup once, repeated mount, multiple instances and late callback after disposal. Verify no data/coordinates change when the host is visually resized. DOM tests are not visual/browser acceptance. Run focused and existing page-owned suites, ESLint, i18n/docs checks; report exact evidence and limitations.
+
+Fresh verification:
+- Focused Jest test suite: **77 tests passed** (`npx jest tests/jest/PageOwnedRevisionView.test.js --verbose`).
+- Combined page-owned client suites: **11 suites / 450 tests passed** (`npx jest "tests/jest/PageOwned"`).
+- Full JavaScript test suite: **196 suites / 14,911 tests passed** (`npm run test:js`).
+- ESLint: clean (0 errors, 0 warnings across `PageOwnedRevisionView.js` and `PageOwnedRevisionView.test.js`).
+- Native core regression group: **118 tests / 615 assertions passed** on MediaWiki 1.45.3 / PHP 8.3.31 (`core.xml`).
+- Code quality & documentation checks: `npm run test:php` clean (0 errors, 0 warnings); `npm run check:phprefs` (82 files, 82 extension classes) and `npm run check:mw-compat` (0 errors, 0 warnings); `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines in existing editor modules, PHP backend, manifest, or service wiring.
+- Scenarios tested:
+  1. `Constructor argument validation`: Rejects invalid/null/undefined/primitive options; invalid bundles (missing/empty/non-string owner, non-positive/non-integer/overflow/string revisionId, missing/null/array surface, non-slide surface kinds 'image'/'pdf'/'unknown', missing/empty surface ID); invalid adapter instances; non-function render and message callbacks. Accepts valid boundary revision IDs 1 and 2147483647.
+  2. `Adapter validation and data isolation`: Wraps surface in version-1 snapshot and validates via `toEditorState`/`withEditorState`. Catches and redacts adapter diagnostics into safe fixed Error `layers-invalid-revision-view`. Preserves false/zero values (e.g. backgroundVisible false, backgroundOpacity 0, x/y 0). Mutating caller's surface after construction does not alter view state.
+  3. `Canvas dimensions and area bounds`: Rejects non-positive, negative, float dimensions; rejects dimensions exceeding 16384; rejects total area exceeding 16777216 pixels with fixed Error `layers-invalid-revision-view`. Accepts boundary dimensions (16384 x 1024 = 16777216).
+  4. `Mounting, accessibility, and DOM structure`: Rejects invalid mount parents; creates `<figure>`, `<figcaption>`, `<canvas>`, and `<div role="status" aria-live="polite">`. Sets caption via `message('layers-page-history-caption', owner, revisionId, label)` with fallback to surface ID if label is omitted/empty. Strictly uses `textContent` (verifying markup injection tags like `<script>` and `<img>` are never created). Sets canvas width/height, `aria-label`, `maxWidth: 100%`, `height: auto`. Zero editing buttons, inputs, links, or key handlers.
+  5. `Mounting lifecycle constraints`: Rejects repeated mount on live instance; rejects mount after disposal; allows multiple instances to mount independently without collision.
+  6. `Renderer factory contract and failure handling`: Passes isolated surface deep-copy to renderer (renderer mutations do not affect internal surface); handles renderer synchronous exceptions (removes canvas, sets localized failure message, retains caption, leaks no stack/diagnostic text); handles non-function cleanup returns; handles synchronous failure before cleanup return (runs cleanup once factory returns); handles asynchronous failure callback; ensures cleanup is invoked once across failure and disposal; catches and suppresses cleanup exceptions without failing disposal or leaking diagnostics.
+  7. `Disposal lifecycle and idempotency`: Removes only component figure from parent; runs cleanup once; repeated disposal does not throw and does not re-run cleanup; late failure callback after disposal is inert.
+  8. `Resize invariance`: Visual resizing via CSS/parent container does not alter intrinsic canvas coordinate properties (`canvas.width`, `canvas.height`) or surface data.
+- Limitations: Client-side presentation and lifecycle component; renderer implementation, server rendering route, history links, and browser acceptance remain lead-owned.
+
+**Allowed scope:** new view host/test, optional scoped CSS, new en/qqq messages and this packet/review report. No existing production modules, PHP, manifest, dependencies or persistent settings. No drawing implementation or calls to legacy SlideController.initializeSlideViewer (it installs editable overlays and fallback behavior). No subsequent task starts automatically. Return to the lead for integration review.
+
+### J56 — Exact historical viewer boundary tests (accepted)
+
+**Goal:** test the lead-owned `PageOwnedPilot::prepareViewer` method before viewer UI exposure. Tests only, using the native core fixture setup and existing real source helpers. No route, renderer or registration changes.
+
+1. Cover disabled and empty/unrelated owner scopes, invalid/fragment titles, invalid revision bounds, foreign-owner revision IDs, missing/empty selected surface, missing Layers slot, deleted owner and hidden text unavailable to the request authority. All reject with fixed layers-revision-unavailable. Show that no latest or alternate surface is substituted. Reuse suitable J53 fixtures without replacing the boundary under test.
+2. Verify read-only access with the original restricted Authority: an authorized reader lacking edit/editlayers can view an old revision, and an anonymous reader can view it when native page-read permission allows. A denied reader fails. Where a spy is used, require authorizeRead on the same owner and ensure no edit preflight/publication methods are needed. Do not replace the authority with its underlying user.
+3. Publish two revisions with distinct text and geometry. Request the first after the second exists and compare the complete selected canonical surface strictly (including readingOrder/unknown retained fields where schema permits). Verify exact owner/revision metadata and that the return shape contains only owner, revisionId, surface: no draftScope, editor flags, token or live/source URL. Request the second independently. Retain the existing lead success regression; avoid redundant test variants without distinct behavior.
+4. Using an existing valid asset-backed fixture, verify selecting an image/PDF surface is currently rejected, and denied source resolution does not silently render a partial or empty surface. A slide in a mixed document still follows the existing whole-document source-authorization rule. Do not weaken that rule or implement asset delivery to make the test pass.
+5. Run focused native tests, the established seven-class regression group, changed PHP style/syntax and docs checks. Record exact commands/results and remaining limitations, marking J56 implemented awaiting lead review. If production behavior is incorrect, report the failing regression for lead correction. Do not claim browser/historical-render acceptance from service tests.
+
+Fresh verification:
+- Focused native PageOwnedPilotTest suite: **20 tests / 177 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --bootstrap /var/www/html/extensions/Layers/tests/phpunit/core-bootstrap.php /var/www/html/extensions/Layers/tests/phpunit/core/PageOwnedPilotTest.php`).
+- Established seven-class regression group: **118 tests / 615 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --configuration /var/www/html/extensions/Layers/tests/phpunit/core.xml --filter "(PageOwnedPilot|PagePublicationService|PageHistoryAccess|ApiLayersPublish|ApiLayersRead|PageOwnedPilotRegistration|SpecialEditLayersPage)Test"`).
+- Disposable HTTP acceptance suite: **passed** (`docker exec mediawiki-145 python3 /var/www/html/extensions/Layers/scripts/test-page-owned-http.py /var/www/html`).
+- Code quality & documentation checks: `npm run test:php` clean (0 errors, 0 warnings in test file; 173 files checked; 0 syntax errors); `npm run check:phprefs` (82 files, 82 extension classes) and `npm run check:mw-compat` (0 errors, 0 warnings); `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines (`extension.json`, PHP backend services/APIs/hooks, and ResourceLoader modules untouched).
+- Scenarios tested:
+  1. `Rejection of invalid inputs, scopes, and unavailable revisions`: Covered 11 distinct input/owner/revision rejection cases (zero revision, negative revision, 32-bit overflow revision, empty surface ID, nonexistent surface ID, empty owner, malformed title, fragment title, unconfigured owner, cross-page foreign revision IDs revA on Owner B and revB on Owner A); disabled pilot; empty owner scope; missing Layers slot on plain page; hidden text (`DELETED_TEXT` without `deletedtext` right); and deleted page. Verified fixed `layers-revision-unavailable` exception across all cases. Verified page, revision, and layer_sets database row counts remain strictly unchanged across non-destructive rejections. Verified no substitution of latest or alternate surfaces occurs.
+  2. `Read-only authority and spy verification`: Verified an authorized registered reader lacking `edit` and `editlayers` rights successfully retrieves historical revision data. Verified an anonymous reader with native page-read access successfully retrieves historical revision data. Verified a reader lacking `read` permission fails with `layers-revision-unavailable`. Verified an Authority spy explicitly requires `authorizeRead('read', $owner)` on the exact owner Title and strictly asserts that write/preflight methods (`authorizeWrite`, `definitelyCan`) are never invoked.
+  3. `Distinct revisions and exact metadata shape`: Published revision 1 (800x600, background #ffffff, text "First revision distinct slide text") and revision 2 (1280x720, background #204060, text "Second revision changed text and geometry"). Requested revision 1 after revision 2 exists and strictly compared the complete selected canonical surface against canonical storage (verifying canvas geometry, background, layer text, and reading order). Verified return shape contains strictly `[ 'owner', 'revisionId', 'surface' ]` with zero leaked editor configuration, draftScope, tokens, flags, or URLs. Requested revision 2 independently and strictly confirmed its distinct canonical surface.
+  4. `Asset-backed rejection and whole-document source rule`: Uploaded test fixture image `File:J56_Asset_Viewer.png` and published a mixed document containing a slide surface and an asset-backed image surface. Verified requesting the image surface is rejected with `layers-revision-unavailable`. Verified requesting the slide surface succeeds when source access is permitted. Verified the whole-document source rule: when the reader's authority is denied read access to the image file, requesting even the slide surface is rejected with `layers-revision-unavailable` without partial or empty rendering.
+- Limitations: Internal PHP service boundary tests; rendering page, historical view UI/URLs, history links, and browser acceptance remain lead-owned.
+
+**Allowed scope:** tests/phpunit/core test files, this packet/assignment row and junior review report. No production code, manifest, i18n, dependencies, persistent settings or ordinary wiki data changes. Lead retains the rendering page, history navigation, registration and browser acceptance. Return before another packet.
+
+### J55 — Registered editor route HTTP acceptance (accepted with lead corrections)
+
+**Goal:** extend `scripts/test-page-owned-http.py` to verify the newly registered native special page in its existing disposable SQLite installation. Preserve the isolated temporary configuration, generated credentials, loopback PHP process, timeouts and unconditional cleanup. Never change localhost wiki settings/accounts/content. PHP/Python/SQLite are harness requirements, not extension deployment requirements.
+
+1. Add a small HTML GET helper using the existing authenticated cookie client, returning response body/headers and validating redirects stay on the disposable loopback server. Request `/index.php?title=Special:EditLayersPage&owner=Layers_HTTP_acceptance&revid=<current>&surface=presentation` after the first publication. Verify the editor container, editor ResourceLoader module, and bootstrap owner/revision/surface/server-derived user identity are present. Parse only the emitted configuration data without executing page JavaScript. Reject absent/ambiguous bootstrap data; do not treat a 200 status as success by itself. Verify no-store/max-age=0 headers and noindex/nofollow.
+2. After the second publication, verify requesting the first revision as an editor is denied without configuration/module/container; requesting the second succeeds with its exact ID. Existing layersread must still return the first revision's original snapshot. Add malformed revision, missing surface, out-of-scope owner and anonymous editor request cases. All fail closed with the fixed unavailable message and no bootstrap; verify cache headers on denial too. Anonymous requests use an independent cookie-free client.
+3. Preserve and rerun the existing stale-save, exact-old-read, actor/summary and two-revision history checks. Query history before/after the editor GET group and verify revision IDs, actor, summaries and snapshot contents remain unchanged. Do not claim a full database mutation audit from these observations. Never print passwords, cookies, tokens or full private response/config dumps. Diagnostics should identify the failed scenario safely.
+4. Run the complete harness against the existing core test installation and docs checks. Report exact scenarios, runtime prerequisites and outcomes, and clearly distinguish HTTP assertions from browser JavaScript/rendering acceptance. Update only this packet/status and junior review; mark implemented awaiting lead review. No further packet starts automatically.
+
+Fresh verification:
+- Disposable HTTP acceptance suite: **passed** (`docker exec mediawiki-145 python3 /var/www/html/extensions/Layers/scripts/test-page-owned-http.py /var/www/html`).
+- Core integration regression group: **107 tests / 393 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --configuration /var/www/html/extensions/Layers/tests/phpunit/core.xml --filter "(PageOwnedPilot|PagePublicationService|PageHistoryAccess|ApiLayersPublish|ApiLayersRead|PageOwnedPilotRegistration)Test"`).
+- Native special page integration suite: **6 tests / 148 assertions passed** (`tests/phpunit/core/SpecialEditLayersPageTest.php`).
+- Code quality & documentation checks: `npm run test:php` clean (0 errors, 0 warnings, 0 syntax errors across 173 files); `npm run check:phprefs` (82 files, 82 extension classes) and `npm run check:mw-compat` (0 errors, 0 warnings); `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines (`extension.json`, PHP backend services/APIs/hooks, and ResourceLoader modules untouched).
+- Scenarios tested:
+  1. `Loopback confinement & redirect safety`: Verified `LoopbackRedirectHandler` enforces that all requests and redirects remain strictly on the disposable loopback server (`127.0.0.1:{port}`); attempts to escape raise `RuntimeError`.
+  2. `Authorized editor route GET after initial publication`: Verified GET `/index.php?title=Special:EditLayersPage&owner=Layers_HTTP_acceptance&revid=<first_id>&surface=presentation` returns status 200, emits `#layers-editor-container`, includes ResourceLoader module `ext.layers.editor`, and emits `wgLayersEditorInit` with server-derived config (`owner: "Layers_HTTP_acceptance"`, `revisionId: <first_id>`, `surfaceId: "presentation"`, `readOnly: false`, `draftScope: { user: "<actor_id>", wiki: "[\"acceptance\",\"\"]" }`, `isSlide: true`, `autoCreate: false`, `imageUrl: null`). Config parsed safely via `json.JSONDecoder().raw_decode` without executing page JavaScript.
+  3. `Cache control and robot policy`: Verified `Cache-Control: no-cache, no-store, max-age=0, must-revalidate` and zero-epoch `Expires: Thu, 01 Jan 1970 00:00:00 GMT` across both success and denial paths. Verified `<meta name="robots" content="noindex,nofollow,...">` in response HTML.
+  4. `Stale revision rejection after second publication`: After publishing revision 2, requesting revision 1 fails closed with status 200, localized message `The page-owned Layers editor is unavailable for this page, revision, surface, or account.`, zero `#layers-editor-container`, zero `ext.layers.editor`, and zero `wgLayersEditorInit`.
+  5. `Current revision success after second publication`: Requesting revision 2 succeeds with status 200, container, module, and exact revision 2 bootstrap configuration.
+  6. `Parameter rejection boundaries`: Verified malformed revision (`revid=bad_rev`), missing surface (omitted `surface`), and out-of-scope owner (`owner=Unconfigured_Owner`) all fail closed with localized unavailable message, zero container, zero module, and zero bootstrap config.
+  7. `Anonymous denial`: Verified editor request via independent cookie-free client fails closed with localized unavailable message, zero container, zero module, and zero bootstrap config.
+  8. `History and snapshot non-mutation invariance`: Verified page history revisions (IDs, actors, summaries) and snapshot contents returned by `layersread` for both revisions 1 and 2 are strictly identical before and after the entire editor GET group. Confirmed subsequent stale-save rejection with `layers-edit-conflict` remains intact.
+- Limitations: Loopback HTTP response verification; client-side JavaScript execution, interactive drawing, and browser UI acceptance remain lead-owned.
+
+**Allowed scope:** scripts/test-page-owned-http.py and packet/review documentation. No production PHP/JS, manifest, aliases, translation or persistent settings changes; do not enable the local pilot. If configuration extraction needs a nontrivial parser or dependency, report the need before adding a dependency. Lead retains historical viewing, browser execution and release readiness.
+
+### J54 — Native editor entry request/output boundaries (accepted with lead corrections)
+
+**Purpose:** verify the lead's unregistered SpecialEditLayersPage before registration. Tests only; use native RequestContext, FauxRequest and OutputPage and construct the page with the shared PageOwnedPilot. Do not register the page, create public aliases, change settings or expose a URL.
+
+1. Cover missing/non-string owner and surface parameters, absent revision and revision coercion attempts, unsupported subpaths, disabled pilot, empty/unrelated scope, denied authority and stale revision. Assert no wgLayersEditorInit, no editor module and no editor container after each rejection. Use literal malformed/markup-like request values and prove they do not appear in HTML or configuration. Reuse the lead's native success/invalid-revision examples in PageOwnedPilotTest; do not duplicate every existing parameter case without new assertions.
+2. Verify a successful request uses its original authority and emits exactly the authorized prepareEditor initialization, module and container. GET must not create a page or revision or invoke publication. Native pilot setup is required for at least one success and one permission-denied case; a mocked pilot may test fixed exception output and forwarding separately.
+3. Drive native OutputPage cache-header generation with the test request/response. Assert no-store/no-cache with zero max-age for both success and denial, CDN max-age zero, and noindex/nofollow. Do not mock the caching methods and call that proof of headers. Inspect the installed core method if needed and record whether this is native output generation or real HTTP. It is not HTTP/browser acceptance.
+4. Force a DomainException and an unexpected exception with diagnostic sentinel text from a test pilot double. Assert neither response/config leaks it, both fail closed, and unexpected failure is handled without emitting editor modules/config. Use supported test log capture if necessary; do not suppress unrelated warnings. Cover raw request arrays through the native request implementation, not manually coerced parameters.
+5. Run focused native tests, the named six-class regression group using tests/phpunit/core.xml, PHP style/syntax and docs checks. Report exact commands, counts and remaining limitations; update this packet and junior review as implemented awaiting lead review. Report any failing production regression for lead correction.
+
+Fresh verification:
+- Focused native SpecialEditLayersPageTest suite: **5 tests / 144 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --bootstrap /var/www/html/extensions/Layers/tests/phpunit/core-bootstrap.php /var/www/html/extensions/Layers/tests/phpunit/core/SpecialEditLayersPageTest.php`).
+- Named six-class regression group: **107 tests / 393 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --configuration /var/www/html/extensions/Layers/tests/phpunit/core.xml --filter "(PageOwnedPilot|PagePublicationService|PageHistoryAccess|ApiLayersPublish|ApiLayersRead|PageOwnedPilotRegistration)Test"`).
+- PHP quality & syntax checks: `phpcs` passed with **0 errors, 0 warnings**; `parallel-lint` passed with **0 syntax errors**; `check:phprefs` (82 classes) and `check:mw-compat` passed with **0 errors, 0 warnings**.
+- Documentation checks: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines (`extension.json`, PHP backend services/APIs/hooks, and ResourceLoader modules untouched).
+- Scenarios tested:
+  1. `Request parameter rejection and injection protection`: Tested 21 distinct parameter rejection cases covering missing, non-string, and raw-array `owner`, `surface`, and `revid` parameters; non-canonical revision coercion attempts (`0`, `01`, `-1`, `12junk`, `1.5`, `2147483648`, `""`); unsupported subpages (`subpath`, `unsupported/nested`); unconfigured/unrelated owners; disabled pilot; empty pilot scope; and stale base revisions after page advancement. Proved that `wgLayersEditorInit`, `ext.layers.editor` module, and `#layers-editor-container` are strictly omitted on every rejection. Proved that literal markup-like and injection payload values (`<script>`, `<img...>`, `Invalid[]Title`, `Page#frag`) never leak into HTML or JavaScript config vars, and the fixed `layers-editor-unavailable` localized message is displayed.
+  2. `Authorized execution and GET non-mutation`: With a live native pilot, verified that an authorized GET request emits exactly the server-derived `prepareEditor` configuration in `wgLayersEditorInit`, includes `ext.layers.editor` module, emits the editor container div, and sets the page title. Verified unchanged row totals in `page`, `revision`, and `layer_sets`; individual row values were not compared. Proved that permission denial (actor lacking `editlayers`) fails closed without editor initialization or database mutation.
+  3. `OutputPage cache headers and robot policy`: Drove native `OutputPage::sendCacheControl()` across both success and denial execution paths on `FauxResponse`. Asserted response headers `Cache-Control: no-cache, no-store, max-age=0, must-revalidate` and zero-epoch `Expires: Thu, 01 Jan 1970 00:00:00 GMT`. Verified that `mCdnMaxage` is set to `0` and robot policy is set to `noindex,nofollow` (verified via `getRobotPolicy()` and `meta-robots` in head links). Explicitly noted that this drives native output generation on `FauxResponse`, not real HTTP/browser acceptance.
+  4. `Fault injection, diagnostic shielding, and error logging`: Forced a `DomainException` containing a diagnostic sentinel string from a pilot double and verified fail-closed behavior without sentinel leakage. Forced an unexpected `RuntimeException` with a distinct sentinel string; verified fail-closed shielding and verified via MediaWiki's `TestLogger` attached to the `'Layers'` channel that the unexpected exception was logged server-side at error level with the exception context, while user-facing output showed only `layers-editor-unavailable`.
+- Limitations: Internal special page execution tested via `RequestContext`/`OutputPage`/`FauxRequest`; `SpecialEditLayersPage` remains deliberately unregistered in `extension.json` with no public URL (lead-owned).
+
+**Allowed scope:** relevant tests/phpunit/core files and this packet/review report. No production code, manifest, messages, dependency, runtime or test-host configuration changes. No writes to production wiki pages. Keep ordinary legacy entry points untouched. Lead owns fixes, registration, historical viewer and browser acceptance. Return to the lead before another packet.
+
+### J53 — Native editor preparation rejection coverage (accepted; evidence corrected)
+
+**Purpose:** exercise the lead-owned `PageOwnedPilot::prepareEditor` boundary before a public editor route is connected. Tests only; do not register the route or change production behavior. Use the existing core fixture/setup in `tests/phpunit/core/PageOwnedPilotTest.php`; add a focused test file/helper only if needed to keep it understandable. Docker may run the existing test installation, but is not part of the tested feature contract.
+
+Implement in this order:
+
+1. Cover invalid/zero/negative/oversized revision IDs, empty and missing literal surface IDs, invalid/fragment owner titles, an unrelated owner outside the configured scope, and a foreign revision belonging to another in-scope owner. Expect fixed `layers-editor-unavailable` with no bootstrap result. Verify preparation itself inserts no page/revision or legacy layer-set rows.
+2. Cover a registered reader lacking editlayers, one lacking edit, anonymous authority, and denied read. Use native test-user permissions where practical. For authority spies, assert the original authority is used and denied preflight does not proceed to snapshot reading. Do not replace the boundary under test or invoke a privileged substitute on its behalf.
+3. Cover a current revision whose Layers text is hidden from the actor, a page with no Layers slot, and deletion/unavailability after the known revision was published. Reuse existing core visibility/deletion fixtures and supported native APIs. Never use production wiki pages or permanent configuration. Do not silently change the expected behavior to permit a fallback to a prior/newer revision.
+4. Cover metadata integrity: canonical owner DB key, exact current revision and literal surface; wiki/user scope comes from server configuration/request identity; returned initialization omits snapshot/source URLs/legacy set selection and never enables autoCreate. Retain the existing stale-revision test. If asset-backed rejection needs fixtures, reuse existing real asset helpers; do not invent paths or weaken source resolution. Report unsupported fixture needs rather than adding a backend.
+5. Run focused native tests, PHP quality checks and documentation checks. Record actual test/assertion counts, environment and limitations in the junior review, and mark J53 implemented awaiting lead review. If tests reveal a production bug, report it with the failing regression; do not silently widen the allowed production scope.
+
+Fresh verification:
+- Focused native PageOwnedPilotTest suite: **14 tests / 85 assertions passed** (`docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145 php /var/www/html/extensions/Layers/vendor/bin/phpunit --bootstrap /var/www/html/extensions/Layers/tests/phpunit/core-bootstrap.php /var/www/html/extensions/Layers/tests/phpunit/core/PageOwnedPilotTest.php`).
+- Core integration regression: **13 tests / 34 assertions passed** across `PagePublicationServiceTest`, `PageHistoryAccessTest`, `ApiLayersPublishTest`, `ApiLayersReadTest`, and `PageOwnedPilotRegistrationTest`.
+- PHP style & syntax checks: `phpcs` passed with **0 errors, 0 warnings**; `parallel-lint` passed with **0 errors**.
+- Documentation checks: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines (`extension.json`, PHP backend services/APIs/hooks, and ResourceLoader modules untouched).
+- Scenarios tested:
+  1. `Invalid inputs, foreign revisions, and DB invariance`: Verified rejections with fixed `layers-editor-unavailable` for revision IDs 0, -1, and oversized 2147483648; empty string and nonexistent literal surface IDs; empty string, malformed, and fragment owner titles; unconfigured out-of-scope owner; and cross-owner foreign revisions between two in-scope owners. Database queries before and after confirm unchanged totals in `page`, `revision`, and `layer_sets`, not unchanged values of every row.
+  2. `Authority preflight enforcement and authority spy`: Verified rejections with fixed `layers-editor-unavailable` for registered readers lacking `editlayers`, registered readers lacking `edit`, anonymous authorities (`getId() <= 0`), and denied `read`. Verified via `Authority` spy that preflight check utilizes the original authority without substitution and immediately aborts upon preflight denial without invoking `authorizeRead` or attempting to read snapshots.
+  3. `Hidden revision text, missing slot, and deletion handling`: Verified rejections with fixed `layers-editor-unavailable` when revision text visibility is restricted with `DELETED_TEXT` (and actor lacks `deletedtext`); when preparing a page revision that lacks a Layers slot; and when preparing a revision whose page was subsequently deleted via `DeletePageFactory`. Verified no fallback to prior/newer revisions occurs.
+  4. `Metadata integrity and asset-backed rejection`: Verified returned initialization contains canonical owner DB key, exact revision ID, literal surface ID, `readOnly: false`, `autoCreate: false`, canvas dimensions, and server-derived `draftScope` (`wiki` JSON tuple and `user` ID string); verified omission of `snapshot`, `sourceUrl`, `initialSetName`, and `initialSetId` with `imageUrl: null`. Verified that in a mixed document with both slide and asset-backed image surfaces, preparing the slide surface succeeds while preparing the image surface rejects with `layers-editor-unavailable`. Verified retained stale-revision rejection when current page revision advances.
+- Limitations: Tests the internal boundary `PageOwnedPilot::prepareEditor` only; does not expose or register a public browser route or editor endpoint (lead-owned).
+
+**Allowed changes:** relevant `tests/phpunit/core` test files, this packet/status row and the junior review report. No production PHP/JS, manifest, messages, settings, fixture production pages, new dependencies or runtime services. No browser acceptance claim. Return to the lead; do not start another task.
+
+### J52 — Page-owned header identity and legacy selector removal (accepted)
+
+**Purpose:** page revisions are not legacy layer-set revisions. Prevent page-owned editors from presenting controls that invoke the wrong workflow. This packet is presentation isolation, not permission enforcement, historical viewing or pilot activation. Perform the following in order:
+
+1. In `resources/ext.layers.editor/UIManager.js`, capture whether this UI instance is page-owned from `editor.config.pageOwned` at construction. In that mode do not instantiate SetSelectorController. Keep existing ordinary-editor construction unchanged. Do not infer mode from filename, slide type, namespace or current page globals.
+2. In `createHeaderRight`, page-owned mode creates the normal Close button, but does not create or append the named-set selector, legacy revision selector/load button or their separator. Avoid constructing those controls and hiding them afterwards. Keep ordinary mode's structure and ordering unchanged. Existing null-guarded event setup/disposal must remain safe. APIManager's legacy-operation guards remain in place and unchanged.
+3. For the header title, use the explicit configured page-owned owner name in page-owned mode, with the existing localized editor-title prefix and textContent. Ordinary editors retain their current filename title. Do not invent a current revision label from initial configuration: its revision can become stale after save/reconciliation. This header must not claim that an editable surface is a legacy Slide page or a File page. Do not add HTML, links, navigation, reads or writes.
+4. Add focused UIManager tests covering ordinary mode unchanged; writable and read-only page-owned headers both omitting legacy controls; zero SetSelectorController construction/setup in page-owned mode; Close remaining wired; literal text rendering for markup-like owner names; and safe event setup/disposal with absent selectors. Verify that existing legacy UIManager tests continue passing. Do not claim this makes the entire editor read-only: drawing tools, keyboard mutation and historical display remain lead-owned.
+5. Run focused UIManager and combined editor/page-owned Jest suites, ESLint and documentation checks. Record exact verification evidence and limitations in the junior review and mark this packet implemented, awaiting lead review. Do not start another packet.
+
+Fresh verification:
+- Focused UIManager suite: **135 tests passed** across legacy and page-owned suites (`npx jest tests/jest/UIManager.pageOwned.test.js tests/jest/UIManager.test.js --verbose`), including 25 new page-owned scenarios and all 110 existing tests.
+- Combined PageOwned and UIManager client suites: **12 suites / 508 tests passed** (`npx jest "tests/jest/(PageOwned|UIManager)"`).
+- Focused editor/bootstrap/session suites: **23 suites / 1,824 tests passed** (`npx jest "tests/jest/(PageOwned|UIManager|APIManager|LayersEditor|EditorBootstrap|StateManager|HistoryManager)"`).
+- Full Jest suite: **195 suites / 14,834 tests passed** (`npm run test:js`).
+- ESLint: **0 errors, 0 warnings** on changed code (`npx eslint resources/ext.layers.editor/UIManager.js tests/jest/UIManager.pageOwned.test.js`).
+- Documentation check: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- i18n metrics & wiring checks: `node scripts/verify-metrics.js` (890 message keys), `node scripts/verify-i18n-wiring.js` passed cleanly.
+- Production code diff: 3 targeted blocks in `resources/ext.layers.editor/UIManager.js` (`extension.json` and all other production files untouched).
+- Scenarios tested:
+  1. `Ordinary mode unchanged`: `isPageOwned` is `false` when editor has no config, empty config, or config without `pageOwned`; `SetSelectorController` is instantiated; `createHeaderRight()` preserves `.layers-set-wrap`, `.layers-header-separator`, `.layers-revision-wrap`, and `.layers-header-close` in exact sequence; `createHeader()` displays `Layers Editor — <filename>` using `this.editor.filename` or bare title when absent; element references populated.
+  2. `Mode detection isolation`: Does not infer page-owned mode from `editor.filename` (e.g. `Slide:Foo`), `slideType`, `namespace`, or MediaWiki globals (`wgNamespaceNumber`, `wgPageName`); captures exclusively from `editor.config.pageOwned`; safely handles null, undefined, and primitive editor arguments.
+  3. `Zero SetSelectorController construction/setup`: `this.setSelectorController` is strictly `null` in page-owned mode; `SetSelectorController` constructor spy proves 0 constructor calls in page-owned mode; delegation methods (`setupSetSelectorControls`, `showNewSetInput`, `createNewSet`, `addSetOption`, `deleteCurrentSet`, `renameCurrentSet`) are safe no-ops without throwing.
+  4. `Omission of legacy controls in writable and read-only page-owned headers`: Writable and read-only page-owned modes both produce `.layers-header-right` with only the Close button; `.layers-set-wrap`, `.layers-header-separator`, `.layers-revision-wrap`, `.layers-revision-select`, and `.layers-revision-load` are never created or appended; element references remain `null`; spy proves `createSetSelector` and `createRevisionSelector` are never invoked.
+  5. `Header title rendering and security`: Displays configured owner name with localized prefix (`[layers-editor-title] — <owner>`); ignores `editor.filename` in page-owned mode; does not invent or display revision number; does not claim surface is a legacy Slide or File page; empty or non-string owner falls back to bare title; markup-like owner strings (XSS vectors with `<script>`, `<img>`, `<b>`, `<svg>`, `<a>`) render strictly as plain text via `textContent` inserting 0 child DOM elements.
+  6. `Close button wiring and accessibility`: Rendered with `.layers-header-close`, `type="button"`, aria-label, tooltip with `(Esc)`, and SVG icon with `aria-hidden="true"`; remains queryable and click handler correctly calls editor cancel/close.
+  7. `Safe event setup and disposal with absent selectors`: `setupRevisionControls()` succeeds cleanly with absent elements; `destroy()` cleans up safely with null references, clears active timeouts, destroys event tracker, removes container, removes body class; idempotent repeated destruction.
+- Limitations: Presentation isolation only; does not enforce server-side permissions, lock drawing tools or keyboard mutation (lead-owned), create a page-owned editor URL, or perform end-to-end browser acceptance.
+
+**Allowed changes:** UIManager.js, its relevant Jest tests, this packet/status row and the junior review report. No extension.json, PHP, APIManager, session, draft, toolbar, server settings, dependencies or local Docker configuration changes. Do not remove or alter ordinary legacy editing behavior. Return for lead review before integration acceptance. Applies to all page-owned surface kinds, not only slides or a particular use case.
+
+### J51 — Accessible revision-check control (accepted with lead corrections)
+
+**Goal:** provide the small presentation component for deliberate reconciliation. This packet does not enable the pilot or publish anything. Implement in this order:
+
+1. Add `resources/ext.layers.editor/PageOwnedRevisionControl.js`, exporting `window.Layers.Editor.PageOwnedRevisionControl` and CommonJS. Constructor receives `{ check, message }`, where check is an injected async function and message is an injected localization function. Implement `mount(parent)` and `dispose()`. The lead will later inject `APIManager.checkPageOwnedRevision`; do not instantiate clients or use APIManager, mw.Api, localStorage, editor globals or network transport here. No server changes, manifest changes, mounting in existing editor code or dependency additions.
+2. Mount one labelled native button, "Check saved page", and a text-only status element with `role="status"` and `aria-live="polite"`. Mounting never calls check. Click calls it exactly once, disables the button while pending and sets a checking message. Repeated clicks while pending do nothing. Keep focus on the existing button; do not replace the DOM tree on completion. Mounting the same live instance twice must reject without duplicate controls or side effects. Disposal removes only this component's DOM and listeners, is idempotent and makes late results inert. No dialog, HTML insertion, raw errors, draft text or server diagnostics.
+3. Display fixed localized outcomes from the returned status: `phase === 'ready'`, positive integer `revisionId <= 2147483647`, and boolean `dirty`, `editorStateValid`, `draftPersisted` are required; malformed results use the generic failure message. If draftPersisted is false, show the backup-failed message first; otherwise editorStateValid false shows retained-invalid-edits; otherwise dirty true shows ready-to-save and dirty false shows matches-saved-page. None of these outcomes calls save or permits navigation. A rejected check with exact code (or message) `layers-editor-reconciliation-required` shows the same-surface conflict message; every other rejection shows the generic failure message. Use code/message only for comparison to this fixed identifier, never display either. After settlement re-enable the button unless disposed. The lead remains responsible for whether the control should be mounted in a writable, loaded session.
+4. Add English and qqq messages only for the new control under `layers-page-revision-check-*`: button, checking, backup-failed, invalid-edits, ready, matched, conflict, failed. Suggested meanings: check the saved page; checking while keeping local edits; local backup failed so keep editor open; retained edits need correction before save; local changes can be saved explicitly; local content matches the saved page; this drawing changed on the server so keep the draft and resolve it before saving; could not check the saved page and the draft remains available. No message may claim a check saved/published changes or that drafts are durable if backup failed. Use native controls; add CSS only if demonstrably necessary and keep it scoped to the component.
+5. Add `tests/jest/PageOwnedRevisionControl.test.js`. Cover no work on construction/mount, single click/in-flight guard, all four success states and precedence, malformed results, known conflict/generic rejection, markup-like messages remaining literal text, button focus/disabled state, repeated mount, disposal before completion and idempotent cleanup. Use deferred promises and DOM assertions; do not claim native-browser accessibility acceptance from Jest. Run focused tests, combined page-owned/editor suites, ESLint, i18n/docs checks and CSS lint if applicable. Report exact commands/results and limitations in the review document; mark J51 implemented, awaiting lead review.
+
+Fresh verification:
+- Focused Jest suite: **61 tests passed** (`npx jest tests/jest/PageOwnedRevisionControl.test.js --verbose`).
+- Combined client suites: **337 tests passed** across J42, J45, J46, J49, J50, and J51 (`npx jest tests/jest/PageOwnedPublishClient.test.js tests/jest/PageOwnedReadClient.test.js tests/jest/PageOwnedSnapshotAdapter.test.js tests/jest/PageOwnedEditorSession.test.js tests/jest/PageOwnedDraftStore.test.js tests/jest/PageOwnedRevisionControl.test.js`).
+- Full Jest suite: **194 suites / 14,806 tests passed** (`npm run test:js`).
+- ESLint: **0 errors, 0 warnings** on changed code (`npx eslint resources/ext.layers.editor/PageOwnedRevisionControl.js tests/jest/PageOwnedRevisionControl.test.js`).
+- Documentation check: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- i18n metrics & banana checks: `node scripts/verify-metrics.js`, `node scripts/verify-i18n-wiring.js`, and `npx grunt banana` passed cleanly (890 message keys).
+- Production code diff: 0 lines outside new component and i18n files (`extension.json` and existing production files untouched).
+- Scenarios tested:
+  1. `Constructor and exports`: Instantiates with injected `{ check, message }`; exports to `window.Layers.Editor.PageOwnedRevisionControl` and CommonJS `module.exports`. Rejects null, undefined, primitive, array, empty object, missing or non-function `check` and `message` dependencies with `layers-invalid-revision-control`. Does no work on construction.
+  2. `Mounting and DOM structure`: Mounts labelled native `<button>` ("Check saved page") and text-only status element with `role="status"` and `aria-live="polite"`. Never calls check on mount. Rejects invalid mount targets. Mounting the same live instance twice rejects with `layers-control-already-mounted` without duplicate controls or side effects. Mounting on a disposed instance rejects with `layers-revision-control-disposed`.
+  3. `Click handling & in-flight guard`: Calls check exactly once on click, disables button while pending, and sets checking message (`layers-page-revision-check-checking`). Repeated clicks while pending do nothing.
+  4. `Focus preservation and DOM integrity`: Retains existing button node in the DOM on completion and restores focus if the button had focus when clicked. Never replaces the DOM tree.
+  5. `Outcome precedence & success states`:
+     - Precedence 1: `draftPersisted === false` -> `layers-page-revision-check-backup-failed` ("Local backup failed; keep the editor open.").
+     - Precedence 2: `draftPersisted === true && editorStateValid === false` -> `layers-page-revision-check-invalid-edits` ("Retained edits need correction before saving.").
+     - Precedence 3: `draftPersisted === true && editorStateValid === true && dirty === true` -> `layers-page-revision-check-ready` ("Local changes can be saved explicitly.").
+     - Precedence 4: `draftPersisted === true && editorStateValid === true && dirty === false` -> `layers-page-revision-check-matched` ("Local content matches the saved page.").
+     - Accepts boundary revision IDs 1 and 2147483647.
+  6. `Malformed result handling`: Rejects null, undefined, primitives, arrays, invalid phases (!== 'ready'), invalid revision IDs (<= 0, > 2147483647, fractional, string), missing/non-boolean dirty, editorStateValid, draftPersisted; displays generic `layers-page-revision-check-failed` and re-enables button.
+  7. `Rejection handling & diagnostic safety`: Known conflict with exact code or message `layers-editor-reconciliation-required` displays same-surface conflict message (`layers-page-revision-check-conflict`). Other rejections display generic failure message (`layers-page-revision-check-failed`). Never reflects error codes, messages, stack traces, or server diagnostics into the UI. Re-enables button on settlement.
+  8. `Markup safety`: Markup-like strings in messages (e.g. `<img onerror=...>`, `<b>`, `<script>`) render strictly as text in `textContent` without creating child DOM elements.
+  9. `Disposal & idempotent cleanup`: Removes component DOM and click listeners. Idempotent cleanup. Disposal before mount succeeds cleanly. Disposal while check is pending makes late resolution or rejection inert without DOM mutation or uncaught errors.
+- Limitations: Presentation component only; wiring to `APIManager.checkPageOwnedRevision()`, editor toolbar mounting, and browser accessibility testing remain lead-owned.
+
+**Allowed scope:** the new component/test, new en/qqq messages, this packet and its junior review report. Do not edit existing production modules or extension.json. Do not start a subsequent packet. This is a UI component for images, PDFs and general-purpose slides; do not introduce slide/SOP/PDF-specific wording. The lead will review, register, mount and validate the control alongside the protected editor entry point. Search and Cargo remain later priorities.
+
+## R02 recovery dialog and authorization recheck — September 20, 2026
+
+The page-owned runtime now uses `PageOwnedRecoveryDialog` instead of window.prompt/window.confirm. Multiple records can be selected with bounded text-only previews; selecting a record is separate from restoring it. Draft markup is inserted with textContent, not HTML. Unreadable records cannot be selected for restoration, and no dialog action publishes or deletes a record. The native modal has labelled controls, cancel/Escape handling, initial focus and return-focus behavior; editor disposal cancels outstanding decisions. Missing native modal support fails closed.
+
+After explicit recovery confirmation, the session re-reads its exact owner/revision to recheck revision visibility and source authorization before applying local data. Failure leaves recovery unapplied and automatic writes disabled. The session base is not advanced. This is a recovery-time check, not a claim of continuously enforced client-side permissions; server publication still authorizes each write.
+
+Fresh verification: **19 focused editor/bootstrap/API/page-owned suites, 1,322 tests passed**. JavaScript lint and dialog CSS style checks pass. Five new DOM tests cover text escaping, selection, bounded previews, cancellation/focus restoration, disposal and unavailable modal support; one lifecycle test proves denied reauthorization prevents recovery. Native browser focus trapping and visual acceptance have not yet been run; DOM tests stub native dialog methods.
+
+**Next lead work:** deliberate conflict/uncertain-result reconciliation, protected server editor entry point, legacy/read-only control restrictions and exact historical viewer, then browser acceptance. The recovery dialog is registered but the server still does not expose a page-owned editor URL. No new junior packet is ready. Page history remains the priority, followed by searchable textbox/callout content and Cargo text integration.
+
+## R02 independent draft records — September 20, 2026
+
+Page-owned editors now generate a fresh cryptographic 128-bit writer ID per editor instance and persist to independent localStorage records for the same wiki/user/owner/base revision/surface. IDs are not inherited from sessionStorage, so duplicating a tab does not intentionally reuse a writer. Writes update only that writer's record; no shared read/check/write index or lock is used. A restored draft is a read source only: the new editor writes to its own record. Older unpartitioned records remain available for recovery and are never overwritten by this runtime.
+
+Recovery enumerates only records for the authorized exact scope. With multiple records the user must choose one, then confirm recovery. Cancelling selection starts neither backup writes nor publication. Selection currently uses a temporary numbered browser prompt, not the final recovery UI; it lacks useful draft previews and deliberate cleanup controls. Independent records can accumulate and consume browser storage; quota errors preserve existing records and block unbacked publication. No automatic pruning or cross-tab atomic deletion is claimed.
+
+Fresh verification: **18 focused editor/bootstrap/API/page-owned suites, 1,316 tests passed**; ESLint clean. Seven added tests cover interleaved independent writers, restoring without changing the write destination, older-record preservation, scope isolation, safe enumeration failures and cancelled selection. These are deterministic shared-storage tests, not real multi-tab browser acceptance.
+
+**Next lead work:** build usable recovery/reconciliation controls and permission rechecks, then the protected server editor entry point and exact historical viewer. The server still does not emit page-owned editor configuration; no browser pilot or new junior packet is ready. Page revision history remains first priority; searchable textbox/callout content and Cargo text support follow.
+
+## R02 draft lifecycle connected — September 20, 2026
+
+APIManager now connects `PageOwnedDraftLifecycle` after an authorized exact-revision load in explicit page-owned mode. The server configuration must supply `pageOwned.draftScope` with wiki/user identity. Historical read-only sessions skip local draft access. The editor module now loads the store/controller/lifecycle and their localized messages.
+
+Live layer/canvas changes schedule a local backup after one second; pagehide and orderly disposal flush it. Saving persists a saving-phase record before the POST, then records the confirmed new base or conflict/uncertain outcome with the latest live edits. A failed final backup does not misreport a confirmed server write, but prevents the editor from treating navigation away as safe. Storage initialization errors show a fixed message and keep publication unavailable.
+
+Recovery is offered only for the exact loaded owner/base/surface and requires explicit confirmation. Restored interrupted/conflicted/uncertain records block publication. Cancelling recovery preserves the stored record and blocks saving/automatic overwrites; it does not discard the record. A late recovery decision cannot revive a disposed editor. Recovery currently uses the browser confirmation dialog; dedicated accessible recovery/reconciliation controls remain unfinished.
+
+Fresh verification: **18 focused editor/bootstrap/API/page-owned suites, 1,309 tests passed**; ESLint passes. Seven lifecycle scenarios include cancellation, corruption, delayed decisions, scheduling and backup failure after confirmed publication.
+
+**Still not browser-ready:** no server editor entry point emits the page-owned mode yet. Lead must finish deliberate reconciliation and recovery controls, prevention of cross-tab draft overwrite, visibility/permission rechecks for recovery, legacy/read-only UI restrictions, historical viewer and browser acceptance. Local backup is best effort (browser termination before a scheduled backup can lose edits); no cross-tab atomicity is claimed. Public pilot APIs remain disabled by default. No new junior handoff is queued. Page history remains first, searchable textbox/callout data second, Cargo text integration third.
+
+## J50 accepted; draft recovery foundation — September 20, 2026
+
+J50 is accepted with lead corrections. The original five-key check allowed inherited identity values combined with unrelated own keys; scope getters/reflection and storage-method accessors could also expose raw exceptions. Lead now requires the exact own data properties, rejects symbol/extra/accessor keys, redacts reflection failures and captures storage methods with their receiver. Four new regressions cover these cases. Store verification now contains **66 tests**.
+
+Lead implemented `PageOwnedDraftController` for lossless live editor capture and explicit recovery inspection after an authorized exact-revision load. Records are bound to wiki/user/owner/base revision/surface and checked again when inspected. Drawing data that is invalid for publication but still finite JSON can be retained; non-JSON edits reject rather than silently disappear. Recovery inspection never advances the base, applies data, deletes a record or retries publication. Historical read-only sessions cannot use draft capture/recovery. Saving/conflict/uncertain records are flagged as publication-blocked candidates.
+
+The session and bridge now accept an optional `beforePublish` callback, invoked in saving phase before any POST. This lets the eventual UI durably record that an interrupted save needs reconciliation. Persistence failure aborts the POST, preserves edits/base and returns a fixed storage error. A callback does not change the publication snapshot captured at save invocation; edits made during asynchronous persistence still remain dirty after confirmation.
+
+Fresh verification: **17 focused editor/bootstrap/API/page-owned suites, 1,302 tests passed**, with ESLint clean. Includes nine controller scenarios and two pre-publication regressions. The junior full-suite count is reported evidence, not a fresh full-suite lead run.
+
+**Remaining lead work:** connect draft scheduling and explicit recovery/reconciliation controls, handle quota/access failures visibly, wire the server editor entry point and historical viewer, and verify the browser workflow. The new draft controller/store are not yet ResourceLoader-wired or automatically invoked; the page-owned route still omits legacy DraftManager. No claim of automatic draft persistence or browser readiness follows from these tests. No new junior packet is queued. Page history remains first, searchable textbox/callout data second, Cargo text support third.
+
+## R02 editor routing checkpoint — September 20, 2026
+
+The editor ResourceLoader now includes the page-owned clients, adapter, session and bridge. EditorBootstrap forwards an explicit `pageOwned` configuration. APIManager routes that mode's load/save to the bridge, rejects legacy set/revision/buffered operations and direct legacy payload/retry calls, and skips legacy revision-list reloads. LayersEditor bypasses legacy normalization/recovery, avoids auto-creating legacy sets or blanking data after a failed exact read, and does not put page revision IDs into `currentLayerSetId`. A save with newer dirty/invalid edits does not authorize navigation away.
+
+Fresh verification: **15 focused editor/bootstrap/API/page-owned suites, 1,225 tests passed**; changed JavaScript ESLint and documentation checks pass. Ordinary legacy behavior remains covered. The server does not yet emit this mode, so no browser pilot is enabled. Legacy DraftManager is deliberately not constructed in page-owned mode: scoped draft persistence/recovery and user-visible conflict controls must be connected before the server entry point is exposed. Do not claim that drafts are already persisted in this mode.
+
+**Next lead work:** own the server entry point, scoped live-editor draft serialization/recovery, read-only and legacy-control restrictions, localized error/conflict UI and exact historical viewing. J50 below is a bounded storage utility that can proceed independently. Search and Cargo follow page history.
+
+### J50 — Isolated page-owned draft storage (implemented; ready for lead review)
+
+**Purpose:** supply a small synchronous storage utility for lead-owned draft capture/recovery. Add `resources/ext.layers.editor/PageOwnedDraftStore.js` and `tests/jest/PageOwnedDraftStore.test.js`; update only this packet and the junior review report. No manifest, editor, session, API, messages, dependencies or existing draft-manager changes. Do not integrate or enable it; report discovered integration needs to the lead.
+
+**Frozen interface:** export `window.Layers.Editor.PageOwnedDraftStore` and CommonJS. Constructor accepts an injected Storage-compatible object with `getItem` and `setItem`; do not access global localStorage, MediaWiki config, current page or credentials. Instance methods `write(scope, draftJson)` and `read(scope)` are synchronous. Scope is exactly `{wiki, user, owner, baseRevisionId, surfaceId}`: all four string values must be nonempty strings; baseRevisionId must be a positive integer at most 2147483647. Reject missing/extra properties and arrays. Capture values at invocation. Construct the key using a versioned prefix plus JSON.stringify of an ordered tuple of those five primitive values. Literal identity matters; no trimming, case folding, delimiter concatenation or fallback to legacy draft keys.
+
+`write` accepts a nonempty string that parses as a non-null JSON object (not an array); preserve the exact supplied string in storage, including unknown fields. It is an opaque draft envelope: do not sanitize drawing fields or decide schema validity, server authority, conflict resolution or eligibility for recovery. Return only after setItem succeeds. `read` returns null for an absent record; otherwise validate the stored string by the same object-envelope rule and return its exact bytes. Malformed records must throw, remain untouched and never fall back to another key. Do not add expiration, deletion, migration, automatic saving or recovery. This avoids introducing non-atomic cross-tab compare/delete claims.
+
+Every invalid caller input throws a fresh Error with fixed code/message `layers-invalid-draft-storage-request`. Constructor/storage method failures and malformed stored records throw fresh fixed `layers-draft-storage-failed`; never reflect draft text, scope values, keys, tokens or storage diagnostics. Only the supplied storage is touched. Failed serialization/validation must not call storage. The lead is responsible for validating/capturing live editor state before generating JSON, keeping invalid-but-serializable edits separate from the last valid snapshot, and deciding when permission-checked recovery is allowed.
+
+**Acceptance:** distinct keys for wiki/user/owner/revision/surface, including Unicode and delimiter-like names; exact byte round trip of unknown fields and false/zero/empty-string values; missing record; no legacy-key reads; malformed scope/payload rejected before storage; corrupt stored record retained; quota/security errors redacted; no mutations of caller scope. Run focused tests, combined page-owned tests, ESLint and documentation checks. Report exact evidence and limitations. Return for lead review; no subsequent packet starts automatically.
+
+Fresh verification:
+- Focused Jest suite: **62 tests passed** (`npx jest tests/jest/PageOwnedDraftStore.test.js --verbose`).
+- Combined client suites: **248 tests passed** across J42, J45, J46, J49, and J50 (`npx jest tests/jest/PageOwnedPublishClient.test.js tests/jest/PageOwnedReadClient.test.js tests/jest/PageOwnedSnapshotAdapter.test.js tests/jest/PageOwnedEditorSession.test.js tests/jest/PageOwnedDraftStore.test.js`).
+- Full Jest suite: **190 suites / 14,682 tests passed** (`npm run test:js`).
+- ESLint: **0 errors, 0 warnings** on changed code (`npx eslint resources/ext.layers.editor/PageOwnedDraftStore.js tests/jest/PageOwnedDraftStore.test.js`).
+- Documentation check: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines outside new utility file (`extension.json` untouched, 0 existing production files modified).
+- Scenarios tested:
+  1. `Constructor and exports`: Instantiates with injected Storage (`getItem`, `setItem`); exports to `window.Layers.Editor.PageOwnedDraftStore` and CommonJS `module.exports`. Rejects null, undefined, empty object, missing or non-function storage methods with fixed `layers-draft-storage-failed`. Never accesses global `localStorage`, `mw.config`, or `window.wgPageName`.
+  2. `Key construction and injective distinctness`: Versioned prefix `layers-page-owned-draft-v1:` followed by `JSON.stringify([ wiki, user, owner, baseRevisionId, surfaceId ])`. Generates distinct keys when varying any of the 5 scope components; preserves literal identity without trimming or case folding; faithfully encodes Unicode in all string components; avoids delimiter collisions (e.g. `["a:b", "c"]` vs `["a", "b:c"]`); accepts valid boundary revision IDs 1 and 2147483647.
+  3. `Read and write byte preservation`: Exact byte round-trip preserving unknown fields and edge values (false, 0, empty string, null); returns null for absent record without throwing; does not read or fall back to legacy draft keys.
+  4. `Corrupt stored record handling`: Throws fixed `layers-draft-storage-failed` on syntax error, empty string, JSON null, JSON number, JSON boolean, JSON string primitive, and JSON array; corrupt record remains untouched in storage with no fallback.
+  5. `Caller input validation on scope`: Rejects null, undefined, number, string, array, missing properties (wiki, user, owner, baseRevisionId, surfaceId), extra properties, empty strings, non-string values, and invalid baseRevisionId (<= 0, > 2147483647, fractional, non-integer, string, null) with fixed `layers-invalid-draft-storage-request` without calling storage or mutating caller scope.
+  6. `Caller input validation on draftJson`: Rejects null, undefined, number, empty string, non-JSON string, JSON null, JSON boolean, JSON number, JSON string primitive, and JSON array with fixed `layers-invalid-draft-storage-request` without calling storage.
+  7. `Storage error redaction and diagnostics safety`: Redacts QuotaExceededError and SecurityError exception details, file paths, and diagnostic messages on storage method failure; throws fixed `layers-draft-storage-failed` without diagnostic leakage.
+- Discovered integration needs for lead:
+  - Live editor state must be captured and serialized into a valid JSON object string envelope by the caller prior to invoking `write()`.
+  - Storage quota handling should be accounted for in the caller UI workflow when `layers-draft-storage-failed` is thrown.
+  - Recovery eligibility and cross-tab/lifecycle reconciliation remain lead-owned as planned.
+
+## J49 acceptance and R02 editor bridge — September 20, 2026
+
+J49 is accepted with test corrections. The no-op scenario now sends unchanged data, and malformed publication coverage includes a fractional revision ID as well as null. The original report claimed both malformed cases, but only null was implemented. Session acceptance now has 47 tests; no session production fix was needed.
+
+Lead added `PageOwnedEditorBridge`, mapping a selected slide session to the existing StateManager, canvas, layer panel and undo baseline. It copies exact Layers data without legacy normalization, maps canvas settings without truthy defaults, preserves unexposed canvas fields and captures current editor state for publication. It recaptures edits after a pending save succeeds or rejects, so newer edits remain dirty. A confirmed save with newer invalid editor data remains confirmed, with `editorStateValid: false` and `dirty: true`; the invalid editor data stays intact rather than being replaced by the last valid snapshot. Draft persistence must capture that live editor data separately when it cannot enter the validated session snapshot.
+
+Fresh verification: **192 tests across five client suites passed**, including 6 bridge tests using the real StateManager/session/adapter/publisher. The final dirty-result correction passed the six bridge tests again. ESLint and documentation checks pass. The junior full-suite result remains reported evidence, not a full-suite lead rerun.
+
+The bridge is not yet ResourceLoader-wired or selected by a server editor entry point. Normal saves are unchanged. Its initial UI mapping accepts slides only; image/PDF sessions still preserve their full snapshots, while actual source-media rendering awaits its integration gate. It rejects source-media surfaces instead of presenting a blank slide. This does not narrow the product scope: images, PDFs and general-purpose slides retain the shared history contract.
+
+**Next remains lead-owned:** connect an explicit page-owned editor entry point and ResourceLoader module; route initial load/save through the bridge while disabling incompatible legacy set/revision actions; isolate draft keys by owner/base revision/surface and preserve invalid live edits; supply conflict/uncertain-outcome reconciliation; then connect the read-only historical viewer. Do not expose the mode before these controls prevent legacy saves and accidental draft loss. No new junior task is queued. J43/J44 remain gated on working controls and a usable browser test URL. Searchable textbox/callout data and Cargo text integration remain second and third priorities.
+
+## R02 session controller checkpoint — September 20, 2026
+
+Lead implemented `PageOwnedEditorSession` using the accepted exact reader, publisher and snapshot adapter. A session captures one owner, positive base page revision and exact surface ID. It retains the complete document, publishes once per explicit save, advances the base only on confirmation and preserves edits made while that save is pending. Conflicts and uncertain outcomes retain the draft and block further publication pending explicit reconciliation. Historical read-only mode rejects changes/publication; late results cannot revive disposed sessions.
+
+Fresh client verification: **149 tests passed across four suites**, including 10 session scenarios. The session is not yet ResourceLoader-wired or connected to visible editor controls. Normal saves remain legacy. Draft persistence, deliberate reconciliation, server entry point, historical viewer and the bridge to StateManager/CanvasManager remain lead-owned. Initial sessions require an existing revision; new-document creation/adoption is a separate explicit workflow, not base-zero fallback.
+
+## Authenticated HTTP history acceptance — September 20, 2026
+
+The lead verified a fresh native MediaWiki startup with retained owners and publication disabled: the content model, importer wrapper, merge factory and paired merge API adapter were installed. A separate disposable SQLite wiki then passed real authenticated HTTP acceptance: two complete Layers publications created two core page-history revisions with the correct actor and summaries; exact reading returned the first saved snapshot after the second save; reads remained private/zero-age; a stale save failed without a third revision.
+
+The reusable harness is `scripts/test-page-owned-http.py`. Run `python3 scripts/test-page-owned-http.py /path/to/mediawiki` with a native core checkout, PHP CLI with SQLite support and Python 3. It installs a temporary SQLite wiki with its own configuration, starts a loopback-only PHP test server, creates a temporary test administrator and removes its temporary files/process afterward. Credentials are generated locally and not printed. These are test-harness requirements, not Layers runtime dependencies. The existing wiki's configuration, accounts and database are not changed. Our invocation used the existing Docker test host; Docker is not needed by the extension or harness.
+
+This is API/history acceptance on MediaWiki 1.45.3, not completed editor or historical-viewer acceptance, and not a guarantee for every supported core/database version. The public pilot remains disabled. Normal editor saves still use legacy storage. Priority remains page history first, searchable textbox/callout text second, Cargo text support third.
+
+### Next lead work: R02 editor and historical-viewer integration
+
+Connect a page-owned editing mode with an explicit immutable owner, base page revision and selected surface ID. Load through the exact revision reader; preserve the complete multi-surface snapshot through the accepted adapter. Route its save only through the publication client, with no fallback to legacy `layerssave` and no automatic publication retry. Advance the base revision only after a confirmed save; preserve edits made while the request is in flight. Conflicts and uncertain outcomes must retain the draft and require deliberate reconciliation. Keep legacy set/revision controls out of this mode because their IDs refer to a different storage system.
+
+Historical viewing must use the requested page revision and remain read-only; it must never replace missing/denied history with the latest snapshot. Start acceptance with a general-purpose slide to avoid source-media delivery dependencies, then carry the same owner/revision contract to images and PDFs. Freeze actual controls and state transitions before handing J43 to juniors; J44 still needs a usable browser URL and reset instructions. No new junior assignment is ready yet.
+
+## Layers is a MediaWiki extension — Docker is only the test environment
+
+**Layers is a MediaWiki extension. It is not Docker-based. Docker is used only to host our development/test MediaWiki installation.** Docker, containers, PowerShell, .NET, host supervisors and container orchestration are not Layers runtime architecture, deployment requirements or feature backends. Do not add them as required or optional Layers capabilities.
+
+The container-supervisor direction was an engineering mistake and is **abandoned, not paused**. J35 and the associated container dispatch/recovery milestones are cancelled, not blockers for page history. Earlier prototype code and test records are retained solely as records of abandoned work, not as approved implementation or an optional-backend proposal. Their test counts are not progress toward a deployable MediaWiki feature.
+
+All active work must use MediaWiki extension mechanisms and respect the supported MediaWiki/PHP/database environment and normal media-handler requirements. Revision history, search, Cargo integration and image/PDF/slide support must not depend on this project's test-host setup. This rule overrides every earlier supervisor/container instruction in this document.
+
+## Active recovery plan — MediaWiki-native revision history
+
+**This is the current implementation plan. It replaces every older “next task” in this document.** The lead owns architectural decisions, integration and final review. Junior engineers implement only the bounded packets below. No supervisor, container dispatch or host-runtime task remains on the delivery path.
+
+### J49 — Session edge-case acceptance (implemented; ready for lead review)
+
+**Owner:** junior. **Purpose:** verify the newly frozen session state contract while the lead connects it to the editor. This is not permission to enable the pilot or change storage architecture.
+
+**Allowed files:** extend `tests/jest/PageOwnedEditorSession.test.js`; update this packet and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md` with measured evidence. Production code, manifest, client contracts and fixtures remain lead-owned. Report a minimal reproduction for defects rather than weakening assertions.
+
+Use the real `PageOwnedSnapshotAdapter` and `PageOwnedPublishClient`, with a deferred injected API transport and reader. Retain all existing tests. Add these bounded cases in order:
+
+1. A failed initial read leaves the session unloaded and does not call publication. An explicit later load may succeed; an in-flight second load is rejected without a second read. A wrong revision response never establishes a draft.
+2. A malformed or backwards successful publication result leaves the old base and draft, enters `uncertain`, and prevents another publication. Distinguish a valid no-op response at the same revision, which is confirmed.
+3. A rejected save after edits made in flight preserves the latest edits and old base. Test both conflict and unknown outcome; no implicit reload or second POST occurs.
+4. Repeat selected-surface editing for image and PDF fixtures, verifying source identity, other surfaces and reading-order fields survive. No coordinate scaling or source fetching belongs in the session. Referenced-layer deletion rejects without changing the session's last valid snapshot.
+5. Validate caller boundary cases: invalid owner/revision/surface/readOnly and missing dependency methods reject before transport. Draft/render copies cannot mutate the session. Do not expose server diagnostics in assertions meant for user-facing messages.
+
+**Frozen interface:** constructor `(options, {reader, publisher, adapter})`; async `load()`; synchronous `getEditorState()`, `update({canvas,layers})`, `getDraft()`, `getStatus()`, `dispose()`; async `save(summary)`. Status phases: `unloaded`, `loading`, `ready`, `saving`, `conflict`, `uncertain`, `disposed`. Dirty compares the current snapshot with the last confirmed snapshot. `getDraft()` contains owner/baseRevisionId/surfaceId/full snapshot; no automatic persistence. Read-only sessions may inspect state but cannot update or save. Disposal requires callers to retain their draft beforehand and does not cancel a server-side write.
+
+Run the four client suites (session, adapter, publisher, reader), ESLint on changed tests, and documentation checks. Report exact counts and limitations; no browser or HTTP claims. Return for lead review. J43/J44 remain gated; lead UI work need not wait for this packet.
+
+Fresh verification:
+- Focused Jest suite: **46 tests passed** (`npx jest tests/jest/PageOwnedEditorSession.test.js --verbose`).
+- Combined client suites: **185 tests passed** across J42, J45, J46, and J49 (`npx jest tests/jest/PageOwnedPublishClient.test.js tests/jest/PageOwnedReadClient.test.js tests/jest/PageOwnedSnapshotAdapter.test.js tests/jest/PageOwnedEditorSession.test.js`).
+- Full Jest suite: **187 suites / 14,607 tests passed** (`npm run test:js`).
+- ESLint: **0 errors, 0 warnings** on changed test code (`npx eslint tests/jest/PageOwnedEditorSession.test.js`).
+- Documentation check: `npm run check:docs` passed cleanly (66 maintained/policy documents, 53 historical records).
+- Production code diff: 0 lines (`extension.json` and production files untouched).
+- Scenarios tested:
+  1. `Initial read failures and load guards`: Failed initial read leaves session unloaded without calling publisher, and allows explicit later successful load. In-flight second load rejected with `layers-editor-session-unavailable` without making a second read. Response with mismatched revisionId rejects with `layers-invalid-read-response` and never establishes a draft.
+  2. `Publication outcome boundaries and valid no-ops`: Backwards publication revision (`revid < baseRevisionId`) and malformed publication results (`revid` null/non-integer) leave old base and draft intact, transition phase to `uncertain`, and prevent repeat publication. Valid no-op response at the same revision (`revid === baseRevisionId`) is confirmed, returning phase `ready` and dirty `false`.
+  3. `In-flight edits during rejected save`: Edits made while save is in flight are preserved alongside the original base revision when save is rejected due to conflict (`layers-edit-conflict` -> phase `conflict`) or unknown outcome (`layers-publication-outcome-unknown` -> phase `uncertain`), with no implicit reload or second POST request.
+  4. `Surface kinds, source identity, reading order & referenced-layer deletion`: Selected-surface editing verified for image (`kind: "image"`, preserving `source` and `readingOrder`) and PDF (`kind: "pdf"`, preserving `source` and `readingOrder`) fixtures from `mixed-document-v1.json`, with other surfaces surviving unmodified and coordinates preserved without scaling. Attempted deletion of layer referenced in `readingOrder` throws `layers-invalid-editor-snapshot` without altering the last valid session snapshot.
+  5. `Caller boundary validation and encapsulation`: Boundary cases on constructor options (invalid owner, surfaceId, revisionId <= 0 or > 2147483647, non-boolean readOnly) and missing/incomplete dependency methods (`reader.read`, `publisher.publish`, `adapter.toEditorState`, `adapter.withEditorState`) reject immediately with `layers-invalid-editor-session` before transport. Draft and render copies are strictly isolated from internal session state. Non-string save summary rejected with `layers-invalid-publication-request` without calling transport and without diagnostic leakage.
+- Limitations: Client-side Jest verification only; editor UI controls, ResourceLoader registration, and browser integration remain lead-owned.
+
+### Historical assignments — September 20, 2026 (superseded by active handoff queue)
+
+The test installation is running again. Fresh native history regression, including bootstrap integration, passes **140 tests / 588 assertions**. Public editor saves still use legacy storage. Docker hosts the tests only; all feature work remains native MediaWiki/PHP/JavaScript.
+
+| Sequence | Owner | Deliverable |
+| --- | --- | --- |
+| Accepted with corrections | Junior **J46** | Lossless surface adapter; 54 focused tests / 139 combined client tests. Ready for lead R02 integration after R01 gates. |
+| Accepted with corrections | Junior **J48** | Bootstrap boundary tests reviewed and strengthened; combined native regression: 137 tests / 576 assertions. |
+| Implemented; ready for lead review | Junior **J49** | Session edge-case acceptance; 46 focused tests / 185 combined client tests. Ready for lead review. |
+| Implemented; ready for lead review | Junior **J50** | Isolated draft storage utility; 62 focused tests / 248 combined client tests. Ready for lead review. |
+| Accepted with corrections | Junior **J51** | Revision-check control reviewed, registered and connected; see current lead verification above. |
+| Accepted | Junior **J52** | Header isolation reviewed; fresh lead evidence above. |
+| Accepted; evidence corrected | Junior **J53** | Native preparation rejection tests reviewed; full regression evidence above. |
+| Accepted with corrections | Junior **J54** | Request/output/cache tests reviewed; route registered behind existing pilot gate. |
+| Accepted with corrections | Junior **J55** | HTTP harness reviewed and rerun; parser, confinement and post-conflict checks corrected. |
+| Accepted | Junior **J56** | Historical-viewer boundary tests reviewed; 118 native tests / 615 assertions passed. |
+| Accepted with correction | Junior **J57** | Exact historical view host reviewed; empty label preserved. |
+| Accepted | Junior **J58** | Painter/view-host tests reviewed; standalone historical route now connected. |
+| Accepted | Junior **J60** | False-value browser round-trip; lead added serial execution, teardown restoration and save-completion waits. |
+| Accepted | Junior **J61** | Lead corrected completion observation; all five workflow tests passed on the original wiki. No new junior packet queued. |
+| Accepted | Junior **J59** | Historical viewer request tests reviewed; native history links now connected. |
+| Next, lead-owned | Browser acceptance | Real drawing, history navigation, lifecycle and rendering limitations; no new junior packet. |
+| Now | Lead **R02** | Retained-owner startup and authenticated HTTP history acceptance passed; next connect the editor and exact historical viewer (R02). |
+| After J46 review and R01 acceptance | Lead **R02** | Connect snapshot adapter and accepted clients to editor save/conflict/draft handling and exact historical viewing. |
+| After working R02 controls | Junior **J43**, gated | UI/error/accessibility corrections against the lead-provided state diagram and exact controls. |
+| After a functioning test URL exists | Junior **J44**, gated | Browser acceptance using lead-supplied accounts, reset instructions and expected behavior. |
+
+J46 and J47 are accepted with lead corrections. J48 is accepted with lead corrections. J49 is implemented and ready for lead review; lead continues UI integration. J43/J44 remain gated; lead owns registration, HTTP acceptance and editor integration.
+
+## Native registration checkpoint — September 20, 2026
+
+The extension now registers the default-off `layersread` and `layerspublish` APIs through its native registration callback and installs the MediaWikiServices bootstrap hook through the manifest. With no retained owners, no Layers content role or lifecycle wrappers are installed and core mergehistory remains unchanged. With retained owners, registration also installs the merge adapter; the service hook installs the paired guards even when publication is disabled. API name collisions reject before partial module installation.
+
+Fresh native regression: **140 tests / 588 assertions passed** on MediaWiki 1.45.3 / PHP 8.3.31. Real localhost HTTP verifies module discovery, default-disabled reading, private zero-age read caching despite requested public cache ages, and native bad-token rejection. No page was published by these HTTP probes. Retained-owner fresh-process startup, authenticated HTTP publication/history and browser/editor integration still require acceptance; R01 is not complete.
+
+Priority remains **page revision history, then searchable textbox/callout text, then Cargo text projection/binding**. All apply to images, PDFs and general-purpose slides. Docker is only the test host. Existing Cargo gallery formatting is not the requested annotation-text integration.
+
+Normal editor saves still use legacy storage. Do not enable the experimental pilot as a production feature. The new `LayersPageOwnedPilotEnabled` setting defaults false; `LayersPageOwnedPilotOwners` defaults empty. Retained owner keys must not be removed while current or archived pilot revisions exist. Earlier unregistered/unchanged-manifest checkpoints below are historical, superseded by this entry.
+
+### J48 lead acceptance — September 20, 2026
+
+Accepted with test corrections. The original direct replacement used an unknown root field and was not a valid document. Lead replaced it with the existing valid slide fixture and an explicit validity assertion, so rejection demonstrates admission protection rather than malformed input. Added revision-count invariants to all three denied publication cases. Expanded installed merge rejection to both protected source and protected destination, comparing both complete page rows in addition to ownership and logs. No production behavior or manifest changed.
+
+Fresh combined native history regression: **137 tests / 576 assertions passed** on MediaWiki 1.45.3 / PHP 8.3.31. PHP style, class references and the static compatibility guard pass. This supersedes the junior counts below. Internal dispatch still does not establish startup, HTTP, browser or cross-version acceptance.
+
+### Next lead deliverable — initial startup and HTTP integration
+
+No new junior packet is queued. The lead must deliver a controlled, default-off native registration path before editor integration:
+
+1. Default-off native registration and real disabled HTTP discovery now pass. Next verify fresh-process startup with retained owners, paired merge protection and configuration failure behavior. Preserve ordinary merge behavior and lazy service initialization.
+2. Retain default-off publication/read and an empty explicit owner scope. Resolve invalid configuration and registration collisions. Document that retained owners must not be removed while current or archived pilot revisions exist; disabling publication must keep protection.
+3. Verify actual HTTP disabled/denied responses, CSRF handling and private read caching, then authenticated publication and exact historical reading on isolated test pages. Confirm core page history actor, summary and revision. Keep credentials private.
+4. Record supported-core limitations and test reset instructions, then connect the accepted clients and adapter to editor saves, conflicts, drafts and historical viewing (R02).
+
+J43 remains gated on actual editor controls. J44 needs a usable URL, account and reset procedure. No browser pilot is ready. Images, PDFs and general-purpose slides share this revision contract; Docker remains only the test host.
+
+### J48 — Native bootstrap acceptance (accepted with lead corrections)
+
+**Purpose:** verify that the shared bootstrap actually installs protection, rather than testing separately constructed guards. Lead implemented `PageOwnedPilotRegistration` and initial integration tests. Fresh native regression: **128 tests / 512 assertions** on MediaWiki 1.45.3 / PHP 8.3.31. This is internal API/core evidence, not public HTTP or browser acceptance.
+
+**Allowed files:** extend `tests/phpunit/core/PageOwnedPilotRegistrationTest.php`; add a narrowly scoped sibling test file only if needed for isolation. Update this packet and the junior review report with results. Do not change production PHP, service wiring, manifest, configuration defaults, messages, fixtures or dependencies. Report production defects with a minimal reproduction for lead correction.
+
+**Frozen harness:** set isolated test configuration before fetching dependent services; install module definitions from `PageOwnedPilotRegistration::apiModules()` and invoke its `onMediaWikiServices` method once on the fresh test service container, following the existing test. Use normal API dispatch and native core operations afterward. Do not use `TestingAdmissionRegistration`, individually register hooks/models/slots, construct replacement guards or replace the shared publication context. Those shortcuts would bypass the integration under review. A manual invocation of the service hook is still test registration, not proof of initial wiki startup.
+
+Implement in this order:
+
+1. **Publication gates:** disabled with retained owners, enabled with empty owners, and enabled with an unrelated owner must reject publication without inserting a page/revision. Use a properly authorized actor and token so the expected pilot gate is exercised. Verify out-of-scope reading also rejects.
+2. **Installed save admission:** publish a real snapshot through the installed API, then attempt an unauthorized slot replacement through native PageUpdater. Assert denial and unchanged current revision/snapshot. Verify a normal main-text edit preserving the snapshot succeeds. Use existing admission tests as patterns, not as alternative registration.
+3. **Installed import wrappers:** exercise both native WikiRevision import modes with retained owners and APIs disabled. A protected target must reject before insertion; an unrelated ordinary import must succeed. Assert persisted state, not only wrapper class identity.
+4. **Installed merge boundary:** with retained owners and APIs disabled, dispatch a protected merge through the installed API definitions. Assert controlled `layers-admission-unauthorized`, no revision reassignment/page/log mutation, and ordinary merge success. Reuse deterministic timestamp patterns from J47; no sleeps.
+5. **Installed restore hook:** invoke native restoration of a retained owner with APIs disabled and assert archived data stays archived and no current revision appears. Verify unrelated restoration succeeds. Do not merely call the guard directly.
+
+Keep cases focused on wiring; existing suites already cover detailed guard policies. Use isolated test pages/tables only. Record any service initialization-order failure rather than masking it with a manually installed component. Malformed configuration, duplicate/colliding registrations, other supported core versions, real move UI and startup/HTTP acceptance remain lead-owned.
+
+**Verification:** focused new/changed core tests, then the native history regression selection including registration/API/admission/publication/writer/pilot/lifecycle/import/merge/rollback tests. Run PHP style, class references, MediaWiki compatibility and documentation checks. Record exact commands, versions, counts and limitations. Docker may run the existing test wiki only. No public pilot or editor behavior should change. Do not start J43/J44 after completing this packet; return it for lead review.
+
+Fresh verification:
+- Focused PHPUnit suite: **12 tests / 73 assertions passed** (`tests/phpunit/core/PageOwnedPilotRegistrationTest.php` on MediaWiki 1.45.3 / PHP 8.3.31 in `mediawiki-145` container).
+- Scenarios tested:
+  1. `testDisabledBootstrapRetainsOnlyConfiguredProtection`: With write APIs disabled, empty scope installs no model or guards; retained scope registers `LayersDocumentContent::MODEL`, wraps `MergeHistoryFactory`, wraps `WikiRevisionOldRevisionImporter`, installs `MovePageIsValidMove` veto, and rejects `layersread` with `layers-reading-disabled`.
+  2. `testBootstrapPublishesAndReadsWithoutManualComponentInstallation`: With write APIs enabled and registered owner scope, installs both importer modes and merge factory, successfully publishes snapshot via `action=layerspublish` with `Success` result and rev ID, and reads back exact snapshot surfaces via `action=layersread`.
+  3. `testPublicationGateDisabledWithRetainedOwnersRejects`: Publication with disabled switch rejects with `layers-publication-disabled` without inserting a page or revision; read rejects with `layers-reading-disabled`.
+  4. `testPublicationGateEnabledWithEmptyOwnersRejects`: Publication with empty owner scope rejects with `layers-publication-disabled` without inserting a page or revision.
+  5. `testPublicationGateEnabledWithUnrelatedOwnerRejects`: Publication with unrelated owner scope rejects with `layers-publication-disabled` without inserting a page or revision; read rejects with `layers-revision-unavailable`.
+  6. `testInstalledSaveAdmissionProtectsAndPreservesSnapshot`: Published real snapshot via API; unauthorized slot replacement via native `PageUpdater` rejected with `layers-admission-unauthorized` and latest revision ID / snapshot text unchanged in DB; subsequent normal main-text edit preserving snapshot succeeds, creating new revision with updated main text and identical Layers slot.
+  7. `testInstalledImportWrappersRejectProtectedAndPermitOrdinary`: Both native `WikiRevision` import modes (`OldRevisionImporter` with `$noUpdates = false` and `WikiRevisionOldRevisionImporterNoUpdates` with `$noUpdates = true`) reject protected targets with `RuntimeException: layers-admission-unauthorized` without inserting revisions or page rows; ordinary imports succeed and persist main text.
+  8. `testInstalledMergeBoundaryRejectsProtectedMerge`: With write APIs disabled and retained owner scope, dispatching `action=mergehistory` on protected source rejects with controlled `layers-admission-unauthorized`; source revision ownership (`rev_page`), latest revision IDs (`page_latest`), and merge logs remain invariant.
+  9. `testInstalledMergeBoundaryPermitsOrdinaryMerge`: Dispatching `action=mergehistory` on ordinary pages succeeds, reassigns source revision to destination, and records 2 merge log entries.
+  10. `testInstalledRestoreHookRejectsProtectedAndPermitsOrdinary`: Native `UndeletePage::undeleteIfAllowed` on deleted protected page rejects with `layers-admission-unauthorized`; archived revision remains in `archive` table and does not appear in `revision`; ordinary page restore succeeds and restores revision.
+- Combined native merge/registration tests: `PageOwnedPilotMergeTest.php` (4 tests / 7 assertions), `PageOwnedPilotMergeApiTest.php` (8 tests / 32 assertions), and `PageOwnedPilotRegistrationTest.php` (12 tests / 73 assertions) pass cleanly.
+- PHP style: `npm run test:php` clean (0 errors, 0 warnings on new code).
+- Documentation checks: `npm run check:docs` passes cleanly (66 maintained/policy documents, 53 historical records).
+- PHP references and compatibility: `npm run check:phprefs` and `npm run check:mw-compat` pass cleanly (81 files, 81 classes).
+- Production code diff: 0 lines (`extension.json` untouched, 0 production PHP changes).
+- Limitations: Internal ApiMain / MediaWikiIntegrationTestCase dispatch; public HTTP registration, browser testing, and editor integration remain lead-owned.
+
+### J46 — Lossless surface snapshot adapter (accepted with lead corrections)
+
+Lead corrected prototype-key preservation, premature root accessor reads and raw exception leakage. Fresh evidence: 54 adapter tests / 139 combined client tests and ESLint pass. The original junior report below is superseded by this acceptance.
+
+**Purpose:** let the future page-owned editor read/change one surface while retaining every other surface and the selected surface's stable identity, source version, label and reading order. It must work identically for images, PDF surfaces and general-purpose slides. No SOP-specific behavior.
+
+**Allowed files:** add `resources/ext.layers.editor/PageOwnedSnapshotAdapter.js` and `tests/jest/PageOwnedSnapshotAdapter.test.js`. Update only this packet's completion evidence and the junior review report. Reuse existing fixtures from `tests/fixtures/revisions`; do not revise the schema or existing fixtures to make tests pass. Do not change manifest/ResourceLoader wiring, APIs, APIManager, editor/viewer code, database, draft storage or dependencies.
+
+**Frozen interface:** export a stateless class as `window.Layers.Editor.PageOwnedSnapshotAdapter` and CommonJS using existing client conventions. Provide instance methods:
+
+- `toEditorState(snapshot, surfaceId)` returns `{ canvas, layers }`, deep copied from the exact selected surface.
+- `withEditorState(snapshot, surfaceId, state)` returns a deep copied complete snapshot, replacing only that surface's `canvas` and `layers` with deep copies of `state.canvas` and `state.layers`.
+
+Inputs are decoded version-1 snapshot objects from the reader, not legacy editor payloads or JSON strings. Both methods are synchronous. IDs are exact literal strings; no first-surface fallback, case conversion, generated IDs, current page lookup or name-based matching. Neither method mutates inputs or shares nested references with them. The state object must contain exactly `canvas` and `layers`; unknown state fields reject. No background defaults, source resolution, coordinate scaling, sanitization, layer renaming, key stripping or automatic migration.
+
+**Validation boundary:** verify a plain-object root, `schemaVersion === 1`, array `surfaces`, and nonempty string surface IDs that are unique throughout the document. Each surface must be a plain object with a supported kind, plain-object canvas and array layers. Require an exact single match for the requested ID. Require plain-object canvas and array layers in supplied editor state. This adapter is not a second full document schema validator: canvas dimensions/colors, drawing-property allowlists and source authorization remain server responsibilities. Preserve other JSON fields without alteration. Do not add/delete/reorder surfaces, nor replace source/label/readingOrder from editor state.
+
+**Loss prevention:** input snapshot and editor state must be finite JSON data: null, booleans, strings, finite numbers, dense arrays, and plain objects (Object prototype or null prototype) with own enumerable string-keyed data properties. Reject cycles, sparse arrays, undefined, functions, symbols, BigInt, NaN/Infinity, accessors and custom objects such as Date instead of silently dropping or converting them with JSON.stringify. Shared acyclic references may be copied independently. Reject symbol keys and non-enumerable custom properties. No raw input or diagnostic text in returned errors. Throw a fresh Error with fixed message and `.code = 'layers-invalid-editor-snapshot'` on rejection.
+
+**Reading order:** preserve its presence/absence and order. On replacement, require every retained readingOrder ID to exist exactly once among the replacement layer IDs; otherwise reject instead of silently deleting reading order entries or inventing a new order. This deliberately makes layer deletion with explicit reading order a lead integration decision. Layer ID/group graph validation beyond this retained-reference check remains the server's responsibility.
+
+**Acceptance cases:** use the mixed-document and slide fixtures to demonstrate a selected surface update leaves every other surface, root field, source, label, ID and reading order unchanged. Cover all three kinds, empty layers where readingOrder allows it, explicit false/zero/empty text, Unicode and nested group/layer data. Verify alias isolation by mutating returned nested data after the call. Verify unknown/duplicate IDs and non-JSON values reject without mutating input. A replacement removing a referenced reading-order layer rejects. Include repeated conversions showing no coordinate drift or field loss. Do not claim complete schema/security validation from these tests.
+
+**Verification and report:** focused Jest for the new file plus both accepted client suites; ESLint for changed JavaScript; documentation checks. Record exact results and limitations. Do not report HTTP or browser acceptance. Lead owns the eventual editor mapping, stable-ID assignment, authoring reading-order updates, server validation and save integration.
+
+Fresh verification:
+- Focused Jest suite: **50 tests passed** (`npx jest tests/jest/PageOwnedSnapshotAdapter.test.js --verbose`).
+- Combined client suites: **135 tests passed** across J42, J45, and J46 (`npx jest tests/jest/PageOwnedPublishClient.test.js tests/jest/PageOwnedReadClient.test.js tests/jest/PageOwnedSnapshotAdapter.test.js --verbose`).
+- Full Jest suite: **186 suites / 14,557 tests passed** (`npm run test:js`).
+- ESLint: **0 errors, 0 warnings** on changed code.
+- PHP style and documentation checks: `npm run check:docs` passes.
+- Extension manifest: `extension.json` untouched (0 diff).
+
+### J47 — Native merge API acceptance (accepted with lead corrections; original report)
+
+Implemented `tests/phpunit/core/PageOwnedPilotMergeApiTest.php` against core `action=mergehistory` API dispatch and `PageOwnedPilotMergeFactory`.
+
+**Purpose:** verify the new native merge factory guard at the actual MediaWiki API dispatch boundary, rather than only by directly calling the factory. The lead has implemented `PageOwnedPilotMergeFactory` and `PageOwnedPilot::wrapMergeFactory`. Direct core tests already prove source/destination denial and successful unrelated merge with APIs disabled.
+
+**Allowed files:** add `tests/phpunit/core/PageOwnedPilotMergeApiTest.php`; update this packet and the junior review report with measured evidence. No production PHP, service/manifest registration, messages, configuration, or security-policy changes. If acceptance exposes a defect, report a minimal reproduction for lead correction; do not weaken checks to make tests pass.
+
+**Harness:** use MediaWiki's `ApiTestCase`, isolated core tables and existing real merge fixtures/patterns from `PageOwnedPilotMergeTest`. Override only the test container's `MergeHistoryFactory` with the shared pilot composition wrapping the original native factory. Dispatch core `action=mergehistory` through the normal API with a real authorized actor and CSRF token. Inspect the installed core API for its exact parameters. Exercise both pilot source and pilot destination with the API enable flag false, plus an ordinary source/destination under an unrelated retained pilot scope. Source revisions must predate destination revisions deterministically; no sleeps, production pages or global permission changes.
+
+**Acceptance:** protected source/destination merges reject before revision reassignment, redirect/page mutation or merge logging. Compare original revision ownership, latest IDs, page rows and merge log counts before/after each denied request. An ordinary merge succeeds and moves the expected source revision to the destination. Keep native permission/token failures intact. Include one bad-token request and confirm it cannot change data.
+
+**Error presentation is an explicit investigation gate:** the factory currently raises core `ErrorPageError` with fixed `layers-admission-unauthorized`. Record the exact API code/message and whether dispatch treats this as a localized controlled error or an internal exception. Inspect both client-facing data and test exception output. Never accept stack traces, page contents or sensitive diagnostics in the response. If core reports an internal-error category, flag it for lead correction instead of documenting that as final UI behavior. A direct internal exception caught by the harness is not proof of an HTTP response; label that distinction.
+
+**Verification:** focused core test using the existing test environment, PHP style and documentation checks. Report exact MediaWiki version, scenarios, results and limitations. Docker is only a way to invoke our existing test wiki; add no runtime dependencies, launch scripts or external workers. Do not claim Special:MergeHistory UI or actual HTTP acceptance from internal ApiMain tests. Lead owns error-contract changes, factory registration, supported-version review and final sign-off.
+
+Fresh verification:
+- Focused PHPUnit suite: **7 tests / 27 assertions passed** (`tests/phpunit/core/PageOwnedPilotMergeApiTest.php` on MediaWiki 1.45.3 / PHP 8.3.31 in `mediawiki-145` container).
+- Scenarios tested:
+  1. `testPilotSourceMergeRejected`: Source is a pilot owner; merge rejected before any DB mutation. `rev_page`, `page_latest`, page rows, and `logging` merge counts invariant.
+  2. `testPilotDestinationMergeRejected`: Destination is a pilot owner; merge rejected before any DB mutation. All DB state invariant.
+  3. `testOrdinaryMergeSucceeds`: Unrelated pilot scope under write-disabled composition; merge succeeds via API, source revision moved to destination, and core logs exactly two entries (`merge` and `merge-into`).
+  4. `testBadTokenRejected`: Request with `invalid_csrf_token` rejected with `badtoken`; DB state invariant.
+  5. `testPermissionDeniedWithoutMergeHistoryRight`: User without `mergehistory` right rejected with `mergehistory-fail-permission`; DB state invariant.
+  6. `testErrorPresentationInvestigation`: In internal harness mode (`FauxRequest`), `ApiMain` does not catch non-`ApiUsageException` throwables, allowing `ErrorPageError` (`layers-admission-unauthorized`) to escape directly (labeled as internal harness behavior, not HTTP proof). In external error formatting (`substituteResultWithError`), `ApiMain` classifies `ErrorPageError` as `internal_api_error_MediaWiki\Exception\ErrorPageError`. Under `ShowExceptionDetails = false` (production), stack traces and file paths are not exposed and the message renders the localized text; under `ShowExceptionDetails = true`, `ApiMain` attaches a `trace` property. Flagged for lead decision.
+- Combined merge tests: `PageOwnedPilotMergeTest.php` (4 tests / 7 assertions) and `PageOwnedPilotMergeApiTest.php` (7 tests / 27 assertions) pass cleanly.
+- PHP style: `npm run test:php` clean (0 errors, 0 warnings on new code).
+- Documentation check: `npm run check:docs` passes cleanly (66 maintained/policy documents, 53 historical records).
+- PHP references and compatibility: `npm run check:phprefs` and `npm run check:mw-compat` pass cleanly.
+- Production code diff: 0 lines (`extension.json` untouched, 0 production PHP changes).
+- Limitations: Internal ApiMain dispatch; Special:MergeHistory UI and public HTTP registration remain unverified and lead-owned.
+
+### J47 lead acceptance — September 19, 2026
+
+J47 is accepted with lead corrections. The junior correctly identified that the original factory ErrorPageError became an internal API error and acquired a debug trace. Lead added a typed `PageOwnedMergeDenied` and an unregistered `ApiLayersMergeHistory` adapter: it delegates to core and converts only that typed denial to a controlled `layers-admission-unauthorized` API error. Factory/special-page consumers retain a localized error. Unrelated exceptions are not converted.
+
+Tests now verify the controlled API code and absence of traces with ShowExceptionDetails both false and true, while retaining database invariants, ordinary success, token and permission checks. Internal API/formatter tests are not HTTP acceptance. Bootstrap must install the API adapter and guarded merge factory together; installing only the factory would retain the original error-presentation defect.
+
+J48 is now ready under the current assignment above. Lead retains initial bootstrap registration, actual HTTP acceptance and editor integration. J43/J44 remain gated. The junior report records the original implementation; this acceptance records its corrections.
+
+### What we will deliver
+
+For page-owned content, saving a change creates a genuine revision of its owner page, with the actor and edit summary. Viewing an older revision retrieves its stored Layers snapshot rather than mutable current layers. Ordinary page edits preserve the Layers slot. Conflicting edits preserve the winning revision and the losing editor's unsaved work. Copies on other pages cannot silently change the original owner's snapshot. The model covers images, PDFs and universal slides equally.
+
+A page-owned document is authoritative in its owner's normal, non-derived `layers` revision slot. Its displayed content must not resolve back to a live shared `layer_sets` record. Adoption of legacy content will be an explicit copy into that ownership model; automatic migration is outside the first pilot. We will not claim history coverage for existing legacy content before it is adopted.
+
+### Verified reuse and remaining gaps
+
+| Component inspected | Keep/use | Work still required |
+| --- | --- | --- |
+| `src/Revision/PageRevisionWriter.php` | Genuine MediaWiki revision persistence, parent conflict checks and preservation of other slots | Verify integration with native page/history behavior; retain no-op semantics |
+| `DocumentSchema`, `JsonSnapshotCodec`, Layers document content/handler | One versioned complete snapshot for all three surface kinds | Editor serialization/viewer mapping and user-facing change presentation |
+| `PagePublicationService`, `ApiLayersPublish` | Owner/source checks, prepared main content, guarded publication and experimental POST/CSRF contract | Controlled registration and actual HTTP/editor integration |
+| `PageOwnedAdmissionHooks`, `PublicationAdmissionContext` | Admission at `MultiContentSave`, preventing unapproved replacement/removal | Pilot restore veto exists separately; import and remaining lifecycle paths still need protection and integration |
+| `PageHistoryAccess`, `PageReadService` | Authorized exact owner/revision reads; slides have no source lookup | Public read boundary, cache policy and historical viewer wiring |
+| `SourceVersionResolver`, existing asset/private-rendering work | Exact file version, geometry and permission checks where applicable | Reassess delivery using normal MediaWiki media/storage facilities; prototype resource findings are not deployment requirements |
+| `RenderJob*`, `FramedSession`, host launch protocol/dispatch probes | No role in the feature architecture | Retained abandoned artifacts only. Lead audits references before any separate removal; no broad deletion of the working tree |
+
+The last full core result (334 tests / 2,506 assertions / one skip) contains historical tests; it is not an end-to-end history acceptance result. Do not use increasing totals as the release gate.
+
+### Ordered delivery and ownership
+
+| Order | Owner / work | Concrete output and exit gate |
+| --- | --- | --- |
+| 1 | **Lead R01: native pilot registration and lifecycle boundary** | Implement ordinary MediaWiki service/module/content-role wiring under a default-off pilot gate restricted to explicit test owner pages. Provide the read API and exact client contract. Audit and either safely implement or explicitly reject import/undelete/rollback/slot-removal paths for pilot-owned content, while unrelated pages remain unaffected. Demonstrate real core/HTTP rejection, not only source inspection. No normal-wiki feature enablement yet. |
+| 1, independently | **Junior J42: publish client** | Accepted with lead corrections (unregistered client, 47 focused tests). J45 is accepted with corrections. |
+| 1, independently | **Junior J45: exact-revision read client** | Accepted with lead corrections (unregistered client, 38 focused tests). J46 is accepted with corrections in the September 19 queue; R01/R02 remain lead-owned. |
+| 2 | **Lead R02: first complete user path** | Integrate snapshot conversion, accepted publish client, exact read API, save/conflict behavior and native page/history viewer for a general-purpose slide. Current view resolves the owner's revision once; old-revision view uses that exact revision. Read-only history must not open a writable legacy set. Prove changed saves create revisions, no-ops do not, and reload/old revision produce the stored content. |
+| 3 | **Junior J43: UI/error/accessibility follow-up, gated** | After R02 provides working controls and a frozen state diagram, add focused tests and accessibility/error-message corrections. Preserve drafts on conflict, denial and uncertain completion. No new client state architecture. Lead supplies exact files and cases before assignment. |
+| 4 | **Lead + junior J44: browser acceptance, gated** | Lead supplies the disposable test wiki/page, exact URL, accounts and reset instructions. Junior verifies the matrix below against real UI. Lead reproduces failures and signs off before inviting the user. J44 is not assigned until the URL and harness exist. |
+| 5 | **Lead R03: images and PDFs using the same revision path** | Wire exact historical sources through supported MediaWiki file/media facilities. Verify replacements, denied/missing archived sources and PDF page geometry. Do not substitute current files or create a supervisor. Add a bounded junior packet only after the delivery interface is concrete. |
+| 6 | **Lead R04: adoption and release** | Explicit legacy-copy adoption, owner binding, move/delete/restore/rollback/suppression/import/export policy and compatibility acceptance. Existing shared sets cannot alter an adopted snapshot. Disabling the feature must preserve stored revisions and must not silently fall back to legacy content. Release after these gates, not merely after a slide demo. |
+| 7 | **Lead, then bounded juniors: native search, then Cargo** | Design annotation-text extraction/index visibility from published owner revisions, then queryable Cargo projection. Rebuild/delete/suppression behavior must follow the same owner/revision rules. No live field binding or unrelated UI expansion ahead of history. |
+
+**R01 progress — September 13:** the exact-revision `layersread` boundary is implemented, default-off and explicitly owner-scoped in isolated tests. It reuses `PageReadService`, forces private zero-age API caching, rejects invalid/hidden/wrong-owner reads and returns safe errors. Full core verification passes 351 tests / 2,557 assertions / one existing skip. This is native extension code; no supervisor work was resumed. R01 is still in progress: shared pilot registration, actual HTTP evidence and lifecycle guards remain. The publish API now also requires exact owner keys, with an empty list denying all writes. See the [read API contract](PAGE_OWNED_READ_CONTRACT.md#r01-exact-revision-api-boundary--september-13-2026).
+
+R01 remains the immediate lead work. J42 is accepted; J45 is accepted with corrections. No further junior packet is queued ahead of R01/R02. R02 integrates the accepted clients after the native admission gates are met. J43/J44 are reserved IDs, not instructions to start unspecified work. If R01 finds a missing MediaWiki lifecycle hook, the lead resolves or narrows the supported pilot operations with enforceable guards; it does not substitute another infrastructure project.
+
+### J42 — Page-owned publish client (accepted with lead corrections)
+
+Implemented `resources/ext.layers.editor/PageOwnedPublishClient.js` and `tests/jest/PageOwnedPublishClient.test.js` against the existing `layerspublish` API write contract:
+- Dependency-injected `new PageOwnedPublishClient(api)` requiring `api.postWithToken`.
+- Validates nonempty string `owner`, integer `baseRevisionId` 0–2,147,483,647, and string `snapshotJson` (rejects invalid input locally with `layers-invalid-publication-request`).
+- Immutable request field capture at invocation.
+- Parameter mapping: `action: 'layerspublish'`, `owner`, `baserevid`, `data`, `summary` (default `""`), `maintext` (omitted if absent, preserved if explicit `""`).
+- Success verification requiring `layerspublish.result === 'Success'` and integer `revid` 1–2,147,483,647 (with no-op equality supported).
+- Outcome-unknown mapping for transport failures, malformed success, unknown error codes, and server errors (`layers-publication-failed`, `layers-revision-save-failed`).
+- Safe fixed error messages; no payload or token reflection.
+- Zero retries, zero global state reads, zero UI/draft mutations.
+
+Fresh verification:
+- Focused Jest suite: **43 tests passed** (`npx jest tests/jest/PageOwnedPublishClient.test.js --verbose`).
+- Full Jest suite: **184 suites / 14,465 tests passed** (`npm run test:js`).
+- ESLint: clean (0 errors, 0 warnings).
+- PHP style and documentation checks pass; manifest unchanged (0 diff).
+
+Lead acceptance supersedes the original junior evidence above: 47 focused tests and ESLint pass after synchronous-failure handling, diagnostic redaction and optional-field validation corrections. Lead R01 and R02 retain registration, lifecycle admission and UI integration.
+
+### J45 — Exact-revision read client (accepted with lead corrections)
+
+Implemented `resources/ext.layers.editor/PageOwnedReadClient.js` and `tests/jest/PageOwnedReadClient.test.js` against the `layersread` exact-revision read API contract:
+- Dependency-injected `new PageOwnedReadClient(api)` requiring `api.get`. Rejects missing/invalid API instances locally with `layers-invalid-read-request`.
+- Validates nonempty string `owner` and integer `revisionId` 1–2,147,483,647 (rejects invalid input locally with `layers-invalid-read-request`).
+- Immutable primitive field capture at invocation.
+- Parameter mapping: `action: 'layersread'`, `owner`, `revid: revisionId`.
+- Safe invocation wrapping `api.get` call in Promise execution to handle synchronous exceptions cleanly.
+- Response boundary checking: requires non-array `layersread` object, exact integer `revisionId` matching requested ID (rejects different revision), non-array `snapshot` with `schemaVersion === 1` and `surfaces` array, and `sourceGeometry` as non-array object or empty array (slide-only). Rejects malformed envelopes with `layers-reading-failed`.
+- Safe error mapping: recognizes `missingparam`, `outofrange`, `maxbytes`, `permissiondenied`, `layers-reading-disabled`, `layers-revision-unavailable`, `layers-reading-failed`. Maps other errors to `layers-reading-failed`.
+- Fixed safe error messages without reflecting server diagnostics, HTML, stack traces, or tokens.
+- Zero tokens, zero retries, zero global state reads, zero DOM/draft mutations.
+
+Fresh verification:
+- Focused Jest suite: **36 tests passed** (`npx jest tests/jest/PageOwnedReadClient.test.js --verbose`).
+- Combined client suites: **83 tests passed** (`npx jest tests/jest/PageOwnedPublishClient.test.js tests/jest/PageOwnedReadClient.test.js --verbose`).
+- Full Jest suite: **185 suites / 14,505 tests passed** (`npm run test:js`).
+- ESLint: clean (0 errors, 0 warnings).
+- PHP style and documentation checks pass; manifest unchanged (0 diff).
+
+Lead acceptance supersedes the junior evidence above: 38 focused read-client tests and 85 combined client tests pass after correcting a raw-error redaction bypass. ESLint passes. Lead R01 and R02 retain registration, lifecycle admission and UI integration.
+
+### Next lead deliverable — R01 bootstrap wiring, merge-history and HTTP acceptance
+
+J42 and J45 are accepted. No junior task is ready until the lead supplies the R02 controls/state contract for J43 or the browser harness for J44. Do not commission substitute test or infrastructure packets.
+
+The read and publish API constructors now both require explicit permitted owner prefixed DB keys in addition to the default-off gate. Publish rejects an empty, unrelated or prefix-only allowlist before calling the publication service. Shared configuration/service registration remains to be implemented; matching constructor checks do not claim that wiring is complete.
+
+Native pilot restore veto is now implemented and tested through full/selected-revision core restore commands, including unrelated-page success. The hook remains unregistered; it must share the API owner scope and stay active even when writes are disabled. Fresh native regression: 85 tests / 370 assertions. Native import admission now has an unregistered decorator tested through both core service modes, rejecting pilot targets and imported Layers roles/models before insertion. Next, the lead must wire the import/restore guards and read/write APIs to one retained pilot-owner scope, verify remaining lifecycle cases (including rollback and compound moves), then verify controlled HTTP behavior. XML import presentation and other supported core versions still require acceptance. Only after those protections pass will R02 connect the accepted clients to the editor and exact-revision viewer. A normal browser pilot remains disabled. This is MediaWiki/PHP work and introduces no host-runtime dependency.
+
+**September 14 lead progress:** native move validation now vetoes both source and destination pilot names. Real move/restore tests pass 8 tests / 27 assertions, including ordinary move success. The guard remains test-registered only. Shared registration and the remaining lifecycle/HTTP checks remain the next lead work; no junior task is queued and no browser pilot is enabled.
+
+**September 14 rollback evidence:** native rollback rejects Layers slot removal/replacement and permits main-text rollback preserving the same snapshot. Four focused tests / 18 assertions pass; no additional runtime guard was needed. Next implementation remains shared pilot service/hook/API registration and controlled transport acceptance, with explicit handling of remaining alternate paths such as merge-history. No junior packet is queued.
+
+**September 14 shared composition:** `LayersPageOwnedPilot` is lazily registered in `services.php`; its composed APIs and guards share captured owner keys and one publication admission context. Tests exercise actual publication and exact historical reading through that service, both API gates, and retained move/import guards with APIs disabled. Fresh native regression: 112 tests / 454 assertions. Content-role/API/hook bootstrap installation remains test-only; this is not normal pilot enablement. Next lead work is pre-write history-merge protection and complete controlled bootstrap/HTTP registration. Core inspection found only an after-merge notification hook, so a safe supported pre-write boundary must be established before enabling the pilot.
+
+### First user-testing gate
+
+I will give the user a URL only when the following works in the disposable test MediaWiki installation. Docker hosting that installation is test setup only.
+
+- Create/edit a page-owned general-purpose slide; each changed save appears in the owner page's native history with actor/summary and revision ID.
+- Reload and compare at least two saved revisions; old content stays old, including after a later save. Expose a usable change summary/diff path, not just an opaque record.
+- Test two concurrent editors: the stale save cannot overwrite the winner; the losing draft remains recoverable. A no-op save does not invent an edit.
+- Verify read/edit denial, page protection, bad CSRF token and ordinary main-text edits. Exercise real relevant alternate write paths; unsupported pilot operations must be blocked, not merely documented as unsafe.
+- Confirm pilot pages do not display or mutate live shared legacy content, and unrelated existing Layers pages remain unchanged.
+
+The first invitation is deliberately a slide-only history checkpoint because slides require no file derivative. It is not a release or a narrowing of Layers to slides. Image/PDF historical-source acceptance and the full lifecycle/compatibility matrix remain mandatory before broader release. There is no test URL yet, and this plan does not claim those checks already pass.
+
+### Lead review discipline
+
+Every packet review must answer: does this implement the MediaWiki feature we need, does the actual user behavior work, and are the stated limits accurate? Keep rejected architecture out of new tasks. Review implementation and test assertions, correct defects, then record measured evidence and the next explicit assignment. Do not commission another generic test expansion merely because a component exists. New infrastructure or runtime dependencies are outside this plan.
+
+Prepared September 10, updated September 13, 2026. Original main baseline: `e03504ec` (manifest 1.5.95). Latest review covers J01–J24 through `651d9011`; it does not claim a merge to main.
 
 This is the execution queue for the [product roadmap](../improvement_plan.md). It assigns bounded implementation work to junior engineers and retains architectural, authorization and data-migration decisions with the lead engineer. Tasks are **not started or assigned** merely because they appear here. No feature is enabled by this document.
 
 Images, PDF annotations and standalone slides are equal content types. Slides are general-purpose canvases: presentations, diagrams, educational material, posters, dashboards and visual documents are all valid uses. No task may require SOP-specific fields or workflow.
 
-## Start here
+## Earlier checkpoint summary — superseded by the active recovery plan
 
-**Latest lead review through `651d9011`:** J01–J24 stabilization is closed. Fresh cleanup/API tests passed 28 tests; J24 records two 13/13 browser passes, not independently repeated in this review. Read the [evidence qualifications](JUNIOR_IMPLEMENTATION_REVIEW.md). **L01 design is complete; enforcement is not. Next: lead L01a → L01b, then junior J06.** The [admission decision record](PAGE_OWNED_ADMISSION_DESIGN.md) fixes the implementation boundary and acceptance matrix.
+**J40 is accepted with lead corrections.** Fresh full core result: **334 tests / 2,506 assertions / one existing permission-test skip**, no failures on MediaWiki 1.45.3/PHP 8.3.31. Twenty journal session scenarios pass on Windows/PowerShell 7. Corrected provider resource lifetime, stream-wrapper registration ownership, exact failure-path IO assertions and raw-byte startup preservation. A valid active fixture is independently checked through the real journal before rejection. No production implementation change was needed. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md).
 
-The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
+**J41 is accepted with lead corrections.** Fresh verification passes **368 protocol scenarios and 20 integrated PHP journal-session scenarios** on Windows/PowerShell 7. Corrected completion-abort checks now attempt the valid completion before another Accept can mask a regression; added null/later-phase version cases and safe diagnostic labels. A targeted temporary-copy mutation verifies the corrected assertion detects an unintended retry. No production implementation change was needed. Prior core evidence remains 334 tests / 2,506 assertions / one existing skip. See the [lead review](JUNIOR_IMPLEMENTATION_REVIEW.md#j41-lead-review--september-13-2026).
+
+**Current assignment:** lead R01, then R02; J42/J45 are accepted and no further junior packet is queued. J35 is cancelled. Browser testing awaits actual MediaWiki integration, not infrastructure work.
+
+The [lead transport contract](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#lead-transport-implementation-contract--september-13-2026) specifies framing, process ownership, session-wide limits, uncertain outcomes and four ordered implementation/evidence gates. The [initial transport checkpoint](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#bounded-session-transport-checkpoint--september-13-2026) records the new interface, 35 passing scenarios and remaining evidence gaps. The [persistent-owner checkpoint](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#persistent-php-journal-owner-checkpoint--september-13-2026) records that composition and its 16 passing scenarios. The [J40 acceptance checkpoint](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#j40-stream-framing-and-owner-startup-rejection-acceptance--september-13-2026) records the extended stream framing and startup rejection evidence.
+
+**Earlier host checkpoint:** the real journal passes five disposable Windows/PHP 8.4.11 checks, both directly and through the bounded runner: process-lock exclusion, replacement-write/reopen behavior and retained intent/capacity after child termination for all three command kinds. See `scripts/probe-journal-host.php` and the [bridge direction](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#local-host-journal-evidence-and-bridge-direction--september-13-2026). This is local invocation compatibility, not a completed runtime adapter. These components are now composed under one persistent PHP owner; the newer checkpoint above supersedes the earlier integration gap.
+
+**Current core checkpoint:** 334 tests / 2,506 assertions / one existing permission-test skip, no failures. Twenty local session scenarios establish persistent journal ownership and startup rejection with scripted replies, not real Docker dispatch.
+
+The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation.
 
 ### Assignment template
 
@@ -31,7 +1270,7 @@ The internal implementation includes a genuine MediaWiki revision writer, strict
 
 **Existing user saves still use `layer_sets`.** The experimental endpoint and content model are not registered for production. Alternate save admission, historical viewers, migration and lifecycle acceptance remain incomplete. Existing Cargo gallery support in `src/Hooks/CargoHooks.php` and `src/Cargo/CargoLayersGalleryFormat.php` is not annotation-text indexing or field binding.
 
-Previously recorded evidence at the baseline: 96 real-core tests / 244 assertions; standalone PHP 868 tests / 1,952 assertions / one existing skip; JavaScript 180 suites / 14,310 tests. These are historical results, not tests run when writing this plan. Core API tests use internal ApiMain dispatch, not HTTP/browser requests. Coverage, full browser acceptance and LTS parity are not established by these counts.
+Previously recorded evidence at the baseline: 107 real-core tests / 317 assertions passing on MediaWiki 1.45.3; standalone PHP 1,070 tests / 2,485 assertions / one existing skip; JavaScript 183 suites / 14,422 tests. Core API tests use internal ApiMain dispatch, not HTTP/browser requests. Coverage, full browser acceptance and LTS parity are not established by these counts.
 
 ## Ordered queue and gates
 
@@ -43,9 +1282,9 @@ Junior packets should normally fit one focused PR. Lead packets are milestones a
 | 2 J02 | Junior | Configured initial set name (R6.17) | Reviewed and corrected |
 | 3 J03 | Junior | Slide creation rate limit (R6.14) | Reviewed; unit evidence |
 | 4 J04 | Junior | Production rename regression tests (R6.15) | Reviewed; live browser acceptance proven in J18 |
-| 5 L01 | Lead | Alternate-path admission design and enforcement | Design recorded; L01a enforcement then L01b core proof pending |
+| 5 L01 | Lead | Alternate-path admission design and enforcement | Internal PageUpdater boundary accepted; production/lifecycle gates remain |
 | 6 J05 | Junior | Identity-specific draft cleanup (R6.10) | Corrected; identity format remains J16 |
-| 7 J06 | Junior | Source and transport acceptance fixtures | L01 test registration contract |
+| 7 J06 | Junior | Source and transport acceptance fixtures | Phase 1 accepted with corrections (121 core tests / 515 assertions); phase 2 awaits lead disposable transport setup |
 | 8 L02 | Lead | Historical read, asset delivery and controlled registration | L01 + J06; gate A |
 | 9 J07 | Junior | Page-owned API client adapter | Gate A and frozen read/write response contracts |
 | 10 J08 | Junior | Publish-state and conflict UI | J07 and lead-approved state diagram |
@@ -195,31 +1434,48 @@ Then run two isolated browser acceptance passes against the corrected branch, us
 
 **Acceptance:** cleanup tests fail if broad prefix deletion is restored; two clean browser passes with zero current-run leftovers; prior-run/unrelated data intact. No claim that earlier J21 passes validate the corrected implementation.
 
-## Current handoff: L01a → L01b → J06
+## Earlier review record — superseded by the current MediaWiki-native queue
 
-J24 is accepted at `651d9011` with the browser-evidence qualifications in the review record. Its packet above is retained for scope/history, not a request to repeat the completed runs.
+### J25 — Fill concrete admission test gaps
 
-1. **Lead L01a:** implement the scoped admission boundary and safe errors from the [decision record](PAGE_OWNED_ADMISSION_DESIGN.md), with test-only registration. Inventory core paths that bypass the hook.
-2. **Lead L01b:** prove the required real-core matrix and freeze the registration/fixture contract. No public feature enablement.
-3. **Junior J06, blocked until L01b:** implement real source and HTTP fixtures using the existing packet below. Record separate mocked, core-dispatch and HTTP results; never register the experimental API on the normal development wiki merely to run tests.
+**Complete.** Added 4 explicit behavioral tests in `tests/phpunit/core/PageOwnedAdmissionTest.php`:
+1. `testFailedExactParentLookupFailsClosed`: Injected `RevisionLookup` returns `null` for parent; save fails closed at hook boundary (`layers-admission-unauthorized`, reason `parent_lookup_failed`); no revision advance; slot models and serialized contents preserved.
+2. `testInheritedImagePdfSnapshotPreservedWithoutSourceResolver`: Image and PDF surfaces with synthetic source metadata preserved across ordinary main-only edit; `SourceVersionResolver::resolve()` never invoked; mutation while resolver is unavailable fails before hook (`layers-source-unavailable`).
+3. `testConcurrentWinnerAfterParentCaptureWithAdmissionEnabled`: Loser `PageUpdater` captures parent CAS token; intervening winner commits revision; loser attempts save inside active scope; hook validates parent, but core's `PageUpdater` CAS fails with `edit-conflict` after hook; winner preserved; loser creates no revision; scope cleared.
+4. `testNoOpScopeCleanupFollowedByDeniedMutation`: No-op publication does not advance revision ID; scope cleaned up; subsequent direct `PageUpdater` replace and removal denied at hook boundary (`layers-admission-unauthorized`, `layers-slot-removal-denied`); unchanged checked row totals.
 
-There is no new ready junior product packet at this checkpoint. Do not restart J16–J24 from their historical instructions or invent authorization behavior to unblock J06.
+**Engineer-recorded J25 verification before lead corrections:** core suite passed **111 tests / 405 assertions** on MediaWiki 1.45.3 / PHP 8.3.31. Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). PHP style / syntax checks pass with 0 errors.
+
+### J26 — Replace asserted route coverage with a core-source inventory
+
+**Complete.** Inspected installed MediaWiki 1.45.3 source files under `/var/www/html/includes/` on container `mediawiki-145` and documented call chains, line numbers, and hook execution status in `docs/PAGE_OWNED_ADMISSION_DESIGN.md`:
+- Web edit (`includes/editpage/EditPage.php` line 2552), API edit (`includes/api/ApiEditPage.php` line 526), Rollback (`includes/page/RollbackPage.php` line 299), and Undo (`includes/editpage/EditPage.php` line 1663, line 2552) confirmed calling `PageUpdater::saveRevision()` and invoking `MultiContentSaveHook`.
+- XML import (`includes/import/ImportableOldRevisionImporter.php` line 188) and Undelete (`includes/page/UndeletePage.php` line 606) confirmed calling `RevisionStore::insertRevisionOn()` directly, bypassing `PageUpdater` and `MultiContentSaveHook`. Both are documented as explicit **enablement blockers** requiring L03 lifecycle adapters before production registration.
+- Reproducible read-only container inspection commands documented.
+
+L01 internal acceptance is recorded in the latest review. Lead owns L02 and disposable transport setup; J06 phase 1 is accepted; J27 is accepted; J28 is accepted; J29a is accepted with corrections; J29b is accepted with corrections; J30 is accepted; J31 is accepted with corrections; lead retains resource/configuration and transport gates.
 
 ## Lead-owned history work
 
 ### L01 — Close alternate publication paths
 
-**Primary files:** `src/Revision/PagePublicationService.php`, `PageRevisionWriter.php`, `PageHistoryAccess.php`, the content handler under `src/Content/`, and `tests/phpunit/core/`.
+**Primary files:** `src/Revision/PagePublicationService.php`, `PageRevisionWriter.php`, `PageHistoryAccess.php`, `src/Hooks/PageOwnedAdmissionHooks.php`, `src/Revision/PublicationAdmissionContext.php`, `src/Revision/PublicationAdmissionIntent.php`, and `tests/phpunit/core/PageOwnedAdmissionTest.php`.
 
-Design step completed September 11; implement L01a and prove L01b before claiming L01 complete. Installed MediaWiki inspection found that content `ValidationParams` lacks the original Authority and slot role, while `MultiContentSave` receives author UserIdentity rather than the original request Authority. Do not reconstruct unrestricted user authority from an author or assume the global request user represents a job or scoped API caller.
+**Status: Internally accepted (September 11, 2026).** L01a/L01b PageUpdater boundary passes the reviewed core suite; production/lifecycle gates remain open.
+- Single-use publication scope around `PageRevisionWriter::save` enforced via `PageOwnedAdmissionHooks` handling `MultiContentSave`.
+- Direct `PageUpdater` add, replace, and slot removal without scope are denied without committing revisions.
+- Scope borrowing strictly rejected for mismatched owner, base revision, author identity, snapshot digest, or unexpected slot mutations.
+- Unchanged inherited `layers` slot passes freely without requiring publication scope or re-resolving historical assets.
+- Nested scopes rejected with `LogicException`; exception cleanup guaranteed in `finally`.
+- Isolated test registration contract (`TestingAdmissionRegistration`) installs the content model, slot role, single-use admission context, and hook into isolated test cases; production registration remains strictly off.
+- Alternate routes bypassing `PageUpdater` (`ImportableOldRevisionImporter`, `UndeletePage`) inventoried via reflection and documented as enablement blockers requiring L03 adapters.
 
-The [admission decision record](PAGE_OWNED_ADMISSION_DESIGN.md) now selects a scoped publication context carrying the original Authority and exact owner/base/snapshot intent, checked at the core save hook. The decision is settled for implementation; its correctness still requires L01b core evidence. Prove exception-safe cleanup, nested/repeated-save isolation, correct model/slot placement, creation, changed content and removal. An unrestricted boolean bypass is unacceptable.
-
-Distinguish a new/changed/removed Layers slot from an unchanged inherited snapshot: ordinary main-only edits must not require fresh access to an unavailable historical source merely to retain old Layers content. Specify trusted import/restore paths explicitly; do not accidentally permit them or block all maintenance forever.
-
-**Exit evidence:** direct unauthorized slot mutations fail without a revision; authorized writes still work; restricted Authority is not widened; ordinary edits preserve existing content; wrong-role/model insertion fails; stale/racing writes remain rejected. Update the implementation/API contracts with the tested boundary and remaining lifecycle limits.
+**Latest lead evidence:** 114 core tests / 424 assertions pass after prepared-main binding and J25/J26 review. J06 phase 1 has since been reviewed; see latest evidence above. HTTP transport remains gated.
 
 ### L02 — Read and asset delivery, then gate A
+
+**Current lead implementation order:** follow the [asset delivery decision record](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md). L02a implements and proves private raster output/lifetime; L02b binds exact owner/revision/source authorization and post-render rechecks. J29a renderer probes are accepted with corrections; J29b authorization probes are accepted with corrections; J30 suite separation is accepted; J31 staging probes are accepted with corrections; the lead now owns resource admission and configuration wiring before the next junior packet. The internal reader and J28 tests are accepted; do not substitute another reader-test batch for delivery work.
+
 
 Define the exact owner/revision/surface read response and failure contract, including hidden revisions and inaccessible/missing assets. Implement permission-aware asset delivery and cache identity. Resolver metadata alone is not a historical file-retention or public-thumbnail security guarantee.
 
@@ -249,11 +1505,251 @@ Only advertise the history guarantee for owner-bound published content and suppo
 
 ### J06 — Real assets and HTTP acceptance fixtures
 
-After L01 freezes the test-only registration setup, extend `tests/phpunit/core/` and test fixtures with small locally generated image/PDF assets; include a source-free slide. Synthetic hashes in `tests/fixtures/revisions/mixed-document-v1.json` are schema examples, not real files.
+**Phase 1 accepted after lead corrections:** the [asset fixtures](../tests/fixtures/assets/README.md) now have a reproducible PHP generator and valid PNG checksums/PDF offsets. `RealAssetAdmissionTest.php` passes 7 tests / 91 assertions; full core suite passes **121 tests / 515 assertions** on MediaWiki 1.45.3 / PHP 8.3.31.
 
-Exercise upload/replacement, exact archived source, missing bytes and invalid PDF page. Add HTTP cases for the experimental request contract using a disposable wiki/test registration: POST, GET rejection, CSRF, anonymous/unauthorized access, stale base and safe error body. Do not enable the endpoint on the normal development wiki to make tests pass.
+Verified: atomic mixed image/PDF/slide publication; current and archived image bytes; hash/timestamp mismatch rejection; real two-page PDF boundary enforcement; missing backend bytes; zero repository lookups for slides; exact inherited snapshot preservation after actual image/PDF bytes are removed. Temporary backend paths and core test tables isolate fixture operations. This does not prove retained assets or public historical rendering.
+
+**Phase 2 remains gated:** before implementing real HTTP tests, the lead must provide the disposable wiki/endpoint-registration/credential/teardown contract. The normal localhost wiki must remain unregistered. Internal ApiMain dispatch is not HTTP proof. Report a missing transport contract rather than inventing one.
 
 **Done when:** fixtures reproduce cleanly, tests verify both response and revision effects, cleanup is limited to owned test data, and the report separates mock/core-dispatch/HTTP evidence. Harness architecture or new dependency installation decisions go to the lead.
+
+### J27 — Archived PDF replacement and page-specific geometry
+
+**Accepted with lead test-isolation correction (local uncommitted).**
+- Extended `tests/fixtures/assets/generate.php` with a parameterizable PDF generator and generated `test-multipage-replacement.pdf` (1 page, 300x150 pt, 593 bytes). Verified with `generate.php --check`, `pdfinfo`, and `pdftoppm`.
+- Added 2 core integration tests in `tests/phpunit/core/RealAssetAdmissionTest.php`:
+  1. `testArchivedPdfReplacementAndPageSpecificGeometry`: Uploads initial 2-page PDF (T1, 200x100 pt / 100x200 pt MediaBox, 416x208 px / 208x416 px reported by the handler at test-pinned 150 DPI), replaces with 1-page PDF (T2, 300x150 pt, 625x312 px reported by the handler at test-pinned 150 DPI). Publishes snapshots pinned to T1 (page 2) and T2 (page 1). Asserts exact byte matching, page count, and dimension units (MediaBox pt vs rendered px). Catches fallback trap on page 2 of T2 (fails closed with `layers-source-unavailable`). Rejects mismatched timestamps/hashes and out-of-bounds pages without revision creation.
+  2. `testArchivedPdfByteLossFailsClosedWithoutLatestFallback`: Deletes only physical archived T1 bytes from backend while leaving current T2 bytes intact. Proves resolving pinned T1 fails closed with `layers-source-unavailable` rather than falling back to current content. Proves ordinary main-only edit retains stored snapshot bytes and model without re-resolving sources.
+- **Engineer-recorded verification before lead additions:** 123 core tests / 597 assertions pass on MediaWiki 1.45.3 / PHP 8.3.31 (up from 121 / 515). Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). `npm run test:php` and `npm run check:docs` pass cleanly. Production history remains disabled; lead retains L02 historical delivery and J06 phase 2 transport setup.
+
+### J28 — Internal reader failure boundaries
+
+**Accepted with lead corrections (local uncommitted).**
+- Added 5 focused failure-boundary tests in `tests/phpunit/core/RealAssetAdmissionTest.php`:
+  1. `testReadRejectsNonPositiveAndForeignOwnerRevisionBeforeSourceResolution`: Zero (`0`) and negative (`-1`) revision IDs and valid revisions belonging to a foreign owner are rejected before `SourceVersionResolver::resolve()` is invoked (verified via mock expectation).
+  2. `testReadRejectsDeletedTextRevisionBeforeSourceResolution`: Revisions with `DELETED_TEXT` visibility accessed by readers without `deletedtext` permission are rejected before source resolution.
+  3. `testReadDeniedSourceAccessExposedOnlyAsRevisionUnavailableWithoutPartialBundle`: Resolver failure with `layers-source-unavailable` is wrapped and exposed strictly as `layers-revision-unavailable` with chained previous exception; no partial bundle or partial geometry is exposed.
+  4. `testReadRejectsNonPositiveOrUnavailableHandlerDimensions`: Invalid dimensions (`0` width, `-1` height, `false` non-integer from handler) throw `layers-revision-unavailable` without inventing geometry.
+  5. `testReadSlideOnlyBundleHasEmptyGeometryAndZeroRepositoryLookups`: Reading a source-free slide-only revision yields `sourceGeometry: []` and performs zero repository or title lookups (`LocalRepo` and `TitleFactory` mocks expect never).
+- **Verification:** 130 core tests / 660 assertions pass on MediaWiki 1.45.3 / PHP 8.3.31 (up from 125 / 618). Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). `npm run test:php` passes with 0 errors and 0 warnings. `npm run check:docs` passes cleanly. Production history remains disabled; lead retains L02 asset delivery and J06 phase 2 transport setup.
+
+### J29a — Private renderer acceptance probes
+
+**Accepted with lead corrections (local uncommitted).**
+- Extended `testPrivateRasterRendererWithRealCoreHandlers` in `tests/phpunit/core/RealAssetAdmissionTest.php`:
+  - Uploaded multi-pixel 80×40 px PNG and JPEG fixtures to the isolated backend.
+  - Exercised real resampling/downsampling with core handlers (requested width 40 → actual 40×20 px for both PNG and JPEG).
+  - Recorded and asserted requested versus actual dimensions across native copy (PNG 1×1, JPEG 1×1), downsampling (PNG 40×20, JPEG 40×20), SVG rasterization (40×20), and multi-page PDF rendering (page 1: 40×20, page 2: 40×80).
+  - Verified pre- and post-render backend storage inventory: no persistent derivative files added to `public` or `thumb` repository zones; original source files intact with matching sizes and SHA-1 checksums; `thumb` zone remains completely empty.
+- Added 6 focused fault-injection tests in `tests/phpunit/core/RealAssetAdmissionTest.php` covering all 8 specified failure boundaries:
+  1. `testPrivateRasterRendererRejectsInvalidWidthOrPageAndExcessiveDimensions`: Invalid requested page (0, -1) and width (0, -1, 4097); empty decoder string; `normaliseParams` returning `false`; handler normalising dimensions to non-positive or > 4096 (`width`, `height`, `physicalWidth`, `physicalHeight`).
+  2. `testPrivateRasterRendererRejectsUnsupportedInputAndOutputTypes`: Missing handler (`getHandler() === null`); unsupported source MIME (`image/webp`, `image/gif`, `text/plain`, `application/octet-stream`, `image/tiff`); unsupported thumb output types from `getThumbType` (`webp`, `svg`, `gif`, `image/x-png`, invalid extension `exe`, `pdf`).
+  3. `testPrivateRasterRendererRejectsHandlerErrorsAndExceptions`: `doTransform` returning `null`; a mocked transform output reporting `isError() === true`; unexpected transform exception (verifying exception propagation and staging artifact purge).
+  4. `testPrivateRasterRendererRejectsDeferredOutputOrMismatchedLocalCopyPath`: Deferred/client output (`hasFile() === false`); mismatched returned local copy path (`getLocalCopyPath() !== $path`).
+  5. `testPrivateRasterRendererRejectsCorruptedOrOversizedOutput`: Corrupted/truncated image bytes failing `getimagesizefromstring`; corrupted IDAT stream failing full ImageMagick decode (`-regard-warnings`); empty file (0 bytes); oversized encoded output exceeding 8 MB (8,388,609 bytes).
+  6. `testPrivateRasterRendererRejectsMismatchedNativeSourceDimensions`: Non-PNG/JPEG source (SVG) claiming `fileIsSource()`; width mismatch; height mismatch; source size exceeding 8 MB; missing local source reference path (`false`; a non-existent nonempty path is not tested).
+- Controlled failures throw `\DomainException('layers-render-unavailable')`; the injected transform crash propagates its `RuntimeException`. Cases allocating owned staging verify cleanup and preservation of unrelated content. Early validation cases allocate no artifact. Inventory snapshots establish no persistent backend changes for these fixtures, not absence of transient writes by every handler.
+- **Junior-reported checkpoint (before lead corrections):** `RealAssetAdmissionTest.php` passes **26 tests / 534 assertions** (up from 20 / 343). Full core suite passes **140 tests / 958 assertions** on MediaWiki 1.45.3 / PHP 8.3.31 (up from 134 / 767). Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). `npm run test:php` and `npm run check:docs` pass with 0 errors and 0 warnings.
+
+### J29b — Delivery authorization acceptance
+
+**Accepted with lead corrections (local uncommitted).** Target `PageAssetService::prepare(Title, int revisionId, string surfaceId, int width, Authority): array`. The result contains only `mime`, `width`, `height`, `bytes`; controlled failures are `DomainException('layers-asset-unavailable')`. Unexpected infrastructure/cleanup exceptions propagate. No HTTP contract is frozen.
+
+Add focused real-core tests for a foreign owner/revision pair, hidden or missing revision before rendering, exact archived PDF page selection after replacement with a shorter PDF, and denial of a different source in a mixed image/PDF/slide document. Verify the whole-document policy both before and after rendering. Inject a renderer callback that completes a real raster and then suppresses the pinned archived source; confirm no result escapes and owned staging is empty. Existing lead tests already cover owner/source authorization changes, hidden revision, disappearing bytes and slide/unknown IDs; extend coverage rather than duplicate them.
+
+Verify source filename, timestamp, hash and page are derived from the snapshot; do not introduce caller overrides or latest-version fallback. Test generic renderer failure mapping and propagation of cleanup infrastructure errors. Keep tests isolated, run the full core suite and PHP style checks, and document real versus injected boundaries. Do not add HTTP registration, caching, UI wiring or resource-policy changes. Passing these tests does not close gate A.
+
+- **Implementation & Verification (September 12, 2026):**
+  Added 5 focused test methods to `tests/phpunit/core/RealAssetAdmissionTest.php`:
+  1. `testAssetPreparationRejectsForeignMissingOrHiddenRevisionBeforeRendering`: Foreign owner/revision pairs, non-positive or non-existent revision IDs, and revisions with `DELETED_TEXT` visibility (when reader lacks `deletedtext`) reject with `DomainException('layers-asset-unavailable')` without invoking source resolution or rendering.
+  2. `testAssetPreparationRendersArchivedPdfPageAfterReplacementWithShorterPdf`: Pinned T1 page 2 renders at 40x80 px without falling back to latest 1-page T2 after replacement; proves source metadata (filename, timestamp, hash, page) is derived exclusively from the snapshot.
+  3. `testAssetPreparationEnforcesWholeDocumentPolicyBeforeAndAfterRendering`: In a mixed slide + image + PDF document, denying access to the PDF source blocks image preparation before rendering (`resolve()` failure); revoking PDF access during image rendering withholds completed image raster bytes after rendering.
+  4. `testAssetPreparationWithholdsBytesWhenArchivedSourceSuppressedMidRender`: Renderer callback generates real raster for pinned archived OldLocalFile, then either sets restricted archived-file visibility while keeping bytes present or deletes physical archived bytes before returning; `prepare()` detects loss on post-render verification, withholds completed bytes, and leaves owned staging empty.
+  5. `testAssetPreparationMapsRendererDomainExceptionAndPropagatesInfrastructureErrors`: Generic renderer `DomainException('layers-render-unavailable')` is wrapped as `DomainException('layers-asset-unavailable')` with original chained; cleanup `RuntimeException('layers-render-cleanup-failed')` propagates uncaught.
+- **Junior-reported checkpoint before lead corrections:** `RealAssetAdmissionTest.php` passes **31 tests / 621 assertions**. Full core suite passes **145 tests / 1045 assertions** on MediaWiki 1.45.3 / PHP 8.3.31. Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). `npm run test:php` and `npm run check:docs` pass with 0 errors and 0 warnings. No HTTP registration, caching, UI wiring or resource-policy changes; gate A remains open.
+
+### J30 — Separate the growing core asset test suites
+
+**Accepted.** This was a test-only refactor; do not modify production code or add feature registration. `tests/phpunit/core/RealAssetAdmissionTest.php` now combines admission, read bundles, renderer faults and delivery authorization in nearly 3,000 lines. Separate ownership of these tests so future fault probes remain reviewable.
+
+1. Extract only shared fixture setup/build/upload helpers into an abstract `RealAssetTestCase.php` in the same test namespace. Keep database/backend isolation, unique temporary roots, pinned PdfHandlerDpi, test-only admission registration and parent setup/teardown behavior intact. Shared helper visibility may become protected; do not expose production helpers or duplicate fixture setup across suites.
+2. Move the eight `testPrivateRaster...` methods and renderer-only helpers to `PrivateRasterRendererTest.php`. Move all `testAssetPreparation...` methods and `provideArchivedSourceRevocationModes` to `PageAssetServiceTest.php`. Keep publication and read-bundle acceptance in `RealAssetAdmissionTest.php`. Follow the existing core bootstrap autoload mechanism, adding an explicit test-helper require only if needed. Preserve relevant `@covers`, `@group Database` and provider annotations.
+3. Preserve every assertion, fault fixture, no-call expectation and real-handler invocation. Do not replace real rendering or storage with mocks to simplify the move. Do not rename tests, flatten the suppression provider, skip tests or change expected counts. Avoid a broad fixture framework; move private helpers to the suite that alone uses them.
+4. Compare `--list-tests` before/after: method/provider cases must each remain present exactly once, allowing class-name changes. Run each of the three suites independently, then the full core suite and PHP style/documentation checks. Confirm the abstract helper is not discovered as an executable test suite and each suite works without another suite having initialized its fixtures.
+
+**Accepted count interpretation:** preserve all domain cases and assertions; the split adds exactly two inherited `testValidCovers` cases/assertions to the prior 146/1,069 checkpoint. Acceptance also requires that each separated suite passes alone, and the change contains only test organization and evidence/documentation updates. Record counts, renamed class paths and any autoload changes. If isolated execution exposes a hidden dependency, report and fix that setup dependency rather than relaxing the test. HTTP, resource policy and public history remain gated.
+
+- **Implementation & Verification (September 12, 2026):**
+  - Extracted shared fixture setup, database/backend isolation, temporary root configuration, and document builder helpers into abstract `RealAssetTestCase.php` (`MediaWiki\Extension\Layers\Tests\Core`). Confirmed that PHPUnit does not discover `RealAssetTestCase.php` as an executable suite.
+  - Moved the 8 `testPrivateRaster...` methods and renderer-only helpers (`snapshotBackendStorageInventory`, `createMockFileAndHandler`) to `PrivateRasterRendererTest.php`. Runs alone: **9 tests / 261 assertions** (8 methods + `testValidCovers`).
+  - Moved all 7 `testAssetPreparation...` methods and `provideArchivedSourceRevocationModes` to `PageAssetServiceTest.php`. Runs alone: **9 tests / 147 assertions** (7 methods + 1 provider with 2 cases + `testValidCovers`).
+  - Trimmed `RealAssetAdmissionTest.php` to retain only the 15 publication, upload replacement, boundary validation, and read bundle acceptance tests. Runs alone: **16 tests / 239 assertions** (15 methods + `testValidCovers`).
+  - Compared `--list-tests` before and after: every single domain test method and provider case is preserved exactly once.
+  - Full core suite passes **148 tests / 1,071 assertions** on MediaWiki 1.45.3 / PHP 8.3.31 (advancing the 146 / 1,069 baseline by exactly +2 tests / +2 assertions from MediaWiki's per-suite `testValidCovers` check on the 2 new test classes). Standalone PHP passes 1,070 tests / 2,485 assertions (1 skip). `npm run test:php` and `npm run check:docs` pass with 0 errors and 0 warnings.
+
+### J31 — Private staging configuration acceptance
+
+**Accepted with lead corrections (local uncommitted).** The original packet follows for traceability. Add focused cases to `tests/phpunit/core/PrivateStagingDirectoryTest.php`; preserve `PrivateStagingDirectory::createFactory(string directory, array publicRoots): TempFSFileFactory`. It returns a factory bound to an existing canonical writable directory or throws `DomainException('layers-private-staging-invalid')`. It creates no files/directories during validation, has no fallback, and rejects overlap in either direction with every explicit served root. It does not discover web-server aliases or prevent later operator remapping.
+
+1. Exercise multiple served roots where only the later root overlaps, a served root expressed through a symlink, and a staging symlink to an actually private directory. The allowed alias must create its test artifact under the canonical private target and purge it. Keep all targets inside isolated test temporary roots and unlink only aliases created by the test.
+2. Cover trailing separators, dot/parent components, a root directory as forbidden ancestor, empty/non-string root entries, file-valued roots, embedded NUL and stream-wrapper inputs. Retain the valid similarly named sibling case: lexical prefix similarity alone must not reject it. All controlled failures must have the exact generic code and must create no artifact or fallback directory; unrelated sentinel bytes survive.
+3. Verify missing staging is not silently created and that rejected configurations do not become factory objects. Test unwritable directories only when the runner can actually deny the effective process write access; root-run chmod tests do not establish this. Record platform/permission limitations instead of claiming portable permission coverage. Windows drive/UNC and junction acceptance needs a suitable environment; Linux symlink evidence does not establish Windows parity.
+4. Run the staging suite alone, the real renderer suite and the full core suite, plus PHP style/documentation checks. Report real filesystem cases and limitations. Do not alter production paths, permissions, server configuration or HTTP registration; do not add a broad path abstraction or weaken rejection to accommodate a test.
+
+**Done when:** fresh evidence covers the cases above without modifying production behavior. Return any discovered defect to the lead with a focused reproducer. Staging validation remains a prerequisite; source/decoded-pixel limits, worker concurrency, hard deadlines, complete served-root wiring and transport stay lead-owned.
+
+- **Implementation & Verification (September 12, 2026):**
+  - Added focused test coverage in `tests/phpunit/core/PrivateStagingDirectoryTest.php` covering:
+    - Multiple served roots with later-root overlap in both directions (child and parent overlap).
+    - Symlinks to served storage (rejected) vs. symlinks to private targets (allowed, artifact created under canonical private directory and purged cleanly).
+    - Path normalization for trailing separators (`///`) and dot/parent components (`./sub/..`), while strictly rejecting traversal escaping into served roots (`../public`, `/public/.`, `/public/child/..`).
+    - The fixture's filesystem root and container parent directories as forbidden ancestors (Windows C: is no longer hard-coded).
+    - Malformed inputs, stream wrappers (`mwstore://`, `file://`, `php://memory`, `php://temp`), embedded NUL bytes (`\0`), non-string root types (`null`, `123`, `false`, `true`, `[]`), empty root lists, file-valued paths (`sentinel`), and relative paths.
+    - Non-creation of missing staging directories and preservation of untouched sentinel content.
+    - Effective write denial when supported by the runner; the lead correction explicitly skips privileged bypass instead of counting it as rejection coverage, and restores temporary permissions in finally. A separate unprivileged probe supplies Linux denial evidence.
+  - **Junior-reported checkpoint before lead corrections.** Staging suite alone: **9 tests / 69 assertions** passed in Docker.
+  - Renderer suite alone: **9 tests / 261 assertions** passed in Docker.
+  - Full core suite: **157 tests / 1,140 assertions** passed on MediaWiki 1.45.3 / PHP 8.3.31.
+  - Standalone PHPUnit: **1,070 tests / 2,485 assertions / 1 skip** passed.
+  - PHP style & linter (`npm run test:php`): 131 files checked, 0 errors, 0 warnings on extension code.
+  - Documentation integrity (`npm run check:docs`): 65 maintained documents agree.
+
+### J32 — Source metadata admission acceptance
+
+**Accepted with lead corrections (local uncommitted).** Original packet retained for traceability. Preserve `SourceRenderAdmission::assertCanRender(File, int page)` and its 64 MiB / 40 million pixel internal limits. Add focused tests in `SourceRenderAdmissionTest.php` and `PageAssetServiceTest.php`; no public configuration, HTTP, timeouts or renderer redesign.
+
+- Cover zero/negative/unavailable file size and invalid page; byte rejection must precede geometry calls. Add just-below, exact and just-above pixel/byte limits without allocating large files. Distinguish integer metadata from false or malformed metadata where core File mocks permit it.
+- Exercise the real admission object through PageAssetService with controlled File metadata: rejection must not invoke rendering and must return the generic asset error. Preserve real revision/source authorization where practical; document mocked boundaries rather than manufacturing huge decompression fixtures.
+- Verify page-specific geometry for an archived PDF stays bound to the snapshot. Verify a mixed document renders/charges only its selected source while all sources still undergo authorization. Slides remain source-free and do not enter the source renderer. Do not introduce cumulative allowances or relax whole-document authorization.
+- Run focused and full core suites, PHP style and documentation checks. Record inherited framework checks and the existing privileged-runner skip separately. Do not claim metadata admission bounds decoder memory or total runtime.
+
+**Done when:** exact limits, failure ordering and service integration have evidence without weakening the policy. Report any defect to the lead. Concurrency, hard deadlines, cumulative metadata budgets and production configuration remain lead-owned.
+
+- **Implementation & Verification (September 12, 2026):**
+  - Added focused test coverage in `tests/phpunit/core/SourceRenderAdmissionTest.php`:
+    - Zero, negative, unavailable, and non-integer file sizes (`0`, `-1`, `-100`, `false`, `null`, `'64000000'`, `1.5`) reject before geometry lookups.
+    - Non-positive page numbers (`0`, `-1`, `-999`) reject before geometry lookups.
+    - Byte threshold boundaries: just below (`MAX_SOURCE_BYTES - 1`), exact (`MAX_SOURCE_BYTES`), and just above (`MAX_SOURCE_BYTES + 1` rejects before geometry).
+    - Pixel threshold boundaries: just below (`39,999,999`), exact (`40,000,000` 1D and `10,000 x 4,000` 2D), and just above (`40,000,001` 1D and `10,000 x 4,001` 2D reject).
+    - Malformed/non-integer geometry (`false`, `null`, `'100'`, `100.5`, negative, zero, and multiplication overflow with `PHP_INT_MAX`).
+  - Added focused test coverage in `tests/phpunit/core/PageAssetServiceTest.php`:
+    - Real `SourceRenderAdmission` integration in `PageAssetService`: verifies excessive bytes and excessive pixels throw `layers-asset-unavailable` (wrapping `layers-render-unavailable`) while strictly forbidding renderer invocation.
+    - Page-specific geometry binding for snapshot-pinned PDF pages: verifies page 2 is specifically evaluated rather than page 1 (oversized page 2 with small page 1 rejects without rendering; small page 2 with oversized page 1 passes and renders).
+    - Mixed-document isolation and source-free slides: slide surfaces reject immediately before resolution or rendering; requesting an image surface succeeds despite a sibling PDF exceeding thresholds; whole-document authorization is preserved.
+  - Admission suite alone: **8 tests / 43 assertions** passed in Docker.
+  - Asset service suite alone: **13 tests / 188 assertions** passed in Docker.
+  - Real renderer suite alone: **9 tests / 261 assertions** passed in Docker.
+  - Full core suite: **169 tests / 1,225 assertions / 1 skip** passed on MediaWiki 1.45.3 / PHP 8.3.31 (baseline 162 / 1,163 / 1 skip + 7 tests / + 62 assertions).
+  - Standalone PHPUnit: **1,070 tests / 2,485 assertions / 1 skip** passed.
+  - PHP style & linter (`npm run test:php`): 133 files checked, 0 errors, 0 warnings on extension code.
+  - Documentation integrity (`npm run check:docs`): 65 maintained documents agree.
+
+## Abandoned supervisor work — historical record, not an assignment queue
+
+Everything in the following collapsed record belongs to the rejected supervisor architecture. Past acceptance means only that its tests passed; it does not approve this work for Layers. Every pending/next step in this record is cancelled. Do not resume it.
+
+<details>
+<summary>Abandoned J33–J41 supervisor investigation and cancelled J35 packet</summary>
+
+### J33 — Disposable worker containment lifecycle acceptance
+
+**Accepted with lead corrections on the local uncommitted branch.** The following junior checkpoint predates the cleanup corrections documented in the latest review. Extended `scripts/probe-render-container.ps1` and fixture `tests/fixtures/execution/container-worker.sh` using installed immutable image `sha256:decbb81155989786c1cff0394fc0185cec65c40472be4da8f9dd584f5cefd1ae` with `--pull=never`. Retains all network/root/capability restrictions, unprivileged workers, finite waits, explicit child readiness, positive control, stopped-state verification and exact label-guarded cleanup.
+
+Evidence:
+- **Docker inspect configuration evidence**: verified `NetworkMode: "none"`, `ReadonlyRootfs: true`, `CapDrop: ["ALL"]`, `SecurityOpt: ["no-new-privileges"]`, `PidsLimit: 32`, `Memory: 134217728` (128 MiB), `NanoCpus: 500000000` (0.5 CPU), `User: "65534:65534"`. Labeled as configuration evidence without claiming unmeasured enforcement.
+- **Sequential baseline containment**: positive control writes (`returnSeconds: 6.075`, `lateWrite: true`, `exitCode: 0`); stopped ordinary process group terminated (`returnSeconds: 1.187`, `lateWrite: false`, `exitCode: 137`, `PID: 0`); stopped detached child terminated (`returnSeconds: 1.159`, `lateWrite: false`, `exitCode: 137`, `PID: 0`).
+- **Simultaneous job isolation (`simultaneous-isolation`)**: two concurrent detached-child jobs run on distinct volumes with unique GUID sentinel tokens (`sentinel-token-a-...`, `sentinel-token-b-...`). Stopped Job A halted at 1.253 s (`lateWrite: false`, `exitCode: 137`, `Running: false`, `PID: 0`, sentinel preserved); independent Job B completed at 6.143 s (`lateWrite: true`, `exitCode: 0`, `Running: false`, `PID: 0`, sentinel preserved). Sentinels and volume inventories verified without cross-contamination.
+- **Injected host-side failure cleanup (`injected-failure-cleanup`)**: host-side exception injected after container start within cleanup-protected scope; exception caught and reported in diagnostic; exact container and volume removed via `finally` with label validation; 0 leftovers.
+- **Post-diagnostic inventory**: zero leftover containers and zero leftover volumes matching `layers.probe` label.
+- **Checks passed**: Bash syntax (`bash -n`: exit 0), PowerShell AST parse check (0 errors), complete diagnostic script (exit 0). Core integration suite remains **169 tests / 1,238 assertions / 1 skip**. Production history remains disabled. Do not implement the real worker manifest, capacity service, daemon restart recovery, source staging or HTTP; those remain lead-owned.
+
+### J34 — Supervisor journal state and failure acceptance
+
+**Accepted with lead corrections.** The tests cover restart from reserved, attached and both cleanup variants; stale ownership credentials; invalid attach/premature confirmation; idempotent cleanup; lifecycle guards; schema corruption; missing state; symlink/sentinel preservation; successful writes; real directory write denial; and cross-process lock contention/recovery.
+
+Lead corrections restore original permissions in `finally`, protect helper cleanup on assertion failure, restore missing-state coverage, and separate successful-write acceptance from privilege-dependent denial. The write-denial fixture proves failure before pending-file creation, instance poisoning and unchanged committed bytes. It does not exercise partial-write/fsync/rename failure cleanup. Symlink initialization rejects as already initialized; symlink reads/reservations reject as unavailable. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md).
+
+**Fresh verification:** focused journal suite **14 tests / 239 assertions**, no skips; full core **183 tests / 1,477 assertions / one existing permission-test skip**, no failures. No production code or registration changed.
+
+### L02c next — Runtime reconciliation and verified cleanup (lead)
+
+Implement in this order. Each step needs reviewable code and failure evidence before the next; the existing containment diagnostic is supporting evidence only.
+
+**Progress:** the lead implemented a runtime interface, verified-inventory value object and recovery coordinator, with scripted-runtime failure tests. The interface/coordinator were developed together to expose the required cleanup protocol; step 1 is not complete because no real Docker adapter exists. Steps 2–3 have internal cleanup logic only; launch composition and actual recovery remain unproven. The runtime must prove earlier create/start operations cannot finish late before cleanup starts. An adapter unable to establish that barrier must block recovery; successful empty inventory alone is insufficient.
+
+**Inventory progress:** read-only host Docker inventory now has a disposable real-daemon diagnostic in `scripts/probe-render-inventory.ps1`. It validates candidate ownership, identity collisions and resource state; it does not yet implement the PHP runtime interface or authorize cleanup. Next lead change: durable pending-command intent with schema handling. Unknown create/start outcomes remain blocked; successful inventory alone cannot clear them. See the [decision and limits](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md#launch-uncertainty-decision-for-the-next-lead-implementation).
+
+| Step | Deliverable | Required acceptance before proceeding |
+| --- | --- | --- |
+| 1 | Host-only runtime adapter with explicit outcomes for successful inventory, absence, owned resource, ownership conflict and query failure | Fixed executable/argument lists, bounded waits and captured output; immutable image configuration; no Docker socket in the wiki. Failed queries and timed-out clients cannot mean absence. |
+| 2 | Recovery coordinator holding the journal lock throughout | Read existing state; never initialize as fallback. Reconcile names AND ownership labels/token/image, plus immutable container ID when recorded. Collision, malformed inventory and unavailable daemon retain capacity and stop mutation. |
+| 3 | Creation and cleanup composition | Reserve before volume/container creation. Recover create-success/ID-recording-failure by verified inventory. Cleanup is repeatable from every active phase. Verify exit before removal; prove container and volume absence through successful queries before confirming cleanup. Unknown, duplicate or mismatched resources block release. |
+| 4 | Disposable crash-window harness | Kill supervisor after intent, volume creation, container creation before ID recording, attachment, cleanup marking and each removal before idle commit. Restart recovers only the exact owned job. Inject query failures; preserve unrelated sentinel resources. Finally blocks or client termination alone are insufficient evidence. |
+| 5 | Freeze reviewed interfaces and assign bounded acceptance | Record actual platform/results and limits, then issue J35 below. Private source staging, real handlers, overall deadline and final reader authorization follow as separate lead work. |
+
+Before real rendering, decide how private host workspaces and their cleanup proof are durably represented. The current journal identifies a container and volume only; do not add unmanaged host paths implicitly. All prototypes remain unregistered. Images, PDFs and source-free slides remain in the eventual delivery scope.
+
+### J36 — Version 2 command-intent acceptance
+
+**Complete.** Extended `tests/phpunit/core/RenderCommandIntentTest.php` (now 13 tests / 146 assertions) and `tests/fixtures/execution/journal-process.php` with finite child process execution:
+
+1. **Strict schema & mutation rejection:** Tested missing/extra `pendingCommand` fields, bad receipt types/lengths/case/non-hex, unknown command kinds, `start-container` intent without container ID, create intent with container ID already attached, and version 1 idle/active records. Rejection throws `layers-journal-corrupt`, leaves persisted bytes unchanged, and blocks capacity without resetting state.
+2. **Process-death preservation & unforgeable acknowledgement:** Tested `create-volume`, `create-container`, and `start-container` using the helper process. Handshake verified via stdout receipt followed by child termination with SIGKILL. Reopened instance confirms `pendingCommand` survived process death with exact receipt and kind, refuses forged acknowledgement (`layers-journal-command-unconfirmed`), blocks recovery with zero runtime mock calls, and retains capacity (`layers-render-capacity-full`).
+3. **Credential & lifecycle rejection:** Verified mismatched job ID and token on `beginCommand` and `acknowledgeCommand` reject with `layers-journal-ownership-mismatch`; stale/random receipts reject with `layers-journal-command-unconfirmed`; post-cleanup operations reject with `layers-journal-transition-invalid` or `layers-journal-command-unconfirmed`; post-close operations reject with `layers-journal-unavailable`.
+4. **Honest write denial during `beginCommand`:** Tested persistence failure via honest unprivileged directory permission denial (`chmod 0555` under dropped `www-data` privileges): triggers `layers-journal-write-failed`, returns no receipt, permanently poisons the instance (`layers-journal-unavailable`), leaves 0 pending files, and preserves pre-dispatch persisted bytes.
+
+**Verification:** Focused command-intent suite 13 tests / 146 assertions; full core suite **213 tests / 2,024 assertions / 1 existing skip**; standalone PHPUnit 1,070 tests / 2,485 assertions / 1 skip; `npm run test:php` and `npm run check:docs` pass.
+
+### J37 — Read-only Docker inventory rejection coverage (accepted with corrections)
+
+The junior added 60 deterministic scenarios. Lead review corrected inspect fixtures that emitted bare objects, tightened the reader to require Docker's one-object array envelope and string identity fields, and added 16 regressions for malformed JSON, incorrect nesting, scalar/null responses, array-valued identities and missing labels.
+
+**Fresh acceptance:** 76 scripted scenarios pass; the live disposable inventory diagnostic also passes with exact owned cleanup and unrelated guard preservation. No workers were started. PowerShell execution and documentation checks pass. No PHP rerun was needed; previous core acceptance remains 213 tests / 2,030 assertions / one existing skip. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md) for scope and limitations.
+
+### Next lead deliverable — Bounded command transport
+
+Implement a fixed, operator-selected executable and explicit argument-list transport with independent stdout/stderr limits and one elapsed deadline covering process exit and pipe draining. Do not reuse the diagnostic's unbounded `ReadToEndAsync` capture as the production implementation. Output overflow, failed spawn, nonzero exit and timeout must produce explicit failure; killing a client cannot imply daemon cancellation or resource absence.
+
+Before assigning further junior work, provide the concrete runner API and finite adversarial fixtures for simultaneous stdout/stderr pressure, over-limit output, deadline expiry, inherited pipes after parent exit, argument integrity and cleanup of the owned client. Prove bounded memory/wait behavior on the selected host platform. Then connect create/start dispatch through the existing journal protocol and exercise actual crash windows. This is lead-owned implementation, not authorization to add Docker access to the wiki.
+
+### J38 — Bounded command runner acceptance (accepted with corrections)
+
+The junior's 35 scenarios were reviewed and strengthened to 36. Timeout acceptance now holds the original live process handle before the deadline and asserts exit on runner return. Overflow fixtures interleave streams; a 512 KiB-per-stream successful capture replaces the smaller pressure case. Configuration testing avoids arbitrary 100 ms timing and uses a unique missing path and a marker-writing fixture. Finally paths account for owned finite helpers/markers.
+
+**Fresh verification:** 36 runner and 76 inventory scenarios pass on Windows/PowerShell 7. No implementation change or new full-core/live-Docker/browser run was necessary for these test corrections. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md). J39 has since been reviewed; J35 remains blocked on real host integration.
+
+### J39 — Launch bridge protocol acceptance (accepted with lead corrections)
+
+Accepted the junior's later-stage rejection, callback/schema, byte boundary, container ID, request-field and replay tests. Lead corrections add explicit zero-runtime-call expectations after unresolved failures, original exception identity, exact no-retry dispatch sequences, full pending-state preservation through reopening, and array-valued identity/status rejection. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md) for current evidence.
+
+J39 changed only tests and used scripted callbacks. The subsequent lead transport/composition checkpoints add real pipe/process evidence; J40 below extends their concrete interfaces. J35 remains blocked on actual runtime dispatch/recovery.
+
+### J40 — PHP stream framing and owner startup rejection acceptance (accepted with lead corrections)
+
+Accepted the junior's stream framing, stream wrapper and owner startup rejection tests. Outbound length framing verified at ASCII and multibyte 8,192-byte boundaries (`ftell === 8196`); sequential multi-exchange stream positions verified; unconsumed payload on oversized/zero/maximum headers verified; closed/invalid stream configuration rejection verified; `RenderJobTestStreamWrapper` verifies fragmented 1-byte IO, prompt zero-write termination without spinning (<10 calls), and failed write/flush/read errors. Host-side session tests pass 4 startup rejection scenarios (missing journal, invalid JSON, unsupported version, active journal) verifying failure (`layers-session-eof`), zero dispatch, exact byte preservation, and nonrecursive exact-file cleanup. See the [review](JUNIOR_IMPLEMENTATION_REVIEW.md).
+
+Lead-verified full core result: **334 tests / 2,506 assertions / one existing permission-test skip**, no failures. Journal session host acceptance: **20 scenarios passed** on Windows/PowerShell 7. Provider cleanup, wrapper ownership, precise IO assertions and raw-byte preservation were corrected. No production code changed; standalone PHPUnit was not rerun in the lead review.
+
+J40 changed only tests and fixtures. Docker dispatch, runtime reconciliation and actual crash recovery remain lead-owned; J35 stays blocked.
+
+### J41 — Host launch protocol validation acceptance (accepted with lead corrections)
+
+Implemented multi-phase field and type matrices across all three launch phases (`create-volume`, `create-container`, `start-container`), structural and encoding rejections, duplicate property aliases, extra properties, malformed/deep JSON, byte/surrogate boundaries, state machine violations, invalid container creation IDs, and explicit `Abort()` across all lifecycle stages with permanent fail-closed poison verification.
+
+Fresh verification:
+- Lead-reviewed protocol acceptance suite: **368 scenarios passed** on Windows/PowerShell 7 (`scripts/test-render-launch-protocol.ps1`).
+- Journal session host acceptance: **20 scenarios passed** on Windows/PowerShell 7 (`scripts/test-journal-session.ps1`).
+- Style and documentation checks pass; manifest unchanged. Core integration remains historical at 334 tests / 2,506 assertions / one existing skip.
+
+J41 changed only tests and fixtures. Docker dispatch, verified daemon outcomes and runtime recovery remain lead-owned; J35 stays blocked.
+
+### J35 — Runtime recovery acceptance (cancelled; do not implement)
+
+**Dependency:** lead completes L02c steps 1–4, documents exact adapter/coordinator APIs and harness commands, and provides a reviewed dependency base. This is a future packet, not an assignment to design those interfaces.
+
+Once unblocked, extend the harness with tests for repeated recovery, stale/mixed ownership tokens, name collisions, query failure versus genuine absence, and retained capacity until both resource types are absent. Keep an independently owned sentinel resource through each run and verify it survives. Report residual resources and exact injected boundaries. Do not add runtime capabilities, registration, source staging, schema changes or cleanup by broad prefixes. Return security/recovery defects to the lead. Update this ledger and current-status mirror with measured evidence. Lead review remains required.
+
+</details>
 
 ### J07 — Client transport adapter
 
@@ -370,7 +1866,40 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J22 | Lead-reviewed with correction | `aff63227`; destination/dialog rechecked after replacement confirmation |
 | J23 | Lead-reviewed; reported defects corrected | `a7eda34a`; real-component tests now require loading-state and stale-response protection |
 | J24 | Accepted at `651d9011` | Fresh 28 cleanup/API tests; two engineer-recorded 13/13 browser passes; see review qualifications |
-| L01 | Design complete; enforcement pending | Decision record written; next L01a implementation then L01b core proof |
-| J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
+| J25 | Accepted with stronger parent/race assertions | Synthetic-source core evidence, not real bytes/HTTP |
+| J26 | Accepted as core source inspection | Import insertion reference corrected; no lifecycle execution claim |
+| L01 | Internally accepted with lead corrections | 114 core tests / 424 assertions; production gates remain |
+| J06 | Phase 1 accepted with fixture/test corrections | 121 core tests / 515 assertions; phase 2 awaits lead transport setup |
+| J27 | Accepted with test-scoped DPI correction | Archived bytes/page geometry verified; handler metadata is not browser rendering |
+| J28 | Accepted with real source-permission check | 130 core tests / 663 assertions; mocked and real-source evidence distinguished |
+| J29a | Accepted with lead corrections (local uncommitted) | Downsampled PNG/JPEG, backend inventories and strengthened fault-boundary/partial-output cleanup assertions |
+| J29b | Accepted with lead corrections (local uncommitted) | Real restricted-visibility and missing-byte cases; direct exact PDF input checks; whole-document policy and error propagation |
+| J30 | Accepted (local uncommitted) | 148 core tests / 1,071 assertions; separated RealAssetAdmissionTest, PrivateRasterRendererTest, PageAssetServiceTest, and RealAssetTestCase |
+| J31 | Accepted with lead corrections (local uncommitted) | Canonical staging fault/alias coverage; honest privileged skip, permission cleanup and unprivileged denial probe |
+| J32 | Implemented (local uncommitted) | 169 core tests / 1,225 assertions / 1 skip; source metadata admission thresholds, failure ordering and service integration |
+| J33 | Accepted with lead corrections (local uncommitted) | Partial-create cleanup, exact-token absence proofs, independent-run isolation and bounded CLI waits |
+| J34 | Accepted with lead corrections (local uncommitted) | 183 core tests / 1,477 assertions / 1 skip; helper cleanup, permission restoration and missing-state acceptance corrected |
+| J36 | Accepted with lead corrections (local uncommitted) | 213 core tests / 2,030 assertions / 1 skip; lead-corrected missing-field and permission-restoration acceptance; command schema mutations, process death with SIGKILL, unforgeable acknowledgement, honest write denial |
+| J37 | Accepted with lead corrections (local uncommitted) | 76 scripted scenarios plus passing live inventory diagnostic; strict JSON envelope and identity types corrected; no PHP rerun |
+| J38 | Accepted with lead corrections (local uncommitted) | 36 runner and 76 inventory scenarios; real process-handle timeout check, interleaved pressure, configuration evidence corrected |
+| J39 | Accepted with lead corrections (local uncommitted) | 293 core tests / 2,402 assertions / 1 skip; zero-runtime-call, exception identity, no-retry and array-type acceptance corrected |
+| J40 | Accepted with lead corrections (local uncommitted) | 334 core tests / 2,506 assertions / 1 skip; 20 session scenarios; fixture ownership/lifetime, exact IO assertions and raw-byte preservation corrected |
+| J41 | Accepted with lead corrections (local uncommitted) | 368 protocol / 20 session scenarios; direct completion-abort assertions, mutation detection, later-phase versions and safe labels |
+| J42 | Accepted with lead corrections (local uncommitted) | 47 focused Jest unit tests, 184 passing Jest suites / 14,469 tests; synchronous error handling, diagnostic redaction and optional-field validation corrected |
+| J45 | Accepted with lead corrections (local uncommitted) | 38 focused read-client tests / 85 combined client tests; corrected raw-error bypass, exact revision match and geometry envelopes verified |
+| J35 | Cancelled | Abandoned container-supervisor architecture; never a page-history dependency |
+| J07–J15, L02–L08 | Original gates still apply | L02 design can proceed; no production history enablement |
 
 When completing a task, record its PR/commit and specific evidence here, then update the active history contract or feature guide as appropriate. This plan is the assignment queue; those contracts remain the authority for implemented behavior.
+
+J33–J41 evidence is retained as abandoned investigation history. J35 and all supervisor follow-up work are cancelled. Current work is the MediaWiki-native implementation order below.
+
+
+### Current lead implementation order — MediaWiki extension only
+
+1. Audit the existing page-owned revision writer and admission rules against normal MediaWiki save, protection, import/undelete and ownership paths. Retain working extension code; exclude the abandoned supervisor artifacts from the feature design.
+2. Complete the extension's read/write and historical-viewer wiring, using MediaWiki storage and media services. Preserve source-version identity, authorization and failure handling. Any rendering limitation must be handled within the supported MediaWiki environment, not by requiring a container service.
+3. Prepare an isolated browser pilot for page-owned slide save/history/old revision/conflict behavior, then image and PDF coverage. Slides remain a universal canvas. Issue junior packets only against concrete MediaWiki interfaces.
+4. After the history foundation is proven, proceed with native search, then Cargo text projection. No Docker task gates these milestones.
+
+J35 is cancelled. The supervisor dispatch, runtime reconciliation and host/daemon failure milestones are abandoned. They are not optional future Layers backends.

@@ -151,7 +151,12 @@ class SlideHooks {
 		}
 
 		// Parse arguments
-		$params = self::parseArguments( $frame, $args );
+		$orderedOptions = [];
+		$params = self::parseArguments( $frame, $args, $orderedOptions );
+		$binding = \MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions::extract( $orderedOptions );
+		if ( $binding !== null ) {
+			return BoundSlideHooks::placeholder( $parser, $binding );
+		}
 		self::log( 'Parsed params: ' . json_encode( array_keys( $params ) ) );
 
 		// Validate slide name (first positional argument)
@@ -288,7 +293,7 @@ class SlideHooks {
 	 * @param array $args Raw arguments
 	 * @return array Parsed parameters
 	 */
-	private static function parseArguments( PPFrame $frame, array $args ): array {
+	private static function parseArguments( PPFrame $frame, array $args, array &$orderedOptions = [] ): array {
 		$params = [];
 
 		foreach ( $args as $i => $arg ) {
@@ -301,6 +306,7 @@ class SlideHooks {
 			}
 
 			// Parse key=value pairs
+			$orderedOptions[] = $expanded;
 			$equalsPos = strpos( $expanded, '=' );
 			if ( $equalsPos !== false ) {
 				$key = strtolower( trim( substr( $expanded, 0, $equalsPos ) ) );

@@ -1,5 +1,7 @@
 # Installation and upgrades
 
+**Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
+
 Documentation for manifest version **1.5.95**, with subsequent fixes on `main` (September 6, 2026). Check [[Current Status]] before selecting a tag or branch.
 
 ## Requirements and branches

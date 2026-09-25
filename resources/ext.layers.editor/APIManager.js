@@ -40,6 +40,22 @@
 	constructor( editor ) {
 		this.editor = editor;
 		this.api = new mw.Api();
+		this.pageOwnedBridge = null;
+		this.pageOwnedDrafts = null;
+		if ( editor && editor.config && editor.config.pageOwned ) {
+			const classes = window.Layers && window.Layers.Editor;
+			if ( !classes || !classes.PageOwnedEditorSession || !classes.PageOwnedEditorBridge ||
+				!classes.PageOwnedReadClient || !classes.PageOwnedPublishClient || !classes.PageOwnedSnapshotAdapter ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			const session = new classes.PageOwnedEditorSession( editor.config.pageOwned, {
+				reader: new classes.PageOwnedReadClient( this.api ),
+				publisher: new classes.PageOwnedPublishClient( this.api ),
+				adapter: new classes.PageOwnedSnapshotAdapter()
+			} );
+			this.pageOwnedBridge = new classes.PageOwnedEditorBridge( editor, session );
+		}
+
 		this.maxRetries = 3;
 		this.retryDelay = 1000; // Start with 1 second
 		this.activeTimeouts = new Set(); // Track active timeouts for cleanup
@@ -303,6 +319,45 @@
 	 * Load layers for the current file
 	 */
 	loadLayers() {
+		if ( this.pageOwnedBridge ) {
+			return this.pageOwnedBridge.load().then( ( state ) => {
+				if ( this.pageOwnedBridge.session.getStatus().readOnly ) {
+					return state;
+				}
+				const classes = window.Layers.Editor;
+				// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
+				const random = new Uint8Array( 16 );
+				window.crypto.getRandomValues( random );
+				const writerId = Array.from( random, ( value ) => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+				const store = new classes.PageOwnedDraftStore( window.localStorage, writerId );
+				const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
+					new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
+				this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
+				this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
+					chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
+					confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
+					notifyFailure: () => mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } ),
+					notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
+				} );
+				return this.pageOwnedDrafts.initialize().then( () => {
+					if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
+						this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {
+							check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key )
+						} );
+						this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
+					}
+					return state;
+				} );
+			} ).catch( ( error ) => {
+				if ( this.pageOwnedBridge.loaded && this.editor ) {
+					mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } );
+					const safeError = new Error( 'layers-draft-storage-failed' );
+					safeError.code = 'layers-draft-storage-failed';
+					throw safeError;
+				}
+				throw error;
+			} );
+		}
 		const generation = this.editor.pageNavigationGeneration;
 		const request = ( this.pageLoadRequest || 0 ) + 1;
 		this.pageLoadRequest = request;
@@ -660,6 +715,9 @@
 	 * Load a specific revision by ID
 	 */
 	loadRevisionById( revisionId ) {
+		if ( this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+		}
 		return new Promise( ( resolve, reject ) => {
 			// Check cache first
 			const cacheKey = this._buildCacheKey( this.editor.filename, { layersetid: revisionId } );
@@ -863,6 +921,9 @@
 	 * @return {Promise} Resolves with the layer data
 	 */
 	loadLayersBySetName( setName, options = {} ) {
+		if ( this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+		}
 		return new Promise( ( resolve, reject ) => {
 			if ( !setName ) {
 				reject( new Error( 'No set name provided' ) );
@@ -984,7 +1045,44 @@
 			} );
 		} );
 	}
+	/** @return {Promise<Object>} Explicit read-only reconciliation; never retries a save */
+	checkPageOwnedRevision() {
+		if ( !this.pageOwnedDrafts || !this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
+		}
+		const owner = this.pageOwnedBridge.session.getDraft().owner;
+		return this.pageOwnedDrafts.reconcile( async () => {
+			try {
+				const response = await this.api.get( {
+					action: 'query', prop: 'revisions', titles: owner,
+					rvprop: 'ids', rvlimit: 1, formatversion: 2
+				} );
+				const pages = response && response.query && response.query.pages;
+				const page = Array.isArray( pages ) && pages.length === 1 && pages[ 0 ];
+				const revisions = page && !page.missing && !page.invalid && page.revisions;
+				const revisionId = Array.isArray( revisions ) && revisions.length === 1 && revisions[ 0 ].revid;
+				if ( !Number.isInteger( revisionId ) || revisionId < 1 || revisionId > 2147483647 ) {
+					throw new Error();
+				}
+				// The exact Layers read checks owner identity, revision visibility and source access.
+				return revisionId;
+			} catch ( error ) {
+				throw new Error( 'layers-revision-unavailable' );
+			}
+		} );
+	}
+
 	saveLayers() {
+		if ( this.pageOwnedBridge ) {
+			if ( !this.pageOwnedDrafts ) {
+				return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
+			}
+			return this.pageOwnedDrafts.save().finally( () => {
+				if ( this.editor ) {
+					this.hideSpinner();
+				}
+			} );
+		}
 		return new Promise( ( resolve, reject ) => {
 			// Prevent concurrent save operations (CORE-3 fix)
 			if ( this.saveInProgress ) {
@@ -1083,6 +1181,9 @@
 	 * @return {Promise} Resolves with the API response
 	 */
 	savePageLayers( entry ) {
+		if ( this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+		}
 		if ( !entry || !Array.isArray( entry.layers ) ) {
 			return Promise.reject( new Error( 'Nothing to save for page' ) );
 		}
@@ -1107,6 +1208,9 @@
 	}
 
 	buildSavePayload( entry ) {
+		if ( this.pageOwnedBridge ) {
+			throw new Error( 'layers-editor-legacy-operation-denied' );
+		}
 		const state = this.editor.stateManager;
 		const layers = entry ? entry.layers : ( state.get( 'layers' ) || [] );
 		const isSlide = state.get( 'isSlide' );
@@ -1175,6 +1279,10 @@
 	 *   page on screen, and so are wrong when writing a page that is not.
 	 */
 	performSaveWithRetry( payload, attempt, resolve, reject, options ) {
+		if ( this.pageOwnedBridge ) {
+			reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+			return;
+		}
 		const silent = !!( options && options.silent );
 		this.api.postWithToken( 'csrf', payload ).then( ( data ) => {
 			// Debug logging controlled by extension config
@@ -1315,6 +1423,9 @@
 	}
 
 	reloadRevisions() {
+		if ( this.pageOwnedBridge ) {
+			return;
+		}
 		// Get the current set name to reload the correct set's data
 		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
@@ -1391,6 +1502,9 @@
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
 	deleteLayerSet( setName, allPages ) {
+		if ( this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+		}
 		return new Promise( ( resolve, reject ) => {
 			if ( !setName ) {
 				reject( new Error( 'Set name is required' ) );
@@ -1509,6 +1623,9 @@
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
 	renameLayerSet( oldName, newName, allPages ) {
+		if ( this.pageOwnedBridge ) {
+			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
+		}
 		return new Promise( ( resolve, reject ) => {
 			if ( !oldName || !newName ) {
 				reject( new Error( 'Both old and new names are required' ) );
@@ -1802,6 +1919,18 @@
 	 * Clean up resources and abort pending requests
 	 */
 	destroy() {
+		if ( this.pageOwnedRecoveryDialog ) {
+			this.pageOwnedRecoveryDialog.dispose();
+		}
+		if ( this.pageOwnedRevisionControl ) {
+			this.pageOwnedRevisionControl.dispose();
+		}
+		if ( this.pageOwnedDrafts ) {
+			this.pageOwnedDrafts.dispose();
+		}
+		if ( this.pageOwnedBridge ) {
+			this.pageOwnedBridge.dispose();
+		}
 		// Clear all pending timeouts
 		this._clearAllTimeouts();
 		

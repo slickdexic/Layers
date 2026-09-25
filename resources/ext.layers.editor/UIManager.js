@@ -35,6 +35,7 @@
 	class UIManager {
 	constructor( editor ) {
 		this.editor = editor;
+		this.isPageOwned = Boolean( editor && editor.config && editor.config.pageOwned );
 		this.container = null;
 		this.spinnerEl = null;
 		// Named Set selector elements (managed by SetSelectorController)
@@ -56,8 +57,9 @@
 		const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
 		this.eventTracker = EventTracker ? new EventTracker() : null;
 
-		// Initialize SetSelectorController for managing named layer sets
-		const SetSelectorController = getClass( 'UI.SetSelectorController', 'SetSelectorController' );
+		// Initialize SetSelectorController for managing named layer sets (ordinary editor only)
+		const SetSelectorController = !this.isPageOwned ?
+			getClass( 'UI.SetSelectorController', 'SetSelectorController' ) : null;
 		this.setSelectorController = SetSelectorController ? new SetSelectorController( this ) : null;
 	}
 
@@ -174,8 +176,17 @@
 		title.className = 'layers-header-title';
 		title.setAttribute( 'role', 'heading' );
 		title.setAttribute( 'aria-level', '1' );
-		title.textContent = this.getMessage( 'layers-editor-title' ) +
-			( this.editor.filename ? ' — ' + this.editor.filename : '' );
+		let titleText = this.getMessage( 'layers-editor-title' );
+		if ( this.isPageOwned ) {
+			const pageOwned = this.editor && this.editor.config && this.editor.config.pageOwned;
+			const owner = ( pageOwned && typeof pageOwned.owner === 'string' ) ? pageOwned.owner : '';
+			if ( owner ) {
+				titleText += ' — ' + owner;
+			}
+		} else if ( this.editor && this.editor.filename ) {
+			titleText += ' — ' + this.editor.filename;
+		}
+		title.textContent = titleText;
 		header.appendChild( title );
 
 		const headerRight = this.createHeaderRight();
@@ -188,19 +199,21 @@
 		const headerRight = document.createElement( 'div' );
 		headerRight.className = 'layers-header-right';
 
-		// Named Set selector (primary grouping)
-		const setWrap = this.createSetSelector();
-		headerRight.appendChild( setWrap );
+		if ( !this.isPageOwned ) {
+			// Named Set selector (primary grouping)
+			const setWrap = this.createSetSelector();
+			headerRight.appendChild( setWrap );
 
-		// Separator
-		const separator = document.createElement( 'span' );
-		separator.className = 'layers-header-separator';
-		separator.setAttribute( 'aria-hidden', 'true' );
-		headerRight.appendChild( separator );
+			// Separator
+			const separator = document.createElement( 'span' );
+			separator.className = 'layers-header-separator';
+			separator.setAttribute( 'aria-hidden', 'true' );
+			headerRight.appendChild( separator );
 
-		// Revision selector (within the selected set)
-		const revWrap = this.createRevisionSelector();
-		headerRight.appendChild( revWrap );
+			// Revision selector (within the selected set)
+			const revWrap = this.createRevisionSelector();
+			headerRight.appendChild( revWrap );
+		}
 
 		// Close button
 		const closeBtn = this.createCloseButton();

@@ -1,0 +1,215 @@
+{
+    "caseName": "name-collision-different-sets",
+    "description": "Same display name/label ('default' and 'Figure 1') across distinct legacy source identities and set records, illustrating identity mapping vs display label decoupling.",
+    "syntheticNonResolvableNotes": "File SHA-1 hashes '3333333333333333333333333333333' and '4444444444444444444444444444444' and timestamps '20260924000004' / '20260924000005' are synthetic test values marked non-resolvable.",
+    "legacyRecords": [
+        {
+            "sourceIdentity": "Set A on File:QuarterlyReport_Q1.png",
+            "database": {
+                "table": "layer_sets",
+                "row": {
+                    "ls_id": 401,
+                    "ls_img_name": "QuarterlyReport_Q1.png",
+                    "ls_img_major_mime": "image",
+                    "ls_img_minor_mime": "png",
+                    "ls_img_sha1": "3333333333333333333333333333333",
+                    "ls_json_blob": "{\"revision\":1,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000004\",\"layers\":[{\"id\":\"layer_metric_q1\",\"type\":\"text\",\"x\":50,\"y\":60,\"text\":\"Q1 Revenue: $1.2M\",\"fontSize\":18,\"fontFamily\":\"Arial\",\"color\":\"#008800\"}],\"backgroundVisible\":true,\"backgroundOpacity\":1}",
+                    "ls_user_id": 1001,
+                    "ls_timestamp": "20260924000004",
+                    "ls_revision": 1,
+                    "ls_name": "default",
+                    "ls_page": 1,
+                    "ls_size": 258,
+                    "ls_layer_count": 1
+                },
+                "codeReferences": {
+                    "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                    "ls_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 104, 'default')",
+                    "ls_img_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::normalizeImageName (line 99)"
+                }
+            },
+            "fileMetadata": {
+                "fileTitle": "File:QuarterlyReport_Q1.png",
+                "canonicalDbKey": "QuarterlyReport_Q1.png",
+                "width": 1200,
+                "height": 800,
+                "mime": "image/png",
+                "mediaType": "BITMAP",
+                "pageCount": 1,
+                "repo": "local",
+                "sha1": "3333333333333333333333333333333",
+                "timestamp": "20260924000004"
+            }
+        },
+        {
+            "sourceIdentity": "Set B on File:QuarterlyReport_Q2.png",
+            "database": {
+                "table": "layer_sets",
+                "row": {
+                    "ls_id": 402,
+                    "ls_img_name": "QuarterlyReport_Q2.png",
+                    "ls_img_major_mime": "image",
+                    "ls_img_minor_mime": "png",
+                    "ls_img_sha1": "4444444444444444444444444444444",
+                    "ls_json_blob": "{\"revision\":1,\"ownerId\":1002,\"schema\":1,\"created\":\"20260924000005\",\"layers\":[{\"id\":\"layer_metric_q2\",\"type\":\"text\",\"x\":50,\"y\":60,\"text\":\"Q2 Revenue: $1.5M\",\"fontSize\":18,\"fontFamily\":\"Arial\",\"color\":\"#008800\"}],\"backgroundVisible\":true,\"backgroundOpacity\":1}",
+                    "ls_user_id": 1002,
+                    "ls_timestamp": "20260924000005",
+                    "ls_revision": 1,
+                    "ls_name": "default",
+                    "ls_page": 1,
+                    "ls_size": 258,
+                    "ls_layer_count": 1
+                },
+                "codeReferences": {
+                    "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                    "ls_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 104, 'default')",
+                    "ls_img_name": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::normalizeImageName (line 99)"
+                }
+            },
+            "fileMetadata": {
+                "fileTitle": "File:QuarterlyReport_Q2.png",
+                "canonicalDbKey": "QuarterlyReport_Q2.png",
+                "width": 1200,
+                "height": 800,
+                "mime": "image/png",
+                "mediaType": "BITMAP",
+                "pageCount": 1,
+                "repo": "local",
+                "sha1": "4444444444444444444444444444444",
+                "timestamp": "20260924000005"
+            }
+        }
+    ],
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "collisionAnalysis": "In legacy storage, identity is composite key (ls_img_name, ls_img_sha1, ls_name, ls_page), so both sets use ls_name='default' without collision. In page-owned documents, surface 'id' must be globally unique across the document, but 'label' does not need to be unique. The converter must NOT map ls_name directly to surface id; it must assign distinct stable surface IDs (e.g. 'surface_q1_rev' and 'surface_q2_rev') while preserving the shared display label 'Figure 1: Revenue'.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "surface_q1_rev",
+                    "kind": "image",
+                    "label": "Figure 1: Revenue",
+                    "canvas": {
+                        "width": 1200,
+                        "height": 800,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "layer_metric_q1",
+                            "type": "text",
+                            "x": 50,
+                            "y": 60,
+                            "text": "Q1 Revenue: $1.2M",
+                            "fontSize": 18,
+                            "fontFamily": "Arial",
+                            "color": "#008800"
+                        }
+                    ],
+                    "source": {
+                        "repository": "local",
+                        "fileTitle": "File:QuarterlyReport_Q1.png",
+                        "timestamp": "20260924000004",
+                        "sha1": "3333333333333333333333333333333",
+                        "page": 1
+                    }
+                },
+                {
+                    "id": "surface_q2_rev",
+                    "kind": "image",
+                    "label": "Figure 1: Revenue",
+                    "canvas": {
+                        "width": 1200,
+                        "height": 800,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": true,
+                        "backgroundOpacity": 1
+                    },
+                    "layers": [
+                        {
+                            "id": "layer_metric_q2",
+                            "type": "text",
+                            "x": 50,
+                            "y": 60,
+                            "text": "Q2 Revenue: $1.5M",
+                            "fontSize": 18,
+                            "fontFamily": "Arial",
+                            "color": "#008800"
+                        }
+                    ],
+                    "source": {
+                        "repository": "local",
+                        "fileTitle": "File:QuarterlyReport_Q2.png",
+                        "timestamp": "20260924000005",
+                        "sha1": "4444444444444444444444444444444",
+                        "page": 1
+                    }
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "duplicate_surface_id_collision",
+            "description": "Adoption converter naively reuses identical legacy set names as surface IDs ('default' and 'default') in the page-owned document.",
+            "inputMutation": {
+                "surfaces": [
+                    {
+                        "id": "default",
+                        "kind": "image"
+                    },
+                    {
+                        "id": "default",
+                        "kind": "image"
+                    }
+                ]
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::canonicalize (lines 45-48)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "duplicate-surface-id",
+            "failureMechanism": "DocumentSchema::canonicalize tracks seen surface IDs ($ids[$surface->id]); encountering a second surface with the same id immediately throws 'duplicate-surface-id'."
+        },
+        {
+            "exampleId": "duplicate_layer_id_within_surface",
+            "description": "A surface contains two layers sharing the same layer ID.",
+            "inputMutation": {
+                "layers": [
+                    {
+                        "id": "layer_duplicate",
+                        "type": "text",
+                        "text": "A"
+                    },
+                    {
+                        "id": "layer_duplicate",
+                        "type": "text",
+                        "text": "B"
+                    }
+                ]
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::layers (lines 133-135)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "duplicate-layer-id",
+            "failureMechanism": "DocumentSchema::layers tracks $byId[$layer->id]; encountering a duplicate layer id throws 'duplicate-layer-id'."
+        },
+        {
+            "exampleId": "non_canonical_setname_traversal",
+            "description": "Legacy API request sends a non-canonical setname with path-traversal characters ('../q1_hack').",
+            "inputMutation": {
+                "setname": "../q1_hack"
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Validation\\SetNameSanitizer::isCanonical",
+            "expectedException": "ApiUsageException",
+            "expectedErrorCode": "invalidsetname",
+            "failureMechanism": "SetNameSanitizer::isCanonical checks against canonical set name rules (letters, digits, underscores, dashes); special characters fail validation in ApiLayersSave line 159."
+        }
+    ]
+}

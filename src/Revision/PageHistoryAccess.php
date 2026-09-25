@@ -69,15 +69,18 @@ class PageHistoryAccess {
 	 * @param Title $owner
 	 * @param int $revisionId Explicit positive revision ID
 	 * @param Authority $authority
+	 * @param int|null $expectedPageId Binding identity, checked against the same owner used for revision access
 	 * @return LayersDocumentContent
 	 * @throws \DomainException If the snapshot is unavailable to this authority
 	 */
-	public function read( Title $owner, int $revisionId, Authority $authority ): LayersDocumentContent {
+	public function read( Title $owner, int $revisionId, Authority $authority,
+		?int $expectedPageId = null
+	): LayersDocumentContent {
 		if ( $revisionId < 1 || !$owner->canExist() || !$authority->authorizeRead( 'read', $owner ) ) {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		$ownerId = $owner->getArticleID( IDBAccessObject::READ_LATEST );
-		if ( !$ownerId ) {
+		if ( !$ownerId || ( $expectedPageId !== null && $ownerId !== $expectedPageId ) ) {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		$revision = $this->revisionLookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
@@ -95,5 +98,19 @@ class PageHistoryAccess {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		return $content;
+	}
+
+	/**
+	 * Check whether a specific revision already has a Layers slot.
+	 *
+	 * @param int $revisionId
+	 * @return bool
+	 */
+	public function hasLayersSlot( int $revisionId ): bool {
+		if ( $revisionId <= 0 ) {
+			return false;
+		}
+		$revision = $this->revisionLookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+		return $revision !== null && $revision->hasSlot( PageRevisionWriter::SLOT );
 	}
 }

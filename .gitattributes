@@ -12,3 +12,6 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+
+# Preserve fixture byte offsets and hashes; PDF xref lines contain significant spaces.
+tests/fixtures/assets/*.pdf binary

@@ -1,0 +1,228 @@
+{
+    "caseName": "slide-falsy-zero",
+    "description": "General-purpose slide with explicit boolean false, zero opacity, empty label, and zero numeric coordinates/stroke widths.",
+    "syntheticNonResolvableNotes": "Slides are standalone canvases with no backing File: upload. In legacy storage they use imgName 'Slide:WelcomePresentation' and sha1 'slide'. No physical file lookup is performed by SourceVersionResolver for slides.",
+    "legacyRecord": {
+        "database": {
+            "table": "layer_sets",
+            "row": {
+                "ls_id": 202,
+                "ls_img_name": "Slide:WelcomePresentation",
+                "ls_img_major_mime": "application",
+                "ls_img_minor_mime": "x-layers-slide",
+                "ls_img_sha1": "slide",
+                "ls_json_blob": "{\"revision\":2,\"ownerId\":1001,\"schema\":1,\"created\":\"20260924000002\",\"isSlide\":true,\"canvasWidth\":800,\"canvasHeight\":600,\"backgroundColor\":\"#ffffff\",\"backgroundVisible\":false,\"backgroundOpacity\":0,\"layers\":[{\"id\":\"rect_zero_falsy\",\"type\":\"rectangle\",\"x\":0,\"y\":0,\"width\":400,\"height\":300,\"visible\":false,\"locked\":false,\"fill\":\"none\",\"fillOpacity\":0,\"stroke\":\"#ff0000\",\"strokeWidth\":0,\"strokeOpacity\":0,\"opacity\":0,\"rotation\":0},{\"id\":\"txt_zero_pos\",\"type\":\"text\",\"x\":0,\"y\":0,\"text\":\"Origin anchored title\",\"fontSize\":20,\"fontFamily\":\"Arial\",\"color\":\"#000000\",\"visible\":true,\"opacity\":1}]}",
+                "ls_user_id": 1001,
+                "ls_timestamp": "20260924000002",
+                "ls_revision": 2,
+                "ls_name": "default",
+                "ls_page": 1,
+                "ls_size": 585,
+                "ls_layer_count": 2
+            },
+            "codeReferences": {
+                "ls_id": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (line 245)",
+                "ls_img_name": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 507, SLIDE_PREFIX . $slidename)",
+                "ls_img_major_mime": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 509, 'application')",
+                "ls_img_minor_mime": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 509, 'x-layers-slide')",
+                "ls_img_sha1": "MediaWiki\\Extension\\Layers\\LayersConstants::TYPE_SLIDE (ApiLayersSave line 510, 'slide')",
+                "ls_json_blob": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::saveLayerSet (lines 203-217)",
+                "ls_user_id": "MediaWiki\\User\\User::getId (ApiLayersSave line 537)",
+                "ls_timestamp": "Wikimedia\\Rdbms\\IDatabase::timestamp (LayersDatabase line 190)",
+                "ls_revision": "MediaWiki\\Extension\\Layers\\Database\\LayersDatabase::getNextRevisionForSet (line 189)",
+                "ls_name": "MediaWiki\\Extension\\Layers\\Utility\\SetNameResolver::latestName / SetNameSanitizer::getDefaultName (ApiLayersSave line 514)",
+                "ls_page": "1 for slide sets (LayersDatabase line 98)",
+                "ls_size": "strlen($jsonBlob) (LayersDatabase line 240)",
+                "ls_layer_count": "count($layersData) (LayersDatabase line 241)"
+            }
+        },
+        "slideSettings": {
+            "isSlide": true,
+            "canvasWidth": 800,
+            "canvasHeight": 600,
+            "backgroundColor": "#ffffff",
+            "backgroundVisible": false,
+            "backgroundOpacity": 0,
+            "codeReferences": {
+                "isSlide": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 490)",
+                "canvasWidth": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 491)",
+                "canvasHeight": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 493)",
+                "backgroundColor": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 495)",
+                "backgroundVisible": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::validateAndParseLayers (line 178)",
+                "backgroundOpacity": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::validateAndParseLayers (line 180)"
+            }
+        },
+        "apiEnvelope": {
+            "endpoint": "action=layerssave",
+            "requestParams": {
+                "slidename": "WelcomePresentation",
+                "setname": "default",
+                "data": "{\"isSlide\":true,\"canvasWidth\":800,\"canvasHeight\":600,\"backgroundColor\":\"#ffffff\",\"backgroundVisible\":false,\"backgroundOpacity\":0.0,\"layers\":[{\"id\":\"rect_zero_falsy\",\"type\":\"rectangle\",\"x\":0,\"y\":0,\"width\":400,\"height\":300,\"visible\":false,\"locked\":false,\"fill\":\"none\",\"fillOpacity\":0,\"stroke\":\"#ff0000\",\"strokeWidth\":0,\"strokeOpacity\":0,\"opacity\":0,\"rotation\":0},{\"id\":\"txt_zero_pos\",\"type\":\"text\",\"x\":0,\"y\":0,\"text\":\"Origin anchored title\",\"fontSize\":20,\"fontFamily\":\"Arial\",\"color\":\"#000000\",\"visible\":true,\"opacity\":1}]}"
+            },
+            "responseEnvelope": {
+                "layerssave": {
+                    "success": 1,
+                    "layersetid": 202,
+                    "result": "Success"
+                }
+            },
+            "codeReferences": {
+                "slidename": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::execute (line 250)",
+                "executeSlideSave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave::executeSlideSave (line 475)"
+            }
+        },
+        "drawingPayload": {
+            "revision": 2,
+            "ownerId": 1001,
+            "schema": 1,
+            "created": "20260924000002",
+            "isSlide": true,
+            "canvasWidth": 800,
+            "canvasHeight": 600,
+            "backgroundColor": "#ffffff",
+            "backgroundVisible": false,
+            "backgroundOpacity": 0,
+            "layers": [
+                {
+                    "id": "rect_zero_falsy",
+                    "type": "rectangle",
+                    "x": 0,
+                    "y": 0,
+                    "width": 400,
+                    "height": 300,
+                    "visible": false,
+                    "locked": false,
+                    "fill": "none",
+                    "fillOpacity": 0,
+                    "stroke": "#ff0000",
+                    "strokeWidth": 0,
+                    "strokeOpacity": 0,
+                    "opacity": 0,
+                    "rotation": 0
+                },
+                {
+                    "id": "txt_zero_pos",
+                    "type": "text",
+                    "x": 0,
+                    "y": 0,
+                    "text": "Origin anchored title",
+                    "fontSize": 20,
+                    "fontFamily": "Arial",
+                    "color": "#000000",
+                    "visible": true,
+                    "opacity": 1
+                }
+            ]
+        }
+    },
+    "candidatePageOwnedSnapshot": {
+        "status": "proposed, pending lead review",
+        "note": "Ownership is native page-level metadata. The label is an explicit empty string, which is valid UTF-8 up to 512 bytes per DocumentSchema. Slide surfaces must forbid the 'source' key entirely.",
+        "document": {
+            "schemaVersion": 1,
+            "surfaces": [
+                {
+                    "id": "slide_surface_welcome",
+                    "kind": "slide",
+                    "label": "",
+                    "canvas": {
+                        "width": 800,
+                        "height": 600,
+                        "backgroundColor": "#ffffff",
+                        "backgroundVisible": false,
+                        "backgroundOpacity": 0
+                    },
+                    "layers": [
+                        {
+                            "id": "rect_zero_falsy",
+                            "type": "rectangle",
+                            "x": 0,
+                            "y": 0,
+                            "width": 400,
+                            "height": 300,
+                            "visible": false,
+                            "locked": false,
+                            "fill": "none",
+                            "fillOpacity": 0,
+                            "stroke": "#ff0000",
+                            "strokeWidth": 0,
+                            "strokeOpacity": 0,
+                            "opacity": 0,
+                            "rotation": 0
+                        },
+                        {
+                            "id": "txt_zero_pos",
+                            "type": "text",
+                            "x": 0,
+                            "y": 0,
+                            "text": "Origin anchored title",
+                            "fontSize": 20,
+                            "fontFamily": "Arial",
+                            "color": "#000000",
+                            "visible": true,
+                            "opacity": 1
+                        }
+                    ]
+                }
+            ]
+        },
+        "mappingDecisions": {
+            "label": "Illustrative explicit user choice; default adoption should preserve ls_name. Empty string is an explicit choice, not a legacy label field.",
+            "readingOrder": "Omitted because legacy data supplies no explicit reading-order preference.",
+            "mediaCanvasBackground": "White background is a proposed canvas default, not copied media metadata; require source-compositing visual parity before adoption.",
+            "ownerId": "Legacy drawingPayload.ownerId is a user ID, never an owner-page ID."
+        }
+    },
+    "rejectionExamples": [
+        {
+            "exampleId": "slide_with_source_block",
+            "description": "A slide surface contains an illegal 'source' property (even if null or empty).",
+            "inputMutation": {
+                "source": null
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::surface (lines 89-91)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "slide-must-not-have-source",
+            "failureMechanism": "DocumentSchema::surface explicitly checks property_exists($surface, 'source') when kind === 'slide' and throws 'slide-must-not-have-source'. Slides have no media backing and cannot declare a file source."
+        },
+        {
+            "exampleId": "null_background_color",
+            "description": "Canvas backgroundColor is passed as null instead of a valid color string.",
+            "inputMutation": {
+                "canvas": {
+                    "backgroundColor": null
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::surface (line 78)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-background",
+            "failureMechanism": "DocumentSchema::surface requires is_string($surface->canvas->backgroundColor) && ColorValidator::isValidColor(...). Null values fail immediately."
+        },
+        {
+            "exampleId": "string_boolean_background_visible",
+            "description": "backgroundVisible is passed as string 'false' rather than native boolean false.",
+            "inputMutation": {
+                "canvas": {
+                    "backgroundVisible": "false"
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::surface (line 80)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-background",
+            "failureMechanism": "DocumentSchema::surface requires is_bool($surface->canvas->backgroundVisible). Coercion from strings is rejected."
+        },
+        {
+            "exampleId": "negative_background_opacity",
+            "description": "backgroundOpacity is negative (-0.05).",
+            "inputMutation": {
+                "canvas": {
+                    "backgroundOpacity": -0.05
+                }
+            },
+            "failingSubsystem": "MediaWiki\\Extension\\Layers\\Revision\\DocumentSchema::surface (line 86)",
+            "expectedException": "InvalidArgumentException",
+            "expectedErrorCode": "invalid-background-opacity",
+            "failureMechanism": "DocumentSchema::surface requires opacity >= 0 && opacity <= 1."
+        }
+    ]
+}
