@@ -180,6 +180,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$init = $pilot->prepareEditor( $title->getPrefixedText(), $id, 'presentation', $actor );
 		$this->assertSame( $title->getPrefixedDBkey(), $init['pageOwned']['owner'] );
 		$this->assertSame( $id, $init['pageOwned']['revisionId'] );
+		$this->assertSame( $title->getArticleID(), $init['pageOwned']['pageId'] );
 		$this->assertSame( (string)$actor->getId(), $init['pageOwned']['draftScope']['user'] );
 		$this->assertSame( 'presentation', $init['pageOwned']['surfaceId'] );
 		$this->assertFalse( $init['autoCreate'] );

@@ -38,6 +38,30 @@ describe( 'PageOwnedEditorSession', () => {
 		session = new Session( options, { reader, publisher: new Publisher( api ), adapter: new Adapter() } );
 	} );
 
+	it.each( [ null, '1', true, 0, -1, 1.5, NaN, Infinity, 2147483648 ] )(
+		'rejects invalid PageID %s before reading or publishing', ( pageId ) => {
+			expect( () => new Session( { ...options, pageId }, {
+				reader, publisher: new Publisher( api ), adapter: new Adapter()
+			} ) ).toThrow( 'layers-invalid-editor-session' );
+			expect( reader.read ).not.toHaveBeenCalled();
+			expect( api.postWithToken ).not.toHaveBeenCalled();
+		}
+	);
+
+	it.each( [ 1, 2147483647 ] )( 'retains PageID %s across reconciliation and repeated saves', async ( pageId ) => {
+		options.pageId = pageId;
+		session = new Session( options, { reader, publisher: new Publisher( api ), adapter: new Adapter() } );
+		options.pageId = 999;
+		await session.load();
+		await session.save();
+		reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: fixture } );
+		await session.reconcile( 15 );
+		api.postWithToken.mockResolvedValueOnce( { layerspublish: { result: 'Success', revid: 16 } } );
+		await session.save();
+		expect( api.postWithToken.mock.calls.map( ( call ) => call[ 1 ].pageid ) ).toEqual( [ pageId, pageId ] );
+		expect( api.postWithToken.mock.calls[ 1 ][ 1 ].baserevid ).toBe( 15 );
+	} );
+
 	function edit( width ) {
 		const state = session.getEditorState();
 		state.canvas.width = width;

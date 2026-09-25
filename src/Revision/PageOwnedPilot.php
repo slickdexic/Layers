@@ -96,7 +96,9 @@ class PageOwnedPilot {
 			( new PageHistoryAccess( $lookup ) )->assertCanPrepareEdit( $owner, $authority );
 			$bundle = $this->reader->read( $owner, $revisionId, $authority );
 			$current = $lookup->getRevisionByTitle( $owner, 0, IDBAccessObject::READ_LATEST );
-			if ( !$current || $current->getId() !== $revisionId ) {
+			if ( !$current || $current->getId() !== $revisionId || $current->getPageId() < 1 ||
+				$current->getPageId() !== $owner->getArticleID()
+			) {
 				throw new \DomainException();
 			}
 		} catch ( \DomainException $e ) {
@@ -118,6 +120,7 @@ class PageOwnedPilot {
 				'backgroundColor' => $surface['canvas']['backgroundColor'] ?? null,
 				'pageOwned' => [
 					'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId,
+					'pageId' => $current->getPageId(),
 					'surfaceId' => $surfaceId, 'readOnly' => false,
 					'draftScope' => [
 						'wiki' => json_encode(

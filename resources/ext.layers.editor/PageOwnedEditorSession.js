@@ -25,7 +25,7 @@
 
 	class PageOwnedEditorSession {
 		/**
-		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional readOnly
+		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional pageId/readOnly
 		 * @param {Object} dependencies Accepted reader, publisher and snapshot adapter
 		 */
 		constructor( options, dependencies ) {
@@ -33,6 +33,8 @@
 				typeof options.surfaceId !== 'string' || !options.surfaceId ||
 				!Number.isInteger( options.revisionId ) || options.revisionId < 1 ||
 				options.revisionId > 2147483647 ||
+				( options.pageId !== undefined && ( !Number.isInteger( options.pageId ) ||
+					options.pageId < 1 || options.pageId > 2147483647 ) ) ||
 				( options.readOnly !== undefined && typeof options.readOnly !== 'boolean' ) ||
 				!dependencies || !dependencies.reader || typeof dependencies.reader.read !== 'function' ||
 				!dependencies.publisher || typeof dependencies.publisher.publish !== 'function' ||
@@ -41,6 +43,7 @@
 				throw failure( 'layers-invalid-editor-session' );
 			}
 			this._owner = options.owner;
+			this._pageId = options.pageId;
 			this._surfaceId = options.surfaceId;
 			this._revisionId = options.revisionId;
 			this._readOnly = options.readOnly === true;
@@ -163,9 +166,13 @@
 						throw failure( 'layers-editor-session-unavailable' );
 					}
 				}
-				const result = await this._publisher.publish( {
+				const request = {
 					owner: this._owner, baseRevisionId: this._revisionId, snapshotJson, summary
-				} );
+				};
+				if ( this._pageId !== undefined ) {
+					request.pageId = this._pageId;
+				}
+				const result = await this._publisher.publish( request );
 				if ( this._phase === 'disposed' ) {
 					throw failure( 'layers-editor-session-unavailable' );
 				}

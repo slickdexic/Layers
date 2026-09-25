@@ -58,6 +58,7 @@
 		 * @param {string} options.snapshotJson Serialized document snapshot JSON string
 		 * @param {string} [options.summary] Optional edit summary (defaults to empty string)
 		 * @param {string} [options.mainText] Optional main wikitext content (omitted if undefined/null, preserved if empty string)
+		 * @param {number} [options.pageId] Optional expected owner PageID (integer 1..2147483647; requires baseRevisionId > 0)
 		 * @return {Promise<{ revisionId: number }>}
 		 */
 		publish( options ) {
@@ -71,6 +72,7 @@
 			const snapshotJson = options.snapshotJson;
 			const summary = options.summary;
 			const mainText = options.mainText;
+			const pageId = options.pageId;
 
 			// Local validation
 			if ( typeof owner !== 'string' || owner.trim().length === 0 ) {
@@ -91,6 +93,16 @@
 				return Promise.reject( createError( 'layers-invalid-publication-request', 'Summary and main text must be strings when provided' ) );
 			}
 
+			if ( pageId !== undefined ) {
+				if ( typeof pageId !== 'number' || !Number.isInteger( pageId ) ||
+					pageId < 1 || pageId > 2147483647 ) {
+					return Promise.reject( createError( 'layers-invalid-publication-request', 'Page ID must be an integer between 1 and 2147483647 when provided' ) );
+				}
+				if ( baseRevisionId <= 0 ) {
+					return Promise.reject( createError( 'layers-invalid-publication-request', 'Base revision ID must be greater than zero when page ID is provided' ) );
+				}
+			}
+
 			const postParams = {
 				action: 'layerspublish',
 				owner: owner,
@@ -98,6 +110,10 @@
 				data: snapshotJson,
 				summary: typeof summary === 'string' ? summary : ''
 			};
+
+			if ( pageId !== undefined ) {
+				postParams.pageid = pageId;
+			}
 
 			if ( typeof mainText === 'string' ) {
 				postParams.maintext = mainText;

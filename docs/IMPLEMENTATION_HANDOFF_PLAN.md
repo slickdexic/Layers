@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J69 accepted; server PageID retained through editor saves — September 25, 2026
+
+Lead reviewed J69 and connected the native editor bootstrap to publication: PageOwnedPilot derives pageId from the validated current revision, checks its owner identity, and PageOwnedEditorSession validates and captures it once. APIManager already passes that configuration to the session. Every save retains the expected PageID, including after reconciliation; changing caller configuration cannot retarget it. Older internal callers omitting pageId remain compatible. Draft envelopes and read contracts are unchanged. J69 validation returns a rejected Promise before transport; it does not throw synchronously.
+
+Fresh lead verification: publisher/session/APIManager tests **3 suites / 150 tests passed**; native pilot/editor route/publication API tests **55 tests / 414 assertions passed**; changed JavaScript and PHP style passed. Browser verification of this new wiring is assigned to J70, not claimed complete. This is an owner-identity safeguard, not proof of a selected embedding or completed ordinary-page adoption. Image/PDF delivery, ownership controls, search and Cargo remain unfinished. Docker is only the test environment.
+
+**Next handoff: J70**, original-wiki browser verification of server-derived PageID on editor saves. Lead retains ordinary binding/adoption entry points; J64/J65 remain blocked. Prior checkpoints below are historical.
+
 ## J68 accepted; expected owner identity reaches publication API — September 25, 2026
 
 Lead reviewed J68's native move/delete/recreate tests. Added explicit proof that the old title is an existing redirect, and gave the replacement page visibly distinct drawing text so an old-content fallback cannot pass. Internal PageID-bound reads survive unscoped native moves, reject redirect/foreign/recreated owners and retain archive records; read-only permission and denied-reader cases passed. These tests do not remove scoped pilot lifecycle guards or establish public move support. Fresh lifecycle/read regression: **33 tests / 143 assertions**.
@@ -191,13 +199,27 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4 | Junior J66: native slide-parser correspondence | Accepted with lead corrections; see current checkpoint |
 | 4a | Junior J67: original-wiki inline binding browser acceptance | Accepted with lead corrections; see current checkpoint |
 | 4b | Junior J68: bound-read identity lifecycle tests | Accepted with lead corrections |
-| 4c | Junior J69: expected PageID publication client | Ready; packet below |
+| 4c | Junior J69: expected PageID publication client | Accepted; lead session/bootstrap wiring verified |
+| 4d | Junior J70: editor PageID browser acceptance | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J69 — Expected PageID publication client (ready)
+### J70 — Server-derived editor PageID browser acceptance (ready)
+
+**Purpose:** verify the accepted native bootstrap → session → publisher wiring in a real browser on the original working-copy wiki at http://localhost:8080/index.php. Docker is only the test host. No second wiki.
+
+**Allowed changes:** tests/e2e/page-owned-workflow.spec.js, this packet and the junior review ledger. No production, manifest, messages, credentials, configuration, real files, Main Page or manual test owners. Use the existing private acceptance configuration and dedicated Layers_browser_acceptance owner only. No commit/push.
+
+1. Resolve the dedicated owner's native PageID through the API. Verify wgLayersEditorInit.pageOwned.pageId matches it on opening the current editor; do not hard-code an ID or infer it from title.
+2. Extend the existing normal save workflow to inspect the real editor POST: pageid must equal that ID and baserevid the explicitly opened revision. Verify exactly one request and a new native revision; old snapshot remains unchanged.
+3. In the existing conflict/reconciliation and lost-response workflows, verify every actual editor publication carries the same PageID before and after reconciliation. Preserve all no-retry assertions. Separate helper seed/cleanup publications from editor requests; do not weaken tests or introduce extra retries to satisfy assertions.
+4. Preserve explicit revision/CAS cleanup and all native history. Never overwrite an intervening edit. Do not move/delete the scoped pilot owner or alter its guards. Run the focused workflow suite, changed-file ESLint and documentation checks; record actual counts and return for review. Report any bootstrap or request mismatch without changing production.
+
+Acceptance is request identity and existing workflow behavior, not general move support, adoption UI or image/PDF parity.
+
+### J69 — Expected PageID publication client (accepted)
 
 **Frozen interface:** `PageOwnedPublishClient.publish(options)` gains optional `options.pageId`. Undefined means omitted and preserves existing pilot calls. When present it must be a JavaScript integer number from 1 through 2147483647; strings, null, booleans, fractions, infinities and NaN reject with the existing fixed `layers-invalid-publication-request` before transport. A provided pageId also requires baseRevisionId greater than zero. Capture its value at invocation, then send it unchanged as numeric API parameter `pageid` in the single existing CSRF POST. The server now enforces this identity through publication. Response shape and error handling do not change.
 
@@ -206,6 +228,22 @@ This queue supersedes all older assignment tables below. Full architectural deci
 **Ordered acceptance:** omitted field leaves the entire existing request unchanged; valid boundary values transmit correctly; every invalid type/range and pageId with baseRevisionId=0 rejects without a POST; mutation of caller options after invocation cannot change the dispatched identity; normal success, conflict, uncertain response and synchronous transport failures retain established one-request/no-retry behavior. Do not add automatic identity lookup or fallback without pageid.
 
 Run focused publisher and combined PageOwned client suites, ESLint on changed files and documentation checks. Record measured counts and return for lead review. This is client support only, not completed bound editing or move support.
+
+Fresh verification:
+- Implemented optional expected `pageId` in `resources/ext.layers.editor/PageOwnedPublishClient.js`:
+  - `pageId` is captured immediately at method invocation into a local constant, preventing external mutation of the caller options object from affecting the dispatched value.
+  - When `pageId === undefined`, it is omitted entirely from `postParams`, preserving legacy/pilot publication requests identically.
+  - When present, `pageId` is strictly validated to be an integer between 1 and 2147483647 inclusive (`Number.isInteger(pageId) && pageId >= 1 && pageId <= 2147483647`).
+  - All invalid types/ranges (null, strings, booleans, floats/fractions, NaN, Infinity, -Infinity, <= 0, > 2147483647, objects, arrays, functions) return rejected Promises before transport with fixed `layers-invalid-publication-request`.
+  - When `pageId` is provided, `baseRevisionId` must be strictly greater than zero (`baseRevisionId > 0`); calls with `baseRevisionId: 0` reject with `layers-invalid-publication-request` before transport, preventing invalid bound-page creation requests.
+  - Valid `pageId` is included unchanged as numeric API parameter `pageid` in the single existing CSRF POST.
+  - Response envelope handling, recognized server error propagation, unknown outcome mapping, and single-request/no-retry guarantees remain completely unchanged.
+- Test suites & verification:
+  - `tests/jest/PageOwnedPublishClient.test.js`: **58 tests passed** (11 new tests added covering omitted field, valid boundaries 1 and 2147483647, every invalid type/range, baseRevisionId=0 rejection, post parameter inclusion, immutability against caller option mutation, and success/conflict/uncertain/transport error modes with pageId).
+  - Combined PageOwned client suites (`PageOwnedPublishClient.test.js`, `PageOwnedReadClient.test.js`, `APIManager.pageOwned.test.js`): **3 suites / 110 tests passed**.
+  - ESLint on modified files (`resources/ext.layers.editor/PageOwnedPublishClient.js`, `tests/jest/PageOwnedPublishClient.test.js`): **0 errors and 0 warnings**.
+  - Full test suite regression (`npm test`): **198 suites / 14,975 tests passed**, all static checks (metrics, i18n wiring, MW compatibility, class refs, parallel lists, atomicity, rate limits, bundle size) passed.
+  - Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
 
 ### J68 — PageID-bound read identity lifecycle tests (accepted with lead corrections)
 

@@ -55,6 +55,18 @@ describe( 'APIManager page-owned routing', () => {
 		editor.stateManager.destroy();
 	} );
 
+	it( 'retains server PageID through the real session and publisher despite config mutation', async () => {
+		manager.destroy();
+		editor.config.pageOwned.pageId = 228;
+		manager = new APIManager( editor );
+		editor.config.pageOwned.pageId = 999;
+		await manager.loadLayers();
+		editor.stateManager.set( 'slideCanvasWidth', 901 );
+		await manager.saveLayers();
+		expect( api.postWithToken ).toHaveBeenCalledTimes( 1 );
+		expect( api.postWithToken.mock.calls[ 0 ][ 1 ] ).toMatchObject( { pageid: 228, baserevid: 12 } );
+	} );
+
 	it( 'uses exact read and page publication through the existing load/save entry points', async () => {
 		await manager.loadLayers();
 		expect( api.get ).toHaveBeenCalledWith( { action: 'layersread', formatversion: 2, owner: 'Owner', revid: 12 } );

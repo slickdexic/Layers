@@ -1,4 +1,29 @@
-# Junior implementation review — J01–J68
+# Junior implementation review — J01–J69
+
+## J69 accepted; server PageID retained through editor saves — September 25, 2026
+
+Lead reviewed J69 and connected the native editor bootstrap to publication: PageOwnedPilot derives pageId from the validated current revision, checks its owner identity, and PageOwnedEditorSession validates and captures it once. APIManager already passes that configuration to the session. Every save retains the expected PageID, including after reconciliation; changing caller configuration cannot retarget it. Older internal callers omitting pageId remain compatible. Draft envelopes and read contracts are unchanged. J69 validation returns a rejected Promise before transport; it does not throw synchronously.
+
+Fresh lead verification: publisher/session/APIManager tests **3 suites / 150 tests passed**; native pilot/editor route/publication API tests **55 tests / 414 assertions passed**; changed JavaScript and PHP style passed. Browser verification of this new wiring is assigned to J70, not claimed complete. This is an owner-identity safeguard, not proof of a selected embedding or completed ordinary-page adoption. Image/PDF delivery, ownership controls, search and Cargo remain unfinished. Docker is only the test environment.
+
+**Next handoff: J70**, original-wiki browser verification of server-derived PageID on editor saves. Lead retains ordinary binding/adoption entry points; J64/J65 remain blocked. Prior checkpoints below are historical.
+
+## J69 implemented awaiting lead review: expected PageID publication client — September 25, 2026
+
+Junior implemented optional expected `pageId` support in `PageOwnedPublishClient.publish(options)`:
+- `pageId` is captured immutably at invocation into a local constant; post-invocation mutation of caller options cannot alter dispatched parameters.
+- Omitted `options.pageId` (`undefined`) preserves the existing request unchanged with no `pageid` property sent in `postParams`.
+- Strictly validates integer range 1..2147483647; non-integer numbers, strings, null, booleans, NaN, infinities, values <= 0, and values > 2147483647 return rejected Promises before transport with fixed `layers-invalid-publication-request`.
+- Enforces `baseRevisionId > 0` whenever `pageId` is provided; `baseRevisionId: 0` rejects with `layers-invalid-publication-request` before transport, preventing invalid bound-page creation requests.
+- Valid `pageId` is passed unchanged as numeric API parameter `pageid` in the single existing CSRF POST.
+- Retains existing envelope validation, error mapping, unknown outcome handling, and single-request/no-retry guarantees.
+
+Verification:
+- Focused suite `tests/jest/PageOwnedPublishClient.test.js`: **58 tests passed** (11 new tests added).
+- Combined PageOwned client suites (`PageOwnedPublishClient.test.js`, `PageOwnedReadClient.test.js`, `APIManager.pageOwned.test.js`): **3 suites / 110 tests passed**.
+- Full test suite (`npm test`): **198 suites / 14,975 tests passed**.
+- ESLint: **0 errors, 0 warnings** on changed files.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
 
 ## J68 accepted; expected owner identity reaches publication API — September 25, 2026
 

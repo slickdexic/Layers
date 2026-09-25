@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## J69 accepted; server PageID retained through editor saves — September 25, 2026
+
+Lead reviewed J69 and connected the native editor bootstrap to publication: PageOwnedPilot derives pageId from the validated current revision, checks its owner identity, and PageOwnedEditorSession validates and captures it once. APIManager already passes that configuration to the session. Every save retains the expected PageID, including after reconciliation; changing caller configuration cannot retarget it. Older internal callers omitting pageId remain compatible. Draft envelopes and read contracts are unchanged. J69 validation returns a rejected Promise before transport; it does not throw synchronously.
+
+Fresh lead verification: publisher/session/APIManager tests **3 suites / 150 tests passed**; native pilot/editor route/publication API tests **55 tests / 414 assertions passed**; changed JavaScript and PHP style passed. Browser verification of this new wiring is assigned to J70, not claimed complete. This is an owner-identity safeguard, not proof of a selected embedding or completed ordinary-page adoption. Image/PDF delivery, ownership controls, search and Cargo remain unfinished. Docker is only the test environment.
+
+**Next handoff: J70**, original-wiki browser verification of server-derived PageID on editor saves. Lead retains ordinary binding/adoption entry points; J64/J65 remain blocked. Prior checkpoints below are historical.
+
 ## J68 accepted; expected owner identity reaches publication API — September 25, 2026
 
 Lead reviewed J68's native move/delete/recreate tests. Added explicit proof that the old title is an existing redirect, and gave the replacement page visibly distinct drawing text so an old-content fallback cannot pass. Internal PageID-bound reads survive unscoped native moves, reject redirect/foreign/recreated owners and retain archive records; read-only permission and denied-reader cases passed. These tests do not remove scoped pilot lifecycle guards or establish public move support. Fresh lifecycle/read regression: **33 tests / 143 assertions**.

@@ -165,6 +165,81 @@ describe( 'PageOwnedPublishClient', () => {
 			}
 			expect( mockApi.postWithToken ).not.toHaveBeenCalled();
 		} );
+
+		it( 'should reject invalid pageId with layers-invalid-publication-request before transport', async () => {
+			const validRest = {
+				owner: 'TestPage',
+				baseRevisionId: 10,
+				snapshotJson: '{"version":1}'
+			};
+
+			const invalidPageIds = [
+				null,
+				'123',
+				'0',
+				'',
+				'abc',
+				true,
+				false,
+				0,
+				-1,
+				-100,
+				1.5,
+				42.7,
+				NaN,
+				Infinity,
+				-Infinity,
+				2147483648,
+				9999999999,
+				{},
+				[],
+				[ 10 ],
+				() => {}
+			];
+
+			for ( const badPageId of invalidPageIds ) {
+				await expect( client.publish( { ...validRest, pageId: badPageId } ) ).rejects.toMatchObject( {
+					code: 'layers-invalid-publication-request'
+				} );
+			}
+			expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should reject pageId when baseRevisionId is zero with layers-invalid-publication-request before transport', async () => {
+			const req = {
+				owner: 'TestPage',
+				baseRevisionId: 0,
+				snapshotJson: '{"version":1}',
+				pageId: 123
+			};
+
+			await expect( client.publish( req ) ).rejects.toMatchObject( {
+				code: 'layers-invalid-publication-request'
+			} );
+			expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should accept valid pageId boundaries 1 and 2147483647 when baseRevisionId > 0', async () => {
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspublish: { result: 'Success', revid: 100 }
+			} );
+
+			await expect( client.publish( {
+				owner: 'TestPage',
+				baseRevisionId: 1,
+				snapshotJson: '{"version":1}',
+				pageId: 1
+			} ) ).resolves.toEqual( { revisionId: 100 } );
+
+			await expect( client.publish( {
+				owner: 'TestPage',
+				baseRevisionId: 1,
+				snapshotJson: '{"version":1}',
+				pageId: 2147483647
+			} ) ).resolves.toEqual( { revisionId: 100 } );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 2 );
+		} );
 	} );
 
 	describe( 'request mapping and parameter immutability', () => {
@@ -313,6 +388,172 @@ describe( 'PageOwnedPublishClient', () => {
 
 			await client.publish( input );
 			expect( input ).toEqual( clone );
+		} );
+
+		it( 'should omit pageid from post parameters when pageId is undefined', async () => {
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspublish: { result: 'Success', revid: 601 }
+			} );
+
+			await client.publish( {
+				owner: 'OwnerPage',
+				baseRevisionId: 10,
+				snapshotJson: '{"v":1}'
+			} );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
+			const postParams = mockApi.postWithToken.mock.calls[ 0 ][ 1 ];
+			expect( 'pageid' in postParams ).toBe( false );
+		} );
+
+		it( 'should include numeric pageid in post parameters when valid pageId is provided', async () => {
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspublish: { result: 'Success', revid: 602 }
+			} );
+
+			await client.publish( {
+				owner: 'OwnerPage',
+				baseRevisionId: 10,
+				snapshotJson: '{"v":1}',
+				pageId: 42
+			} );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
+			const postParams = mockApi.postWithToken.mock.calls[ 0 ][ 1 ];
+			expect( postParams.pageid ).toBe( 42 );
+			expect( typeof postParams.pageid ).toBe( 'number' );
+		} );
+
+		it( 'should capture pageId immutably at invocation preventing caller mutation', async () => {
+			let resolvePost;
+			mockApi.postWithToken.mockImplementation( () => new Promise( ( resolve ) => {
+				resolvePost = resolve;
+			} ) );
+
+			const req = {
+				owner: 'OriginalOwner',
+				baseRevisionId: 10,
+				snapshotJson: '{"initial":true}',
+				pageId: 777
+			};
+
+			const publishPromise = client.publish( req );
+
+			// Mutate caller input immediately after invocation
+			req.pageId = 999;
+
+			resolvePost( {
+				layerspublish: { result: 'Success', revid: 11 }
+			} );
+
+			const result = await publishPromise;
+			expect( result ).toEqual( { revisionId: 11 } );
+			expect( mockApi.postWithToken.mock.calls[ 0 ][ 1 ].pageid ).toBe( 777 );
+		} );
+
+		it( 'should not add pageid if pageId is added to caller object after invocation', async () => {
+			let resolvePost;
+			mockApi.postWithToken.mockImplementation( () => new Promise( ( resolve ) => {
+				resolvePost = resolve;
+			} ) );
+
+			const req = {
+				owner: 'OriginalOwner',
+				baseRevisionId: 10,
+				snapshotJson: '{"initial":true}'
+			};
+
+			const publishPromise = client.publish( req );
+
+			// Add pageId to caller object after invocation
+			req.pageId = 888;
+
+			resolvePost( {
+				layerspublish: { result: 'Success', revid: 12 }
+			} );
+
+			const result = await publishPromise;
+			expect( result ).toEqual( { revisionId: 12 } );
+			expect( 'pageid' in mockApi.postWithToken.mock.calls[ 0 ][ 1 ] ).toBe( false );
+		} );
+	} );
+
+	describe( 'pageId lifecycle and failure modes', () => {
+		it( 'should handle success with expected pageId', async () => {
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspublish: { result: 'Success', revid: 701 }
+			} );
+
+			const res = await client.publish( {
+				owner: 'Slide1',
+				baseRevisionId: 700,
+				snapshotJson: '{"v":1}',
+				pageId: 105
+			} );
+
+			expect( res ).toEqual( { revisionId: 701 } );
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
+			expect( mockApi.postWithToken ).toHaveBeenCalledWith(
+				'csrf',
+				expect.objectContaining( {
+					action: 'layerspublish',
+					owner: 'Slide1',
+					baserevid: 700,
+					pageid: 105
+				} )
+			);
+		} );
+
+		it( 'should propagate conflict error with pageId without retry', async () => {
+			mockApi.postWithToken.mockRejectedValue( {
+				error: { code: 'layers-edit-conflict', info: 'Conflict on page 105' }
+			} );
+
+			await expect( client.publish( {
+				owner: 'Slide1',
+				baseRevisionId: 700,
+				snapshotJson: '{"v":1}',
+				pageId: 105
+			} ) ).rejects.toMatchObject( {
+				code: 'layers-edit-conflict',
+				message: 'Publication failed: layers-edit-conflict'
+			} );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should map uncertain response with pageId to layers-publication-outcome-unknown', async () => {
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspublish: { result: 'Failure' }
+			} );
+
+			await expect( client.publish( {
+				owner: 'Slide1',
+				baseRevisionId: 700,
+				snapshotJson: '{"v":1}',
+				pageId: 105
+			} ) ).rejects.toMatchObject( {
+				code: 'layers-publication-outcome-unknown'
+			} );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should map synchronous transport failure with pageId to layers-publication-outcome-unknown without retry', async () => {
+			mockApi.postWithToken.mockImplementation( () => {
+				throw new Error( 'Network timeout on pageid 105' );
+			} );
+
+			await expect( client.publish( {
+				owner: 'Slide1',
+				baseRevisionId: 700,
+				snapshotJson: '{"v":1}',
+				pageId: 105
+			} ) ).rejects.toMatchObject( {
+				code: 'layers-publication-outcome-unknown'
+			} );
+
+			expect( mockApi.postWithToken ).toHaveBeenCalledTimes( 1 );
 		} );
 	} );
 
