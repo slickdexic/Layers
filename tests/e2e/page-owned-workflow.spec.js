@@ -2,6 +2,10 @@
 /** Opt-in: publishes only to the explicitly provisioned Layers_browser_acceptance test owner. */
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
+const path = require( 'path' );
+
+const getConfigPath = () => process.env.LAYERS_ACCEPTANCE_CONFIG ||
+	( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 
 // All tests advance the same dedicated automation owner; never run them concurrently.
 test.describe.configure( { mode: 'serial' } );
@@ -16,11 +20,16 @@ test.afterEach( async () => {
 } );
 
 test( 'reload recovers an unsaved local drawing only after confirmation without publishing', async ( { page, context } ) => {
-	test.skip( !process.env.LAYERS_ACCEPTANCE_CONFIG, 'Requires an explicitly provisioned, seeded pilot automation owner' );
-	const config = JSON.parse( fs.readFileSync( process.env.LAYERS_ACCEPTANCE_CONFIG, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const configPath = getConfigPath();
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
 	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( [ '', '/' ] ).toContain( url.pathname );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	config.base = url.origin;
 	const owner = 'Layers_browser_acceptance';
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -33,12 +42,22 @@ test( 'reload recovers an unsaved local drawing only after confirmation without 
 		lgtoken: token.query.tokens.logintoken }, true );
 	expect( login.login.result ).toBe( 'Success' );
 	const history = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
-	const revision = history.query.pages[ 0 ].revisions[ 0 ].revid;
+	const pageRecord = history.query.pages[ 0 ];
+	const pageId = pageRecord.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThanOrEqual( 1 );
+	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
 	await page.goto( config.base + '/index.php?' + new URLSearchParams( {
 		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
 	} ) );
 	await expect( page.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
+	const bootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( bootstrapPageId ).toBe( pageId );
 	let publications = 0;
 	page.on( 'request', ( request ) => {
 		if ( ( request.postData() || '' ).includes( 'action=layerspublish' ) ) {
@@ -77,6 +96,12 @@ test( 'reload recovers an unsaved local drawing only after confirmation without 
 	await expect( dialog ).toHaveCount( 0 );
 	await expect( page.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) ) ).toEqual( local );
+	const reloadedBootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( reloadedBootstrapPageId ).toBe( pageId );
 	expect( publications ).toBe( 0 );
 	const after = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
 	expect( after ).toEqual( history );
@@ -84,11 +109,16 @@ test( 'reload recovers an unsaved local drawing only after confirmation without 
 } );
 
 test( 'two editors reject conflicting saves and retain the unsaved drawing during reconciliation', async ( { page, context } ) => {
-	test.skip( !process.env.LAYERS_ACCEPTANCE_CONFIG, 'Requires an explicitly provisioned, seeded pilot automation owner' );
-	const config = JSON.parse( fs.readFileSync( process.env.LAYERS_ACCEPTANCE_CONFIG, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const configPath = getConfigPath();
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
 	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( [ '', '/' ] ).toContain( url.pathname );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	config.base = url.origin;
 	const owner = 'Layers_browser_acceptance';
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -101,7 +131,11 @@ test( 'two editors reject conflicting saves and retain the unsaved drawing durin
 		lgtoken: token.query.tokens.logintoken }, true );
 	expect( login.login.result ).toBe( 'Success' );
 	const history = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
-	const revision = history.query.pages[ 0 ].revisions[ 0 ].revid;
+	const pageRecord = history.query.pages[ 0 ];
+	const pageId = pageRecord.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThanOrEqual( 1 );
+	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
 	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
 		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
@@ -110,16 +144,33 @@ test( 'two editors reject conflicting saves and retain the unsaved drawing durin
 	for ( const tab of [ page, other ] ) {
 		await tab.goto( editorUrl );
 		await expect( tab.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
+		const tabInitPageId = await tab.evaluate( () => {
+			const init = window.wgLayersEditorInit ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+			return init?.pageOwned?.pageId;
+		} );
+		expect( tabInitPageId ).toBe( pageId );
 	}
 	for ( const [ tab, key ] of [ [ page, 'ArrowRight' ], [ other, 'ArrowDown' ] ] ) {
 		await tab.locator( '.layer-item:not(.background-layer-item)' ).first().click();
 		await tab.keyboard.press( key );
 	}
 	const save = async ( tab ) => {
-		const pending = tab.waitForResponse( ( response ) => response.url().includes( 'api.php' ) &&
-			( response.request().postData() || '' ).includes( 'action=layerspublish' ) );
+		let capturedRequest = null;
+		const pending = tab.waitForResponse( ( response ) => {
+			if ( response.url().includes( 'api.php' ) &&
+				( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+				capturedRequest = response.request();
+				return true;
+			}
+			return false;
+		} );
 		await tab.locator( '.save-button' ).click();
-		return ( await pending ).json();
+		const response = await pending;
+		const postParams = new URLSearchParams( capturedRequest.postData() );
+		expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
+		expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
+		return response.json();
 	};
 	const winner = await save( page );
 	expect( winner.error ).toBeUndefined();
@@ -150,11 +201,16 @@ test( 'two editors reject conflicting saves and retain the unsaved drawing durin
 } );
 
 test( 'native editor save preserves the old revision and opens it from page history', async ( { page, context } ) => {
-	test.skip( !process.env.LAYERS_ACCEPTANCE_CONFIG, 'Requires an explicitly provisioned, seeded pilot automation owner' );
-	const config = JSON.parse( fs.readFileSync( process.env.LAYERS_ACCEPTANCE_CONFIG, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const configPath = getConfigPath();
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
 	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( [ '', '/' ] ).toContain( url.pathname );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	config.base = url.origin;
 	const owner = 'Layers_browser_acceptance';
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -167,7 +223,11 @@ test( 'native editor save preserves the old revision and opens it from page hist
 		lgtoken: token.query.tokens.logintoken }, true );
 	expect( login.login.result ).toBe( 'Success' );
 	const history = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
-	const revision = history.query.pages[ 0 ].revisions[ 0 ].revid;
+	const pageRecord = history.query.pages[ 0 ];
+	const pageId = pageRecord.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThanOrEqual( 1 );
+	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
 	expect( before.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( true );
 	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
@@ -181,14 +241,38 @@ test( 'native editor save preserves the old revision and opens it from page hist
 	const readRequest = await readRequestPromise;
 	expect( new URL( readRequest.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
 	await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
+	const bootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( bootstrapPageId ).toBe( pageId );
 	// The real mw.Api client must preserve JSON booleans before any user changes.
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'backgroundVisible' ) ) ).toBe( true );
 	await page.locator( '.layer-item:not(.background-layer-item)' ).first().click();
 	await page.keyboard.press( 'ArrowRight' );
-	const responsePromise = page.waitForResponse( ( response ) => response.url().includes( 'api.php' ) &&
-		( response.request().postData() || '' ).includes( 'action=layerspublish' ) );
+	let saveRequests = 0;
+	page.on( 'request', ( request ) => {
+		if ( new URLSearchParams( request.postData() || '' ).get( 'action' ) === 'layerspublish' ) {
+			saveRequests++;
+		}
+	} );
+	let capturedPostData = null;
+	const responsePromise = page.waitForResponse( ( response ) => {
+		if ( response.url().includes( 'api.php' ) &&
+			( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+			capturedPostData = response.request().postData();
+			return true;
+		}
+		return false;
+	} );
 	await page.locator( '.save-button' ).click();
-	const saved = await ( await responsePromise ).json();
+	const savedResponse = await responsePromise;
+	const saved = await savedResponse.json();
+	expect( saveRequests ).toBe( 1 );
+	const postParams = new URLSearchParams( capturedPostData );
+	expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
+	expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
 	expect( saved.error ).toBeUndefined();
 	const newRevision = saved.layerspublish.revid;
 	expect( newRevision ).toBeGreaterThan( revision );
@@ -205,14 +289,20 @@ test( 'native editor save preserves the old revision and opens it from page hist
 		before.layersread.snapshot.surfaces[ 0 ] );
 	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).revisionId ) ).toBe( revision );
 	await expect( viewer.locator( '.save-button' ) ).toHaveCount( 0 );
+	expect( saveRequests ).toBe( 1 );
 } );
 
 test( 'native editor preserves and round-trips false boolean values across save, reopen and historical viewing', async ( { page, context } ) => {
-	test.skip( !process.env.LAYERS_ACCEPTANCE_CONFIG, 'Requires an explicitly provisioned, seeded pilot automation owner' );
-	const config = JSON.parse( fs.readFileSync( process.env.LAYERS_ACCEPTANCE_CONFIG, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const configPath = getConfigPath();
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
 	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( [ '', '/' ] ).toContain( url.pathname );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	config.base = url.origin;
 	const owner = 'Layers_browser_acceptance';
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -227,10 +317,14 @@ test( 'native editor preserves and round-trips false boolean values across save,
 
 	const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
 	const history = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
-	const currentRev = history.query.pages[ 0 ].revisions[ 0 ].revid;
+	const pageRecord = history.query.pages[ 0 ];
+	const pageId = pageRecord.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThanOrEqual( 1 );
+	const currentRev = pageRecord.revisions[ 0 ].revid;
 	const currentRead = await api( { action: 'layersread', owner, revid: String( currentRev ) } );
 
-	// 1. Seed only the disposable owner using the authenticated native publication API,
+	// 1. Seed only the dedicated automation owner using the authenticated native publication API,
 	// preserving all unrelated snapshot fields while ensuring visible starting state.
 	const seedSnapshot = JSON.parse( JSON.stringify( currentRead.layersread.snapshot ) );
 	seedSnapshot.surfaces[ 0 ].canvas.backgroundVisible = true;
@@ -245,18 +339,23 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	}, true );
 	expect( seedResult.error ).toBeUndefined();
 	const baseRevision = seedResult.layerspublish.revid;
+	let lastOwnedRevision = baseRevision;
+	let publicationPending = false;
 
 	restoreVisibility = async () => {
 		// Also restore visibility if a UI assertion or navigation fails after Save.
-		// Read the current snapshot so cleanup never rolls back unrelated edits.
+		// Never modify a newer editor's state or guess after an uncertain publication.
+		expect( publicationPending, 'Cleanup blocked by unconfirmed publication' ).toBe( false );
 		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
 		const latestRevision = latestHistory.query.pages[ 0 ].revisions[ 0 ].revid;
+		expect( latestHistory.query.pages[ 0 ].pageid ).toBe( pageId );
+		expect( latestRevision, 'Cleanup must not overwrite an intervening edit' ).toBe( lastOwnedRevision );
 		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
 		const latest = latestRead.layersread.snapshot;
 		if ( latest.surfaces[ 0 ].canvas.backgroundVisible !== true || latest.surfaces[ 0 ].layers[ 0 ].visible !== true ) {
 			latest.surfaces[ 0 ].canvas.backgroundVisible = true;
 			latest.surfaces[ 0 ].layers[ 0 ].visible = true;
-			const restored = await api( { action: 'layerspublish', owner, baserevid: String( latestRevision ),
+			const restored = await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
 				data: JSON.stringify( latest ), summary: 'Restore browser test visibility after failure', token: csrfToken }, true );
 			expect( restored.error ).toBeUndefined();
 		}
@@ -273,6 +372,12 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	const initialRead = await initialReadPromise;
 	expect( new URL( initialRead.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
 	await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
+	const bootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( bootstrapPageId ).toBe( pageId );
 
 	// Confirm initial true state
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'backgroundVisible' ) ) ).toBe( true );
@@ -290,12 +395,33 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' )[ 0 ].visible ) ).toBe( false );
 
 	// Save through actual editor
-	const savePromise = page.waitForResponse( ( response ) => response.url().includes( 'api.php' ) &&
-		( response.request().postData() || '' ).includes( 'action=layerspublish' ) );
+	let editorSaveRequests = 0;
+	page.on( 'request', ( request ) => {
+		if ( new URLSearchParams( request.postData() || '' ).get( 'action' ) === 'layerspublish' ) {
+			editorSaveRequests++;
+		}
+	} );
+	let editorPostData = null;
+	const savePromise = page.waitForResponse( ( response ) => {
+		if ( response.url().includes( 'api.php' ) &&
+			( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+			editorPostData = response.request().postData();
+			return true;
+		}
+		return false;
+	} );
+	publicationPending = true;
 	await page.locator( '.save-button' ).click();
 	const saved = await ( await savePromise ).json();
+	expect( editorSaveRequests ).toBe( 1 );
+	const editorPostParams = new URLSearchParams( editorPostData );
+	expect( editorPostParams.get( 'pageid' ) ).toBe( String( pageId ) );
+	expect( editorPostParams.get( 'baserevid' ) ).toBe( String( baseRevision ) );
 	expect( saved.error ).toBeUndefined();
 	const hiddenRevision = saved.layerspublish.revid;
+	expect( hiddenRevision ).toBeGreaterThan( baseRevision );
+	lastOwnedRevision = hiddenRevision;
+	publicationPending = false;
 	// A received HTTP response precedes completion of the editor save lifecycle.
 	await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );
 	expect( hiddenRevision ).toBeGreaterThan( baseRevision );
@@ -312,10 +438,16 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	const reopenRead = await reopenReadPromise;
 	expect( new URL( reopenRead.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
 	await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
+	const reopenBootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( reopenBootstrapPageId ).toBe( pageId );
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'backgroundVisible' ) ) ).toBe( false );
 	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' )[ 0 ].visible ) ).toBe( false );
 
-	// 2 & 3. Restore the disposable owner's initial canvas/layer visibility with another ordinary publication
+	// 2 & 3. Restore the dedicated automation owner's initial canvas/layer visibility with another ordinary publication
 	// in cleanup, preserving its history. This creates a later publication after hiddenRevision.
 	const readHidden = await api( { action: 'layersread', owner, revid: String( hiddenRevision ) } );
 	expect( readHidden.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( false );
@@ -325,9 +457,11 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	restoreSnapshot.surfaces[ 0 ].canvas.backgroundVisible = true;
 	restoreSnapshot.surfaces[ 0 ].layers[ 0 ].visible = true;
 
+	publicationPending = true;
 	const cleanupResult = await api( {
 		action: 'layerspublish',
 		owner,
+		pageid: String( pageId ),
 		baserevid: String( hiddenRevision ),
 		data: JSON.stringify( restoreSnapshot ),
 		summary: 'Restore initial canvas/layer visibility in cleanup',
@@ -336,6 +470,8 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	expect( cleanupResult.error ).toBeUndefined();
 	const laterRevision = cleanupResult.layerspublish.revid;
 	expect( laterRevision ).toBeGreaterThan( hiddenRevision );
+	lastOwnedRevision = laterRevision;
+	publicationPending = false;
 
 	// Verify the historical viewer uses that explicit revision (hiddenRevision) after later publication
 	const viewer = await context.newPage();
@@ -356,15 +492,21 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	const verifiedLatest = await api( { action: 'layersread', owner, revid: String( laterRevision ) } );
 	expect( verifiedLatest.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( true );
 	expect( verifiedLatest.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].visible ).toBe( true );
+	expect( editorSaveRequests ).toBe( 1 );
 
 } );
 
 test( 'lost publication response enters uncertain phase and continues editing after deliberate reconciliation', async ( { page, context } ) => {
-	test.skip( !process.env.LAYERS_ACCEPTANCE_CONFIG, 'Requires an explicitly provisioned, seeded pilot automation owner' );
-	const config = JSON.parse( fs.readFileSync( process.env.LAYERS_ACCEPTANCE_CONFIG, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const configPath = getConfigPath();
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
 	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( [ '', '/' ] ).toContain( url.pathname );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	config.base = url.origin;
 	const owner = 'Layers_browser_acceptance';
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -378,7 +520,11 @@ test( 'lost publication response enters uncertain phase and continues editing af
 	expect( login.login.result ).toBe( 'Success' );
 
 	const history = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids', rvlimit: 5 } );
-	const revision = history.query.pages[ 0 ].revisions[ 0 ].revid;
+	const pageRecord = history.query.pages[ 0 ];
+	const pageId = pageRecord.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThanOrEqual( 1 );
+	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
 
 	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
@@ -393,6 +539,12 @@ test( 'lost publication response enters uncertain phase and continues editing af
 	expect( new URL( initialRead.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
 	await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
 	await expect( page.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
+	const bootstrapPageId = await page.evaluate( () => {
+		const init = window.wgLayersEditorInit ||
+			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+		return init?.pageOwned?.pageId;
+	} );
+	expect( bootstrapPageId ).toBe( pageId );
 
 	// 1. Make an actual UI drawing edit
 	await page.locator( '.layer-item:not(.background-layer-item) .layer-grab-area' ).first().click();
@@ -412,12 +564,14 @@ test( 'lost publication response enters uncertain phase and continues editing af
 	// verify the response confirms a new revision, then abort delivery to the editor.
 	let interceptedPublish = false;
 	let committedRevision = null;
+	let firstPublishPostData = null;
 	const routePattern = '**/api.php*';
 
 	await page.route( routePattern, async ( route ) => {
 		const postData = route.request().postData() || '';
 		if ( !interceptedPublish && postData.includes( 'action=layerspublish' ) ) {
 			interceptedPublish = true;
+			firstPublishPostData = postData;
 			const response = await route.fetch();
 			const json = await response.json();
 			expect( json.error ).toBeUndefined();
@@ -436,6 +590,11 @@ test( 'lost publication response enters uncertain phase and continues editing af
 
 		// Save through UI with intercepted and aborted response
 		await page.locator( '.save-button' ).click();
+		await expect.poll( () => committedRevision ).not.toBeNull();
+		expect( firstPublishPostData ).not.toBeNull();
+		const firstPostParams = new URLSearchParams( firstPublishPostData );
+		expect( firstPostParams.get( 'pageid' ) ).toBe( String( pageId ) );
+		expect( firstPostParams.get( 'baserevid' ) ).toBe( String( revision ) );
 
 		// 2. Verify the browser enters uncertain, preserves its local drawing/base, and does not retry
 		await expect.poll( async () => ( await status() ).phase ).toBe( 'uncertain' );
@@ -504,10 +663,15 @@ test( 'lost publication response enters uncertain phase and continues editing af
 		expect( secondEditedLayers[ 0 ].x ).toBe( editedLayers[ 0 ].x + 1 );
 		expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'isDirty' ) ) ).toBe( true );
 
-		const secondSavePromise = page.waitForResponse( ( response ) =>
-			response.url().includes( 'api.php' ) &&
-			( response.request().postData() || '' ).includes( 'action=layerspublish' )
-		);
+		let secondSavePostData = null;
+		const secondSavePromise = page.waitForResponse( ( response ) => {
+			if ( response.url().includes( 'api.php' ) &&
+				( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+				secondSavePostData = response.request().postData();
+				return true;
+			}
+			return false;
+		} );
 		await page.locator( '.save-button' ).click();
 		const secondSaveResponse = await secondSavePromise;
 		const secondSaved = await secondSaveResponse.json();
@@ -515,6 +679,10 @@ test( 'lost publication response enters uncertain phase and continues editing af
 		expect( secondSaved.layerspublish?.result ).toBe( 'Success' );
 		const secondRevision = secondSaved.layerspublish.revid;
 		expect( secondRevision ).toBeGreaterThan( committedRevision );
+		expect( secondSavePostData ).not.toBeNull();
+		const secondPostParams = new URLSearchParams( secondSavePostData );
+		expect( secondPostParams.get( 'pageid' ) ).toBe( String( pageId ) );
+		expect( secondPostParams.get( 'baserevid' ) ).toBe( String( committedRevision ) );
 
 		// Verify editor continues cleanly after reconciliation
 		await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );

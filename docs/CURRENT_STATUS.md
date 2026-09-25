@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## J70 accepted with corrections; J71 ready — September 25, 2026
+
+Lead reviewed J70 and corrected two acceptance gaps. Counting responses inside waitForResponse could only count the first matching response; persistent request listeners now verify the normal and boolean workflows make one editor publication through completion. The existing failure cleanup could modify a newer unrelated revision; it now requires the exact last confirmed revision and original PageID, refuses uncertain outcomes, and uses native CAS with expected PageID. It preserves revisions rather than deleting history. The browser target is explicitly restricted to the original loopback wiki on port 8080 with no alternate path or embedded credentials. Replaced an unbounded interception Promise with a bounded wait.
+
+Fresh corrected Chromium verification on the original wiki: **5 workflows passed (2.3 minutes)**, covering draft recovery, two-editor conflict, normal save/history, false booleans and lost-response reconciliation. Server-derived PageID matches the bootstrap and inspected editor requests. Changed-file ESLint and diff whitespace checks passed. No production, manifest, configuration or user test-page changes. This evidence verifies the scoped slide editor; ordinary legacy image/PDF edits still do not automatically create owner-page revisions.
+
+**J71 is ready:** competing prepared adoption tests using existing native service interfaces. Lead retains the ordinary-page adoption/confirmation and bound editor routes plus pinned image/PDF delivery. J64/J65 remain blocked. History remains first priority, then searchable textbox/callout content, then Cargo. Docker remains only the test environment. Earlier entries below are historical evidence.
+
 ## J69 accepted; server PageID retained through editor saves — September 25, 2026
 
 Lead reviewed J69 and connected the native editor bootstrap to publication: PageOwnedPilot derives pageId from the validated current revision, checks its owner identity, and PageOwnedEditorSession validates and captures it once. APIManager already passes that configuration to the session. Every save retains the expected PageID, including after reconciliation; changing caller configuration cannot retarget it. Older internal callers omitting pageId remain compatible. Draft envelopes and read contracts are unchanged. J69 validation returns a rejected Promise before transport; it does not throw synchronously.

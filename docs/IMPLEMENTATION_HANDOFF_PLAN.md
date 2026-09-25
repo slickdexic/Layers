@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J70 accepted with corrections; J71 ready — September 25, 2026
+
+Lead reviewed J70 and corrected two acceptance gaps. Counting responses inside waitForResponse could only count the first matching response; persistent request listeners now verify the normal and boolean workflows make one editor publication through completion. The existing failure cleanup could modify a newer unrelated revision; it now requires the exact last confirmed revision and original PageID, refuses uncertain outcomes, and uses native CAS with expected PageID. It preserves revisions rather than deleting history. The browser target is explicitly restricted to the original loopback wiki on port 8080 with no alternate path or embedded credentials. Replaced an unbounded interception Promise with a bounded wait.
+
+Fresh corrected Chromium verification on the original wiki: **5 workflows passed (2.3 minutes)**, covering draft recovery, two-editor conflict, normal save/history, false booleans and lost-response reconciliation. Server-derived PageID matches the bootstrap and inspected editor requests. Changed-file ESLint and diff whitespace checks passed. No production, manifest, configuration or user test-page changes. This evidence verifies the scoped slide editor; ordinary legacy image/PDF edits still do not automatically create owner-page revisions.
+
+**J71 is ready:** competing prepared adoption tests using existing native service interfaces. Lead retains the ordinary-page adoption/confirmation and bound editor routes plus pinned image/PDF delivery. J64/J65 remain blocked. History remains first priority, then searchable textbox/callout content, then Cargo. Docker remains only the test environment. Earlier entries below are historical evidence.
+
 ## J69 accepted; server PageID retained through editor saves — September 25, 2026
 
 Lead reviewed J69 and connected the native editor bootstrap to publication: PageOwnedPilot derives pageId from the validated current revision, checks its owner identity, and PageOwnedEditorSession validates and captures it once. APIManager already passes that configuration to the session. Every save retains the expected PageID, including after reconciliation; changing caller configuration cannot retarget it. Older internal callers omitting pageId remain compatible. Draft envelopes and read contracts are unchanged. J69 validation returns a rejected Promise before transport; it does not throw synchronously.
@@ -200,13 +208,28 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4a | Junior J67: original-wiki inline binding browser acceptance | Accepted with lead corrections; see current checkpoint |
 | 4b | Junior J68: bound-read identity lifecycle tests | Accepted with lead corrections |
 | 4c | Junior J69: expected PageID publication client | Accepted; lead session/bootstrap wiring verified |
-| 4d | Junior J70: editor PageID browser acceptance | Ready; packet below |
+| 4d | Junior J70: editor PageID browser acceptance | Accepted with lead corrections |
+| 4e | Junior J71: competing prepared adoptions | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J70 — Server-derived editor PageID browser acceptance (ready)
+### J71 — Competing prepared adoptions (ready)
+
+**Purpose:** test the existing native preparation/publication composition before lead exposes ordinary-page adoption.
+
+**Allowed changes:** tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php, this packet and the review ledger. Use isolated native test tables, TestingAdmissionRegistration and synthetic immutable legacy rows. No production, manifest, services, messages, configuration, real wiki pages/files, commit or push.
+
+1. Create an owner containing two identical literal slide embeddings separated by Unicode. Prepare two proposals through DirectAdoptionPreparationService against the same explicit base, one per occurrence, selecting the same immutable legacy row. Assert distinct server-generated surface IDs and no revision created during preparation.
+2. Publish the first through PageOwnedAdoptionService::publishPreparedSurface. Assert exactly one new revision contains both its targeted binding and snapshot; the other occurrence and surrounding text remain unchanged. Verify the parent stays unchanged.
+3. Publish the second prepared proposal against its original base. Require layers-edit-conflict, no new revision, no main-text change and no appended surface. Never substitute the latest base or retry automatically.
+4. Simulate deliberate renewed selection: prepare the remaining unbound occurrence against the first committed revision. Obtain its new byte offset by scanning that revision, not reusing the stale offset. Publish once. Assert both bindings survive, the first surface remains canonical-byte equivalent, the second has a distinct identity, and selected drawing values remain intact. Verify both native revisions and the original parent remain unchanged/readable.
+5. Keep exact legacy row selection observable; no latest named-set fallback. Reuse existing helpers. Do not weaken rendering gates, permission checks or lifecycle guards.
+
+Run the focused composition suite and PageOwnedAdoptionServiceTest, PHP style and documentation checks. Record actual counts. Report any production defect for lead correction; do not invent new APIs. Lead retains adoption confirmation, ordinary overlay routing and pinned image/PDF delivery. J64/J65 remain blocked.
+
+### J70 — Server-derived editor PageID browser acceptance (accepted with lead corrections)
 
 **Purpose:** verify the accepted native bootstrap → session → publisher wiring in a real browser on the original working-copy wiki at http://localhost:8080/index.php. Docker is only the test host. No second wiki.
 
@@ -218,6 +241,27 @@ This queue supersedes all older assignment tables below. Full architectural deci
 4. Preserve explicit revision/CAS cleanup and all native history. Never overwrite an intervening edit. Do not move/delete the scoped pilot owner or alter its guards. Run the focused workflow suite, changed-file ESLint and documentation checks; record actual counts and return for review. Report any bootstrap or request mismatch without changing production.
 
 Acceptance is request identity and existing workflow behavior, not general move support, adoption UI or image/PDF parity.
+
+Fresh verification:
+- Extended real-browser workflow acceptance in `tests/e2e/page-owned-workflow.spec.js` on Chromium against the original test wiki at `http://localhost:8080/index.php`:
+  1. *Native PageID resolution and bootstrap verification*:
+     - Dynamically resolved the dedicated automation owner's native PageID (`Layers_browser_acceptance`) via MediaWiki `action=query` (`query.pages[0].pageid`), ensuring no hard-coded ID or title inference.
+     - Verified `wgLayersEditorInit.pageOwned.pageId` precisely matches that native PageID upon opening `Special:EditLayersPage` in every test workflow (including initial load, reloaded recovery, and multi-tab concurrent sessions).
+  2. *Normal save POST parameter inspection*:
+     - Extended normal editor save to intercept and inspect the actual `action=layerspublish` HTTP POST payload.
+     - Verified `pageid` strictly matches the dynamically resolved native PageID and `baserevid` equals the explicitly opened revision.
+     - Verified exactly one HTTP request was dispatched (`saveRequests === 1`), a new native revision was produced, and the old revision snapshot remains strictly unchanged in historical reads.
+  3. *Conflict/reconciliation & lost-response workflows*:
+     - In the multi-editor conflict test, verified both the winning publication and the rejected conflicting save transmit `pageid` equal to the native PageID and `baserevid` equal to the initial revision. Re-check button click makes zero POST requests (`posts === 0`).
+     - In the lost publication response test, verified the first publication transmits `pageid` equal to the native PageID and `baserevid` equal to the initial revision.
+     - Verified that after uncertain phase and deliberate reconciliation via `Check saved page`, the second editor edit and save transmits the exact same `pageid` and `baserevid` equal to the newly reconciled server revision (`committedRevision`).
+     - Separated helper seed and cleanup publications from actual editor save requests, strictly preserving all single-request and no-retry assertions.
+  4. *CAS/revision history preservation*:
+     - All native revision records and historical snapshots preserved intact; no intervening edits overwritten.
+- Test execution & verification:
+  - Focused Playwright workflow suite (`npx playwright test tests/e2e/page-owned-workflow.spec.js`): **5 tests passed** across Chromium on the original loopback wiki (initial run: 2.3m; repeatability run: 2.3m).
+  - ESLint on `tests/e2e/page-owned-workflow.spec.js`: **0 errors and 0 warnings**.
+  - Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
 
 ### J69 — Expected PageID publication client (accepted)
 

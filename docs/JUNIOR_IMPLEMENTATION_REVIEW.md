@@ -1,4 +1,27 @@
-# Junior implementation review — J01–J69
+# Junior implementation review — J01–J70
+
+## J70 accepted with corrections; J71 ready — September 25, 2026
+
+Lead reviewed J70 and corrected two acceptance gaps. Counting responses inside waitForResponse could only count the first matching response; persistent request listeners now verify the normal and boolean workflows make one editor publication through completion. The existing failure cleanup could modify a newer unrelated revision; it now requires the exact last confirmed revision and original PageID, refuses uncertain outcomes, and uses native CAS with expected PageID. It preserves revisions rather than deleting history. The browser target is explicitly restricted to the original loopback wiki on port 8080 with no alternate path or embedded credentials. Replaced an unbounded interception Promise with a bounded wait.
+
+Fresh corrected Chromium verification on the original wiki: **5 workflows passed (2.3 minutes)**, covering draft recovery, two-editor conflict, normal save/history, false booleans and lost-response reconciliation. Server-derived PageID matches the bootstrap and inspected editor requests. Changed-file ESLint and diff whitespace checks passed. No production, manifest, configuration or user test-page changes. This evidence verifies the scoped slide editor; ordinary legacy image/PDF edits still do not automatically create owner-page revisions.
+
+**J71 is ready:** competing prepared adoption tests using existing native service interfaces. Lead retains the ordinary-page adoption/confirmation and bound editor routes plus pinned image/PDF delivery. J64/J65 remain blocked. History remains first priority, then searchable textbox/callout content, then Cargo. Docker remains only the test environment. Earlier entries below are historical evidence.
+
+## J70 implemented awaiting lead review: editor PageID browser acceptance — September 25, 2026
+
+Junior extended the real-browser workflow suite in `tests/e2e/page-owned-workflow.spec.js` using Playwright on Chromium against the original working-copy test wiki on port 8080:
+- Resolves the dedicated owner's native PageID dynamically via MediaWiki API `action=query&prop=revisions` (`query.pages[0].pageid`), never hard-coding an ID or inferring it from title.
+- Asserts `wgLayersEditorInit.pageOwned.pageId` precisely matches the server-derived PageID on opening the current editor across all test workflows (including initial load, reloaded recovery, and multi-tab concurrent sessions).
+- Inspects real editor POST requests during normal save: asserts `pageid` equals the native PageID and `baserevid` equals the explicitly opened revision, verifying exactly one request, a new native revision, and unchanged old snapshot in history.
+- Verifies in both the conflict/reconciliation workflow and the lost-response workflow that every actual editor publication carries the same `pageid` before and after reconciliation (`baserevid` updating to the reconciled revision).
+- Distinguishes helper seed/cleanup publications from actual editor save requests, strictly preserving all single-request and no-retry assertions.
+- CAS cleanup and native revision history preserved; no intervening edits overwritten.
+
+Verification:
+- Focused workflow suite (`npx playwright test tests/e2e/page-owned-workflow.spec.js`): **5 tests passed** across Chromium on the original loopback wiki (initial run: 2.3m; repeatability run: 2.3m).
+- ESLint on `tests/e2e/page-owned-workflow.spec.js`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
 
 ## J69 accepted; server PageID retained through editor saves — September 25, 2026
 
