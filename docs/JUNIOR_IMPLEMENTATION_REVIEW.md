@@ -1,4 +1,12 @@
-# Junior implementation review — J01–J67
+# Junior implementation review — J01–J68
+
+## J68 accepted; expected owner identity reaches publication API — September 25, 2026
+
+Lead reviewed J68's native move/delete/recreate tests. Added explicit proof that the old title is an existing redirect, and gave the replacement page visibly distinct drawing text so an old-content fallback cannot pass. Internal PageID-bound reads survive unscoped native moves, reject redirect/foreign/recreated owners and retain archive records; read-only permission and denied-reader cases passed. These tests do not remove scoped pilot lifecycle guards or establish public move support. Fresh lifecycle/read regression: **33 tests / 143 assertions**.
+
+Lead added optional `pageid` to the scoped `layerspublish` API (integer 1–2147483647). It carries expected owner identity into PagePublicationService's existing preflight and prepared-update checks. Wrong identity maps to fixed `layers-invalid-publication-request`; bound creation is rejected. Existing callers omitting pageid remain compatible. This is not surface-binding proof and the editor/session does not yet send it. Native tests cover successful publication/no-op, foreign PageID rejection without mutation, rejected creation and range errors before publication. Combined publication/API/read/lifecycle regression: **79 tests / 276 assertions passed**. Changed PHP style passed.
+
+**Junior J69 is ready** in the handoff plan: add strict optional pageId capture/validation/transport to PageOwnedPublishClient with focused tests. Lead retains server-derived bootstrap identity, session/save wiring and explicit adoption. J64/J65 remain blocked. A small follow-up development commit preserves this review/API step; no release or remote push is implied. Docker remains only the test host; user wiki content and configuration are unchanged.
 
 ## Recovery checkpoint preparation and next handoff — September 25, 2026
 
@@ -225,6 +233,40 @@ Fresh verification: **539 tests in 15 related client suites passed**; the full J
 **Ready for limited user testing:** an isolated disposable SQLite wiki is running beneath the existing localhost test server. The main wiki's configuration and data are unchanged; its pilot stays disabled. Local URLs, disposable login and instructions are in ignored `tmp/PAGE_HISTORY_TESTING.md`. Test the supported slide/text/vector workflow only. Image/PDF source delivery, groups/resource-backed historical rendering, adoption/migration, search and Cargo are still unfinished. Slides remain general-purpose; this is a staged rollout, not a change to the extension's supported content model.
 
 **Not ready to commit/push yet.** Lead retains browser conflict/recovery/navigation acceptance, supported-renderer fidelity and an explicit staging review of the large working tree (including separation of abandoned host/container prototypes). Junior J60 below is a bounded browser regression packet. No commit/push has been performed. Docker is only the test environment; the extension has no Docker dependency.
+
+## J68 implementation report — bound-read identity lifecycle tests — September 25, 2026
+
+Implemented comprehensive native lifecycle tests in `tests/phpunit/core/PageReadBindingTest.php` exercising the internal `PageReadService::readBoundSurface()` and `PageHistoryAccess::read()` contracts across native moves, redirects, page deletions, native recreations, permission boundaries, and archive preservation:
+
+- **Native Move & Fresh Title Resolution (Step 1)**:
+  - Published a valid bound slide on an unscoped native test page (`UnscopedBindingMoveSource`) retaining explicit PageID, surface ID (`presentation`), and revision.
+  - Moved the unscoped native test page to `UnscopedBindingMoveDestination` via `MovePageFactory->moveIfAllowed()`.
+  - Resolved fresh `Title` objects after the move. Asserted the moved destination title retains the original PageID and successfully resolves the original revision, PageID, and drawing text (`Visual ideas — 世界`).
+- **Old-Title Redirect & Surface Label Rejection (Step 2)**:
+  - Asserted the old-title redirect (`UnscopedBindingMoveSource`) receives a different PageID and cannot act as the binding owner, both when queried with the original PageID binding and with a redirect-specific PageID binding.
+  - Published a drawing with the identical surface label (`presentation`) on an independent page (`UnscopedBindingOtherOwner`): verified that neither matching title nor matching surface label can confer the original PageID identity.
+  - Verified all mismatched cross-page, cross-revision, and foreign-owner read attempts fail closed with fixed `layers-revision-unavailable` errors and zero diagnostic or exception leakage (`assertNull($e->getPrevious())`).
+- **Native Deletion, Archive Preservation & Recreation Rejection (Step 3)**:
+  - Published a valid bound slide on unscoped test owner `UnscopedBindingDeleteSource`.
+  - Deleted the page via MediaWiki's native `DeletePageFactory->deleteUnsafe()`. Asserted the original revision record is preserved in the native `archive` table with its original `ar_page_id` and `ar_rev_id`.
+  - Recreated a new page at the same title via native `WikiPageFactory` / `editPage`. Asserted the recreated page receives a distinct PageID from the deleted page.
+  - Published a new snapshot onto the recreated page using the same surface ID (`presentation`) and its new PageID. Verified the replacement page reads its new binding.
+  - Asserted the replacement page strictly rejects the original binding for both its new revision and the archived revision, and rejects querying the archived revision with the new binding.
+  - Verified native archive records remain intact and preserved without invoking undelete or bypassing administrative guards.
+- **Denied Reader & Read-Only Permission Boundary (Step 4)**:
+  - Verified denied readers (both mocked `Authority` denying `read` and real user with revoked `read` permission via `setGroupPermissions('*', 'read', false)`) receive fixed `layers-revision-unavailable` errors when querying the moved page.
+  - Verified a read-only user with only `read` permission (explicitly lacking `editlayers` and `edit` permissions) successfully reads the bound surface, proving that read-only access does not require `editlayers` permission.
+- **Fresh verification**:
+  - Native focused suite: `tests/phpunit/core/PageReadBindingTest.php` passed **4 tests / 70 assertions** cleanly (MediaWiki 1.45.3 / PHP 8.3.31 in `mediawiki-145` container).
+  - Existing regressions:
+    - `tests/phpunit/core/PageHistoryAccessTest.php`: **22 tests / 45 assertions passed**.
+    - `tests/phpunit/core/PageOwnedIdentityResolverTest.php`: **5 tests / 10 assertions passed**.
+    - `tests/phpunit/core/BoundSlideHooksTest.php`: **2 tests / 16 assertions passed**.
+    - Combined lifecycle & read regression: **33 tests / 141 assertions passed**.
+  - Style check: `phpcs` on `tests/phpunit/core/PageReadBindingTest.php` passed with **0 errors and 0 warnings**.
+  - Documentation integrity: `npm run check:docs` passed cleanly (**68 maintained/policy documents, 53 historical records**).
+  - Production code diff: strictly 0 lines. Zero modifications to `extension.json`, services, aliases, messages, database schema, or wiki settings. Zero commits or pushes performed.
+  - Scoped pilot guards and production move/delete protections remain intact. J64 and J65 remain strictly blocked awaiting lead interfaces.
 
 ## J67 implementation report — original-wiki inline binding browser acceptance — September 25, 2026
 

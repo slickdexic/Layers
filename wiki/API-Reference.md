@@ -4,7 +4,7 @@
 
 `layersread` and `layerspublish` are now registered by the native extension callback, but disabled by default. They use an explicit retained owner scope. Normal editor saves still use legacy storage. The core merge API is replaced by a guarded adapter only with retained pilot owners. See [Current Status](Current-Status.md) for acceptance limits; this is not a production enablement guide.
 
-The read contract requires an exact owner/revision and private zero-age caching. Publication requires native POST/CSRF handling and optimistic revision matching. Authenticated publication and historical reading now pass in the disposable SQLite HTTP harness; editor/history UI integration remains pending.
+The read contract requires an exact owner/revision and private zero-age caching. Publication requires native POST/CSRF handling and optimistic revision matching. Optional `pageid` asserts the existing owner identity (1–2147483647), is checked through native publication, and rejects mismatches or creation with `baserevid=0`. It does not grant permission or prove a surface binding. Existing pilot clients may omit it; bound-editor wiring remains in progress. Scoped editor/history and read-only inline slide workflows have acceptance evidence on the original test wiki; ordinary adoption and image/PDF binding integration remain unfinished. See the [publishing contract](../docs/PAGE_OWNED_API_CONTRACT.md).
 
 Reviewed September 6, 2026 against the six modules in `extension.json`, their PHP implementations and the local wiki's `action=paraminfo` output. This describes current code, not the proposed page-owned API.
 

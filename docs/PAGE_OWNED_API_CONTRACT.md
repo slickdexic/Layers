@@ -13,6 +13,7 @@ The experimental action is `layerspublish`. It requires POST and a MediaWiki CSR
 | Parameter | Required | Contract |
 | --- | --- | --- |
 | `owner` | Yes | Local owner-page title, at most 512 UTF-8 bytes. Invalid, special, interwiki or fragment-bearing targets are rejected. Redirects are not followed by the publication service. |
+| `pageid` | No for existing pilot callers | Expected existing owner PageID, integer 1–2,147,483,647. Future bound-editor callers must supply the server-derived ID. It is an identity assertion, not permission or proof of a selected surface. Passed into native publication's preflight and commit-time identity checks; mismatches fail with `layers-invalid-publication-request`. Cannot be combined with creation (`baserevid=0`). |
 | `baserevid` | Yes | Integer 0–2,147,483,647. Zero means creation and requires main text; updates require the current owner revision. Out-of-range values fail rather than clamp. |
 | `data` | Yes | Complete versioned snapshot JSON, at most 2 MiB; the service validates the whole document. |
 | `maintext` | For creation | Optional simultaneous wikitext main-slot edit, at most 2 MiB. Omission preserves existing main content; an explicit empty string supplies empty wikitext. Cannot change the owner's main content model. |

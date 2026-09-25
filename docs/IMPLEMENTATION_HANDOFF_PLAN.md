@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J68 accepted; expected owner identity reaches publication API — September 25, 2026
+
+Lead reviewed J68's native move/delete/recreate tests. Added explicit proof that the old title is an existing redirect, and gave the replacement page visibly distinct drawing text so an old-content fallback cannot pass. Internal PageID-bound reads survive unscoped native moves, reject redirect/foreign/recreated owners and retain archive records; read-only permission and denied-reader cases passed. These tests do not remove scoped pilot lifecycle guards or establish public move support. Fresh lifecycle/read regression: **33 tests / 143 assertions**.
+
+Lead added optional `pageid` to the scoped `layerspublish` API (integer 1–2147483647). It carries expected owner identity into PagePublicationService's existing preflight and prepared-update checks. Wrong identity maps to fixed `layers-invalid-publication-request`; bound creation is rejected. Existing callers omitting pageid remain compatible. This is not surface-binding proof and the editor/session does not yet send it. Native tests cover successful publication/no-op, foreign PageID rejection without mutation, rejected creation and range errors before publication. Combined publication/API/read/lifecycle regression: **79 tests / 276 assertions passed**. Changed PHP style passed.
+
+**Junior J69 is ready** in the handoff plan: add strict optional pageId capture/validation/transport to PageOwnedPublishClient with focused tests. Lead retains server-derived bootstrap identity, session/save wiring and explicit adoption. J64/J65 remain blocked. A small follow-up development commit preserves this review/API step; no release or remote push is implied. Docker remains only the test host; user wiki content and configuration are unchanged.
+
 ## Recovery checkpoint preparation and next handoff — September 25, 2026
 
 A development checkpoint now captures the accumulated MediaWiki-native history pilot, scoped read/edit/view routes, inline bound-slide display, adoption preparation, regression tests and documentation through J67. This is not a completed adoption release: ordinary image/PDF ownership, bound editor entry/save, lifecycle integration, search and Cargo remain unfinished. Existing defaults remain disabled/empty-scope.
@@ -182,13 +190,24 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 3 | Junior J63: ordered binding-option adapter | Accepted with lead corrections |
 | 4 | Junior J66: native slide-parser correspondence | Accepted with lead corrections; see current checkpoint |
 | 4a | Junior J67: original-wiki inline binding browser acceptance | Accepted with lead corrections; see current checkpoint |
-| 4b | Junior J68: bound-read identity lifecycle tests | Ready; packet below |
+| 4b | Junior J68: bound-read identity lifecycle tests | Accepted with lead corrections |
+| 4c | Junior J69: expected PageID publication client | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J68 — PageID-bound read identity lifecycle tests (ready)
+### J69 — Expected PageID publication client (ready)
+
+**Frozen interface:** `PageOwnedPublishClient.publish(options)` gains optional `options.pageId`. Undefined means omitted and preserves existing pilot calls. When present it must be a JavaScript integer number from 1 through 2147483647; strings, null, booleans, fractions, infinities and NaN reject with the existing fixed `layers-invalid-publication-request` before transport. A provided pageId also requires baseRevisionId greater than zero. Capture its value at invocation, then send it unchanged as numeric API parameter `pageid` in the single existing CSRF POST. The server now enforces this identity through publication. Response shape and error handling do not change.
+
+**Allowed changes:** `resources/ext.layers.editor/PageOwnedPublishClient.js`, `tests/jest/PageOwnedPublishClient.test.js`, this packet's status/evidence and junior review ledger. No session, bridge, bootstrap, draft, API, manifest, messages or wiki settings. No commit/push. Lead will thread the server-derived identity through editor/session state; do not infer it from owner title, filename, globals or binding-looking text.
+
+**Ordered acceptance:** omitted field leaves the entire existing request unchanged; valid boundary values transmit correctly; every invalid type/range and pageId with baseRevisionId=0 rejects without a POST; mutation of caller options after invocation cannot change the dispatched identity; normal success, conflict, uncertain response and synchronous transport failures retain established one-request/no-retry behavior. Do not add automatic identity lookup or fallback without pageid.
+
+Run focused publisher and combined PageOwned client suites, ESLint on changed files and documentation checks. Record measured counts and return for lead review. This is client support only, not completed bound editing or move support.
+
+### J68 — PageID-bound read identity lifecycle tests (accepted with lead corrections)
 
 **Purpose:** verify the existing internal read contract before lead connects bound editing. This is test-only work and may proceed alongside lead editor routing. Do not remove the current scoped-pilot move/delete/import protections or expose new APIs.
 
@@ -200,6 +219,38 @@ This queue supersedes all older assignment tables below. Full architectural deci
 4. Add a denied-reader check after move, and verify read-only access does not require editlayers permission. Do not infer full production move support from these internal unscoped tests.
 
 Run the focused suite and existing PageHistoryAccess/PageReadBinding/PageOwnedIdentityResolver regressions, PHP style and documentation checks. Record actual counts and return for lead review. If a real production defect appears, report the minimal sequence; lead owns the fix and lifecycle policy.
+
+Fresh verification:
+- Implemented comprehensive native lifecycle tests in `tests/phpunit/core/PageReadBindingTest.php` covering all four ordered behaviors across native moves, redirects, page deletion, native recreation, permissions, and archive preservation:
+  1. *Native move & fresh Title resolution*:
+     - Published valid bound slide on unscoped native test page `UnscopedBindingMoveSource` with explicit PageID, surface ID (`presentation`), and revision.
+     - Moved page to `UnscopedBindingMoveDestination` via `MovePageFactory->moveIfAllowed()`.
+     - Resolved fresh Title objects after move. Verified new title retains original PageID and successfully reads original revision, PageID, and drawing text.
+  2. *Redirect & same-surface label rejection*:
+     - Asserted old-title redirect (`UnscopedBindingMoveSource`) receives a different PageID and cannot act as binding owner (both with original binding and redirect-specific binding).
+     - Published drawing with matching surface label (`presentation`) on separate owner `UnscopedBindingOtherOwner`: verified neither title nor matching surface label can confer original PageID identity. All mismatched queries return fixed `layers-revision-unavailable` with zero diagnostic leakage (`assertNull($e->getPrevious())`).
+  3. *Native deletion, archive preservation & recreation rejection*:
+     - Published bound slide on unscoped test owner `UnscopedBindingDeleteSource`.
+     - Deleted page via native `DeletePageFactory->deleteUnsafe()`. Asserted revision record preserved in native `archive` table with original `ar_page_id` and `ar_rev_id`.
+     - Recreated new page at the same title via native `WikiPageFactory`/`editPage`: verified new page receives a distinct PageID.
+     - Published new drawing with the same surface ID (`presentation`) and new PageID. Verified replacement page reads its new binding, but strictly rejects the original binding for both new and archived revisions, and rejects the old revision with the new binding.
+     - Verified native archive records remain intact and preserved without undeletion or administrative bypass.
+  4. *Denied reader & permission boundary*:
+     - Verified denied reader (both mocked `Authority` denying `read` and real user with revoked `read` permission via `setGroupPermissions('*', 'read', false)`) receives fixed `layers-revision-unavailable` on moved page.
+     - Verified read-only user with only `read` permission (lacking both `editlayers` and `edit`) successfully reads the bound slide, proving read-only access does not require `editlayers` permission.
+- Native test execution (MediaWiki 1.45.3 / PHP 8.3.31 in `mediawiki-145` container):
+  - `tests/phpunit/core/PageReadBindingTest.php`: **4 tests / 70 assertions passed** cleanly.
+  - `tests/phpunit/core/PageHistoryAccessTest.php`: **22 tests / 45 assertions passed**.
+  - `tests/phpunit/core/PageOwnedIdentityResolverTest.php`: **5 tests / 10 assertions passed**.
+  - `tests/phpunit/core/BoundSlideHooksTest.php`: **2 tests / 16 assertions passed**.
+  - Combined lifecycle & read regression: **33 tests / 141 assertions passed**.
+- Style & documentation:
+  - `phpcs` on `tests/phpunit/core/PageReadBindingTest.php`: **0 errors and 0 warnings**.
+  - `npm run check:docs`: **68 maintained/policy documents, 53 historical records passed**.
+- Boundaries & production code diff:
+  - Strictly 0 lines of production PHP/JS code modified. Zero changes to `extension.json`, services, aliases, messages, database schema, or wiki settings.
+  - Zero commits or pushes performed.
+  - Scoped pilot guards and production move/delete protections remain intact. J64 and J65 remain strictly blocked awaiting lead interfaces.
 
 ### J67 — Original-wiki inline binding browser acceptance (accepted with lead corrections)
 

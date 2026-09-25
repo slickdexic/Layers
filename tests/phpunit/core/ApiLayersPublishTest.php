@@ -68,6 +68,43 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $response, $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish'] );
 	}
 
+	public function testExpectedPageIdentityPublishesAndRejectsWrongOwnerWithoutMutation(): void {
+		$params = $this->request();
+		$actor = $this->actor();
+		$s = $this->getServiceContainer();
+		$owner = $s->getTitleFactory()->newFromText( $params['owner'] );
+		$params['pageid'] = $owner->getArticleID();
+		$first = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$this->assertGreaterThan( $params['baserevid'], $first );
+		$params['baserevid'] = $first;
+		$this->assertSame( $first,
+			$this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'] );
+		$params['pageid'] = $this->getExistingTestPage( 'OtherPublicationIdentity' )->getId();
+		$params['maintext'] = 'Must not replace page';
+		try {
+			$this->doApiRequestWithToken( $params, null, $actor );
+			$this->fail( 'Expected foreign PageID rejection' );
+		} catch ( ApiUsageException $e ) {
+			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-invalid-publication-request' ) );
+		}
+		$this->assertSame( $first, $s->getRevisionLookup()->getRevisionByTitle( $owner )->getId() );
+	}
+
+	public function testExpectedPageIdentityCannotCreatePage(): void {
+		$page = $this->getNonexistingTestPage();
+		$this->ownerKeys = [ $page->getTitle()->getPrefixedDBkey() ];
+		try {
+			$this->doApiRequestWithToken( [ 'action' => 'layerspublish',
+				'owner' => $page->getTitle()->getPrefixedText(), 'pageid' => 123, 'baserevid' => 0,
+				'data' => '{"schemaVersion":1,"surfaces":[]}', 'maintext' => 'Must not create'
+			], null, $this->actor() );
+			$this->fail( 'Expected bound creation rejection' );
+		} catch ( ApiUsageException $e ) {
+			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-invalid-publication-request' ) );
+		}
+		$this->assertSame( 0, $page->getTitle()->getArticleID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST ) );
+	}
+
 	/**
 	 * @dataProvider provideBoundaryFailures
 	 * @param string $reason
@@ -111,6 +148,12 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			case 'negative':
 				$params['baserevid'] = -1;
 				break;
+			case 'pageid-zero':
+				$params['pageid'] = 0;
+				break;
+			case 'pageid-overflow':
+				$params['pageid'] = 2147483648;
+				break;
 			case 'fragment':
 				$params['owner'] .= '#Section';
 				break;
@@ -143,6 +186,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			[ 'prefix-only', 'layers-publication-disabled' ],
 			[ 'token', 'missingparam' ], [ 'badtoken', 'badtoken' ],
 			[ 'owner', 'missingparam' ], [ 'base', 'missingparam' ], [ 'negative', 'outofrange' ],
+			[ 'pageid-zero', 'outofrange' ], [ 'pageid-overflow', 'outofrange' ],
 			[ 'fragment', 'layers-invalid-publication-request' ],
 			[ 'special', 'layers-invalid-publication-request' ],
 			[ 'large', 'maxbytes' ], [ 'summary', 'maxbytes' ],

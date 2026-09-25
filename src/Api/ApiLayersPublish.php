@@ -67,10 +67,12 @@ class ApiLayersPublish extends ApiBase {
 		try {
 			$id = $this->publisher->publish( $owner, $this->getAuthority(), $params['baserevid'],
 				$params['data'], $params['summary'],
-				$params['maintext'] !== null ? new WikitextContent( $params['maintext'] ) : null );
+				$params['maintext'] !== null ? new WikitextContent( $params['maintext'] ) : null,
+				$params['pageid'] );
 		} catch ( PublicationException $e ) {
-			$code = in_array( $e->getMessage(), self::PUBLIC_ERRORS, true ) ?
-				$e->getMessage() : 'layers-publication-failed';
+			$reason = $e->getMessage() === 'layers-owner-unavailable' ?
+				'layers-invalid-publication-request' : $e->getMessage();
+			$code = in_array( $reason, self::PUBLIC_ERRORS, true ) ? $reason : 'layers-publication-failed';
 			$this->dieWithError( $code, $code );
 		} catch ( \Throwable $e ) {
 			LoggerFactory::getInstance( 'Layers' )->error( 'Page-owned publication failed.', [ 'exception' => $e ] );
@@ -83,6 +85,9 @@ class ApiLayersPublish extends ApiBase {
 	public function getAllowedParams() {
 		return [
 			'owner' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true, self::PARAM_MAX_BYTES => 512 ],
+			// Optional for legacy pilot callers; bound editors must carry the original server-derived PageID.
+			'pageid' => [ self::PARAM_TYPE => 'integer', self::PARAM_MIN => 1,
+				self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
 			'baserevid' => [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
 				self::PARAM_MIN => 0, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
 			'data' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
