@@ -11,18 +11,18 @@ namespace MediaWiki\Extension\Layers\Revision;
 final class PageOwnedRenderCapability {
 	public const LAYER_TYPES = [
 		'text', 'textbox', 'callout', 'rectangle', 'circle', 'ellipse', 'polygon', 'star',
-		'line', 'arrow', 'path', 'dimension', 'angleDimension'
+		'line', 'arrow', 'path', 'dimension', 'angleDimension', 'image', 'customShape', 'marker', 'group'
 	];
 
 	/**
 	 * Hidden layers count too: saving must never make a revision unviewable.
+	 * Group membership needs no check: the document schema keeps it consistent, and groups draw nothing.
 	 * @param \stdClass $surface Structurally validated surface
 	 * @return bool
 	 */
 	public static function isRenderable( \stdClass $surface ): bool {
 		foreach ( $surface->layers as $layer ) {
-			if ( !in_array( $layer->type ?? null, self::LAYER_TYPES, true ) ||
-				isset( $layer->parentGroup ) || isset( $layer->parentId ) ) {
+			if ( !in_array( $layer->type ?? null, self::LAYER_TYPES, true ) ) {
 				return false;
 			}
 		}

@@ -235,7 +235,7 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 	}
 
 	/** @covers \MediaWiki\Extension\Layers\Revision\DirectAdoptionPreparationService */
-	public function testHiddenGroupCannotProduceAdoptableProposal(): void {
+	public function testGroupedDrawingWithMarkerIsAdoptable(): void {
 		$page = $this->getExistingTestPage();
 		$embed = '{{#Slide:WelcomePresentation|layerset=default}}';
 		$this->editPage( $page, $embed );
@@ -245,16 +245,18 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
 		$row = $this->row();
 		$data = json_decode( $row['json'] );
-		$data->layers[] = (object)[ 'id' => 'group1', 'type' => 'group', 'children' => [], 'visible' => false ];
+		$data->layers[0]->parentGroup = 'group1';
+		$data->layers[] = (object)[ 'id' => 'group1', 'type' => 'group', 'children' => [ $data->layers[0]->id ],
+			'visible' => false ];
+		$data->layers[] = (object)[ 'id' => 'pin', 'type' => 'marker', 'x' => 5, 'y' => 5, 'text' => '1' ];
 		$row['json'] = json_encode( $data );
 		$legacy = $this->createMock( LayersDatabase::class );
 		$legacy->method( 'getLayerSetForAdoption' )->willReturn( $row );
-		try {
-			$this->directService( $legacy )->prepare( $page->getId(), $base, 0, $embed, 202, null, $actor );
-			$this->fail( 'Expected unsupported rendering rejection' );
-		} catch ( PublicationException $e ) {
-			$this->assertSame( 'layers-adoption-rendering-unavailable', $e->getMessage() );
-		}
+		$result = $this->directService( $legacy )->prepare( $page->getId(), $base, 0, $embed, 202, null, $actor );
+		$layers = json_decode( $result['document'] )->surfaces[0]->layers;
+		$this->assertSame( [ 'rectangle', 'text', 'group', 'marker' ], array_column( $layers, 'type' ) );
+		$this->assertSame( 'group1', $layers[0]->parentGroup );
+		$this->assertSame( [ $layers[0]->id ], $layers[2]->children );
 		$this->assertSame( $base, $lookup->getRevisionByTitle( $page->getTitle() )->getId() );
 		$this->assertSame( $embed, $lookup->getRevisionById( $base )->getContent( 'main' )->getText() );
 	}

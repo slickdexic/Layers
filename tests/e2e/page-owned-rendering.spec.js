@@ -119,6 +119,60 @@ test( 'image surface paints its source rendition under the layers and hides it w
 	expect( result.hidden.ink ).toBe( 0 );
 } );
 
+test( 'image, emoji-style SVG, marker, grouped and blended layers all paint', async ( { page } ) => {
+	const result = await page.evaluate( async () => {
+		const source = document.createElement( 'canvas' );
+		source.width = source.height = 4;
+		const sourceCtx = source.getContext( '2d' );
+		sourceCtx.fillStyle = '#ff0000';
+		sourceCtx.fillRect( 0, 0, 4, 4 );
+		const surface = { id: 'mixed', kind: 'slide', canvas: { width: 300, height: 200 }, layers: [
+			{ id: 'multiplied', type: 'rectangle', x: 100, y: 100, width: 60, height: 60, fill: '#00ffff',
+				stroke: 'none', blendMode: 'multiply' },
+			{ id: 'yellow', type: 'rectangle', x: 100, y: 100, width: 60, height: 60, fill: '#ffff00', stroke: 'none' },
+			{ id: 'folder', type: 'group', children: [ 'member' ] },
+			{ id: 'member', type: 'rectangle', x: 10, y: 100, width: 60, height: 60, fill: '#00ff00', stroke: 'none',
+				parentGroup: 'folder' },
+			{ id: 'pin', type: 'marker', x: 240, y: 40, value: 1 },
+			{ id: 'shape', type: 'customShape', shapeId: 'test/blue', x: 100, y: 10, width: 60, height: 60,
+				svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#0000ff"/></svg>' },
+			{ id: 'photo', type: 'image', x: 10, y: 10, width: 60, height: 60, src: source.toDataURL( 'image/png' ),
+				originalWidth: 4, originalHeight: 4 }
+		] };
+		const canvas = document.createElement( 'canvas' );
+		canvas.width = 300;
+		canvas.height = 200;
+		const ctx = canvas.getContext( '2d' );
+		const sample = ( x, y ) => Array.from( ctx.getImageData( x, y, 1, 1 ).data );
+		let failed = false;
+		const dispose = window.Layers.Viewer.renderPageOwnedRevision( canvas, surface, () => {
+			failed = true;
+		}, window.Layers.LayerRenderer );
+		// The image and the SVG decode asynchronously; each decode repaints the whole snapshot.
+		const started = Date.now();
+		await new Promise( ( resolve ) => {
+			const probe = () => ( failed || Date.now() - started > 5000 ||
+				( sample( 40, 40 )[ 0 ] === 255 && sample( 130, 40 )[ 2 ] === 255 ) ? resolve() :
+				requestAnimationFrame( probe ) );
+			probe();
+		} );
+		const pixels = ctx.getImageData( 215, 15, 50, 50 ).data;
+		let markerInk = 0;
+		for ( let index = 0; index < pixels.length; index += 4 ) {
+			markerInk += pixels[ index ] < 250 || pixels[ index + 1 ] < 250 || pixels[ index + 2 ] < 250 ? 1 : 0;
+		}
+		dispose();
+		return { failed, image: sample( 40, 40 ), shape: sample( 130, 40 ), member: sample( 40, 130 ),
+			blended: sample( 130, 130 ), markerInk };
+	} );
+	expect( result.failed ).toBe( false );
+	expect( result.image ).toEqual( [ 255, 0, 0, 255 ] );
+	expect( result.shape ).toEqual( [ 0, 0, 255, 255 ] );
+	expect( result.member ).toEqual( [ 0, 255, 0, 255 ] );
+	expect( result.blended ).toEqual( [ 0, 255, 0, 255 ] );
+	expect( result.markerInk ).toBeGreaterThan( 200 );
+} );
+
 test( 'history module does not start or load the editable UI', async ( { page } ) => {
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.history' ) ) ).toBe( 'ready' );
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.editor' ) ) ).toBe( 'registered' );

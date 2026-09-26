@@ -19,9 +19,6 @@
 			return window[ globalName ] || null;
 		};
 
-	// Tools whose layer types PageOwnedRenderCapability refuses (marker layers).
-	const PAGE_OWNED_UNAVAILABLE_TOOLS = new Set( [ 'marker' ] );
-
 	/**
 	 * Toolbar class
 	 *
@@ -39,8 +36,6 @@
 			this.config = config || {};
 			this.container = this.config.container;
 			this.editor = this.config.editor;
-			// Page-history drawings refuse layer types the historical viewer cannot display yet.
-			this.pageOwned = Boolean( this.editor && this.editor.config && this.editor.config.pageOwned );
 			this.currentTool = 'pointer';
 
 			// Debug logging removed - use mw.config.get('wgLayersDebug') if needed
@@ -676,7 +671,7 @@
 				{ id: 'marker', icon: icons.marker, title: t( 'layers-tool-marker', 'Marker Tool' ), key: 'M', isSvg: true },
 				{ id: 'dimension', icon: icons.dimension, title: t( 'layers-tool-dimension', 'Dimension Tool' ), key: 'D', isSvg: true },
 				{ id: 'angleDimension', icon: icons.angleDimension, title: t( 'layers-tool-angle-dimension', 'Angle Dimension Tool' ), key: 'Shift+D', isSvg: true }
-			].filter( ( tool ) => !this.pageOwned || !PAGE_OWNED_UNAVAILABLE_TOOLS.has( tool.id ) );
+			];
 
 			// Shape tools group
 			const shapeTools = [
@@ -792,13 +787,12 @@
 				toolGroup.appendChild( button );
 			} );
 
-			// Shape library and emoji insert customShape/image layers
-			const shapeLibraryBtn = this.pageOwned ? null : this.createShapeLibraryButton();
+			const shapeLibraryBtn = this.createShapeLibraryButton();
 			if ( shapeLibraryBtn ) {
 				toolGroup.appendChild( shapeLibraryBtn );
 			}
 
-			const emojiBtn = this.pageOwned ? null : this.createEmojiPickerButton();
+			const emojiBtn = this.createEmojiPickerButton();
 			if ( emojiBtn ) {
 				toolGroup.appendChild( emojiBtn );
 			}
@@ -1716,7 +1710,6 @@
 		importImageButton.innerHTML = icons.importImage;
 		importImageButton.title = t( 'layers-import-image-tooltip', 'Add an image as a layer' );
 		importImageButton.setAttribute( 'aria-label', t( 'layers-import-image', 'Import Image' ) );
-		importImageButton.hidden = this.pageOwned;
 		actionGroup.appendChild( importImageButton );
 
 		const importImageInput = document.createElement( 'input' );
@@ -1894,9 +1887,6 @@
 	}
 
 	selectTool( toolId ) {
-		if ( this.pageOwned && PAGE_OWNED_UNAVAILABLE_TOOLS.has( toolId ) ) {
-			return;
-		}
 		// Update UI - clear active state from all standalone tool buttons
 		this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ).forEach( ( button ) => {
 			button.classList.remove( 'active' );

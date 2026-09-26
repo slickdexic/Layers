@@ -1,6 +1,5 @@
 /**
- * Page-owned drawings refuse layer types the historical viewer cannot display yet,
- * so the toolbar must not offer tools that create them.
+ * Page history draws every layer type, so page-owned editors get the same tools as ordinary ones.
  */
 'use strict';
 
@@ -54,27 +53,14 @@ describe( 'Toolbar in page-owned mode', () => {
 		container.remove();
 	} );
 
-	it( 'offers the marker tool and image import to ordinary editors', () => {
-		toolbar = new Toolbar( { container, editor: editor( false ) } );
+	it.each( [ false, true ] )( 'offers markers, shapes, emoji and image import (page-owned: %s)', ( pageOwned ) => {
+		toolbar = new Toolbar( { container, editor: editor( pageOwned ) } );
 		expect( container.querySelector( '[data-tool="marker"]' ) ).not.toBeNull();
+		expect( container.querySelector( '[data-tool="dimension"]' ) ).not.toBeNull();
 		expect( container.querySelector( '.import-image-button' ).hidden ).toBe( false );
 		expect( container.querySelector( '.shape-library-button' ) ).not.toBeNull();
 		expect( container.querySelector( '.emoji-picker-button' ) ).not.toBeNull();
-	} );
-
-	it( 'hides tools whose layers page history cannot display', () => {
-		toolbar = new Toolbar( { container, editor: editor( true ) } );
-		expect( container.querySelector( '[data-tool="marker"]' ) ).toBeNull();
-		expect( container.querySelector( '[data-tool="dimension"]' ) ).not.toBeNull();
-		expect( container.querySelector( '.import-image-button' ).hidden ).toBe( true );
-		expect( container.querySelector( '.shape-library-button' ) ).toBeNull();
-		expect( container.querySelector( '.emoji-picker-button' ) ).toBeNull();
-	} );
-
-	it( 'ignores keyboard or programmatic selection of an unavailable tool', () => {
-		toolbar = new Toolbar( { container, editor: editor( true ) } );
-		toolbar.selectTool( 'rectangle' );
 		toolbar.selectTool( 'marker' );
-		expect( toolbar.currentTool ).toBe( 'rectangle' );
+		expect( toolbar.currentTool ).toBe( 'marker' );
 	} );
 } );

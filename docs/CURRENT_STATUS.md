@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## Page history draws every layer type — September 26, 2026
+
+Page-owned drawings can now contain everything the editor makes: imported images, Shape Library shapes and emoji, numbered markers and layer folders. Before, the page-history painter could not draw these, so the page-owned editor hid their tools, and saving or adopting a drawing that used them was refused. Many real drawings could therefore not be moved into page history at all.
+
+- **Drawing:** the painter used for page-owned drawings everywhere (on pages, in history, diffs and the viewer) draws image, custom shape and marker layers with the same shared renderers as the ordinary viewer, and repaints the snapshot whenever an image or SVG shape finishes decoding. Folders draw nothing themselves; their members draw by their own visibility, as in the editor, which hides members when a folder is hidden.
+- **Blend modes fixed:** this painter silently ignored layer blend modes (multiply, screen and so on), so page-owned drawings could look different from the editor. They now apply per layer, as in the ordinary viewer.
+- **Editor and adoption:** the page-owned editor offers the marker tool, Shape Library, emoji picker and image import again, and publication and adoption accept these layers. `PageOwnedRenderCapability::LAYER_TYPES` now lists every type the validator accepts. The gate stays, so a layer type added later is refused until page history can draw it.
+- **Unchanged:** the glow effect is drawn only inside the editor, as it already was for the ordinary viewer.
+
+Fresh verification: Jest **15,010** (the painter draws image, shape and marker layers, skips folders but draws their members, repaints on each decode and not after disposal, and applies a blend mode to that layer only; the toolbar offers the same tools in both modes). A new Chromium check paints a real image layer, an SVG shape, a marker, a folder member and a multiply blend, and checks exact pixels. Native tests that relied on these layers being refused now prove the opposite: a marker saves on a page with bound slides and reaches the reader bundle, a legacy drawing with a folder and a marker prepares for adoption with membership intact, slide and file adoption confirmations are offered for marker drawings, and an unknown legacy layer type is still refused at conversion. Full native configuration **384 tests passed, 1 skipped**. One serial Chromium run of all nine page-owned specs passed 18 of 19. The one failure was the J64 adoption spec, which expected a marker drawing to be refused; it now expects the confirmation form and passes. The two refusal messages no longer name specific layer types, since none of today's types is refused.
+
 ## Page-owned drawing text can be stored in Cargo — September 26, 2026
 
 A page's own drawings can now be stored as Cargo rows, so their text can be queried with `#cargo_query` like any other Cargo data. This was the next priority after page history and search.

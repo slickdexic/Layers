@@ -258,7 +258,7 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( [], $this->pilot->listAdoptionCandidates( $page->getId(), $revision->getId(), $actor ) );
 	}
 
-	public function testUnrenderableDrawingAndMalformedRequestsAreRefused(): void {
+	public function testMarkerDrawingIsOfferedAndMalformedRequestsAreRefused(): void {
 		[ $page, $actor, $base ] = $this->sharedSlidePage();
 		$fixture = json_decode( file_get_contents( __DIR__ . '/../../fixtures/adoption/slide-falsy-zero.json' ), true );
 		$blob = json_decode( $fixture['legacyRecord']['database']['row']['ls_json_blob'], true );
@@ -267,9 +267,9 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$params = [ 'pageid' => (string)$page->getId(), 'revid' => (string)$base,
 			'start' => (string)strlen( self::PREFIX ), 'expected' => self::EMBED, 'legacyrev' => '202' ];
 		$before = $this->revisionCount( $page->getId() );
-		$output = $this->visit( $actor, $params + [ 'wpsummary' => 'Refuse' ], true, true, 'qqx' )->getOutput();
-		$this->assertStringContainsString( '(layers-adopt-not-renderable', $output->getHTML() );
-		$this->assertStringNotContainsString( 'wpEditToken', $output->getHTML() );
+		$html = $this->visit( $actor, $params, false, true, 'qqx' )->getOutput()->getHTML();
+		$this->assertStringContainsString( 'wpEditToken', $html );
+		$this->assertStringNotContainsString( '(layers-adopt-not-renderable', $html );
 		foreach ( [ [ 'pageid' => '0' . $page->getId() ], [ 'start' => '-1' ], [ 'legacyrev' => 'latest' ],
 			[ 'expected' => str_repeat( 'x', 4097 ) ] ] as $change
 		) {
@@ -366,16 +366,16 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( [], $this->pilot->listAdoptionCandidates( $page->getId(), $revision->getId(), $actor ) );
 	}
 
-	public function testFileAdoptionRefusesAWrongVersionAndUnrenderableContent(): void {
+	public function testFileAdoptionOffersMarkersAndRefusesAWrongVersion(): void {
 		[ $page, $actor, $base, $file ] = $this->sharedFilePage( [
 			[ 'id' => 'pin', 'type' => 'marker', 'x' => 5, 'y' => 5, 'text' => '1' ]
 		] );
 		$candidate = $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor )[0];
 		$params = array_map( 'strval', $candidate['params'] );
 		$before = $this->revisionCount( $page->getId() );
-		$html = $this->visit( $actor, $params + [ 'wpsummary' => 'Refuse' ], true, true, 'qqx' )
-			->getOutput()->getHTML();
-		$this->assertStringContainsString( '(layers-adopt-not-renderable', $html );
+		$html = $this->visit( $actor, $params, false, true, 'qqx' )->getOutput()->getHTML();
+		$this->assertStringContainsString( 'wpEditToken', $html );
+		$this->assertStringNotContainsString( '(layers-adopt-not-renderable', $html );
 		foreach ( [ '20250101000000', '2026090612000', 'latest' ] as $version ) {
 			$html = $this->visit( $actor, array_replace( $params, [ 'filets' => $version ] ), true, true, 'qqx' )
 				->getOutput()->getHTML();

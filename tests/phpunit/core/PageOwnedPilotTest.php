@@ -360,10 +360,10 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$this->assertSame( 'layers-embedding-selection-unavailable', $e->getMessage() );
 		}
 
-		// 2d. Unsupported hidden group layer
+		// 2d. A layer type Layers does not know cannot be converted
 		$groupBlob = json_decode( $validRow['json'], true );
 		$groupBlob['layers'][] = [
-			'id' => 'grp_hidden', 'type' => 'group', 'children' => [], 'visible' => false
+			'id' => 'unknown_hidden', 'type' => 'hologram', 'visible' => false
 		];
 		$groupRow = $validRow;
 		$groupRow['json'] = json_encode( $groupBlob );
@@ -375,10 +375,10 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 		try {
 			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
-				202, null, $actor, 'Hidden group' );
-			$this->fail( 'Expected layers-adoption-rendering-unavailable for hidden group' );
+				202, null, $actor, 'Unknown layer type' );
+			$this->fail( 'Expected layers-legacy-conversion-unavailable for an unknown layer type' );
 		} catch ( PublicationException $e ) {
-			$this->assertSame( 'layers-adoption-rendering-unavailable', $e->getMessage() );
+			$this->assertSame( 'layers-legacy-conversion-unavailable', $e->getMessage() );
 		}
 
 		// 2e. Forbidden source selection: file timestamp given for slide embed

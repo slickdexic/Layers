@@ -1010,7 +1010,7 @@
 	"layers-restore-drawings-denied": "Error shown by [[Special:Undelete]] when restoring would put page-owned drawings onto a different page than the one they belong to, for example because a new page now exists at the title.",
 	"layers-admission-unauthorized": "Error message shown when a revision save attempts to add or mutate the Layers slot without passing through the authorized publication service boundary.",
 	"layers-slot-removal-denied": "Error message shown when a revision save attempts to remove the Layers slot from an existing page.",
-	"layers-content-not-renderable": "Error shown when saving a page-owned drawing that adds or changes layer types the page-history viewer cannot display yet (groups, markers, imported images, shape-library/emoji shapes). The save is refused without changing the page.",
+	"layers-content-not-renderable": "Error shown when saving a page-owned drawing that adds or changes a layer type the page-history viewer cannot display yet (currently only a layer type added to Layers later). The save is refused without changing the page.",
 	"layers-edit-filtered": "Error from the page-owned publishing API when the page text change was rejected by an EditFilterMergedContent handler such as AbuseFilter, SpamBlacklist or ConfirmEdit.",
 	"tag-layers-page-drawing": "Short description of the layers-page-drawing change tag, shown in Recent Changes and page history.\n\nSee also:\n* {{msg-mw|tag-layers-page-drawing-description}}",
 	"tag-layers-page-drawing-description": "Long description of the layers-page-drawing change tag, shown on [[Special:Tags]]. The tag marks revisions saved by the Layers editor for drawings owned by the page.",

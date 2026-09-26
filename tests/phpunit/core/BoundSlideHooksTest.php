@@ -6,7 +6,6 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Hooks\BoundSlideHooks;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
-use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Parser\ParserOutputFlags;
@@ -121,7 +120,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 	 * Ordinary page markup must not remove page-owned editing, several bindings share one read,
 	 * and a save cannot introduce content the historical viewer would refuse to draw.
 	 */
-	public function testRealisticPageKeepsEditEntriesAndRefusesUnrenderableSaves(): void {
+	public function testRealisticPageKeepsEditEntriesAndSavesEveryLayerType(): void {
 		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
 			'LayersPageOwnedPilotOwners' => [ 'BoundSlideRealistic' ] ] );
 		$registered = TestingAdmissionRegistration::install( $this );
@@ -149,13 +148,11 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( [ $first, $second ], array_keys( $bundles ) );
 		$this->assertSame( 'appendix', $bundles[$second]['surface']['id'] );
 
+		// Page history draws markers, shapes, images and groups, so they save like any other layer.
 		$document->surfaces[1]->layers[] = (object)[ 'id' => 'pin', 'type' => 'marker', 'x' => 10, 'y' => 10 ];
-		try {
-			$registered['publisher']->publish( $title, $actor, $revision, json_encode( $document ), 'Add marker' );
-			$this->fail( 'A marker would make the saved drawing unviewable in page history' );
-		} catch ( PublicationException $e ) {
-			$this->assertSame( 'layers-content-not-renderable', $e->getMessage() );
-		}
-		$this->assertSame( $revision, $s->getRevisionLookup()->getRevisionByTitle( $title )->getId() );
+		$next = $registered['publisher']->publish( $title, $actor, $revision, json_encode( $document ), 'Add marker' );
+		$this->assertGreaterThan( $revision, $next );
+		$layers = $pilot->prepareBoundViewers( $title, $next, [ $second ], $actor )[$second]['surface']['layers'];
+		$this->assertSame( [ 'pin', 'marker' ], [ end( $layers )['id'], end( $layers )['type'] ] );
 	}
 }

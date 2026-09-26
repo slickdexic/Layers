@@ -28,7 +28,8 @@ describe( 'PageOwnedRevisionRenderer', () => {
 		it( 'uses original dimensions and reverse paint order while preserving zero opacity and coordinates', () => {
 			const before = JSON.stringify( surface );
 			const dispose = render( canvas, surface, failure, Renderer );
-			expect( Renderer ).toHaveBeenCalledWith( context, { canvas, zoom: 1, baseWidth: 800, baseHeight: 600 } );
+			expect( Renderer ).toHaveBeenCalledWith( context, { canvas, zoom: 1, baseWidth: 800, baseHeight: 600,
+				onImageLoad: expect.any( Function ) } );
 			expect( painter.drawLayer.mock.calls.map( ( call ) => call[ 0 ].id ) ).toEqual( [ 'bottom', 'top' ] );
 			expect( context.globalAlpha ).toBe( 0 );
 			expect( JSON.stringify( surface ) ).toBe( before );
@@ -38,15 +39,50 @@ describe( 'PageOwnedRevisionRenderer', () => {
 			expect( failure ).not.toHaveBeenCalled();
 		} );
 
-		it.each( [ 'image', 'customShape', 'group', 'unknown' ] )(
-			'fails explicitly before painting unsupported %s',
-			( type ) => {
-				surface.layers[ 0 ].type = type;
-				render( canvas, surface, failure, Renderer )();
-				expect( Renderer ).not.toHaveBeenCalled();
-				expect( failure ).toHaveBeenCalledTimes( 1 );
-			}
-		);
+		it( 'fails explicitly before painting an unknown layer type', () => {
+			surface.layers[ 0 ].type = 'unknown';
+			render( canvas, surface, failure, Renderer )();
+			expect( Renderer ).not.toHaveBeenCalled();
+			expect( failure ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'draws image, shape and marker layers, leaves groups to their members, and redraws on each decode', () => {
+			surface.layers = [
+				{ id: 'folder', type: 'group', children: [ 'photo', 'emoji' ] },
+				{ id: 'photo', type: 'image', parentGroup: 'folder' },
+				{ id: 'emoji', type: 'customShape', parentGroup: 'folder' },
+				{ id: 'pin', type: 'marker' }
+			];
+			const dispose = render( canvas, surface, failure, Renderer );
+			expect( painter.drawLayer.mock.calls.map( ( call ) => call[ 0 ].id ) ).toEqual( [ 'pin', 'emoji', 'photo' ] );
+			const { onImageLoad } = Renderer.mock.calls[ 0 ][ 1 ];
+			onImageLoad();
+			expect( context.clearRect ).toHaveBeenCalledTimes( 2 );
+			expect( painter.drawLayer ).toHaveBeenCalledTimes( 6 );
+			dispose();
+			onImageLoad();
+			expect( context.clearRect ).toHaveBeenCalledTimes( 2 );
+			expect( failure ).not.toHaveBeenCalled();
+		} );
+
+		it( 'applies a layer blend mode around that layer only, as the ordinary viewer does', () => {
+			context.globalCompositeOperation = 'source-over';
+			surface.layers = [
+				{ id: 'plain', type: 'rectangle', blendMode: 'normal' },
+				{ id: 'blurred', type: 'rectangle', blendMode: 'blur' },
+				{ id: 'multiplied', type: 'rectangle', blendMode: 'multiply' },
+				{ id: 'legacy', type: 'rectangle', blend: 'screen' }
+			];
+			const seen = [];
+			painter.drawLayer.mockImplementation( ( layer ) => seen.push( [ layer.id, context.globalCompositeOperation ] ) );
+			context.restore.mockImplementation( () => {
+				context.globalCompositeOperation = 'source-over';
+			} );
+			render( canvas, surface, failure, Renderer )();
+			expect( seen ).toEqual( [ [ 'legacy', 'screen' ], [ 'multiplied', 'multiply' ],
+				[ 'blurred', 'source-over' ], [ 'plain', 'source-over' ] ] );
+			expect( context.save ).toHaveBeenCalledTimes( context.restore.mock.calls.length );
+		} );
 
 		it( 'fails and cleans up once on painter errors, including failing teardown', () => {
 			painter.drawLayer.mockImplementation( () => {
@@ -295,7 +331,8 @@ describe( 'PageOwnedRevisionRenderer', () => {
 					canvas,
 					zoom: 1,
 					baseWidth: 960,
-					baseHeight: 540
+					baseHeight: 540,
+					onImageLoad: expect.any( Function )
 				} );
 
 				expect( mockContext.clearRect ).toHaveBeenCalledWith( 0, 0, 960, 540 );
@@ -745,7 +782,7 @@ describe( 'PageOwnedRevisionRenderer', () => {
 			} );
 		} );
 
-		describe( 'invisible layers, unsupported types and group membership rejection', () => {
+		describe( 'invisible layers, unsupported types and groups', () => {
 			it( 'skips invisible layers with visible: false or visible: 0 while drawing visible layers', () => {
 				const layers = [
 					{ id: 'layer-v-true', type: 'text', text: 'Visible true', x: 1, y: 1, visible: true },
@@ -774,7 +811,7 @@ describe( 'PageOwnedRevisionRenderer', () => {
 				view.dispose();
 			} );
 
-			it.each( [ 'image', 'customShape', 'group', 'marker', 'unknown-vector' ] )(
+			it.each( [ 'unknown-vector' ] )(
 				'rejects unsupported type %s before painter construction even when visible: false',
 				( type ) => {
 					const layers = [
@@ -804,7 +841,7 @@ describe( 'PageOwnedRevisionRenderer', () => {
 				}
 			);
 
-			it.each( [ 'image', 'customShape', 'group', 'marker', 'unknown-vector' ] )(
+			it.each( [ 'unknown-vector' ] )(
 				'rejects unsupported type %s before painter construction even when visible: 0',
 				( type ) => {
 					const layers = [
@@ -831,9 +868,10 @@ describe( 'PageOwnedRevisionRenderer', () => {
 				}
 			);
 
-			it( 'rejects layer with parentGroup before painter construction even when visible: false', () => {
+			it( 'draws members of a group, including a hidden group\'s visible member, like the editor', () => {
 				const layers = [
-					{ id: 'grouped-text', type: 'text', parentGroup: 'group-alpha', visible: false }
+					{ id: 'group-alpha', type: 'group', children: [ 'grouped-text' ], visible: false },
+					{ id: 'grouped-text', type: 'text', text: 'Member', parentGroup: 'group-alpha' }
 				];
 
 				const bundle = createStandardBundle( { layers } );
@@ -847,33 +885,8 @@ describe( 'PageOwnedRevisionRenderer', () => {
 
 				view.mount( parent );
 
-				expect( Renderer ).not.toHaveBeenCalled();
-				expect( parent.querySelector( '.ext-layers-historical-canvas' ) ).toBeNull();
-				expect( parent.querySelector( '.ext-layers-historical-status' ).textContent ).toBe(
-					'This saved drawing could not be displayed.'
-				);
-
-				view.dispose();
-			} );
-
-			it( 'rejects layer with parentId before painter construction even when visible: 0', () => {
-				const layers = [
-					{ id: 'parent-id-rect', type: 'rectangle', parentId: 'parent-container', visible: 0 }
-				];
-
-				const bundle = createStandardBundle( { layers } );
-				const view = new PageOwnedRevisionView( {
-					bundle,
-					adapter,
-					render: ( canvas, surfaceCopy, handleFailure ) =>
-						render( canvas, surfaceCopy, handleFailure, Renderer ),
-					message: messageMock
-				} );
-
-				view.mount( parent );
-
-				expect( Renderer ).not.toHaveBeenCalled();
-				expect( parent.querySelector( '.ext-layers-historical-canvas' ) ).toBeNull();
+				expect( painter.drawLayer.mock.calls.map( ( call ) => call[ 0 ].id ) ).toEqual( [ 'grouped-text' ] );
+				expect( parent.querySelector( '.ext-layers-historical-canvas' ) ).not.toBeNull();
 
 				view.dispose();
 			} );

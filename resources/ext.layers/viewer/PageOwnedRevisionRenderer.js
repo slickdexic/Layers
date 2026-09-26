@@ -3,7 +3,8 @@
 	'use strict';
 	// Mirrors PageOwnedRenderCapability::LAYER_TYPES, which publication enforces (check-parallel-lists.js).
 	const RENDERABLE_LAYER_TYPES = [ 'text', 'textbox', 'callout', 'rectangle', 'circle',
-		'ellipse', 'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension' ];
+		'ellipse', 'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension',
+		'image', 'customShape', 'marker', 'group' ];
 	const supported = new Set( RENDERABLE_LAYER_TYPES );
 
 	/**
@@ -51,7 +52,7 @@
 		try {
 			const hasSource = surface.kind === 'image' || surface.kind === 'pdf';
 			if ( ( !hasSource && surface.kind !== 'slide' ) || surface.layers.some( ( layer ) =>
-				!layer || !supported.has( layer.type ) || layer.parentGroup || layer.parentId ) ) {
+				!layer || !supported.has( layer.type ) ) ) {
 				throw new Error( 'Unsupported historical surface' );
 			}
 			if ( hasSource && ( !source || typeof source.url !== 'string' ||
@@ -62,6 +63,21 @@
 			if ( !context ) {
 				throw new Error( 'Canvas unavailable' );
 			}
+			// As in the ordinary viewer: blend modes apply at context level, and groups draw nothing themselves.
+			const drawLayer = ( layer ) => {
+				const blend = layer.blendMode || layer.blend;
+				if ( typeof blend !== 'string' || blend === 'normal' || blend === 'blur' ) {
+					painter.drawLayer( layer );
+					return;
+				}
+				context.save();
+				try {
+					context.globalCompositeOperation = blend;
+					painter.drawLayer( layer );
+				} finally {
+					context.restore();
+				}
+			};
 			const draw = () => {
 				if ( stopped || ( hasSource && !( image.complete && image.naturalWidth > 0 ) ) ) {
 					return;
@@ -89,15 +105,16 @@
 					}
 					for ( let index = surface.layers.length - 1; index >= 0; index-- ) {
 						const layer = surface.layers[ index ];
-						if ( layer.visible !== false && layer.visible !== 0 ) {
-							painter.drawLayer( layer );
+						if ( layer.visible !== false && layer.visible !== 0 && layer.type !== 'group' ) {
+							drawLayer( layer );
 						}
 					}
 				} catch ( error ) {
 					fail();
 				}
 			};
-			painter = new Renderer( context, { canvas, zoom: 1,
+			// Image layers and SVG shapes (emoji included) decode asynchronously; each decode redraws.
+			painter = new Renderer( context, { canvas, zoom: 1, onImageLoad: () => draw(),
 				baseWidth: surface.canvas.width, baseHeight: surface.canvas.height } );
 			if ( hasSource ) {
 				image = new window.Image();

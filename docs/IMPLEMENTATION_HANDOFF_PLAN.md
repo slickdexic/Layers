@@ -1,10 +1,14 @@
 # Layers implementation handoff plan
 
-## Cargo text projection implemented; J75 ready — September 26, 2026
+## Page history draws every layer type — September 26, 2026
 
-See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_cargo_store:}}` only hands rows to Cargo's `CargoStore::run()` and returns an empty string; it never writes Cargo tables itself and always passes all six fields. **J75 is ready** (packet below). Earlier entries below are historical.
+See the [current status](CURRENT_STATUS.md) entry. Contracts: `PageOwnedRenderCapability::LAYER_TYPES` and `RENDERABLE_LAYER_TYPES` list every validator type; a new layer type must be drawable by `PageOwnedRevisionRenderer` before it is added to both. The page-owned toolbar no longer hides the marker tool, Shape Library, emoji picker or image import. J75 is unaffected. Earlier entries below are historical.
 
-### J75 — Cargo projection acceptance on the test wiki (ready)
+## Cargo text projection implemented; J75 accepted — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_cargo_store:}}` only hands rows to Cargo's `CargoStore::run()` and returns an empty string; it never writes Cargo tables itself and always passes all six fields. **J75 is accepted** (packet below; see the review ledger). Earlier entries below are historical.
+
+### J75 — Cargo projection acceptance on the test wiki (accepted)
 
 **Purpose:** prove on the original test wiki that page-owned drawing text reaches a real Cargo table and stays current. Acceptance testing only; report defects for lead correction.
 
@@ -18,7 +22,7 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_cargo_st
 6. Put the template on the isolation page, which owns no drawings: it must store no rows.
 7. Remove the template from both pages: both pages' rows must be gone. Restore the owner with the usual exact-base cleanup; leave the template and table in place.
 
-Record counts, durations and defects with the smallest reproduction, then return for lead review.
+**Status & verification:** Implemented in `tests/e2e/page-owned-cargo.spec.js`. Initial run passed (**1 passed in 53.9s**), repeatability run passed (**1 passed in 1.0m**). Clean post-test state confirmed on owner (`Dedicated automated Layers history acceptance page.`, 0 rows) and isolation (0 rows); template and table left intact. ESLint clean.
 
 ## J65, J65b and J74 accepted — September 26, 2026
 

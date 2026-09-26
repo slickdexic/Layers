@@ -1,4 +1,46 @@
-# Junior implementation review — J01–J74
+# Junior implementation review — J01–J75
+
+## J75 accepted: Cargo projection acceptance — September 26, 2026
+
+Lead reran it on the current branch as part of one serial Chromium run of all nine page-owned specs (after the lead's layer-type change to the editor and painter): **passed**. The full native configuration (**384 tests passed, 1 skipped**) was run while the wiki was quiet.
+
+- **Accepted as written.** The spec creates the table through Cargo's own recreate-data action and checks every packet step through `action=cargoquery`: one row with the expected ID, label, kind and text after the template is added; the new text and not the old after a drawing-only save in the page-owned editor; empty text once the layer is hidden; the restored text after **Restore this version**; no rows for a page that owns no drawings; and no rows for either page once the template is removed. This is the first proof that Cargo's post-save reparse reaches the page's current drawings on a real wiki.
+- **Notes, not defects:** step 3 falls back to setting the text programmatically if the properties field is not found, so a passing run does not by itself prove that field works; the expected label and text are the automation owner's baseline, which cleanup restores. Image and PDF rows (`source_file`, `source_page`) are covered by native tests only.
+
+## J75 implemented awaiting lead review: Cargo projection acceptance — September 26, 2026
+
+Junior implemented real-browser Cargo projection acceptance in `tests/e2e/page-owned-cargo.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Verified QA actor rights (`recreatecargodata` and `runcargoqueries`); skips cleanly if permissions are missing.
+- Enforced 10-minute quiet check before executing; runs serial (`--workers=1`).
+- **Step 1: Template declaration & Cargo table creation/recreation**:
+  - Declared `Template:Layers_cargo_acceptance` with `#cargo_declare:_table=Layers_cargo_acceptance` and `<includeonly>{{#layers_cargo_store:}}</includeonly>`.
+  - Navigated to the template page's recreate data action (`action=recreatedata`), ensured in-place recreation (`createReplacement` unchecked), and submitted `#cargoSubmit`.
+  - Awaited job completion (`#recreateDataProgress` "View table"); verified table exists and returns empty row set for owner prior to template inclusion.
+- **Step 2: Template inclusion on owner & projection verification**:
+  - Added `{{Layers_cargo_acceptance}}` to `Layers_browser_acceptance` (PageID 228) via an ordinary edit.
+  - Queried `action=cargoquery` for `_pageID=228` (aliased `_pageID=pageID` per Cargo API constraints).
+  - Confirmed exactly 1 row with expected attributes: `surface_id: 'presentation'`, `surface_label: 'Welcome Slide'`, `surface_kind: 'slide'`, and `drawing_text: 'Visual ideas — 世界'`.
+- **Step 3: Drawing-only edit through page-owned editor**:
+  - Opened `Special:EditLayersPage` for the current revision, updated text layer via properties input / UI to `'Cargo acceptance updated text'`, and saved via `.save-button` (`action=layerspublish`).
+  - Confirmed Cargo row updated immediately upon publication to `'Cargo acceptance updated text'` and omitted old text `'Visual ideas — 世界'`.
+- **Step 4: Hide text layer in editor**:
+  - Toggled text layer visibility to `false` via `.layer-visibility` in the editor UI and saved.
+  - Confirmed Cargo row `drawing_text` became empty string `""` (layer text disappeared from Cargo projection).
+- **Step 5: Restore previous drawing version from history viewer**:
+  - Opened `Special:ViewLayersPage` at the earlier edited revision with text, clicked **Restore this version** (`.mw-htmlform-submit button`).
+  - Form submission published a new revision restoring that version; confirmed Cargo row followed immediately and restored `drawing_text` to `'Cargo acceptance updated text'`.
+- **Step 6: Isolation check**:
+  - Added `{{Layers_cargo_acceptance}}` to `Layers_browser_acceptance_isolation` (PageID 230, owns no drawings) via ordinary edit.
+  - Queried `action=cargoquery` for `_pageID=230`; confirmed Cargo stores zero rows for the isolation page.
+- **Step 7: Clean removal and exact-base CAS restoration**:
+  - Removed template from `Layers_browser_acceptance_isolation`; confirmed 0 rows.
+  - Restored `Layers_browser_acceptance` with baseline snapshot and wikitext (`Dedicated automated Layers history acceptance page.`) via exact-base CAS `layerspublish`.
+  - Confirmed 0 Cargo rows remain for `_pageID=228`.
+  - Left template and table in place without deleting pages or tables.
+- **Verification**:
+  - Initial run: **1 passed (53.9s)**; repeatability run: **1 passed (1.0m)**.
+  - Clean post-test verification confirmed: `Layers_browser_acceptance` at baseline wikitext with 0 Cargo rows; `Layers_browser_acceptance_isolation` at baseline wikitext with 0 Cargo rows; template and table preserved.
+  - ESLint clean on `tests/e2e/page-owned-cargo.spec.js`.
 
 ## J65, J65b and J74 accepted with lead corrections — September 26, 2026
 

@@ -312,7 +312,7 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		await expect( page.locator( '.mw-htmlform' ) ).toHaveCount( 0 );
 		await expect( page.locator( 'button[type="submit"]' ) ).toHaveCount( 0 );
 
-		// 3b. Unrenderable drawing refusal
+		// 3b. A marker drawing, which page history once refused, is now offered like any other drawing
 		const unrenderableSlide = 'LayersAdoptionJ64Unrenderable';
 		await api( { action: 'layerssave', slidename: unrenderableSlide, token: csrfToken, data: JSON.stringify( {
 			canvasWidth: 800, canvasHeight: 600, backgroundColor: '#ffffff', layers: [
@@ -332,13 +332,9 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		await expect( unrenderableAdoptLink ).toHaveCount( 1 );
 		const unrenderableUrl = new URL( await unrenderableAdoptLink.getAttribute( 'href' ), base ).href;
 		await page.goto( unrenderableUrl );
-		const unrenderableContent = page.locator( '#mw-content-text' );
-		await expect( unrenderableContent )
-			.toContainText( 'This drawing contains groups, markers, imported images or library shapes, which page history cannot display yet' );
-		await expect( unrenderableContent ).toContainText( 'It stays shared and keeps working as before.' );
-		await expect( unrenderableContent.locator( 'a' ).first() ).toHaveText( 'Layers browser acceptance' );
-		await expect( page.locator( '.mw-htmlform' ) ).toHaveCount( 0 );
-		await expect( page.locator( 'button[type="submit"]' ) ).toHaveCount( 0 );
+		await expect( page.locator( '.mw-htmlform' ) ).toHaveCount( 1 );
+		await expect( page.locator( '#mw-content-text' ) ).not.toContainText( 'cannot display' );
+		await expect( page.locator( 'button[type="submit"]' ).first() ).toContainText( 'Make it owned by the page' );
 
 		// 3c. Edit conflict refusal on POST
 		// Reseed owner with valid adoptable slide
