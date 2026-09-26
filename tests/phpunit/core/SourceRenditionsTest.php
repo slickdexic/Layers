@@ -115,5 +115,8 @@ class SourceRenditionsTest extends RealAssetTestCase {
 		}
 		$slide = $pilot->prepareViewer( $page->getTitle()->getPrefixedText(), $revisionId, 'presentation', $actor );
 		$this->assertArrayNotHasKey( 'source', $slide );
+		// Page history links to every drawing kind the viewer can show.
+		$this->assertSame( [ 'presentation', 'image', 'pdf' ], array_column(
+			$pilot->getHistorySurfaces( $page->getTitle(), $revisionId, $actor ), 'id' ) );
 	}
 }

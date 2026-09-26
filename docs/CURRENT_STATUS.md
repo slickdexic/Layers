@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Diff pages show changed drawings side by side — September 26, 2026
+
+A diff between two revisions of a page that owns drawings now starts with a **Drawing changes** section: each drawing that was added, removed or changed, drawn at the older revision on the left and the newer on the right. Unchanged drawings are left out, and text-only edits show no section. Before, the only comparison was the pretty-printed JSON diff below it, which stays.
+
+- **Privacy and caching:** the section carries only identities (binding and revision). The reader's browser fetches each side through `layersread` with its own session, exactly like drawings on the page. If either revision's drawings are hidden from the reader, nothing is compared.
+- **History links for every kind:** page-history rows linked only slide drawings to the viewer; image and PDF drawings, which the viewer has shown since this morning, are now linked too.
+- Code: `PageDrawingDiff` (via `PageOwnedPilot::getDrawingChanges()`), `PageOwnedDiffHooks` (`DifferenceEngineShowDiff`), `loadComparison()` in the history bootstrap, styles in `ext.layers.pageControls.styles`.
+
+Fresh verification: new `PageOwnedDiffHooksTest` (changed drawing shown at both revisions and unchanged ones left out, text-only edit shows nothing, removed and added drawings, hidden drawings, pilot disabled) and a history-listing assertion for image and PDF surfaces; two new Jest cases for the comparison loader (each side read at its own revision, a reply for another revision never fills a side, failed reads stay unavailable). Full native configuration **376 tests passed, 1 skipped** (including J74 work in progress); Jest **15,021**; `npm test` passes; PHP style 0 errors. In a logged-in Chromium check (read-only), a real diff of the automation owner showed a slide, a photo and PDF page two on the left, each marked removed on the right.
+
 ## Earlier drawing versions can be restored from the viewer — September 26, 2026
 
 Editors viewing an earlier version of a page-owned drawing on `Special:ViewLayersPage` now get a **Restore this version** button below it.

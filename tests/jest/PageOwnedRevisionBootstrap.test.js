@@ -166,4 +166,41 @@ describe( 'Historical viewer bootstrap', () => {
 			expect( unused.get ).not.toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'diff comparison', () => {
+		function side( binding, revision ) {
+			const el = document.createElement( 'div' );
+			el.className = 'layers-drawing-diff-view';
+			el.dataset.layersBinding = binding;
+			el.dataset.layersRevision = revision;
+			el.textContent = 'Unavailable';
+			container.append( el );
+			return el;
+		}
+
+		it( 'reads each side at its own revision and mounts only matching replies', async () => {
+			const before = side( 'v1:10:a', '41' );
+			const after = side( 'v1:10:a', '42' );
+			const reply = ( revision ) => ( { layersread: { bindings: {
+				'v1:10:a': Object.assign( {}, bundle, { revisionId: revision } ) } } } );
+			const api = { get: jest.fn( ( params ) => Promise.resolve( reply( params.revid === 41 ? 41 : 99 ) ) ) };
+			const dispose = await mount.loadComparison( container, api, 'Owner' );
+			expect( api.get.mock.calls.map( ( call ) => [ call[ 0 ].revid, call[ 0 ].binding ] ) )
+				.toEqual( [ [ 41, [ 'v1:10:a' ] ], [ 42, [ 'v1:10:a' ] ] ] );
+			expect( before.querySelector( 'canvas' ) ).not.toBeNull();
+			// A reply for a different revision never fills a side.
+			expect( after.textContent ).toBe( 'Unavailable' );
+			dispose();
+			expect( cleanup ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'leaves sides unavailable when a read fails and ignores malformed hosts', async () => {
+			side( 'v1:10:a', '41' );
+			side( 'v1:10:b', 'latest' );
+			const api = { get: jest.fn( () => Promise.reject( new Error( 'private' ) ) ) };
+			( await mount.loadComparison( container, api, 'Owner' ) )();
+			expect( api.get ).toHaveBeenCalledTimes( 1 );
+			expect( container.textContent ).toBe( 'UnavailableUnavailable' );
+		} );
+	} );
 } );

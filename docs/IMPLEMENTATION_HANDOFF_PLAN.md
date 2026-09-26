@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Drawing comparison on diff pages — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: comparison hosts are `.layers-drawing-diff-view` elements with `data-layers-binding` and `data-layers-revision`, emitted per request by `PageOwnedDiffHooks`, never from parser output. No queue change. Earlier entries below are historical.
+
 ## Drawing restore from the viewer — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. J65b gains step 3a below. Earlier entries below are historical.

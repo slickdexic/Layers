@@ -28,3 +28,25 @@
 		margin: @spacing-25 0 0 @spacing-125;
 	}
 }
+
+.layers-drawing-diff {
+	margin: 0 0 @spacing-150;
+
+	&__pair {
+		display: flex;
+		flex-wrap: wrap;
+		gap: @spacing-100;
+		margin-bottom: @spacing-100;
+	}
+
+	&__side {
+		flex: 1 1 18em;
+		min-width: 0;
+	}
+
+	&__absent {
+		margin: 0;
+		color: @color-subtle;
+		font-style: italic;
+	}
+}

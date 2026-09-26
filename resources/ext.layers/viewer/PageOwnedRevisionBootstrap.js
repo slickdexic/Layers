@@ -2,6 +2,8 @@
 ( function () {
 	'use strict';
 	const HOSTS = '.layers-bound-slide, img.layers-bound-file';
+	// Diff pages show the same drawing at two revisions; the server emits these hosts per request.
+	const COMPARISON_HOSTS = '.layers-drawing-diff-view';
 	function mount( container, bundle, options ) {
 		let view;
 		try {
@@ -87,15 +89,54 @@
 		}
 		return Promise.all( requests ).then( ( parts ) => mountInline( root, Object.assign( {}, ...parts ) ) );
 	}
+	/**
+	 * Fetch and mount each comparison host's drawing at its own revision.
+	 * @param {Document|Element} root
+	 * @param {Object} api mw.Api-compatible client
+	 * @param {string} owner Displayed page name
+	 * @return {Promise<Function>} Disposer
+	 */
+	function loadComparison( root, api, owner ) {
+		const byRevision = new Map();
+		root.querySelectorAll( COMPARISON_HOSTS ).forEach( ( host ) => {
+			const revision = Number( host.getAttribute( 'data-layers-revision' ) );
+			if ( host.getAttribute( 'data-layers-binding' ) && Number.isInteger( revision ) && revision > 0 ) {
+				byRevision.set( revision, ( byRevision.get( revision ) || [] ).concat( [ host ] ) );
+			}
+		} );
+		if ( !byRevision.size || typeof owner !== 'string' || !owner ) {
+			return Promise.resolve( () => {} );
+		}
+		const requests = [];
+		byRevision.forEach( ( hosts, revision ) => {
+			const bindings = Array.from( new Set( hosts.map( ( host ) => host.getAttribute( 'data-layers-binding' ) ) ) );
+			requests.push( Promise.resolve( api.get( { action: 'layersread', formatversion: 2, owner,
+				revid: revision, binding: bindings.slice( 0, 50 ) } ) ).then( ( response ) => {
+				const bundles = ( response && response.layersread && response.layersread.bindings ) || {};
+				const disposers = [];
+				hosts.forEach( ( host ) => {
+					const binding = host.getAttribute( 'data-layers-binding' );
+					const bundle = Object.prototype.hasOwnProperty.call( bundles, binding ) ? bundles[ binding ] : null;
+					if ( bundle && bundle.surface && bundle.revisionId === revision ) {
+						host.textContent = '';
+						disposers.push( mount( host, bundle ) );
+					}
+				} );
+				return () => disposers.forEach( ( dispose ) => dispose() );
+			} ).catch( () => () => {} ) );
+		} );
+		return Promise.all( requests ).then( ( disposers ) => () => disposers.forEach( ( dispose ) => dispose() ) );
+	}
 	if ( typeof module !== 'undefined' && module.exports ) {
 		module.exports = mount;
 		module.exports.mountInline = mountInline;
 		module.exports.loadInline = loadInline;
+		module.exports.loadComparison = loadComparison;
 	}
 	if ( typeof $ === 'function' && typeof mw !== 'undefined' ) {
 		$( () => {
 			const container = document.getElementById( 'layers-history-container' );
-			if ( !container && !document.querySelector( HOSTS ) ) {
+			if ( !container && !document.querySelector( HOSTS ) && !document.querySelector( COMPARISON_HOSTS ) ) {
 				return;
 			}
 			let dispose = () => {};
@@ -103,8 +144,12 @@
 			if ( container ) {
 				dispose = mount( container, mw.config.get( 'wgLayersRevisionView' ) );
 			} else {
-				loadInline( document, new mw.Api(), mw.config.get( 'wgPageName' ),
-					mw.config.get( 'wgRevisionId' ) ).then( ( inlineDispose ) => {
+				const api = new mw.Api();
+				Promise.all( [
+					loadInline( document, api, mw.config.get( 'wgPageName' ), mw.config.get( 'wgRevisionId' ) ),
+					loadComparison( document, api, mw.config.get( 'wgPageName' ) )
+				] ).then( ( disposers ) => {
+					const inlineDispose = () => disposers.forEach( ( part ) => part() );
 					if ( disposed ) {
 						inlineDispose();
 					} else {

@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Drawing changes on diff pages (pilot, September 26): diffs of pages that own drawings show each added, removed or changed drawing at both revisions, fetched per reader like page drawings. Page-history rows now link image and PDF drawings to the viewer, not only slides.
+
 - Restore an earlier drawing version (pilot, September 26): `Special:ViewLayersPage` offers editors "Restore this version" for an earlier version of a page-owned drawing. It publishes one tagged revision replacing only that drawing, and refuses stale or repeated submissions.
 
 - Rollback restores page-owned drawings (pilot, September 26): outside publication, a save may set the drawing slot only to the exact drawings of an earlier, visible revision of the same page, by a user with `editlayers`. Native rollback of drawing edits now works; another page's drawings, hidden drawings, new content and slot removal stay refused.

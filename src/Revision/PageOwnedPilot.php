@@ -611,7 +611,7 @@ class PageOwnedPilot {
 		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [] );
 		$surfaces = [];
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
-			if ( $surface['kind'] === 'slide' ) {
+			if ( in_array( $surface['kind'], [ 'slide', 'image', 'pdf' ], true ) ) {
 				$surfaces[] = [ 'id' => $surface['id'], 'label' => $surface['label'] ?? $surface['id'] ];
 			}
 		}
@@ -685,6 +685,25 @@ class PageOwnedPilot {
 	public function newSurfaceRestore(): PageSurfaceRestore {
 		return new PageSurfaceRestore( $this->enabled, $this->scope, $this->services->getTitleFactory(),
 			$this->services->getRevisionLookup(), $this->publisher );
+	}
+
+	/**
+	 * Drawings that differ between two revisions of an owner page, for its diff view.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param RevisionRecord $old
+	 * @param RevisionRecord $new
+	 * @param Authority $authority
+	 * @return array[] See PageDrawingDiff::changes(); empty outside the pilot
+	 * @throws \DomainException When either side's drawings are hidden from this reader
+	 */
+	public function getDrawingChanges( \MediaWiki\Title\Title $owner, RevisionRecord $old, RevisionRecord $new,
+		Authority $authority
+	): array {
+		if ( !$this->enabled || !$this->scope->includes( $owner ) ) {
+			return [];
+		}
+		return ( new PageDrawingDiff( new PageHistoryAccess( $this->services->getRevisionLookup() ) ) )
+			->changes( $owner, $old, $new, $authority );
 	}
 
 	/**
