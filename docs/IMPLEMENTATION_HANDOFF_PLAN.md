@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J72 accepted; exact-source editor route connected — September 25, 2026
+
+Reviewed J72's native rejection coverage and added PageID/revision upper-bound cases. Lead connected the existing Special:EditLayersPage route to prepareBoundEditor using the complete tuple pageid, revid, start, expected. Numeric parameters require canonical bounded decimal strings; start may be zero. Bound requests cannot use revid=current, mix owner/surface selectors, or fall back to the older route when malformed. The service still verifies exact authorized current source, saved binding, pilot scope and selected slide surface. Existing no-store/noindex and safe error handling remain in place; no manifest or configuration changes.
+
+Fresh corrected native pilot/route regression: **32 tests / 489 assertions passed**. Includes actual route-to-service bootstrap equality, no-write invariants, numeric/source/permission rejection and malformed bound-request isolation. Changed PHP style and diff whitespace checks passed. This is a callable route, not yet an ordinary overlay or adoption button. No real wiki pages were modified by native tests; Docker is only the test environment.
+
+**J73 is ready** for original-wiki browser acceptance of the new route. Lead retains author-facing inline ownership/edit controls, explicit adoption and pinned image/PDF delivery. The reviewed checkpoint through 5c7063f5 is already on GitHub's development branch. Search and Cargo follow history; earlier entries below are historical.
+
 ## Lead bound-editor admission implemented; J72 ready — September 25, 2026
 
 Added PageOwnedPilot::prepareBoundEditor(pageId, revisionId, start, expected, authority), an internal admission method for a selected direct embedding. It resolves native identity/edit rights, requires current explicit revision and retained pilot scope, reads authorized main content, locates exact UTF-8 byte offset and complete source bytes through DirectEmbeddingRewriter, and extracts the binding from those server-read options. Binding owner must match native PageID; existing editor preparation confirms the surface, current revision and server-derived identity. Fixed rejection is layers-editor-unavailable without chained diagnostics. No public route or browser control calls this method yet; file-backed editing remains closed. Existing editor APIs and defaults are unchanged.
@@ -226,13 +234,25 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4c | Junior J69: expected PageID publication client | Accepted; lead session/bootstrap wiring verified |
 | 4d | Junior J70: editor PageID browser acceptance | Accepted with lead corrections |
 | 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections |
-| 4f | Junior J72: exact-source bound-editor rejection tests | Ready; packet below |
+| 4f | Junior J72: exact-source bound-editor rejection tests | Accepted with lead additions |
+| 4g | Junior J73: bound-editor route browser acceptance | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J72 — Exact-source bound-editor rejection coverage (ready)
+### J73 — Exact-source bound-editor route browser acceptance (ready)
+
+**Frozen route:** Special:EditLayersPage accepts pageid, revid, start, expected as an exclusive bound-entry tuple. start is a UTF-8 byte offset (zero allowed), expected is complete literal embedding text, pageid/revid are positive native IDs. No owner/surface parameters or revid=current. The route is read-only admission; later editor Save publishes through the existing native API.
+
+**Allowed changes:** tests/e2e/page-owned-binding.spec.js, this packet and review ledger. Reuse original localhost:8080 root-wiki safeguards, private acceptance configuration, dedicated Layers_browser_acceptance owner and existing exact-CAS cleanup. No production, config, manifest, messages, real files, manual owner pages, commits or pushes.
+
+1. Extend the existing bound-slide setup with a Unicode prefix. Obtain native PageID and explicit revision from actual API results; compute the selected embed's UTF-8 byte offset, not JavaScript character count. Navigate to the new tuple route. Verify bootstrap PageID/revision/surface match and canvas loads.
+2. Make one ordinary UI drawing edit and save once. Inspect pageid and baserevid on the actual editor POST; assert exactly one new native revision, preserved main binding, and unchanged old snapshot. Update the test's last-confirmed-revision cleanup tracker immediately when publication is confirmed. Hold cleanup on uncertain outcome; do not overwrite intervening edits.
+3. Navigate the same route at the old revision and at a wrong offset/altered expected string. Require fixed unavailable output, no editor configuration/module/container and no publication. Check real HTTP no-store policy on success and denial. Preserve existing inline/historical tests.
+4. Run the focused spec on the original wiki and changed-file lint/docs checks. Record results; do not claim an ordinary-page edit button exists or broaden to image/PDF. If cleanup or fixture ownership cannot be maintained safely, return the exact blocker for lead work.
+
+### J72 — Exact-source bound-editor rejection coverage (implemented awaiting lead review)
 
 **Frozen interface:** PageOwnedPilot::prepareBoundEditor(int pageId, int revisionId, int start, string expected, Authority authority): array. The lead implementation is internal only and returns the existing editor bootstrap after validating exact saved source. It does not register a route.
 
@@ -244,6 +264,28 @@ This queue supersedes all older assignment tables below. Full architectural deci
 4. Preserve the lead success test and current exact-revision requirements. Record native revision counts before/after admission calls, not only latest IDs. Do not claim public routing, image/PDF or browser acceptance.
 
 Run the focused PageOwnedPilotTest plus SpecialEditLayersPageTest, changed-file PHP style and documentation checks. Return actual counts and any minimal production failure sequence for lead review. J64/J65 remain blocked pending ordinary UI callbacks.
+
+Fresh verification:
+- Preserved lead success test `testBoundEditorDerivesSelectionFromExactSavedSource` in `tests/phpunit/core/PageOwnedPilotTest.php` and enhanced it with explicit native database row counts (`COUNT(*)` from `page` and `revision`) before/after admission and rejection loops.
+- Implemented `testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds`:
+  - Disabled pilot, empty scope, and unrelated scope reject with `layers-editor-unavailable` and null previous exception.
+  - Anonymous actor (`getId() <= 0`), denied read authority, denied edit authority, and denied editlayers authority reject with fixed `layers-editor-unavailable` and null previous exception.
+  - Invalid numeric bounds (`pageId <= 0`, `revisionId <= 0`, `start < 0`, and empty `expected` string) reject with fixed `layers-editor-unavailable` and null previous exception.
+  - Verified zero page/revision database mutations occurred across all cases.
+- Implemented `testBoundEditorRejectsInvalidMainSourceCases`:
+  - Published exact main-source cases with foreign-owner binding, missing surface ID, duplicate binding, legacy-selector conflict, and unbound legacy slide.
+  - Supplying exact source bytes and byte offset to `prepareBoundEditor` strictly rejects with `layers-editor-unavailable` and null previous exception without mocking `prepareEditor`.
+  - Verified native page and revision row counts remain unchanged after rejections.
+- Implemented `testBoundEditorRejectsOpaqueContainersAndRequiresExactMultibyteOffset`:
+  - Proved embeddings inside HTML comments (`<!-- ... -->`), `<nowiki>` containers, and template arguments (`{{SomeTemplate|slide=...}}`) cannot qualify as direct occurrences when queried by literal offsets into their source; verified rejection without rewriting page content or inserting revisions.
+  - Published owner with two identical valid direct slide bindings separated by multibyte UTF-8 text (`Unicode 測試 café — 世界 — 日本語`). Verified byte offset 0 and second byte offset are admitted, while interior offsets, wrong expected strings, and multibyte character-count offsets (differing from byte offsets) are strictly rejected with `layers-editor-unavailable` and null previous exception.
+- PHPUnit test results:
+  - `PageOwnedPilotTest`: **24 tests / 302 assertions passed** (3 new tests added; baseline was 21 tests / 195 assertions).
+  - `SpecialEditLayersPageTest`: **7 tests / 152 assertions passed**.
+  - Combined focused regression: **31 tests / 454 assertions passed**.
+- PHP style (`phpcs --standard=MediaWiki`): **0 errors, 0 warnings** on `tests/phpunit/core/PageOwnedPilotTest.php`.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Changes strictly bounded to `tests/phpunit/core/PageOwnedPilotTest.php`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ### J71 — Competing prepared adoptions (accepted with lead corrections)
 
@@ -1601,7 +1643,7 @@ Capture and display the destination wiki/file/set/page when opening recovery. If
 **Acceptance:** a real shared parser rejects over-limit input without state changes, missing parser fails closed, destination changes cannot redirect import, current edits survive cancelled replacement, successful import is dirty/undoable, and failed export cannot report success. Include image, PDF page and slide contexts without building three separate implementations. Return any required redesign of the general import boundary to the lead.
 
 ### J23 — Verify switches through the actual APIManager
- 
+
 **Completed (`a7eda34a`).** Verified switches using real collaborating components (`APIManager` + `LayerSetManager` + `StateManager` + `SetSelectorController`) with mock network/rendering boundaries in `tests/jest/LayerSetSwitchingAPIManager.test.js` (14 scenarios). Demonstrated request closure prevents real response processing for stale requests, monotonic generation prevents same-name overwrites, and in-place/background/buffered-page edits are preserved. Discovered and reported APIManager loading-state defect on abort and RevisionManager fallback defect to lead. Fixed `LayerSetManager.prototype.loadLayerSetByName` check ordering so superseded generation takes precedence over newer edits check.
 
 ### J24 — Verify cleanup isolation, then rerun browser acceptance

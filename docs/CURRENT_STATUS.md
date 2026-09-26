@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## J72 accepted; exact-source editor route connected — September 25, 2026
+
+Reviewed J72's native rejection coverage and added PageID/revision upper-bound cases. Lead connected the existing Special:EditLayersPage route to prepareBoundEditor using the complete tuple pageid, revid, start, expected. Numeric parameters require canonical bounded decimal strings; start may be zero. Bound requests cannot use revid=current, mix owner/surface selectors, or fall back to the older route when malformed. The service still verifies exact authorized current source, saved binding, pilot scope and selected slide surface. Existing no-store/noindex and safe error handling remain in place; no manifest or configuration changes.
+
+Fresh corrected native pilot/route regression: **32 tests / 489 assertions passed**. Includes actual route-to-service bootstrap equality, no-write invariants, numeric/source/permission rejection and malformed bound-request isolation. Changed PHP style and diff whitespace checks passed. This is a callable route, not yet an ordinary overlay or adoption button. No real wiki pages were modified by native tests; Docker is only the test environment.
+
+**J73 is ready** for original-wiki browser acceptance of the new route. Lead retains author-facing inline ownership/edit controls, explicit adoption and pinned image/PDF delivery. The reviewed checkpoint through 5c7063f5 is already on GitHub's development branch. Search and Cargo follow history; earlier entries below are historical.
+
 ## Lead bound-editor admission implemented; J72 ready — September 25, 2026
 
 Added PageOwnedPilot::prepareBoundEditor(pageId, revisionId, start, expected, authority), an internal admission method for a selected direct embedding. It resolves native identity/edit rights, requires current explicit revision and retained pilot scope, reads authorized main content, locates exact UTF-8 byte offset and complete source bytes through DirectEmbeddingRewriter, and extracts the binding from those server-read options. Binding owner must match native PageID; existing editor preparation confirms the surface, current revision and server-derived identity. Fixed rejection is layers-editor-unavailable without chained diagnostics. No public route or browser control calls this method yet; file-backed editing remains closed. Existing editor APIs and defaults are unchanged.

@@ -183,10 +183,35 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$params['baserevid'] = $base;
 		$params['maintext'] = $prefix . $embed;
 		$current = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+
+		$dbr = $this->getDb();
+		$initialPageCount = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
+		$initialRevCount = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
+
 		$init = $pilot->prepareBoundEditor( $pageId, $current, strlen( $prefix ), $embed, $actor );
 		$this->assertSame( $pageId, $init['pageOwned']['pageId'] );
 		$this->assertSame( $current, $init['pageOwned']['revisionId'] );
 		$this->assertSame( 'presentation', $init['pageOwned']['surfaceId'] );
+		$entry = new SpecialEditLayersPage( $pilot );
+		$context = new \RequestContext();
+		$context->setUser( $actor );
+		$context->setTitle( $entry->getPageTitle() );
+		$context->setRequest( new \MediaWiki\Request\FauxRequest( [
+			'pageid' => (string)$pageId, 'revid' => (string)$current,
+			'start' => (string)strlen( $prefix ), 'expected' => $embed
+		] ) );
+		$entry->setContext( $context );
+		$entry->execute( null );
+		$this->assertSame( $init, $context->getOutput()->getJsConfigVars()['wgLayersEditorInit'] );
+		$this->assertContains( 'ext.layers.editor', $context->getOutput()->getModules() );
+
+		$this->assertSame( $initialPageCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $initialRevCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+
 		foreach ( [
 			[ $base, strlen( $prefix ), $embed ],
 			[ $current, 0, $embed ],
@@ -200,9 +225,348 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$this->assertNull( $e->getPrevious() );
 			}
 		}
+
+		$this->assertSame( $initialPageCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $initialRevCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+
 		$lookup = $this->getServiceContainer()->getRevisionLookup();
 		$this->assertSame( $current, $lookup->getRevisionByTitle( $title )->getId() );
 		$this->assertSame( $prefix . $embed, $lookup->getRevisionById( $current )->getContent( 'main' )->getText() );
+	}
+
+	public function testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$params = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => 0,
+			'data' => file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ),
+			'maintext' => 'Initial text' ];
+		$base = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$pageId = $title->getArticleID();
+		$prefix = "Unicode 測試 — café\n";
+		$embed = '{{#Slide:Welcome|layersbinding=v1:' . $pageId . ':presentation}}';
+		$params['baserevid'] = $base;
+		$params['maintext'] = $prefix . $embed;
+		$current = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$start = strlen( $prefix );
+
+		$dbr = $this->getDb();
+		$initialPageCount = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
+		$initialRevCount = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
+
+		// 1. Disabled pilot
+		$disabledPilot = $this->configure( false, [ $title->getPrefixedDBkey() ] );
+		try {
+			$disabledPilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
+			$this->fail( 'Expected disabled pilot to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 2. Empty scope
+		$emptyScopePilot = $this->configure( true, [] );
+		try {
+			$emptyScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
+			$this->fail( 'Expected empty scope to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 3. Unrelated scope
+		$unrelatedScopePilot = $this->configure( true, [ 'Unrelated_Owner_Page' ] );
+		try {
+			$unrelatedScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
+			$this->fail( 'Expected unrelated scope to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 4. Anonymous actor (getId() <= 0)
+		$anonUser = $this->createMock( UserIdentity::class );
+		$anonUser->method( 'getId' )->willReturn( 0 );
+		$anonAuthority = $this->createMock( Authority::class );
+		$anonAuthority->method( 'getUser' )->willReturn( $anonUser );
+		try {
+			$pilot->prepareBoundEditor( $pageId, $current, $start, $embed, $anonAuthority );
+			$this->fail( 'Expected anonymous actor to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 5. Denied read permission
+		$deniedRead = $this->createMock( Authority::class );
+		$deniedRead->method( 'getUser' )->willReturn( $actor );
+		$deniedRead->method( 'authorizeRead' )->willReturn( false );
+		$deniedRead->method( 'authorizeWrite' )->willReturn( true );
+		$deniedRead->method( 'isAllowed' )->willReturn( true );
+		try {
+			$pilot->prepareBoundEditor( $pageId, $current, $start, $embed, $deniedRead );
+			$this->fail( 'Expected denied read to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 6. Denied edit permission
+		$deniedEdit = $this->createMock( Authority::class );
+		$deniedEdit->method( 'getUser' )->willReturn( $actor );
+		$deniedEdit->method( 'authorizeRead' )->willReturn( true );
+		$deniedEdit->method( 'authorizeWrite' )->willReturn( false );
+		$deniedEdit->method( 'isAllowed' )->willReturn( true );
+		try {
+			$pilot->prepareBoundEditor( $pageId, $current, $start, $embed, $deniedEdit );
+			$this->fail( 'Expected denied edit to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 7. Denied editlayers permission
+		$deniedEditlayers = $this->createMock( Authority::class );
+		$deniedEditlayers->method( 'getUser' )->willReturn( $actor );
+		$deniedEditlayers->method( 'authorizeRead' )->willReturn( true );
+		$deniedEditlayers->method( 'authorizeWrite' )->willReturn( true );
+		$deniedEditlayers->method( 'isAllowed' )->with( 'editlayers' )->willReturn( false );
+		try {
+			$pilot->prepareBoundEditor( $pageId, $current, $start, $embed, $deniedEditlayers );
+			$this->fail( 'Expected denied editlayers to reject' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+			$this->assertNull( $e->getPrevious() );
+		}
+
+		// 8. Invalid numeric bounds: pageId, revisionId, start, and empty expected
+		$invalidNumericBounds = [
+			'zero-page-id' => [ 0, $current, $start, $embed ],
+			'negative-page-id' => [ -1, $current, $start, $embed ],
+			'overflow-page-id' => [ 2147483648, $current, $start, $embed ],
+			'overflow-revision-id' => [ $pageId, 2147483648, $start, $embed ],
+			'zero-revision-id' => [ $pageId, 0, $start, $embed ],
+			'negative-revision-id' => [ $pageId, -1, $start, $embed ],
+			'negative-start' => [ $pageId, $current, -1, $embed ],
+			'empty-expected' => [ $pageId, $current, $start, '' ],
+		];
+
+		foreach ( $invalidNumericBounds as $caseKey => [ $pId, $revId, $st, $exp ] ) {
+			try {
+				$pilot->prepareBoundEditor( $pId, $revId, $st, $exp, $actor );
+				$this->fail( "Expected invalid bounds {$caseKey} to reject" );
+			} catch ( \DomainException $e ) {
+				$this->assertSame( 'layers-editor-unavailable', $e->getMessage(), "Failed on {$caseKey}" );
+				$this->assertNull( $e->getPrevious(), "Previous exception must be null on {$caseKey}" );
+			}
+		}
+
+		// Assert no page or revision mutation occurred
+		$this->assertSame( $initialPageCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $initialRevCount, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$this->assertSame( $current, $lookup->getRevisionByTitle( $title )->getId() );
+		$this->assertSame( $prefix . $embed, $lookup->getRevisionById( $current )->getContent( 'main' )->getText() );
+	}
+
+	public function testBoundEditorRejectsInvalidMainSourceCases(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$fixture = file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' );
+		$params = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => 0,
+			'data' => $fixture, 'maintext' => 'Base setup' ];
+		$base = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$pageId = $title->getArticleID();
+		$prefix = "Lead content — 世界\n";
+		$start = strlen( $prefix );
+
+		$dbr = $this->getDb();
+
+		$cases = [
+			'foreign-owner-binding' => [
+				'embed' => '{{#Slide:Welcome|layersbinding=v1:' . ( $pageId + 99999 ) . ':presentation}}',
+			],
+			'missing-surface' => [
+				'embed' => '{{#Slide:Welcome|layersbinding=v1:' . $pageId . ':nonexistent_surface}}',
+			],
+			'duplicate-binding' => [
+				'embed' => '{{#Slide:Welcome|layersbinding=v1:' . $pageId . ':presentation|layersbinding=v1:' .
+					$pageId . ':presentation}}',
+			],
+			'legacy-selector-conflict' => [
+				'embed' => '{{#Slide:Welcome|layerset=default|layersbinding=v1:' . $pageId . ':presentation}}',
+			],
+			'unbound-legacy-slide' => [
+				'embed' => '{{#Slide:Welcome|layerset=default}}',
+			],
+		];
+
+		$lastRev = $base;
+		foreach ( $cases as $caseKey => $caseData ) {
+			$embed = $caseData['embed'];
+			$mainText = $prefix . $embed;
+			$publishParams = [
+				'action' => 'layerspublish',
+				'owner' => $title->getPrefixedText(),
+				'baserevid' => $lastRev,
+				'data' => $fixture,
+				'maintext' => $mainText,
+			];
+			$revId = $this->doApiRequestWithToken( $publishParams, null, $actor )[0]['layerspublish']['revid'];
+			$this->assertGreaterThan( $lastRev, $revId );
+			$lastRev = $revId;
+
+			$revCountBefore = (int)$dbr->newSelectQueryBuilder()
+				->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
+			$pageCountBefore = (int)$dbr->newSelectQueryBuilder()
+				->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
+
+			try {
+				$pilot->prepareBoundEditor( $pageId, $revId, $start, $embed, $actor );
+				$this->fail( "Expected {$caseKey} to reject" );
+			} catch ( \DomainException $e ) {
+				$this->assertSame( 'layers-editor-unavailable', $e->getMessage(), "Failed on {$caseKey}" );
+				$this->assertNull( $e->getPrevious(), "Previous exception must be null on {$caseKey}" );
+			}
+
+			$this->assertSame( $pageCountBefore, (int)$dbr->newSelectQueryBuilder()
+				->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+			$this->assertSame( $revCountBefore, (int)$dbr->newSelectQueryBuilder()
+				->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+			$lookup = $this->getServiceContainer()->getRevisionLookup();
+			$this->assertSame( $mainText, $lookup->getRevisionById( $revId )->getContent( 'main' )->getText() );
+		}
+	}
+
+	public function testBoundEditorRejectsOpaqueContainersAndRequiresExactMultibyteOffset(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$fixture = file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' );
+		$params = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => 0,
+			'data' => $fixture, 'maintext' => 'Initial base' ];
+		$base = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$pageId = $title->getArticleID();
+		$dbr = $this->getDb();
+
+		// Part A: Comments, nowiki and template-generated references
+		$commentInner = '{{#Slide:CommentedSlide|layersbinding=v1:' . $pageId . ':presentation}}';
+		$commentFull = '<!-- ' . $commentInner . ' -->';
+
+		$nowikiInner = '{{#Slide:NowikiSlide|layersbinding=v1:' . $pageId . ':presentation}}';
+		$nowikiFull = '<nowiki>' . $nowikiInner . '</nowiki>';
+
+		$templateInner = '{{#Slide:TemplateSlide|layersbinding=v1:' . $pageId . ':presentation}}';
+		$templateFull = '{{SomeTemplate|slide=' . $templateInner . '}}';
+
+		$opaqueMain = "Header introductory text\n" .
+			$commentFull . "\n" .
+			$nowikiFull . "\n" .
+			$templateFull;
+
+		$paramsOpaque = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => $base,
+			'data' => $fixture, 'maintext' => $opaqueMain ];
+		$revOpaque = $this->doApiRequestWithToken( $paramsOpaque, null, $actor )[0]['layerspublish']['revid'];
+
+		$revCountOpaque = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
+		$pageCountOpaque = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
+
+		$opaqueCases = [
+			'comment-inner' => [ strpos( $opaqueMain, $commentInner ), $commentInner ],
+			'comment-full' => [ strpos( $opaqueMain, $commentFull ), $commentFull ],
+			'nowiki-inner' => [ strpos( $opaqueMain, $nowikiInner ), $nowikiInner ],
+			'nowiki-full' => [ strpos( $opaqueMain, $nowikiFull ), $nowikiFull ],
+			'template-inner' => [ strpos( $opaqueMain, $templateInner ), $templateInner ],
+			'template-full' => [ strpos( $opaqueMain, $templateFull ), $templateFull ],
+		];
+
+		foreach ( $opaqueCases as $caseKey => [ $st, $exp ] ) {
+			$this->assertIsInt( $st, "Offset must be found for {$caseKey}" );
+			try {
+				$pilot->prepareBoundEditor( $pageId, $revOpaque, $st, $exp, $actor );
+				$this->fail( "Expected opaque case {$caseKey} to reject" );
+			} catch ( \DomainException $e ) {
+				$this->assertSame( 'layers-editor-unavailable', $e->getMessage(), "Failed on {$caseKey}" );
+				$this->assertNull( $e->getPrevious(), "Previous exception must be null on {$caseKey}" );
+			}
+		}
+
+		$this->assertSame( $pageCountOpaque, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $revCountOpaque, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$this->assertSame( $opaqueMain, $lookup->getRevisionById( $revOpaque )->getContent( 'main' )->getText() );
+
+		// Part B: Two identical valid direct bindings separated by multibyte text
+		$multibyteSep = "\nUnicode 測試 café — 世界 — 日本語\n";
+		$slideEmbed = '{{#Slide:WelcomePresentation|layersbinding=v1:' . $pageId . ':presentation|width=400}}';
+		$twoEmbedsMain = $slideEmbed . $multibyteSep . $slideEmbed;
+
+		$paramsTwo = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => $revOpaque,
+			'data' => $fixture, 'maintext' => $twoEmbedsMain ];
+		$revTwo = $this->doApiRequestWithToken( $paramsTwo, null, $actor )[0]['layerspublish']['revid'];
+
+		$revCountTwo = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
+		$pageCountTwo = (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
+
+		$offset1 = 0;
+		$offset2 = strlen( $slideEmbed . $multibyteSep );
+		$charOffset2 = mb_strlen( $slideEmbed . $multibyteSep, 'UTF-8' );
+		$this->assertLessThan( $offset2, $charOffset2,
+			'Multibyte character offset must be strictly less than byte offset' );
+
+		// Occurrence 1 at byte offset 0 is admitted
+		$init1 = $pilot->prepareBoundEditor( $pageId, $revTwo, $offset1, $slideEmbed, $actor );
+		$this->assertSame( $pageId, $init1['pageOwned']['pageId'] );
+		$this->assertSame( $revTwo, $init1['pageOwned']['revisionId'] );
+		$this->assertSame( 'presentation', $init1['pageOwned']['surfaceId'] );
+
+		// Occurrence 2 at byte offset $offset2 is admitted
+		$init2 = $pilot->prepareBoundEditor( $pageId, $revTwo, $offset2, $slideEmbed, $actor );
+		$this->assertSame( $pageId, $init2['pageOwned']['pageId'] );
+		$this->assertSame( $revTwo, $init2['pageOwned']['revisionId'] );
+		$this->assertSame( 'presentation', $init2['pageOwned']['surfaceId'] );
+
+		// Interior and wrong offsets must reject
+		$interiorAndWrongOffsets = [
+			'interior-occurrence-1' => [ 8, $slideEmbed ],
+			'interior-multibyte-sep' => [ strlen( $slideEmbed ) + 5, $slideEmbed ],
+			'interior-occurrence-2' => [ $offset2 + 8, $slideEmbed ],
+			'char-offset-not-byte-offset' => [ $charOffset2, $slideEmbed ],
+			'truncated-expected' => [ $offset1, substr( $slideEmbed, 0, -2 ) ],
+			'padded-expected' => [ $offset2, $slideEmbed . ' ' ],
+		];
+
+		foreach ( $interiorAndWrongOffsets as $caseKey => [ $st, $exp ] ) {
+			try {
+				$pilot->prepareBoundEditor( $pageId, $revTwo, $st, $exp, $actor );
+				$this->fail( "Expected interior/wrong offset case {$caseKey} to reject" );
+			} catch ( \DomainException $e ) {
+				$this->assertSame( 'layers-editor-unavailable', $e->getMessage(), "Failed on {$caseKey}" );
+				$this->assertNull( $e->getPrevious(), "Previous exception must be null on {$caseKey}" );
+			}
+		}
+
+		$this->assertSame( $pageCountTwo, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $revCountTwo, (int)$dbr->newSelectQueryBuilder()
+			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
+		$this->assertSame( $twoEmbedsMain, $lookup->getRevisionById( $revTwo )->getContent( 'main' )->getText() );
 	}
 
 	public function testEditorPreparationUsesAuthorizedCurrentRevisionAndServerIdentity(): void {

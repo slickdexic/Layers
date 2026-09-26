@@ -24,6 +24,29 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
+	public function testMalformedBoundRequestCannotFallBackToOwnerRoute(): void {
+		$pilot = $this->createMock( PageOwnedPilot::class );
+		$pilot->expects( $this->never() )->method( 'prepareBoundEditor' );
+		$pilot->expects( $this->never() )->method( 'prepareEditor' );
+		$pilot->expects( $this->never() )->method( 'prepareCurrentEditor' );
+		$valid = [ 'pageid' => '1', 'revid' => '12', 'start' => '0', 'expected' => '{{#Slide:A}}' ];
+		$cases = [
+			[ 'pageid' => '01' ], [ 'pageid' => [ '1' ] ], [ 'pageid' => '2147483648' ],
+			[ 'revid' => 'current' ], [ 'revid' => '12junk' ], [ 'revid' => [ '12' ] ],
+			[ 'start' => '-1' ], [ 'start' => '00' ], [ 'start' => '1.5' ], [ 'start' => [ '0' ] ],
+			[ 'expected' => '' ], [ 'expected' => [ 'source' ] ],
+			[ 'owner' => 'Owner' ], [ 'surface' => 'presentation' ]
+		];
+		foreach ( $cases as $changes ) {
+			$context = $this->newPageContext( $this->getTestUser()->getUser(), array_replace( $valid, $changes ) );
+			$entry = new SpecialEditLayersPage( $pilot );
+			$entry->setContext( $context );
+			$entry->execute( null );
+			$this->assertArrayNotHasKey( 'wgLayersEditorInit', $context->getOutput()->getJsConfigVars() );
+			$this->assertNotContains( 'ext.layers.editor', $context->getOutput()->getModules() );
+		}
+	}
+
 	public function testCurrentEntryFollowsNewSavesButNumericEntryRemainsExact(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );

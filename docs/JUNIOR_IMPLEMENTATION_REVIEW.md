@@ -1,4 +1,37 @@
-# Junior implementation review — J01–J71
+# Junior implementation review — J01–J72
+
+## J72 accepted; exact-source editor route connected — September 25, 2026
+
+Reviewed J72's native rejection coverage and added PageID/revision upper-bound cases. Lead connected the existing Special:EditLayersPage route to prepareBoundEditor using the complete tuple pageid, revid, start, expected. Numeric parameters require canonical bounded decimal strings; start may be zero. Bound requests cannot use revid=current, mix owner/surface selectors, or fall back to the older route when malformed. The service still verifies exact authorized current source, saved binding, pilot scope and selected slide surface. Existing no-store/noindex and safe error handling remain in place; no manifest or configuration changes.
+
+Fresh corrected native pilot/route regression: **32 tests / 489 assertions passed**. Includes actual route-to-service bootstrap equality, no-write invariants, numeric/source/permission rejection and malformed bound-request isolation. Changed PHP style and diff whitespace checks passed. This is a callable route, not yet an ordinary overlay or adoption button. No real wiki pages were modified by native tests; Docker is only the test environment.
+
+**J73 is ready** for original-wiki browser acceptance of the new route. Lead retains author-facing inline ownership/edit controls, explicit adoption and pinned image/PDF delivery. The reviewed checkpoint through 5c7063f5 is already on GitHub's development branch. Search and Cargo follow history; earlier entries below are historical.
+
+## J72 implemented awaiting lead review: exact-source bound-editor rejection tests — September 25, 2026
+
+Junior implemented comprehensive rejection coverage for `PageOwnedPilot::prepareBoundEditor` in `tests/phpunit/core/PageOwnedPilotTest.php`:
+- Preserved lead success test `testBoundEditorDerivesSelectionFromExactSavedSource` and added database row count assertions (`COUNT(*)` on `page` and `revision` tables) before/after admission and rejection loops.
+- Implemented `testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds`:
+  - Verified disabled pilot, empty scope, and unrelated scope reject with fixed `layers-editor-unavailable` and null previous exception.
+  - Verified anonymous actor (`getId() <= 0`), denied read, denied edit, and denied editlayers reject with fixed `layers-editor-unavailable` and null previous exception.
+  - Verified invalid numeric bounds (`pageId <= 0`, `revisionId <= 0`, `start < 0`, and empty `expected` string) reject with fixed `layers-editor-unavailable` and null previous exception.
+  - Verified zero page/revision database mutations occurred across all cases.
+- Implemented `testBoundEditorRejectsInvalidMainSourceCases`:
+  - Published exact main-source cases with foreign-owner binding, missing surface ID, duplicate binding, legacy-selector conflict, and unbound legacy slide.
+  - Supplying exact source bytes and byte offset to `prepareBoundEditor` strictly rejects with `layers-editor-unavailable` and null previous exception without mocking `prepareEditor`.
+  - Verified native page and revision row counts remain unchanged after rejections.
+- Implemented `testBoundEditorRejectsOpaqueContainersAndRequiresExactMultibyteOffset`:
+  - Proved embeddings inside HTML comments (`<!-- ... -->`), `<nowiki>` containers, and template arguments (`{{SomeTemplate|slide=...}}`) cannot qualify as direct occurrences when queried by literal offsets into their source; verified rejection without rewriting page content or inserting revisions.
+  - Published owner with two identical valid direct slide bindings separated by multibyte UTF-8 text (`Unicode 測試 café — 世界 — 日本語`). Verified byte offset 0 and second byte offset are admitted, while interior offsets, wrong expected strings, and multibyte character-count offsets (differing from byte offsets) are strictly rejected with `layers-editor-unavailable` and null previous exception.
+
+Verification:
+- Focused suite (`PageOwnedPilotTest`): **24 tests / 302 assertions passed** (3 new tests added; baseline was 21 tests / 195 assertions).
+- Supporting suite (`SpecialEditLayersPageTest`): **7 tests / 152 assertions passed**.
+- Combined focused regression: **31 tests / 454 assertions passed**.
+- PHPCS style: `phpcs --standard=MediaWiki` on `tests/phpunit/core/PageOwnedPilotTest.php`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Changes strictly bounded to `tests/phpunit/core/PageOwnedPilotTest.php`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ## Lead bound-editor admission implemented; J72 ready — September 25, 2026
 

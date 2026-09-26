@@ -32,20 +32,37 @@ class SpecialEditLayersPage extends SpecialPage {
 		$out->setRobotPolicy( 'noindex,nofollow' );
 		$request = $this->getRequest();
 		try {
-			// A deliberate current-editor link is distinct from an exact numeric link.
 			$revision = $request->getVal( 'revid' );
-			$owner = $request->getVal( 'owner' );
-			$surface = $request->getVal( 'surface' );
-			if ( !is_string( $revision ) || ( $revision !== 'current' &&
-				( !preg_match( '/^[1-9][0-9]{0,9}$/D', $revision ) || (float)$revision > 2147483647 ) ) ||
-				!is_string( $owner ) || !is_string( $surface ) ||
-				( $subPage !== null && $subPage !== '' )
-			) {
+			if ( $subPage !== null && $subPage !== '' ) {
 				throw new \DomainException( 'layers-editor-unavailable' );
 			}
-			$init = $revision === 'current' ?
-				$this->pilot->prepareCurrentEditor( $owner, $surface, $this->getAuthority() ) :
-				$this->pilot->prepareEditor( $owner, (int)$revision, $surface, $this->getAuthority() );
+			$values = $request->getValues();
+			$bound = array_key_exists( 'pageid', $values ) || array_key_exists( 'start', $values ) ||
+				array_key_exists( 'expected', $values );
+			if ( $bound ) {
+				// Never reinterpret malformed bound requests as the older owner/surface route.
+				$pageId = $request->getVal( 'pageid' );
+				$start = $request->getVal( 'start' );
+				$expected = $request->getVal( 'expected' );
+				if ( array_key_exists( 'owner', $values ) || array_key_exists( 'surface', $values ) ||
+					!self::isDecimal( $pageId, false ) || !self::isDecimal( $revision, false ) ||
+					!self::isDecimal( $start, true ) || !is_string( $expected ) || $expected === '' ) {
+					throw new \DomainException( 'layers-editor-unavailable' );
+				}
+				$init = $this->pilot->prepareBoundEditor( (int)$pageId, (int)$revision, (int)$start,
+					$expected, $this->getAuthority() );
+			} else {
+				// A deliberate current-editor link is distinct from an exact numeric link.
+				$owner = $request->getVal( 'owner' );
+				$surface = $request->getVal( 'surface' );
+				if ( ( $revision !== 'current' && !self::isDecimal( $revision, false ) ) ||
+					!is_string( $owner ) || !is_string( $surface ) ) {
+					throw new \DomainException( 'layers-editor-unavailable' );
+				}
+				$init = $revision === 'current' ?
+					$this->pilot->prepareCurrentEditor( $owner, $surface, $this->getAuthority() ) :
+					$this->pilot->prepareEditor( $owner, (int)$revision, $surface, $this->getAuthority() );
+			}
 		} catch ( \DomainException $e ) {
 			$out->addWikiMsg( 'layers-editor-unavailable' );
 			return;
@@ -60,4 +77,16 @@ class SpecialEditLayersPage extends SpecialPage {
 		$out->addModules( 'ext.layers.editor' );
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
 	}
+
+	/**
+	 * @param mixed $value
+	 * @param bool $allowZero
+	 * @return bool
+	 */
+	private static function isDecimal( $value, bool $allowZero ): bool {
+		return is_string( $value ) &&
+			( ( $allowZero && $value === '0' ) || preg_match( '/^[1-9][0-9]{0,9}$/D', $value ) ) &&
+			(float)$value <= 2147483647;
+	}
+
 }
