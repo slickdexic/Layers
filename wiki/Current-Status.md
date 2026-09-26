@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## Adoption presentation reviewed (J64) — September 26, 2026
+
+The shared-slide adoption UI from the entry below was reworked and then reviewed by junior packet J64 (accepted with lead corrections).
+
+- **Page controls:** edit and adoption links sit in one labelled box, "Drawings on this page", with a real heading for screen-reader navigation. The box uses a new style-only module, `ext.layers.pageControls.styles`, built from Codex design tokens, so it follows the skin and Vector 2022 night mode. The shared-slide notice now says why adoption matters: changes to shared drawings are not in page history.
+- **Confirmation page:** retitled "Make a shared drawing owned by a page"; it names the page, set and revision. It uses a Codex form with a Cancel back to the page and sends logged-out visitors to log in.
+- **Refusals:** every refusal now appears as a styled error box. Before this, the message box styles were never loaded, so errors looked like plain text. Each box says nothing was saved and links back to the page when the page can be named. Wording is clearer for the repeat case ("The drawing may already be owned by the page") and the unrenderable case ("It stays shared and keeps working as before").
+
+Fresh verification: full native configuration **350 tests / 2,795 assertions passed, 1 skipped**; standalone PHPUnit **1,294 tests, 1 skipped**; Jest **199 suites / 14,993 tests**; `npm test` and every repository gate pass; PHP style 0 errors (2 old stub warnings). All **12 page-owned Chromium tests passed**, including J64's presentation spec, which now requires WCAG AA contrast for the controls in Vector 2022 day and night and a real colour change between them. Screenshots were checked in legacy Vector and Vector 2022 day and night.
+
+**Still open, lead-owned:** image/PDF pinned delivery (file adoption and J65 wait on it), lifecycle guards keyed to titles rather than PageID, and a public cache policy for anonymous binding reads. Earlier entries below are historical.
+
 ## Shared slides can be adopted into page history — September 26, 2026
 
 Editors can now make a shared (legacy) slide owned by the page it appears on, so its later changes are recorded in that page's history. Scope is the existing pilot: configured owner pages, text/vector slides only.

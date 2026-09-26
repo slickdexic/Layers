@@ -318,6 +318,11 @@
 				"layers-content-not-renderable"
 			]
 		},
+		"ext.layers.pageControls.styles": {
+			"localBasePath": "resources/ext.layers/viewer",
+			"remoteExtPath": "Layers/resources/ext.layers/viewer",
+			"styles": [ "PageDrawingControls.less" ]
+		},
 		"ext.layers.history": {
 			"localBasePath": "resources",
 			"remoteExtPath": "Layers/resources",

@@ -105,21 +105,35 @@ class BoundSlideHooks {
 			}
 			$html = '';
 			if ( $items !== '' ) {
-				$html .= Html::element( 'p', [], $out->msg( 'layers-page-edit-history-notice' )->text() ) .
-					Html::rawElement( 'ul', [], $items );
+				$html .= self::controlGroup( $out, 'layers-page-edit-history-notice', $items );
 			}
 			if ( $adoptItems !== '' ) {
-				$html .= Html::element( 'p', [], $out->msg( 'layers-page-adopt-notice' )->text() ) .
-					Html::rawElement( 'ul', [], $adoptItems );
+				$html .= self::controlGroup( $out, 'layers-page-adopt-notice', $adoptItems );
 			}
 			if ( $html !== '' ) {
-				$out->addHTML( Html::rawElement( 'nav', [ 'class' => 'layers-page-edit-controls',
-					'aria-label' => $out->msg( 'layers-edit-link-text' )->text() ], $html ) );
+				$out->addModuleStyles( 'ext.layers.pageControls.styles' );
+				$out->addHTML( Html::rawElement( 'section', [ 'class' => 'layers-page-edit-controls',
+					'aria-labelledby' => 'layers-page-edit-controls-heading' ],
+					Html::element( 'p', [ 'id' => 'layers-page-edit-controls-heading',
+						'class' => 'layers-page-edit-controls__heading', 'role' => 'heading', 'aria-level' => '2' ],
+						$out->msg( 'layers-page-drawings-heading' )->text() ) . $html ) );
 			}
 		} catch ( \Throwable $e ) {
 			LoggerFactory::getInstance( 'Layers' )->error( 'Page-owned drawing controls failed.',
 				[ 'exception' => $e ] );
 		}
+	}
+
+	/**
+	 * @param OutputPage $out
+	 * @param string $notice Message key explaining what the links do
+	 * @param string $items Rendered list items
+	 * @return string
+	 */
+	private static function controlGroup( OutputPage $out, string $notice, string $items ): string {
+		return Html::rawElement( 'div', [ 'class' => 'layers-page-edit-controls__group' ],
+			Html::element( 'p', [ 'class' => 'layers-page-edit-controls__notice' ], $out->msg( $notice )->text() ) .
+			Html::rawElement( 'ul', [ 'class' => 'layers-page-edit-controls__list' ], $items ) );
 	}
 
 	/**

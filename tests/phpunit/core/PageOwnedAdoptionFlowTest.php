@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Tests\Core;
 
 use MediaWiki\Context\RequestContext;
+use MediaWiki\Exception\UserNotLoggedIn;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
@@ -163,6 +164,7 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$reader = $this->getTestUser( [ 'read' ] )->getUser();
 		$this->overrideUserPermissions( $reader, [ 'read' ] );
 		$html = [];
+		$styles = [];
 		foreach ( [ 'editor' => [ $actor, [] ], 'reader' => [ $reader, [] ],
 			'history' => [ $actor, [ 'oldid' => (string)$base ] ] ] as $case => [ $user, $query ]
 		) {
@@ -174,8 +176,14 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$out->setRevisionId( $base );
 			BoundSlideHooks::output( $out, $parsed, $pilot );
 			$html[$case] = $out->getHTML();
+			$styles[$case] = $out->getModuleStyles();
 		}
 		$this->assertStringContainsString( 'layers-page-adopt-link', $html['editor'] );
+		$this->assertStringContainsString( 'aria-labelledby="layers-page-edit-controls-heading"', $html['editor'] );
+		$this->assertStringContainsString( 'id="layers-page-edit-controls-heading"', $html['editor'] );
+		$this->assertStringContainsString( 'role="heading" aria-level="2"', $html['editor'] );
+		$this->assertContains( 'ext.layers.pageControls.styles', $styles['editor'] );
+		$this->assertNotContains( 'ext.layers.pageControls.styles', $styles['reader'] );
 		$this->assertStringContainsString( 'Special:AdoptLayersDrawing', $html['editor'] );
 		$this->assertStringContainsString( 'legacyrev=202', $html['editor'] );
 		$this->assertStringContainsString( 'revid=' . $base, $html['editor'] );
@@ -220,6 +228,9 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$shown = $this->visit( $actor, $params )->getOutput();
 		$this->assertStringContainsString( 'WelcomePresentation', $shown->getHTML() );
 		$this->assertStringContainsString( 'name="wpEditToken"', $shown->getHTML() );
+		$this->assertMatchesRegularExpression( '/<a href="' . preg_quote( $page->getTitle()->getLocalURL(), '/' ) .
+			'"[^>]*role="button"/', $shown->getHTML(), 'Cancel returns' );
+		$this->assertContains( 'mediawiki.htmlform.codex.styles', $shown->getModuleStyles() );
 		$this->assertSame( '', $shown->getRedirect() );
 
 		$refused = $this->visit( $actor, $params + [ 'wpsummary' => 'No token' ], true, false )->getOutput();
@@ -237,8 +248,12 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			'\{\{#Slide:WelcomePresentation\|width=400\|layersbinding=v1:' . $page->getId() . ':[^|}]+\}\}$/D',
 			$revision->getContent( 'main' )->getText() );
 
-		$repeat = $this->visit( $actor, $params + [ 'wpsummary' => 'Again' ], true )->getOutput();
+		$repeat = $this->visit( $actor, $params + [ 'wpsummary' => 'Again' ], true, true, 'qqx' )->getOutput();
 		$this->assertSame( '', $repeat->getRedirect() );
+		$this->assertStringContainsString( '(layers-adopt-conflict', $repeat->getHTML() );
+		$this->assertStringContainsString( 'cdx-message--error', $repeat->getHTML() );
+		$this->assertContains( 'mediawiki.codex.messagebox.styles', $repeat->getModuleStyles() );
+		$this->assertStringContainsString( '(returnto:', $repeat->getHTML() );
 		$this->assertSame( $before + 1, $this->revisionCount( $page->getId() ) );
 		$this->assertSame( [], $this->pilot->listAdoptionCandidates( $page->getId(), $revision->getId(), $actor ) );
 	}
@@ -261,7 +276,10 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$html = $this->visit( $actor, array_replace( $params, $change ), true, true, 'qqx' )
 				->getOutput()->getHTML();
 			$this->assertStringContainsString( '(layers-adopt-unavailable-generic', $html );
+			$this->assertStringNotContainsString( '(returnto:', $html );
 		}
 		$this->assertSame( $before, $this->revisionCount( $page->getId() ) );
+		$this->expectException( UserNotLoggedIn::class );
+		$this->visit( $this->getServiceContainer()->getUserFactory()->newAnonymous(), $params );
 	}
 }

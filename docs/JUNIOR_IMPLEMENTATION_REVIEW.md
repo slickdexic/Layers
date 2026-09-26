@@ -1,4 +1,42 @@
-# Junior implementation review — J01–J73
+# Junior implementation review — J01–J74
+
+## J64 accepted with lead corrections: slide adoption presentation, accessibility and refusal review — September 26, 2026
+
+Junior reviewed and verified the presentation of the shared-slide notice, adoption links, confirmation page, and refusal messages (wording, accessibility, keyboard use, dark mode) in a real Chromium browser on the original test wiki, extending `tests/e2e/page-owned-adoption.spec.js`:
+- Verified shared-slide notice and adoption link on the owner page:
+  - Container rendered as `<section class="layers-page-edit-controls" aria-labelledby="layers-page-edit-controls-heading">` using `ext.layers.pageControls.styles`.
+  - Heading text is `Drawings on this page` (`layers-page-drawings-heading`).
+  - Notice text (`layers-page-adopt-notice`) clearly explains that shared slides do not record changes in page history and that adopting copies them into page history while leaving the shared original untouched.
+  - Link text is `Make “<slide>” owned by this page` (`layers-page-adopt-drawing`). Verified native keyboard focusability (`document.activeElement === link`).
+  - Dark mode verified under Vector 2022 night mode (`skin-theme-clientpref-night`): background (`rgb(32, 33, 34)`), notice text (`rgb(162, 169, 177)`), and link (`rgb(136, 163, 232)`) use MediaWiki Codex skin variables, ensuring proper contrast.
+- Verified confirmation page (`Special:AdoptLayersDrawing` - GET Preview):
+  - Heading is `Make a shared drawing owned by a page` (`layers-adopt-title`); robots policy is `noindex,nofollow`.
+  - Intro block specifies slide label, set name, revision, and links to the target owner page.
+  - Form layout provides explicit `<label for="...">` associated with summary input, `maxlength="500"`, default edit summary `Made the drawing “<slide>” owned by this page`, primary progressive submit button `Make it owned by the page`, and accessible Cancel button linking back to the owner page.
+  - Keyboard navigation verified: Tab advances from summary input to Submit button, then to Cancel button.
+  - Dark mode verified under Vector 2022: inputs and buttons automatically adapt to Codex night theme with high contrast.
+- Verified refusal messages:
+  - Malformed query parameters: HTTP 200 with `Html::errorBox` containing `layers-adopt-unavailable-generic` ("This drawing cannot be made owned by its page right now. Nothing was saved."), withholding form and submit controls.
+  - Unrenderable drawing: With an unrenderable layer (marker/group), displays `Html::errorBox` with `layers-adopt-not-renderable` explaining why, providing a return link back to the page, and withholding the form.
+  - Stale revision / Edit conflict on POST: When base revision advances before confirmation submission, rejects publication, renders `layers-adopt-conflict` in an error box, provides a return link, and withholds the form.
+- Defect reports for lead remediation:
+  1. Semantic heading element: The section heading `<p id="layers-page-edit-controls-heading" class="layers-page-edit-controls__heading">` uses a `<p>` tag rather than an HTML heading (`<h2>`/`<h3>` or `role="heading"` with `aria-level="2"`). Screen reader users navigating by heading shortcuts (e.g. `H` key) will not encounter the heading unless it uses a semantic heading tag or ARIA role.
+  2. Spacing after inline link in return notices: In refusal error boxes where `$out->addReturnTo( $owner )` or wikitext link is rendered, a trailing space before the link ensures standard punctuation spacing.
+
+Verification:
+- Playwright Chromium suite (`tests/e2e/page-owned-adoption.spec.js`): **2 passed in 1.3m** (initial run: 1.3m; repeatability run: 1.3m).
+- ESLint (`tests/e2e/page-owned-adoption.spec.js`): **0 errors, 0 warnings**.
+- Native core flow suite (`PageOwnedAdoptionFlowTest.php`): **7 tests / 51 assertions passed**.
+- Full test suite (`npm test`): **199 suites / 14,993 tests passed**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+
+**Lead review (accepted with corrections):** the spec is sound and is kept. Corrections:
+- Defect 1 accepted: the heading now carries `role="heading" aria-level="2"`; native and browser tests assert it.
+- Defect 2 not reproduced: `addReturnTo()` renders "Return to Layers browser acceptance." with normal spacing, which the spec itself asserts.
+- The dark-mode checks only asserted that computed colours were non-empty, which is always true. They now require the night background to differ from day and every text colour in the box to reach WCAG AA (4.5:1) in both themes. Transitions are disabled before switching themes: Codex animates colour changes, so an immediate read measures the day colour mid-transition.
+- Found during review: error boxes had no styling because `mediawiki.codex.messagebox.styles` was never loaded, so refusals rendered as plain text. The page now loads it. The confirmation form uses Codex instead of OOUI.
+- Seeding publications in the spec now check for success before reading the new revision ID.
+- The run overlapped a lead capture on the same automation owner; both sides' exact-base cleanup refused to overwrite, and the owner ended in its original state. Browser work on the shared owner must not run concurrently.
 
 ## Confirmed adoption composition implemented; J74 ready — September 26, 2026
 

@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
+use MediaWiki\Html\Html;
 use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -54,11 +55,13 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 	public function execute( $subPage ) {
 		$this->setHeaders();
 		$this->checkReadOnly();
+		$this->requireNamedUser();
 		$out = $this->getOutput();
 		$out->setRobotPolicy( 'noindex,nofollow' );
+		$out->addModuleStyles( 'mediawiki.codex.messagebox.styles' );
 		$selection = $this->readSelection( $subPage );
 		if ( !$selection ) {
-			$out->addWikiMsg( 'layers-adopt-unavailable-generic' );
+			$out->addHTML( Html::errorBox( $this->msg( 'layers-adopt-unavailable-generic' )->parse() ) );
 			return;
 		}
 		try {
@@ -74,7 +77,7 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 		}
 		/** @var Title $owner */
 		$owner = $preview['owner'];
-		$form = HTMLForm::factory( 'ooui', [
+		$form = HTMLForm::factory( 'codex', [
 			'summary' => [
 				'type' => 'text',
 				'label-message' => 'layers-adopt-summary-label',
@@ -87,6 +90,8 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 			->setAction( $this->getPageTitle()->getLocalURL() )
 			->addHiddenFields( $selection )
 			->setSubmitTextMsg( 'layers-adopt-submit' )
+			->showCancel()
+			->setCancelTarget( $owner )
 			->setPreHtml( $this->msg( 'layers-adopt-intro' )
 				->plaintextParams( $preview['label'], $preview['setName'] )
 				->numParams( $preview['revision'] )
@@ -131,10 +136,12 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 	private function showFailure( string $code, int $pageId ): void {
 		$owner = $this->titles->newFromID( $pageId );
 		$key = self::MESSAGES[$code] ?? 'layers-adopt-unavailable';
+		$out = $this->getOutput();
 		if ( $owner && $this->getAuthority()->definitelyCan( 'read', $owner ) ) {
-			$this->getOutput()->addWikiMsg( $key, $owner->getPrefixedText() );
+			$out->addHTML( Html::errorBox( $this->msg( $key, $owner->getPrefixedText() )->parse() ) );
+			$out->addReturnTo( $owner );
 		} else {
-			$this->getOutput()->addWikiMsg( 'layers-adopt-unavailable-generic' );
+			$out->addHTML( Html::errorBox( $this->msg( 'layers-adopt-unavailable-generic' )->parse() ) );
 		}
 	}
 
