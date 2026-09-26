@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## Earlier drawing versions can be restored from the viewer — September 26, 2026
+
+Editors viewing an earlier version of a page-owned drawing on `Special:ViewLayersPage` now get a **Restore this version** button below it.
+
+- **What it does:** publishes one new page revision in which that drawing is replaced by the version being viewed. The page text and the page's other drawings stay as they are now, unlike rollback, which reverts the whole page. The edit summary names the drawing and the revision it came from, and the revision is tagged `layers-page-drawing`.
+- **When it is offered:** only to users who may edit the page and have `editlayers`, only for an earlier revision, and only when the drawing still exists and differs from its current version. Readers see the viewer exactly as before.
+- **Safety:** the form carries the current revision it was shown against. If the page changed meanwhile, or the form is submitted twice, nothing is saved and a message says so. The copied drawing goes through normal publication, so it must still pass current validation and renderability; the save rate limit applies.
+- Code: `PageSurfaceRestore` (via `PageOwnedPilot::newSurfaceRestore()`) and `SpecialViewLayersPage`.
+
+Fresh verification: new `PageSurfaceRestoreTest` covers the offer (not for the current version, a missing drawing or a reader), a restore that changes only that drawing, the tag and summary, a stale form, and the viewer's GET, POST, redirect and repeated submission. Full native configuration **372 tests passed, 1 skipped** (including J74 work in progress); `npm test` passes; PHP style 0 errors. A logged-in Chromium screenshot of an old automation-owner revision shows the viewer with the explanation and button below the drawing (read-only check, nothing submitted).
+
 ## Rollback restores page-owned drawings — September 26, 2026
 
 Native rollback now works on pages that own drawings. Before, rolling back an edit that changed a drawing failed with "Direct or unauthorized changes to the Layers revision slot are not permitted", so vandalised drawings could not be reverted from page history.

@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Restore an earlier drawing version (pilot, September 26): `Special:ViewLayersPage` offers editors "Restore this version" for an earlier version of a page-owned drawing. It publishes one tagged revision replacing only that drawing, and refuses stale or repeated submissions.
+
 - Rollback restores page-owned drawings (pilot, September 26): outside publication, a save may set the drawing slot only to the exact drawings of an earlier, visible revision of the same page, by a user with `editlayers`. Native rollback of drawing edits now works; another page's drawings, hidden drawings, new content and slot removal stay refused.
 
 - Page-owned drawings follow their page (pilot, September 26): one scope rule (`PageOwnedScope`) replaces the title checks. A page that owns drawings keeps them under any title, so owner pages can be moved; the old-title redirect cannot claim them. Undelete restores drawings only onto their own page (no page at the title, one deleted page, its ID free) and otherwise refuses with `layers-restore-drawings-denied`. Import and merge stay refused wherever drawings are involved; enrolled titles that own nothing behave like ordinary pages.

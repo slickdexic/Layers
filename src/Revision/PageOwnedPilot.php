@@ -681,6 +681,12 @@ class PageOwnedPilot {
 		return new PageOwnedPilotLifecycleHooks( $this->scope );
 	}
 
+	/** @return PageSurfaceRestore */
+	public function newSurfaceRestore(): PageSurfaceRestore {
+		return new PageSurfaceRestore( $this->enabled, $this->scope, $this->services->getTitleFactory(),
+			$this->services->getRevisionLookup(), $this->publisher );
+	}
+
 	/**
 	 * @param OldRevisionImporter $native
 	 * @return PageOwnedPilotImporter

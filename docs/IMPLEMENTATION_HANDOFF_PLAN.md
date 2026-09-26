@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Drawing restore from the viewer — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. J65b gains step 3a below. Earlier entries below are historical.
+
 ## Native rollback of drawings — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: outside publication, admission accepts a drawing-slot change only when it restores the exact drawings of an earlier, visible revision of the same page and the user has `editlayers` (`PageDrawingRevert`). `TestingAdmissionRegistration` installs the same rule, so a test that expects an unauthorized replacement to fail must use content that no earlier revision of that page had. No queue change. Earlier entries below are historical.
@@ -390,6 +394,7 @@ Fresh verification:
 1. Read the test account's rights (`meta=userinfo&uiprop=rights`). Skip with a clear message unless it has `move` and `suppressredirect`. Both moves use `noredirect`, so no redirect page is left behind.
 2. Seed one bound slide by exact-base publication, as the existing specs do, and record the PageID.
 3. Move the owner to the new title with the API (`action=move`). At the new title check the drawing's pixels, the page's edit link (open it, change one layer, save, and check the saved revision), the history link to the pre-move revision, and `layersread` with the new title. The old title must not exist.
+3a. Still at the new title, open the pre-edit version of the drawing from page history and use **Restore this version**. Check the page shows that version again, history gained exactly one tagged revision, and the page text did not change.
 4. Move it back the same way and check the PageID is unchanged and the drawing still renders. Restore the owner with the usual exact-base cleanup.
 5. If any step fails after the first move, move the page back before anything else, and never delete a page. If moving back fails, stop and report; do not retry.
 
