@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Shared slides can be adopted into page history (pilot, September 26): editors of a pilot owner page get a "Make … owned by this page" link per direct shared slide, confirmed on `Special:AdoptLayersDrawing` (GET previews without writing; POST with edit token adopts once, rate limited, tagged `layers-page-drawing`). Unrenderable drawings, stale confirmations and repeats are refused. Also fixed `layersinfo` returning `name: null` for slides opened without a set name or by revision ID, and made "most recent set" deterministic for saves in the same second.
+
 - Page-owned history pilot hardening (lead review, September 26): pages with bound slides are cached like any other page, with drawings fetched per reader through `layersread` `binding=`. Page-owned saves carry the `layers-page-drawing` change tag and run core edit filters on page-text changes. Saves cannot introduce layer types page history cannot display; stored revisions are read structurally so later validation changes never hide old history; one unavailable file no longer hides other drawings. Ordinary page markup no longer disables page-owned editing, diffs show changed properties per line, the content model is always registered, and page-owned editor code ships in its own `ext.layers.editor.pageOwned` module.
 
 - Lead review: recheck recovery destination after confirmation; isolate set-load busy state and fallback selection from stale responses; share browser cleanup with tested helper and reject malformed inventory. J24 browser acceptance remains pending.

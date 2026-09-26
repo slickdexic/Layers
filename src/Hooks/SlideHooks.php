@@ -157,6 +157,7 @@ class SlideHooks {
 		if ( $binding !== null ) {
 			return BoundSlideHooks::placeholder( $parser, $binding );
 		}
+		BoundSlideHooks::noteSharedSlide( $parser );
 		self::log( 'Parsed params: ' . json_encode( array_keys( $params ) ) );
 
 		// Validate slide name (first positional argument)

@@ -19,6 +19,8 @@ class DirectAdoptionPreparationService {
 	private TitleFactory $titles;
 	private LegacyAdoptionPreparationService $legacy;
 	private DirectEmbeddingRewriter $rewriter;
+	/** @var callable|null (string $slideName): ?string */
+	private $displayedSet;
 
 	/**
 	 * @param PageOwnedIdentityResolver $identities
@@ -26,15 +28,18 @@ class DirectAdoptionPreparationService {
 	 * @param TitleFactory $titles
 	 * @param LegacyAdoptionPreparationService $legacy
 	 * @param DirectEmbeddingRewriter|null $rewriter Scanner configured with the wiki's extension tags
+	 * @param callable|null $displayedSet Set a slide without `layerset=` shows; null requires a selector
 	 */
 	public function __construct( PageOwnedIdentityResolver $identities, RevisionLookup $revisions,
-		TitleFactory $titles, LegacyAdoptionPreparationService $legacy, ?DirectEmbeddingRewriter $rewriter = null
+		TitleFactory $titles, LegacyAdoptionPreparationService $legacy, ?DirectEmbeddingRewriter $rewriter = null,
+		?callable $displayedSet = null
 	) {
 		$this->identities = $identities;
 		$this->revisions = $revisions;
 		$this->titles = $titles;
 		$this->legacy = $legacy;
 		$this->rewriter = $rewriter ?? new DirectEmbeddingRewriter();
+		$this->displayedSet = $displayedSet;
 	}
 
 	/**
@@ -92,7 +97,13 @@ class DirectAdoptionPreparationService {
 		}
 		$proposal = $this->legacy->prepare( $pageId, $baseRevisionId, $legacyRevisionId, $fileTimestamp, $authority );
 		try {
-			DirectEmbeddingSelection::assertMatches( $selected, $proposal['legacySelection'] );
+			$displayed = null;
+			if ( $selected['kind'] === 'slide' && $this->displayedSet &&
+				!self::hasSetSelector( $selected['options'] )
+			) {
+				$displayed = ( $this->displayedSet )( $selected['target'] );
+			}
+			DirectEmbeddingSelection::assertMatches( $selected, $proposal['legacySelection'], $displayed );
 			$boundMain = $rewriter->rewrite( $main->getText(), $start, $expected, $proposal['binding'], $resolveFile );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-embedding-selection-unavailable' );
@@ -100,6 +111,20 @@ class DirectAdoptionPreparationService {
 		$this->assertViewerCapabilities( $proposal['document'] );
 		$proposal['main'] = new WikitextContent( $boundMain );
 		return $proposal;
+	}
+
+	/**
+	 * @param string[] $options Raw embed options
+	 * @return bool
+	 */
+	private static function hasSetSelector( array $options ): bool {
+		foreach ( $options as $option ) {
+			$key = strtolower( trim( explode( '=', $option, 2 )[0], " \t\r\n\f" ) );
+			if ( in_array( $key, [ 'layerset', 'layers', 'layer' ], true ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

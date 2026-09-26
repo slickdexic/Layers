@@ -1,5 +1,16 @@
 # Layers implementation handoff plan
 
+## Slide adoption boundary and UI implemented; J64 released for slides — September 26, 2026
+
+See the matching [current status](CURRENT_STATUS.md) entry. New interfaces juniors may rely on:
+
+- `PageOwnedPilot::listAdoptionCandidates(pageId, revisionId, authority)` returns label, setName and confirmation parameters (pageid, revid, start, expected, legacyrev) for direct unbound slide embeds on the current revision. It never writes.
+- `PageOwnedPilot::previewDirectAdoption(...)` runs every adoption check without writing and returns owner, label, setName, revision, timestamp and userId.
+- `Special:AdoptLayersDrawing` is the only HTTP adoption path: GET confirms, POST with the edit token adopts, `editlayers-save` limits it. Links carry class `layers-page-adopt-link`.
+- A slide without `layerset=` adopts the set it displays now (`getLatestLayerSet`). `getLayerSetByName()` reports the name as `setName`, `getLatestLayerSet()`/`getLayerSet()` as `name`; read both.
+
+J74 remains ready as written. **J64 is released for slides only:** review and test the presentation of the shared-slide notice, adoption links, confirmation page and its refusal messages (wording, accessibility, keyboard use, dark mode). It must not change adoption, publication or permission logic; report defects for lead correction. J65 stays blocked on image/PDF pinned delivery, which is the next lead step. Earlier entries below are historical.
+
 ## Lead review remediation; queue unchanged, next lead steps revised — September 26, 2026
 
 See the matching [current status](CURRENT_STATUS.md) entry for the fixes and fresh verification. Contract changes juniors must respect:

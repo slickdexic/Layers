@@ -421,8 +421,8 @@ class ApiLayersInfo extends ApiBase {
 				$layerSet = null;
 			}
 			// Update setName from the loaded layer set for correct revision history
-			if ( $layerSet && isset( $layerSet['setName'] ) ) {
-				$setName = $layerSet['setName'];
+			if ( $layerSet ) {
+				$setName = $layerSet['setName'] ?? $layerSet['name'] ?? $setName;
 			}
 		} else {
 			// Fetch by name, or by recency when the caller named no set. Slide set
@@ -453,7 +453,8 @@ class ApiLayersInfo extends ApiBase {
 				'userId' => $layerSet['userId'],
 				'timestamp' => $layerSet['timestamp'],
 				'revision' => $layerSet['revision'],
-				'name' => $layerSet['setName'],
+				// getLayerSetByName() returns setName; getLatestLayerSet() and getLayerSet() return name.
+				'name' => $layerSet['setName'] ?? $layerSet['name'] ?? null,
 				'data' => $data,
 				'baseWidth' => $canvasWidth,
 				'baseHeight' => $canvasHeight

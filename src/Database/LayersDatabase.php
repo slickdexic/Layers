@@ -453,8 +453,10 @@ class LayersDatabase {
 			__METHOD__,
 			// Timestamp first because revision numbers restart per set, so ordering
 			// by revision alone would pick the most-edited set rather than the newest
-			// one when no set name narrows the query.
-			[ 'ORDER BY' => 'ls_timestamp DESC, ls_revision DESC' ]
+			// one when no set name narrows the query. Timestamps have one-second
+			// resolution, so the row ID (insertion order) decides saves made within
+			// the same second.
+			[ 'ORDER BY' => 'ls_timestamp DESC, ls_id DESC' ]
 		);
 
 		if ( !$row ) {

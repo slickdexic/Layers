@@ -16,8 +16,11 @@ class DirectEmbeddingSelection {
 	 * Does not prove row freshness or permissions. Callers must provide the exact authorized row.
 	 * @param array $candidate Scanner-produced candidate
 	 * @param array $legacySelection Server-captured imgName, name and integer page
+	 * @param string|null $displayedSetName Server-resolved set a slide without `layerset=` currently shows
 	 */
-	public static function assertMatches( array $candidate, array $legacySelection ): void {
+	public static function assertMatches( array $candidate, array $legacySelection,
+		?string $displayedSetName = null
+	): void {
 		$kind = $candidate['kind'] ?? null;
 		$target = $candidate['target'] ?? null;
 		$options = $candidate['options'] ?? null;
@@ -76,6 +79,10 @@ class DirectEmbeddingSelection {
 				}
 				$selector = $value;
 			}
+		}
+		// A slide without a selector shows its most recently saved set; files keep explicit selection.
+		if ( $selector === null && $kind === 'slide' ) {
+			$selector = $displayedSetName;
 		}
 		if ( $selector === null || $selector !== $name || $embeddingPage !== $page ) {
 			self::reject();

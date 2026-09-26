@@ -17,6 +17,7 @@ use MediaWiki\SpecialPage\SpecialPage;
 /** Page output carries only binding identities; each reader's browser fetches authorized drawings. */
 class BoundSlideHooks {
 	public const DATA_KEY = 'layers-bound-slides-v1';
+	public const ADOPTABLE_KEY = 'layers-shared-slides-v1';
 
 	/**
 	 * @param Parser $parser
@@ -48,7 +49,21 @@ class BoundSlideHooks {
 	}
 
 	/**
-	 * Load the viewer and, for editors of the current revision, per-request edit links.
+	 * Record, in cacheable parser output, that a shared (legacy) slide was rendered on a pilot page.
+	 * Which slides are adoptable, and by whom, is decided per request in output().
+	 * @param Parser $parser
+	 */
+	public static function noteSharedSlide( Parser $parser ): void {
+		$config = MediaWikiServices::getInstance()->getMainConfig();
+		if ( $config->get( 'LayersPageOwnedPilotEnabled' ) &&
+			in_array( $parser->getTitle()->getPrefixedDBkey(), $config->get( 'LayersPageOwnedPilotOwners' ), true )
+		) {
+			$parser->getOutput()->setExtensionData( self::ADOPTABLE_KEY, true );
+		}
+	}
+
+	/**
+	 * Load the viewer and, for editors of the current revision, per-request edit and adoption links.
 	 * Drawing data never enters this response: the viewer requests it through layersread with the
 	 * reader's own session, so the page HTML stays cacheable like any other page.
 	 * @param OutputPage $out
@@ -57,42 +72,65 @@ class BoundSlideHooks {
 	 */
 	public static function output( OutputPage $out, ParserOutput $parsed, PageOwnedPilot $pilot ): void {
 		$data = $parsed->getExtensionData( self::DATA_KEY );
-		if ( !is_array( $data ) || !$data ) {
-			return;
-		}
 		$displayed = false;
-		foreach ( $data as $context ) {
+		foreach ( is_array( $data ) ? $data : [] as $context ) {
 			$displayed = $displayed ||
 				( is_array( $context ) && ( $context['revisionId'] ?? null ) === $out->getRevisionId() );
 		}
-		if ( !$displayed ) {
-			return;
+		$adoptable = $parsed->getExtensionData( self::ADOPTABLE_KEY ) === true;
+		if ( $displayed ) {
+			$out->addModules( 'ext.layers.history' );
 		}
-		$out->addModules( 'ext.layers.history' );
 		$request = $out->getRequest();
-		if ( $request->getVal( 'action', 'view' ) !== 'view' || $request->getCheck( 'oldid' ) ||
-			$request->getCheck( 'diff' ) || !$out->getUser()->isRegistered() ) {
+		if ( ( !$displayed && !$adoptable ) || $request->getVal( 'action', 'view' ) !== 'view' ||
+			$request->getCheck( 'oldid' ) || $request->getCheck( 'diff' ) || !$out->getUser()->isRegistered()
+		) {
 			return;
 		}
 		try {
-			$entries = $pilot->listBoundEditorSelections( $out->getTitle()->getArticleID(),
-				$out->getRevisionId(), $out->getAuthority() );
+			$pageId = $out->getTitle()->getArticleID();
 			$items = '';
-			foreach ( $entries as $entry ) {
-				$link = Html::element( 'a', [ 'class' => 'layers-page-edit-link',
-					'href' => SpecialPage::getTitleFor( 'EditLayersPage' )->getLocalURL( $entry['params'] )
-				], $out->msg( 'layers-page-edit-drawing', $entry['label'] )->text() );
-				$items .= Html::rawElement( 'li', [], $link );
+			foreach ( $displayed ? $pilot->listBoundEditorSelections( $pageId, $out->getRevisionId(),
+				$out->getAuthority() ) : [] as $entry
+			) {
+				$items .= self::controlItem( 'layers-page-edit-link', 'EditLayersPage', $entry['params'],
+					$out->msg( 'layers-page-edit-drawing', $entry['label'] )->text() );
 			}
+			$adoptItems = '';
+			foreach ( $adoptable ? $pilot->listAdoptionCandidates( $pageId, $out->getRevisionId(),
+				$out->getAuthority() ) : [] as $entry
+			) {
+				$adoptItems .= self::controlItem( 'layers-page-adopt-link', 'AdoptLayersDrawing', $entry['params'],
+					$out->msg( 'layers-page-adopt-drawing', $entry['label'] )->text() );
+			}
+			$html = '';
 			if ( $items !== '' ) {
+				$html .= Html::element( 'p', [], $out->msg( 'layers-page-edit-history-notice' )->text() ) .
+					Html::rawElement( 'ul', [], $items );
+			}
+			if ( $adoptItems !== '' ) {
+				$html .= Html::element( 'p', [], $out->msg( 'layers-page-adopt-notice' )->text() ) .
+					Html::rawElement( 'ul', [], $adoptItems );
+			}
+			if ( $html !== '' ) {
 				$out->addHTML( Html::rawElement( 'nav', [ 'class' => 'layers-page-edit-controls',
-					'aria-label' => $out->msg( 'layers-edit-link-text' )->text()
-				], Html::element( 'p', [], $out->msg( 'layers-page-edit-history-notice' )->text() ) .
-					Html::rawElement( 'ul', [], $items ) ) );
+					'aria-label' => $out->msg( 'layers-edit-link-text' )->text() ], $html ) );
 			}
 		} catch ( \Throwable $e ) {
-			LoggerFactory::getInstance( 'Layers' )->error( 'Bound editor controls failed.',
+			LoggerFactory::getInstance( 'Layers' )->error( 'Page-owned drawing controls failed.',
 				[ 'exception' => $e ] );
 		}
+	}
+
+	/**
+	 * @param string $class
+	 * @param string $special
+	 * @param array $params
+	 * @param string $text
+	 * @return string
+	 */
+	private static function controlItem( string $class, string $special, array $params, string $text ): string {
+		return Html::rawElement( 'li', [], Html::element( 'a', [ 'class' => $class,
+			'href' => SpecialPage::getTitleFor( $special )->getLocalURL( $params ) ], $text ) );
 	}
 }

@@ -1,5 +1,19 @@
 # Current status and limitations
 
+## Shared slides can be adopted into page history — September 26, 2026
+
+Editors can now make a shared (legacy) slide owned by the page it appears on, so its later changes are recorded in that page's history. Scope is the existing pilot: configured owner pages, text/vector slides only.
+
+- **Offer:** on a pilot owner page, an editor of the current revision sees "Make “<slide>” owned by this page" under the page for each direct, unbound slide embed in the page source. The list is built per request from the exact displayed revision; parser output only records that a shared slide was rendered. Readers, anonymous users, `oldid`/`diff` views and template-generated slides get nothing.
+- **Confirm:** the link opens `Special:AdoptLayersDrawing` (unlisted, `noindex`). GET runs every adoption check without writing and names the exact saved set and revision that will be copied. Only a POST with the user's edit token adopts, under the `editlayers-save` limit. Success redirects to the page; the new revision carries the binding, the copied drawing and the `layers-page-drawing` tag. The shared original and other pages using it are not changed.
+- **Refusals:** a stale confirmation (the page changed, or the same confirmation is submitted twice) is refused with an explanation and never retried. Drawings with groups, markers, imported images or library shapes are refused before the form is shown. Malformed requests get one generic message.
+- **Slides without `layerset=`** are adopted from the set they display now (the most recent save). Files still require an explicit selector.
+- **Fixed while testing:** `layersinfo` returned `name: null` for a slide opened without a set name or by revision ID, and gave that revision ID the wrong history list. "Most recent set" is now deterministic when two saves share a timestamp second (`ls_id` breaks the tie).
+
+Fresh verification: full native configuration (`tests/phpunit/core.xml`) **350 tests / 2,779 assertions passed, 1 skipped**, including the new `PageOwnedAdoptionFlowTest` (candidates, preview without writes, GET/POST/token/repeat, unrenderable and malformed requests, page-view gating) and `ApiLayersInfoSlideNameTest`. Standalone PHPUnit **1,294 tests, 1 skipped**; Jest **199 suites / 14,993 tests**; `npm test` and every repository gate pass; PHP style 0 errors (2 old stub warnings). All **11 page-owned Chromium acceptance tests passed** on the original wiki, including the new adoption spec, which creates a shared slide, adopts it through the real link and form, checks history and the unchanged original, and restores the automation owner with an exact-base publication.
+
+**Still open, lead-owned:** image/PDF pinned delivery (file adoption stays unavailable until then), lifecycle guards keyed to titles rather than PageID, and a public cache policy for anonymous binding reads. Earlier entries below are historical.
+
 ## Page views cacheable, edits tagged and filtered — September 26, 2026
 
 Second lead round on the page-owned history pilot, in the working tree and not yet committed.

@@ -42,6 +42,24 @@ class DirectEmbeddingSelectionTest extends \MediaWikiUnitTestCase {
 		}
 	}
 
+	/** A slide without `layerset=` matches only the set the server says it currently displays. */
+	public function testSelectorlessSlideMatchesDisplayedSetOnly(): void {
+		$slide = [ 'kind' => 'slide', 'target' => 'My_Slide', 'options' => [ 'size=400x300' ] ];
+		$row = [ 'imgName' => 'Slide:My_Slide', 'name' => 'Drawing_A', 'page' => 1 ];
+		DirectEmbeddingSelection::assertMatches( $slide, $row, 'Drawing_A' );
+		foreach ( [ [ $slide, $row, 'Other' ], [ $slide, $row, null ],
+			[ self::file( [ 'thumb' ] ), self::selection(), 'default' ],
+			[ [ 'options' => [ 'layerset=Other' ] ] + $slide, $row, 'Drawing_A' ] ] as [ $c, $s, $shown ]
+		) {
+			try {
+				DirectEmbeddingSelection::assertMatches( $c, $s, $shown );
+				$this->fail( 'Expected rejection' );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertSame( 'layers-embedding-selection-unavailable', $e->getMessage() );
+			}
+		}
+	}
+
 	/** @return array */
 	public static function provideRejected(): array {
 		$result = [];

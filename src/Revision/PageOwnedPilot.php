@@ -10,6 +10,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\MergeHistoryFactory;
 use MediaWiki\Permissions\Authority;
@@ -156,15 +157,148 @@ class PageOwnedPilot {
 	public function adoptDirectEmbedding( int $pageId, int $baseRevisionId, int $start, string $expected,
 		int $legacyRevisionId, ?string $fileTimestamp, Authority $authority, string $summary
 	): array {
+		$identities = $this->assertAdoptionScope( $pageId, $baseRevisionId, $start, $expected,
+			$legacyRevisionId, $authority );
+		$proposal = $this->newAdoptionPreparer( $identities )->prepare( $pageId, $baseRevisionId, $start, $expected,
+			$legacyRevisionId, $fileTimestamp, $authority );
+		$revisionId = ( new PageOwnedAdoptionService( $identities, $this->services->getRevisionLookup(),
+			$this->publisher ) )->publishPreparedSurface( $pageId, $baseRevisionId, $authority,
+				$proposal['document'], $proposal['main'], $summary );
+		return [ 'pageId' => $pageId, 'revisionId' => $revisionId,
+			'surfaceId' => $proposal['surfaceId'], 'binding' => $proposal['binding'] ];
+	}
+
+	/**
+	 * Run every adoption check without writing, for the confirmation step.
+	 * The result describes what the reader is asked to confirm; it is not an authorization token.
+	 *
+	 * @param int $pageId
+	 * @param int $baseRevisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param int $legacyRevisionId
+	 * @param Authority $authority
+	 * @return array owner Title, label, setName, revision, timestamp and userId of the copied drawing
+	 * @throws PublicationException Same fixed failures adoption would report
+	 */
+	public function previewDirectAdoption( int $pageId, int $baseRevisionId, int $start, string $expected,
+		int $legacyRevisionId, Authority $authority
+	): array {
+		$identities = $this->assertAdoptionScope( $pageId, $baseRevisionId, $start, $expected,
+			$legacyRevisionId, $authority );
+		$proposal = $this->newAdoptionPreparer( $identities )->prepare( $pageId, $baseRevisionId, $start, $expected,
+			$legacyRevisionId, null, $authority );
+		$record = $this->services->getService( 'LayersDatabase' )->getLayerSetForAdoption( $legacyRevisionId );
+		if ( !$record ) {
+			throw new PublicationException( 'layers-legacy-revision-unavailable' );
+		}
+		try {
+			$owner = $identities->resolveForEdit( $pageId, $baseRevisionId, $authority );
+		} catch ( \DomainException $e ) {
+			throw new PublicationException( $e->getMessage() );
+		}
+		return [
+			'owner' => $owner,
+			'label' => substr( $proposal['legacySelection']['imgName'], strlen( LayersConstants::SLIDE_PREFIX ) ),
+			'setName' => $proposal['legacySelection']['name'], 'revision' => (int)$record['revision'],
+			'timestamp' => (string)$record['timestamp'], 'userId' => (int)( $record['userId'] ?? 0 )
+		];
+	}
+
+	/**
+	 * Shared slides on the current revision that an editor can make owned by the page.
+	 * Each entry names the exact legacy row the slide shows now; confirmation revalidates everything.
+	 * @param int $pageId
+	 * @param int $revisionId Displayed revision; must still be current
+	 * @param Authority $authority
+	 * @return array[] label, setName and confirmation route parameters
+	 */
+	public function listAdoptionCandidates( int $pageId, int $revisionId, Authority $authority ): array {
+		try {
+			if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+				return [];
+			}
+			$lookup = $this->services->getRevisionLookup();
+			$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $revisionId, $authority );
+			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+				return [];
+			}
+			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+			$main = $revision ? $revision->getContent( SlotRecord::MAIN,
+				RevisionRecord::FOR_THIS_USER, $authority ) : null;
+			if ( !$main instanceof WikitextContent ) {
+				return [];
+			}
+			$db = $this->services->getService( 'LayersDatabase' );
+			$entries = [];
+			foreach ( $this->newRewriter()->scan( $main->getText(), static fn () => null ) as $candidate ) {
+				try {
+					if ( $candidate['kind'] !== 'slide' ||
+						PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+						continue;
+					}
+					$imgName = LayersConstants::SLIDE_PREFIX . $candidate['target'];
+					$setName = self::explicitSetName( $candidate['options'] );
+					$row = $setName === null ?
+						$db->getLatestLayerSet( $imgName, LayersConstants::TYPE_SLIDE ) :
+						$db->getLayerSetByName( $imgName, LayersConstants::TYPE_SLIDE, $setName );
+					if ( !$row ) {
+						continue;
+					}
+					// getLayerSetByName() returns setName; getLatestLayerSet() returns name.
+					$rowName = (string)( $row['setName'] ?? $row['name'] ?? '' );
+					DirectEmbeddingSelection::assertMatches( $candidate,
+						[ 'imgName' => $imgName, 'name' => $rowName, 'page' => 1 ],
+						$setName === null ? $rowName : null );
+					$entries[] = [ 'label' => $candidate['target'], 'setName' => $rowName, 'params' => [
+						'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
+						'expected' => $candidate['raw'], 'legacyrev' => (int)$row['id']
+					] ];
+				} catch ( \InvalidArgumentException $e ) {
+					// Embeds the conservative source rules cannot adopt are simply not offered.
+				}
+			}
+			return $entries;
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			return [];
+		}
+	}
+
+	/**
+	 * @param string[] $options
+	 * @return string|null Literal selector value, or null when the slide shows its latest set
+	 */
+	private static function explicitSetName( array $options ): ?string {
+		foreach ( $options as $option ) {
+			$parts = explode( '=', $option, 2 );
+			$key = strtolower( trim( $parts[0], " \t\r\n\f" ) );
+			if ( in_array( $key, [ 'layerset', 'layers', 'layer' ], true ) && isset( $parts[1] ) ) {
+				return trim( $parts[1], " \t\r\n\f" );
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Common adoption preflight: pilot switch, actor, bounds, native owner/base and scope.
+	 * @param int $pageId
+	 * @param int $baseRevisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param int $legacyRevisionId
+	 * @param Authority $authority
+	 * @return PageOwnedIdentityResolver
+	 */
+	private function assertAdoptionScope( int $pageId, int $baseRevisionId, int $start, string $expected,
+		int $legacyRevisionId, Authority $authority
+	): PageOwnedIdentityResolver {
 		if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
 		if ( $start < 0 || $expected === '' || $legacyRevisionId < 1 || $legacyRevisionId > 2147483647 ) {
 			throw new PublicationException( 'layers-invalid-publication-request' );
 		}
-		$lookup = $this->services->getRevisionLookup();
-		$identities = new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
-			new PageHistoryAccess( $lookup ) );
+		$identities = $this->newIdentityResolver();
 		try {
 			$owner = $identities->resolveForEdit( $pageId, $baseRevisionId, $authority );
 		} catch ( \DomainException $e ) {
@@ -173,20 +307,30 @@ class PageOwnedPilot {
 		if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
+		return $identities;
+	}
+
+	/** @return PageOwnedIdentityResolver */
+	private function newIdentityResolver(): PageOwnedIdentityResolver {
+		$lookup = $this->services->getRevisionLookup();
+		return new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
+			new PageHistoryAccess( $lookup ) );
+	}
+
+	/**
+	 * @param PageOwnedIdentityResolver $identities
+	 * @return DirectAdoptionPreparationService
+	 */
+	private function newAdoptionPreparer( PageOwnedIdentityResolver $identities ): DirectAdoptionPreparationService {
+		$db = $this->services->getService( 'LayersDatabase' );
 		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
 			$this->services->getTitleFactory() );
-		$legacy = new LegacyAdoptionPreparationService( $identities,
-			$this->services->getService( 'LayersDatabase' ), new LegacyMediaResolver( $sources ),
+		$legacy = new LegacyAdoptionPreparationService( $identities, $db, new LegacyMediaResolver( $sources ),
 			new LegacySurfaceConverter() );
-		$preparer = new DirectAdoptionPreparationService( $identities, $lookup,
-			$this->services->getTitleFactory(), $legacy, $this->newRewriter() );
-		$proposal = $preparer->prepare( $pageId, $baseRevisionId, $start, $expected,
-			$legacyRevisionId, $fileTimestamp, $authority );
-		$revisionId = ( new PageOwnedAdoptionService( $identities, $lookup, $this->publisher ) )
-			->publishPreparedSurface( $pageId, $baseRevisionId, $authority,
-				$proposal['document'], $proposal['main'], $summary );
-		return [ 'pageId' => $pageId, 'revisionId' => $revisionId,
-			'surfaceId' => $proposal['surfaceId'], 'binding' => $proposal['binding'] ];
+		return new DirectAdoptionPreparationService( $identities, $this->services->getRevisionLookup(),
+			$this->services->getTitleFactory(), $legacy, $this->newRewriter(),
+			static fn ( string $slide ): ?string => $db->getLatestLayerSet(
+				LayersConstants::SLIDE_PREFIX . $slide, LayersConstants::TYPE_SLIDE )['name'] ?? null );
 	}
 
 	/**

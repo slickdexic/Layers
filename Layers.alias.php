@@ -4,4 +4,5 @@ $specialPageAliases = [];
 $specialPageAliases['en'] = [
 	'ViewLayersPage' => [ 'ViewLayersPage' ],
 	'EditLayersPage' => [ 'EditLayersPage' ],
+	'AdoptLayersDrawing' => [ 'AdoptLayersDrawing' ],
 ];
