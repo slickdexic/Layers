@@ -25,34 +25,30 @@ use Wikimedia\Rdbms\IDBAccessObject;
 class PageOwnedPilot {
 	private MediaWikiServices $services;
 	private bool $enabled;
-	private array $ownerKeys;
+	private PageOwnedScope $scope;
 	private PagePublicationService $publisher;
 	private PageReadService $reader;
 
 	/**
 	 * @param MediaWikiServices $services Fully initialized native service container
 	 * @param bool $enabled Default-off API switch; guards are independent of this switch
-	 * @param string[] $ownerKeys Exact prefixed DB keys, retained while stored pilot revisions exist
+	 * @param string[] $ownerKeys Enrolled titles as exact prefixed DB keys; see PageOwnedScope
 	 */
 	public function __construct( MediaWikiServices $services, bool $enabled = false, array $ownerKeys = [] ) {
-		foreach ( $ownerKeys as $key ) {
-			if ( !is_string( $key ) || $key === '' ) {
-				throw new \InvalidArgumentException( 'Invalid Layers pilot owner scope' );
-			}
-			$title = $services->getTitleFactory()->newFromText( $key );
-			if ( !$title || !$title->canExist() || $title->hasFragment() || $title->getPrefixedDBkey() !== $key ) {
-				throw new \InvalidArgumentException( 'Invalid Layers pilot owner scope' );
-			}
-		}
+		$this->scope = PageOwnedScope::newFromServices( $services, $ownerKeys );
 		$this->services = $services;
 		$this->enabled = $enabled;
-		$this->ownerKeys = array_values( array_unique( $ownerKeys ) );
 		$access = new PageHistoryAccess( $services->getRevisionLookup() );
 		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
 		$this->publisher = new PagePublicationService( $services->getWikiPageFactory(), $access, $sources,
 			new PageRevisionWriter(), new PublicationAdmissionContext(), $services->getHookContainer(),
 			$services->getUserFactory() );
 		$this->reader = new PageReadService( $access, $sources, new SourceRenditions( $services->getUrlUtils() ) );
+	}
+
+	/** @return PageOwnedScope Pages taking part in the pilot */
+	public function getScope(): PageOwnedScope {
+		return $this->scope;
 	}
 
 	/**
@@ -62,7 +58,7 @@ class PageOwnedPilot {
 	 */
 	public function newPublishApi( ApiMain $main, string $name ): ApiLayersPublish {
 		return new ApiLayersPublish( $main, $name, $this->publisher, $this->services->getTitleFactory(),
-			$this->enabled, $this->ownerKeys );
+			$this->enabled, $this->scope );
 	}
 
 	/**
@@ -72,7 +68,7 @@ class PageOwnedPilot {
 	 */
 	public function newReadApi( ApiMain $main, string $name ): ApiLayersRead {
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
-			$this->enabled, $this->ownerKeys, [ $this, 'prepareBoundViewers' ] );
+			$this->enabled, $this->scope, [ $this, 'prepareBoundViewers' ] );
 	}
 
 	/**
@@ -92,7 +88,7 @@ class PageOwnedPilot {
 	): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
 		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
-			!in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ||
+			!$this->scope->includes( $owner ) ||
 			$revisionId < 1 || $revisionId > 2147483647 || $surfaceId === '' ||
 			$authority->getUser()->getId() <= 0
 		) {
@@ -234,7 +230,7 @@ class PageOwnedPilot {
 			}
 			$lookup = $this->services->getRevisionLookup();
 			$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $revisionId, $authority );
-			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+			if ( !$this->scope->includes( $owner ) ) {
 				return [];
 			}
 			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
@@ -361,7 +357,7 @@ class PageOwnedPilot {
 		} catch ( \DomainException $e ) {
 			throw new PublicationException( $e->getMessage() );
 		}
-		if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+		if ( !$this->scope->includes( $owner ) ) {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
 		return $identities;
@@ -433,7 +429,7 @@ class PageOwnedPilot {
 			$lookup = $this->services->getRevisionLookup();
 			$owner = ( new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
 				new PageHistoryAccess( $lookup ) ) )->resolveForEdit( $pageId, $revisionId, $authority );
-			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+			if ( !$this->scope->includes( $owner ) ) {
 				return [];
 			}
 			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
@@ -497,7 +493,7 @@ class PageOwnedPilot {
 			$lookup = $this->services->getRevisionLookup();
 			$owner = ( new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
 				new PageHistoryAccess( $lookup ) ) )->resolveForEdit( $pageId, $revisionId, $authority );
-			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+			if ( !$this->scope->includes( $owner ) ) {
 				throw new \DomainException();
 			}
 			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
@@ -543,7 +539,7 @@ class PageOwnedPilot {
 	public function prepareCurrentEditor( string $ownerText, string $surfaceId, Authority $authority ): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
 		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
-			!in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ||
+			!$this->scope->includes( $owner ) ||
 			$surfaceId === '' || $authority->getUser()->getId() <= 0
 		) {
 			throw new \DomainException( 'layers-editor-unavailable' );
@@ -578,7 +574,7 @@ class PageOwnedPilot {
 	): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
 		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
-			!in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ||
+			!$this->scope->includes( $owner ) ||
 			$revisionId < 1 || $revisionId > 2147483647 || $surfaceId === ''
 		) {
 			throw new \DomainException( 'layers-revision-unavailable' );
@@ -607,7 +603,7 @@ class PageOwnedPilot {
 	 * @return array[]
 	 */
 	public function getHistorySurfaces( \MediaWiki\Title\Title $owner, int $revisionId, Authority $authority ): array {
-		if ( !$this->enabled || !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ||
+		if ( !$this->enabled || !$this->scope->includes( $owner ) ||
 			$owner->hasFragment() || $revisionId < 1 || $revisionId > 2147483647 ) {
 			return [];
 		}
@@ -650,7 +646,7 @@ class PageOwnedPilot {
 	public function prepareBoundViewers( \MediaWiki\Title\Title $owner, int $revisionId,
 		array $bindings, Authority $authority
 	): array {
-		if ( !$this->enabled || !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+		if ( !$this->enabled || !$this->scope->includes( $owner ) ) {
 			return [];
 		}
 		$result = [];
@@ -680,7 +676,7 @@ class PageOwnedPilot {
 
 	/** @return PageOwnedPilotLifecycleHooks */
 	public function newLifecycleHooks(): PageOwnedPilotLifecycleHooks {
-		return new PageOwnedPilotLifecycleHooks( $this->services->getTitleFactory(), $this->ownerKeys );
+		return new PageOwnedPilotLifecycleHooks( $this->scope );
 	}
 
 	/**
@@ -688,7 +684,7 @@ class PageOwnedPilot {
 	 * @return PageOwnedPilotImporter
 	 */
 	public function wrapImporter( OldRevisionImporter $native ): PageOwnedPilotImporter {
-		return new PageOwnedPilotImporter( $native, $this->ownerKeys );
+		return new PageOwnedPilotImporter( $native, $this->scope );
 	}
 
 	/**
@@ -696,6 +692,6 @@ class PageOwnedPilot {
 	 * @return PageOwnedPilotMergeFactory
 	 */
 	public function wrapMergeFactory( MergeHistoryFactory $native ): PageOwnedPilotMergeFactory {
-		return new PageOwnedPilotMergeFactory( $native, $this->services->getTitleFactory(), $this->ownerKeys );
+		return new PageOwnedPilotMergeFactory( $native, $this->scope );
 	}
 }

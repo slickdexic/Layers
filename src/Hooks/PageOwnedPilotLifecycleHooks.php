@@ -4,36 +4,21 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use MediaWiki\Hook\MovePageIsValidMoveHook;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Page\Hook\PageUndeleteHook;
 use MediaWiki\Page\ProperPageIdentity;
 use MediaWiki\Permissions\Authority;
-use MediaWiki\Title\TitleFactory;
 use StatusValue;
 
-/** Unregistered pilot guards. Restore and rename await full lifecycle integration. */
-class PageOwnedPilotLifecycleHooks implements PageUndeleteHook, MovePageIsValidMoveHook {
-	private TitleFactory $titles;
-	private array $ownerKeys;
+/** Native lifecycle guard for pages that own drawings. Moves need none: drawings belong to the PageID. */
+class PageOwnedPilotLifecycleHooks implements PageUndeleteHook {
+	private PageOwnedScope $scope;
 
 	/**
-	 * @param TitleFactory $titles
-	 * @param string[] $ownerKeys Exact pilot owner prefixed DB keys, shared with the API scope
+	 * @param PageOwnedScope $scope
 	 */
-	public function __construct( TitleFactory $titles, array $ownerKeys ) {
-		$this->titles = $titles;
-		$this->ownerKeys = $ownerKeys;
-	}
-
-	/** @inheritDoc */
-	public function onMovePageIsValidMove( $oldTitle, $newTitle, $status ) {
-		if ( in_array( $oldTitle->getPrefixedDBkey(), $this->ownerKeys, true ) ||
-			in_array( $newTitle->getPrefixedDBkey(), $this->ownerKeys, true )
-		) {
-			$status->fatal( 'layers-admission-unauthorized' );
-			return false;
-		}
-		return true;
+	public function __construct( PageOwnedScope $scope ) {
+		$this->scope = $scope;
 	}
 
 	/** @inheritDoc */
@@ -46,13 +31,11 @@ class PageOwnedPilotLifecycleHooks implements PageUndeleteHook, MovePageIsValidM
 		array $fileVersions,
 		StatusValue $status
 	) {
-		$key = $this->titles->newFromPageIdentity( $page )->getPrefixedDBkey();
-		if ( !in_array( $key, $this->ownerKeys, true ) ) {
+		// Do not tie this protection to the write-enable switch: disabling writes must not open restore.
+		if ( $this->scope->canRestore( $page, $timestamps ) ) {
 			return true;
 		}
-		// Core restore bypasses MultiContentSave. Veto before any archived revision/file is restored.
-		// Do not tie this protection to the write-enable switch: disabling writes must not open restore.
-		$status->fatal( 'layers-admission-unauthorized' );
+		$status->fatal( 'layers-restore-drawings-denied' );
 		return false;
 	}
 }

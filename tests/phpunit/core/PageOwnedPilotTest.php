@@ -12,7 +12,6 @@ use MediaWiki\Extension\Layers\SpecialPages\SpecialEditLayersPage;
 use MediaWiki\FileRepo\File\LocalFile;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionRecord;
-use MediaWiki\Status\Status;
 use MediaWiki\User\UserIdentity;
 use OldRevisionImporter;
 use WikiRevision;
@@ -155,17 +154,14 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->getRevisionByTitle( $title )->getId() );
 	}
 
-	public function testDisabledApisRetainMoveAndImportProtection(): void {
+	public function testDisabledApisRetainImportProtection(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$pilot = $this->configure( false, [ $title->getPrefixedDBkey() ] );
-		$status = Status::newGood();
-		$this->assertFalse( $pilot->newLifecycleHooks()->onMovePageIsValidMove(
-			$title, $this->getNonexistingTestPage()->getTitle(), $status ) );
-		$this->assertTrue( $status->hasMessage( 'layers-admission-unauthorized' ) );
 		$native = $this->createMock( OldRevisionImporter::class );
 		$native->expects( $this->never() )->method( 'import' );
 		$revision = new WikiRevision();
 		$revision->setTitle( $title );
+		$revision->setContent( 'layers', new LayersDocumentContent( '{"schemaVersion":1,"surfaces":[]}' ) );
 		try {
 			$pilot->wrapImporter( $native )->import( $revision );
 			$this->fail( 'Expected retained import guard' );
@@ -333,15 +329,10 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$this->assertNull( $e->getPrevious() );
 		}
 
-		// 3. Unrelated scope
+		// 3. A page that owns drawings stays in scope when its title is no longer enrolled.
 		$unrelatedScopePilot = $this->configure( true, [ 'Unrelated_Owner_Page' ] );
-		try {
-			$unrelatedScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
-			$this->fail( 'Expected unrelated scope to reject' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
-			$this->assertNull( $e->getPrevious() );
-		}
+		$this->assertSame( $pageId, $unrelatedScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed,
+			$actor )['pageOwned']['pageId'] );
 
 		// 4. Anonymous actor (getId() <= 0)
 		$anonUser = $this->createMock( UserIdentity::class );

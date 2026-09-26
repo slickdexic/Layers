@@ -1,6 +1,6 @@
 # Page ownership and ordinary editing implementation plan
 
-September 23, 2026. **Approved direction; implementation pending.** This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
+September 23, 2026. **Approved direction; implementation pending.** *September 26 update: lifecycle guards now follow drawing ownership, so moves are supported and restore, import and merge are keyed to whether drawings are involved; see the [current status](CURRENT_STATUS.md). The move veto and title-keyed guards described below are superseded.* This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
 ## Source scanning follows preprocessor rules — September 26, 2026
 

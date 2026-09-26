@@ -53,7 +53,7 @@
 			"value": false
 		},
 		"LayersPageOwnedPilotOwners": {
-			"description": "Retained exact canonical owner DB keys for the experimental revision pilot. Never remove owners while current or archived pilot revisions exist.",
+			"description": "Exact canonical DB keys of titles where page-owned drawings may start. A page that owns drawings keeps them under any later title, so removing a title stops only new ownership. Do not empty the list while page-owned drawings exist: the drawing slot and its guards are installed only while it has entries.",
 			"value": []
 		},
 		"LayersEnable": {

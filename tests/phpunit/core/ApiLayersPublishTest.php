@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Revision\PublicationAdmissionContext;
@@ -34,7 +35,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$registered = TestingAdmissionRegistration::install( $this, $this->context );
 				$publisher = $this->publisher ?? $registered['publisher'];
 				return new ApiLayersPublish( $main, $name, $publisher, $s->getTitleFactory(),
-					$this->enabled, $this->ownerKeys );
+					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ) );
 			} ]
 		] ) );
 	}

@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
@@ -16,7 +17,7 @@ class ApiLayersRead extends ApiBase {
 	private PageReadService $reader;
 	private TitleFactory $titles;
 	private bool $enabled;
-	private array $ownerKeys;
+	private ?PageOwnedScope $scope;
 	/** @var callable|null (Title, int, string[], Authority): array Authorized bound surfaces keyed by binding */
 	private $boundReader;
 
@@ -26,17 +27,17 @@ class ApiLayersRead extends ApiBase {
 	 * @param PageReadService $reader
 	 * @param TitleFactory $titles
 	 * @param bool $enabled Default-off experimental gate
-	 * @param string[] $ownerKeys Exact prefixed DB keys; empty permits no pilot pages
+	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
 	 */
 	public function __construct( ApiMain $main, string $name, PageReadService $reader,
-		TitleFactory $titles, bool $enabled = false, array $ownerKeys = [], ?callable $boundReader = null
+		TitleFactory $titles, bool $enabled = false, ?PageOwnedScope $scope = null, ?callable $boundReader = null
 	) {
 		parent::__construct( $main, $name );
 		$this->reader = $reader;
 		$this->titles = $titles;
 		$this->enabled = $enabled;
-		$this->ownerKeys = $ownerKeys;
+		$this->scope = $scope;
 		$this->boundReader = $boundReader;
 	}
 
@@ -50,7 +51,7 @@ class ApiLayersRead extends ApiBase {
 		$params = $this->extractRequestParams();
 		$owner = $this->titles->newFromText( $params['owner'] );
 		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
-			!in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true )
+			!$this->scope || !$this->scope->includes( $owner )
 		) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}

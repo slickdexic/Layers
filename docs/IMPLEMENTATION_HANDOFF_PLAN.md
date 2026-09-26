@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## Lifecycle guards follow drawing ownership (B04); J65b queued — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contracts juniors must respect: every scope question goes through `PageOwnedPilot::getScope()` (`PageOwnedScope`); never compare a title with `LayersPageOwnedPilotOwners` directly. Moves have no Layers guard. Undelete allows drawings back only onto their own page. A test that expects a guard to refuse must make the protected page own drawings first (publish to it); an enrolled title alone is no longer protected.
+
+**Note for J74 (in progress):** the lead changed two committed tests in `PageOwnedPilotTest.php` and left the rest of that file alone. `testDisabledApisRetainMoveAndImportProtection` is now `testDisabledApisRetainImportProtection`, because no move guard exists. Case 3 of `testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds` now expects a page that owns drawings to stay editable when its title is no longer enrolled. Keep both when finishing J74, and use a page that owns no drawings for any "unrelated scope" denial.
+
+J65 and J74 are assigned. J65b (below) is ready once J65 is returned. Earlier entries below are historical.
+
 ## File adoption implemented (step 3 of B03); J65 released — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. B03 is complete: bound file embeds, image/PDF editing and file adoption. Contracts: a file adoption offer requires an explicit `layerset=`, names the legacy row for the current file version and PDF page, and carries `filets`; `Special:AdoptLayersDrawing` refuses a malformed `filets` and the preparer refuses any version but the current one. **J65 is ready** (packet below) except move continuity, which waits on lead B04 (PageID lifecycle guards). J74 remains ready. Earlier entries below are historical.
@@ -321,11 +329,12 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections |
 | 4f | Junior J72: exact-source bound-editor rejection tests | Accepted with lead additions |
 | 4g | Junior J73: bound-editor route browser acceptance | Accepted with lead corrections; next work lead-owned |
-| 4h | Junior J74: confirmed-adoption denial and race coverage | Ready; packet below |
+| 4h | Junior J74: confirmed-adoption denial and race coverage | Assigned; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Implemented: bound files, image/PDF editing, file adoption |
 | 6 | Junior J64: ownership controls and accessible messages | Accepted with lead corrections (slides); packet below |
-| 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
-| 8 | Junior J65: end-to-end adoption/history acceptance | Ready except move continuity (waits on B04); packet below |
+| 7 | Lead B04: slide/PDF parity and identity lifecycle | Lifecycle implemented (moves, restore, import, merge); PDF page two in J65 |
+| 8 | Junior J65: end-to-end adoption/history acceptance | Assigned; packet below |
+| 8a | Junior J65b: move continuity browser acceptance | Ready after J65 returns; packet below |
 
 ### J64 — Slide adoption presentation and accessible messages (accepted with lead corrections)
 
@@ -368,7 +377,21 @@ Fresh verification:
 - Seeding publications in the spec now check for success before reading the new revision ID.
 - The run overlapped a lead capture on the same automation owner; both sides' exact-base cleanup refused to overwrite, and the owner ended in its original state. Browser work on the shared owner must not run concurrently.
 
-### J65 — Adoption-to-history browser acceptance (ready)
+### J65b — Move continuity browser acceptance (ready after J65)
+
+**Purpose:** prove in real Chromium on the original test wiki that a page-owned drawing survives a native page move, then put the page back.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-journey-move.spec.js`, this packet and the review ledger. The same wiki rules, cleanup rules and exclusions as J65 apply. The spec may move only `Layers_browser_acceptance`, only to `Layers_browser_acceptance_moved`, and only back again.
+
+1. Read the test account's rights (`meta=userinfo&uiprop=rights`). Skip with a clear message unless it has `move` and `suppressredirect`. Both moves use `noredirect`, so no redirect page is left behind.
+2. Seed one bound slide by exact-base publication, as the existing specs do, and record the PageID.
+3. Move the owner to the new title with the API (`action=move`). At the new title check the drawing's pixels, the page's edit link (open it, change one layer, save, and check the saved revision), the history link to the pre-move revision, and `layersread` with the new title. The old title must not exist.
+4. Move it back the same way and check the PageID is unchanged and the drawing still renders. Restore the owner with the usual exact-base cleanup.
+5. If any step fails after the first move, move the page back before anything else, and never delete a page. If moving back fails, stop and report; do not retry.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+### J65 — Adoption-to-history browser acceptance (assigned)
 
 **Purpose:** walk the ordinary workflows end to end in real Chromium on the original test wiki (http://localhost:8080) and report defects. This is acceptance testing only; the lead fixes what it finds.
 
@@ -384,7 +407,7 @@ Fresh verification:
 
 Run each new spec alone, then all `tests/e2e/page-owned-*.spec.js` serially with `--workers=1`. Record exact counts, durations and every defect with the smallest reproduction, then return for lead review.
 
-### J74 — Confirmed-adoption denial and race coverage (ready)
+### J74 — Confirmed-adoption denial and race coverage (assigned)
 
 **Frozen interface:** PageOwnedPilot::adoptDirectEmbedding(int pageId, int baseRevisionId, int start, string expected, int legacyRevisionId, ?string fileTimestamp, Authority authority, string summary): array. Success is exactly pageId, revisionId, surfaceId, binding. This is internal write composition, not an HTTP endpoint. Never invoke it against real wiki pages.
 
@@ -708,7 +731,7 @@ Fresh verification:
 
 J64 will cover UI presentation for shared, adoption pending, page-owned, conflict and unavailable states, with clear ownership and accessibility. It must not implement publication, identity migration or source delivery.
 
-J65 is released above, without move continuity. A follow-up packet will cover move continuity once B04 keys lifecycle guards to PageID. It must not seed a special-page-only workaround and call the ordinary workflow complete.
+J65 is released above, without move continuity, which is J65b. It must not seed a special-page-only workaround and call the ordinary workflow complete.
 
 ## Original wiki browser acceptance passed; J61 accepted — September 23, 2026
 

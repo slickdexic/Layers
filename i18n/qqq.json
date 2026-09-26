@@ -999,6 +999,7 @@
 	"apihelp-layersread-param-owner": "{{doc-apihelp-param|layersread|owner}}",
 	"apihelp-layersread-param-revid": "{{doc-apihelp-param|layersread|revid}}",
 	"apihelp-layersread-param-binding": "{{doc-apihelp-param|layersread|binding}}",
+	"layers-restore-drawings-denied": "Error shown by [[Special:Undelete]] when restoring would put page-owned drawings onto a different page than the one they belong to, for example because a new page now exists at the title.",
 	"layers-admission-unauthorized": "Error message shown when a revision save attempts to add or mutate the Layers slot without passing through the authorized publication service boundary.",
 	"layers-slot-removal-denied": "Error message shown when a revision save attempts to remove the Layers slot from an existing page.",
 	"layers-content-not-renderable": "Error shown when saving a page-owned drawing that adds or changes layer types the page-history viewer cannot display yet (groups, markers, imported images, shape-library/emoji shapes). The save is refused without changing the page.",

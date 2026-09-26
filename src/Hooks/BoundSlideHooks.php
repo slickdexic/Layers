@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Html\Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
@@ -43,14 +44,14 @@ class BoundSlideHooks {
 		// Save-time and edit-stash renders lack the new revision ID; core must re-render after insertion.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$config = MediaWikiServices::getInstance()->getMainConfig();
-		if ( !$config->get( 'LayersPageOwnedPilotEnabled' ) ||
-			!in_array( $parser->getTitle()->getPrefixedDBkey(), $config->get( 'LayersPageOwnedPilotOwners' ), true ) ||
-			$parser->getRevisionId() === null ) {
+		if ( !$config->get( 'LayersPageOwnedPilotEnabled' ) || $parser->getRevisionId() === null ) {
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		// Native parsing may supply revisionId=0 with an exact revision callback. Never query latest here.
 		$revision = $parser->getRevisionRecordObject();
-		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $binding['pageId'] ) {
+		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $binding['pageId'] ||
+			!self::scope()->includesRevision( $parser->getTitle(), $revision )
+		) {
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		$value = 'v1:' . $binding['pageId'] . ':' . $binding['surfaceId'];
@@ -67,12 +68,21 @@ class BoundSlideHooks {
 	 * @param Parser $parser
 	 */
 	public static function noteSharedSlide( Parser $parser ): void {
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		if ( $config->get( 'LayersPageOwnedPilotEnabled' ) &&
-			in_array( $parser->getTitle()->getPrefixedDBkey(), $config->get( 'LayersPageOwnedPilotOwners' ), true )
+		if ( !MediaWikiServices::getInstance()->getMainConfig()->get( 'LayersPageOwnedPilotEnabled' ) ) {
+			return;
+		}
+		$scope = self::scope();
+		$revision = $parser->getRevisionRecordObject();
+		if ( $revision ? $scope->includesRevision( $parser->getTitle(), $revision ) :
+			$scope->isEnrolled( $parser->getTitle() )
 		) {
 			$parser->getOutput()->setExtensionData( self::ADOPTABLE_KEY, true );
 		}
+	}
+
+	/** @return PageOwnedScope */
+	private static function scope(): PageOwnedScope {
+		return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )->getScope();
 	}
 
 	/**

@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilotImporter;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWikiIntegrationTestCase;
 use RuntimeException;
 use WikiRevision;
@@ -50,10 +51,12 @@ class PageOwnedPilotImporterTest extends MediaWikiIntegrationTestCase {
 		}
 		$name = $noUpdates ? 'WikiRevisionOldRevisionImporterNoUpdates' : 'OldRevisionImporter';
 		$native = $s->getService( $name );
-		$this->setService( $name, new PageOwnedPilotImporter( $native, $keys ) );
+		$this->setService( $name, new PageOwnedPilotImporter( $native, PageOwnedScope::newFromServices( $s, $keys ) ) );
 		$beforeCount = $this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'revision' )
 			->caller( __METHOD__ )->fetchField();
-		if ( $kind === 'ordinary' ) {
+		// An enrolled title that owns no drawings imports like any other page.
+		$imports = in_array( $kind, [ 'ordinary', 'pilot' ], true );
+		if ( $imports ) {
 			$this->assertTrue( $revision->importOldRevision() );
 		} else {
 			try {
@@ -69,7 +72,7 @@ class PageOwnedPilotImporterTest extends MediaWikiIntegrationTestCase {
 		$row = $this->getDb()->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
 			->where( [ 'page_namespace' => $title->getNamespace(), 'page_title' => $title->getDBkey() ] )
 			->caller( __METHOD__ )->fetchField();
-		if ( $kind === 'ordinary' ) {
+		if ( $imports ) {
 			$this->assertGreaterThan( 0, (int)$row );
 			$stored = $s->getRevisionLookup()->getRevisionByTitle( $title );
 			$this->assertSame( 'Ordinary imported text', $stored->getContent( 'main' )->serialize() );

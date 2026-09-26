@@ -15,6 +15,8 @@ use MediaWiki\User\User;
 use RequestContext;
 use Wikimedia\TestingAccessWrapper;
 
+require_once __DIR__ . '/TestingAdmissionRegistration.php';
+
 /**
  * @covers \MediaWiki\Extension\Layers\Revision\PageOwnedPilotMergeFactory
  * @covers \MediaWiki\Extension\Layers\Revision\PageOwnedPilot
@@ -108,6 +110,17 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 		];
 	}
 
+	/**
+	 * Merges are refused only for pages that own drawings.
+	 * @param \WikiPage $page
+	 */
+	private function ownDrawings( \WikiPage $page ): void {
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $page->getTitle(), $actor,
+			$page->getLatest(), '{"schemaVersion":1,"surfaces":[]}', 'Owns drawings' );
+	}
+
 	private function getMergeActor(): User {
 		$user = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $user, [ 'read', 'edit', 'mergehistory' ] );
@@ -121,6 +134,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 		$s = $this->getServiceContainer();
 
 		$key = $source->getTitle()->getPrefixedDBkey();
+		$this->ownDrawings( $source );
 		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
@@ -153,6 +167,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 		$s = $this->getServiceContainer();
 
 		$key = $destination->getTitle()->getPrefixedDBkey();
+		$this->ownDrawings( $destination );
 		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
@@ -221,6 +236,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 		$s = $this->getServiceContainer();
 
 		$key = $source->getTitle()->getPrefixedDBkey();
+		$this->ownDrawings( $source );
 		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
@@ -285,6 +301,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 		$s = $this->getServiceContainer();
 
 		$key = $source->getTitle()->getPrefixedDBkey();
+		$this->ownDrawings( $source );
 		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 

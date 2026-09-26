@@ -1,5 +1,19 @@
 # Current status and limitations
 
+## Page-owned drawings follow their page through moves and restores — September 26, 2026
+
+The pilot's lifecycle guards now follow what a page owns rather than its title (lead B04).
+
+- **One scope rule:** `PageOwnedScope` decides which pages take part. A page takes part if its current revision carries the drawing slot, which only publication can write, or if its title is enrolled in `$wgLayersPageOwnedPilotOwners`. The publish and read APIs, parser bindings, editor, viewer, adoption and every guard use it; the separate title comparisons are gone. With no enrolled titles the pilot is not installed and nothing takes part.
+- **Moves:** allowed, with no Layers guard. The page keeps its PageID, history, drawings and bindings under the new title, and the editor, viewer and adoption work there. The redirect left at the old title is a different page: it cannot show the drawings, and a session opened before the move cannot save onto it. Removing a title from the list now stops only new ownership.
+- **Delete and restore:** deletion is unchanged. Revisions with drawings are restored only onto their own page: no page may exist at the title, and every restored revision with drawings must come from one deleted page whose ID is still free, so MediaWiki restores that same ID. Otherwise Special:Undelete refuses with a clear message (`layers-restore-drawings-denied`) and restores nothing. Restoring anything onto a page that owns drawings is refused the same way, because a restored revision could replace its current drawings. Ordinary restores are unchanged.
+- **Import and merge:** still refused wherever drawings are involved. No revision may import the drawing slot or model, a page that owns drawings takes no imports, and history cannot be merged into or out of a page that owns drawings. An enrolled title that owns nothing imports and merges normally.
+- **Drafts** stay keyed by title and base revision. A base revision belongs to exactly one page and every move creates a new revision, so a draft from before a move is treated like any draft whose base was superseded, and is never offered on another page.
+
+Fresh verification: the rewritten `PageOwnedPilotLifecycleTest` (9 tests) covers a move (binding parse, bound read, editor bootstrap and publication under the new title; the old-title redirect cannot claim the binding; a pre-move session cannot save there), ordinary moves onto and off enrolled titles, exact restore of all or selected revisions with the same PageID, and refusals for a recreated title, for two deleted pages at one title (followed by an exact restore of the right one), and for restoring onto a page that owns drawings. Importer, merge, merge API and installed-registration tests now make the protected side own drawings. Full native configuration **366 tests passed, 1 skipped** (this count includes J74 work in progress); standalone PHPUnit **1,294 tests**; `npm test` passes; PHP style 0 errors. No browser run: the automation owner is in use for J65, and a real move is queued as J65b.
+
+**Not yet:** browser acceptance of a real move (J65b), and a public cache policy for anonymous binding reads. Earlier entries below are historical.
+
 ## Shared file drawings can be adopted into page history — September 26, 2026
 
 On a pilot owner page, a legacy file drawing shown with an explicit set (`[[File:X|layerset=name]]`, optionally `page=N`) can now be made owned by the page, as shared slides already could.

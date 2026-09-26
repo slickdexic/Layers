@@ -7,32 +7,29 @@ namespace MediaWiki\Extension\Layers\Revision;
 use MediaWiki\Page\MergeHistory;
 use MediaWiki\Page\MergeHistoryFactory;
 use MediaWiki\Page\PageIdentity;
-use MediaWiki\Title\TitleFactory;
+use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Native factory decorator; pilot history merges are deliberately unsupported. */
+/** Native factory decorator; merging history into or out of a page that owns drawings is unsupported. */
 class PageOwnedPilotMergeFactory implements MergeHistoryFactory {
 	private MergeHistoryFactory $inner;
-	private TitleFactory $titles;
-	private array $ownerKeys;
+	private PageOwnedScope $scope;
 
 	/**
 	 * @param MergeHistoryFactory $inner
-	 * @param TitleFactory $titles
-	 * @param string[] $ownerKeys Retained exact pilot owner keys
+	 * @param PageOwnedScope $scope
 	 */
-	public function __construct( MergeHistoryFactory $inner, TitleFactory $titles, array $ownerKeys ) {
+	public function __construct( MergeHistoryFactory $inner, PageOwnedScope $scope ) {
 		$this->inner = $inner;
-		$this->titles = $titles;
-		$this->ownerKeys = $ownerKeys;
+		$this->scope = $scope;
 	}
 
 	/** @inheritDoc */
 	public function newMergeHistory( PageIdentity $source, PageIdentity $destination,
 		?string $timestamp = null, ?string $timestampOld = null
 	): MergeHistory {
+		// Moved revisions would carry drawings bound to another PageID.
 		foreach ( [ $source, $destination ] as $page ) {
-			$key = $this->titles->newFromPageIdentity( $page )->getPrefixedDBkey();
-			if ( in_array( $key, $this->ownerKeys, true ) ) {
+			if ( $this->scope->ownsDrawings( $page, IDBAccessObject::READ_LATEST ) ) {
 				throw new PageOwnedMergeDenied();
 			}
 		}

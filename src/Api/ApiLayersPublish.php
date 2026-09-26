@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Logger\LoggerFactory;
@@ -18,7 +19,7 @@ class ApiLayersPublish extends ApiBase {
 	private PagePublicationService $publisher;
 	private TitleFactory $titles;
 	private bool $enabled;
-	private array $ownerKeys;
+	private ?PageOwnedScope $scope;
 
 	private const PUBLIC_ERRORS = [
 		'layers-owner-edit-denied', 'layers-invalid-publication-request',
@@ -34,16 +35,16 @@ class ApiLayersPublish extends ApiBase {
 	 * @param PagePublicationService $publisher
 	 * @param TitleFactory $titles
 	 * @param bool $enabled Explicit experimental gate; defaults to disabled
-	 * @param string[] $ownerKeys Exact prefixed DB keys; empty permits no pilot pages
+	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 */
 	public function __construct( ApiMain $main, string $name, PagePublicationService $publisher,
-		TitleFactory $titles, bool $enabled = false, array $ownerKeys = []
+		TitleFactory $titles, bool $enabled = false, ?PageOwnedScope $scope = null
 	) {
 		parent::__construct( $main, $name );
 		$this->publisher = $publisher;
 		$this->titles = $titles;
 		$this->enabled = $enabled;
-		$this->ownerKeys = $ownerKeys;
+		$this->scope = $scope;
 	}
 
 	public function execute() {
@@ -62,7 +63,7 @@ class ApiLayersPublish extends ApiBase {
 		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ) {
 			$this->dieWithError( 'layers-invalid-publication-request', 'layers-invalid-publication-request' );
 		}
-		if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+		if ( !$this->scope || !$this->scope->includes( $owner ) ) {
 			$this->dieWithError( 'layers-publication-disabled', 'layers-publication-disabled' );
 		}
 		try {

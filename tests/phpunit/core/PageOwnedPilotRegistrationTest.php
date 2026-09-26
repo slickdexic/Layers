@@ -17,6 +17,7 @@ use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Status\Status;
 use MediaWiki\User\User;
 use RuntimeException;
+use Wikimedia\Rdbms\IDBAccessObject;
 use WikiRevision;
 
 /**
@@ -119,12 +120,13 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $retained, $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
 		$this->assertSame( $retained, $s->getMergeHistoryFactory() instanceof PageOwnedPilotMergeFactory );
 		$this->assertSame( $retained, $s->getWikiRevisionOldRevisionImporter() instanceof PageOwnedPilotImporter );
+		// Drawings belong to the PageID, so moves need no guard.
 		$status = Status::newGood();
 		$s->getHookContainer()->run( 'MovePageIsValidMove', [
 			$s->getTitleFactory()->newFromText( 'Layers bootstrap test' ),
 			$s->getTitleFactory()->newFromText( 'Layers other title' ), $status
 		] );
-		$this->assertSame( !$retained, $status->isOK() );
+		$this->assertTrue( $status->isOK() );
 		$this->expectApiErrorCode( 'layers-reading-disabled' );
 		$this->doApiRequest( [ 'action' => 'layersread', 'owner' => 'Layers bootstrap test', 'revid' => 1 ] );
 	}
@@ -333,11 +335,18 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$protectedPage2 = $this->getNonexistingTestPage();
 		$protectedTitle2 = $protectedPage2->getTitle();
 
-		$s = $this->bootstrap( false, [
+		$s = $this->bootstrap( true, [
 			$protectedTitle1->getPrefixedDBkey(),
 			$protectedTitle2->getPrefixedDBkey()
 		] );
 		$actor = $this->getAuthorizedActor();
+		$owned = [];
+		foreach ( [ $protectedTitle1, $protectedTitle2 ] as $index => $protectedTitle ) {
+			$owned[$index] = $this->doApiRequestWithToken( [ 'action' => 'layerspublish',
+				'owner' => $protectedTitle->getPrefixedText(), 'baserevid' => 0,
+				'data' => '{"schemaVersion":1,"surfaces":[]}', 'maintext' => 'Owner'
+			], null, $actor )[0]['layerspublish']['revid'];
+		}
 
 		// Mode 1: OldRevisionImporter ($noUpdates = false)
 		$rev1 = new WikiRevision();
@@ -362,11 +371,8 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->caller( __METHOD__ )->fetchField();
 		$this->assertSame( $beforeCount, $afterCount );
 
-		$pageRow1 = $this->getDb()->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
-			->where( [ 'page_namespace' => $protectedTitle1->getNamespace(),
-				'page_title' => $protectedTitle1->getDBkey() ] )
-			->caller( __METHOD__ )->fetchField();
-		$this->assertFalse( $pageRow1, 'Rejected import must not create a page record' );
+		$this->assertSame( $owned[0], $protectedTitle1->getLatestRevID( IDBAccessObject::READ_LATEST ),
+			'Rejected import must not change the owner' );
 
 		// Ordinary import with $noUpdates = false succeeds.
 		$ordinaryPage1 = $this->getNonexistingTestPage();
@@ -408,11 +414,8 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->caller( __METHOD__ )->fetchField();
 		$this->assertSame( $beforeCount2, $afterCount2 );
 
-		$pageRow2 = $this->getDb()->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
-			->where( [ 'page_namespace' => $protectedTitle2->getNamespace(),
-				'page_title' => $protectedTitle2->getDBkey() ] )
-			->caller( __METHOD__ )->fetchField();
-		$this->assertFalse( $pageRow2, 'Rejected no-updates import must not create a page record' );
+		$this->assertSame( $owned[1], $protectedTitle2->getLatestRevID( IDBAccessObject::READ_LATEST ),
+			'Rejected no-updates import must not change the owner' );
 
 		// Ordinary import with $noUpdates = true succeeds.
 		$ordinaryPage2 = $this->getNonexistingTestPage();
@@ -452,7 +455,12 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->set( [ 'rev_timestamp' => $this->getDb()->timestamp( '20210101000000' ) ] )
 			->where( [ 'rev_page' => $destinationId ] )->caller( __METHOD__ )->execute();
 
-		$this->bootstrap( false, [ $protectDestination ? $destination->getTitle()->getPrefixedDBkey() : $sourceKey ] );
+		$protected = $protectDestination ? $destination : $source;
+		$this->bootstrap( true, [ $protected->getTitle()->getPrefixedDBkey() ] );
+		$this->doApiRequestWithToken( [ 'action' => 'layerspublish',
+			'owner' => $protected->getTitle()->getPrefixedText(), 'baserevid' => $protected->getLatest(),
+			'data' => '{"schemaVersion":1,"surfaces":[]}' ], null, $this->getAuthorizedActor() );
+		$sourceRevId = $source->getTitle()->getLatestRevID( IDBAccessObject::READ_LATEST );
 		$beforePages = iterator_to_array( $this->getDb()->newSelectQueryBuilder()->select( '*' )->from( 'page' )
 			->where( [ 'page_id' => [ $sourceId, $destinationId ] ] )->orderBy( 'page_id' )
 			->caller( __METHOD__ )->fetchResultSet() );
@@ -554,10 +562,13 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$ordinaryTitle = $ordinaryPage->getTitle();
 		$ordinaryRevId = $ordinaryPage->getLatest();
 
-		$s = $this->bootstrap( false, [ $protectedKey ] );
+		$s = $this->bootstrap( true, [ $protectedKey ] );
 		$actor = $this->getAuthorizedActor(
-			[ 'read', 'edit', 'delete', 'undelete', 'createpage', 'createtalk' ]
+			[ 'read', 'edit', 'editlayers', 'delete', 'undelete', 'createpage', 'createtalk' ]
 		);
+		$protectedRevId = $this->doApiRequestWithToken( [ 'action' => 'layerspublish',
+			'owner' => $protectedTitle->getPrefixedText(), 'baserevid' => $protectedPage->getLatest(),
+			'data' => '{"schemaVersion":1,"surfaces":[]}' ], null, $actor )[0]['layerspublish']['revid'];
 
 		// 1. Delete protected page via DeletePageFactory.
 		$delProtected = $s->getWikiPageFactory()->newFromTitle( $protectedTitle );
@@ -571,11 +582,16 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->where( [ 'ar_rev_id' => $protectedRevId ] )->caller( __METHOD__ )->fetchField();
 		$this->assertSame( $protectedRevId, (int)$archived );
 
+		$this->editPage( $protectedTitle, 'A different page at the same title' );
+		$actor = $this->getAuthorizedActor(
+			[ 'read', 'edit', 'editlayers', 'delete', 'undelete', 'createpage', 'createtalk' ]
+		);
 		// Attempt native restoration of protected page via UndeletePageFactory.
 		$restoreProtected = $s->getUndeletePageFactory()->newUndeletePage( $delProtected, $actor );
 		$restoreStatus = $restoreProtected->undeleteIfAllowed( 'Restore protected test' );
 		$this->assertFalse( $restoreStatus->isOK() );
-		$this->assertTrue( $restoreStatus->hasMessage( 'layers-admission-unauthorized' ) );
+		$this->assertTrue( $restoreStatus->hasMessage( 'layers-restore-drawings-denied' ),
+			json_encode( $restoreStatus->getErrors() ) );
 
 		// Archived data stays in archive table; no live revision appears.
 		$archivedAfter = $this->getDb()->newSelectQueryBuilder()->select( 'ar_rev_id' )->from( 'archive' )

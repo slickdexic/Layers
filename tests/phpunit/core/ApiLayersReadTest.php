@@ -9,6 +9,7 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 
@@ -37,7 +38,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$reader = $this->reader ?? new PageReadService( new PageHistoryAccess( $s->getRevisionLookup() ),
 					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ) );
 				return new ApiLayersRead( $main, $name, $reader, $s->getTitleFactory(),
-					$this->enabled, $this->ownerKeys, $this->boundReader );
+					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader );
 			} ]
 		] ) );
 	}

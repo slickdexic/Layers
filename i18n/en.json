@@ -1006,6 +1006,7 @@
 	"apihelp-layersread-param-revid": "Exact revision ID to read; the latest revision is never substituted.",
 	"apihelp-layersread-param-binding": "Return only these drawings, identified by their layersbinding values. Drawings that are unavailable to you are omitted.",
 	"layers-admission-unauthorized": "Direct or unauthorized changes to the Layers revision slot are not permitted.",
+	"layers-restore-drawings-denied": "These revisions include drawings owned by the deleted page, so they can only be restored onto that page. Restore them while no other page exists at this title, and do not combine them with revisions of a different deleted page.",
 	"layers-slot-removal-denied": "Removing the Layers revision slot is not supported.",
 	"layers-content-not-renderable": "Drawings saved to page history cannot yet contain groups, markers, imported images or library shapes. Remove them and save again.",
 	"layers-edit-filtered": "This change was blocked by the wiki's edit filters.",

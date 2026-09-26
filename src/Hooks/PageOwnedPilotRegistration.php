@@ -79,10 +79,6 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 		$hooks->register( 'PageUndelete', static function ( ...$args ) use ( $services ) {
 			return $services->getService( 'LayersPageOwnedPilot' )->newLifecycleHooks()->onPageUndelete( ...$args );
 		} );
-		$hooks->register( 'MovePageIsValidMove', static function ( ...$args ) use ( $services ) {
-			return $services->getService( 'LayersPageOwnedPilot' )->newLifecycleHooks()
-				->onMovePageIsValidMove( ...$args );
-		} );
 	}
 
 	/**

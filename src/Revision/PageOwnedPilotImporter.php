@@ -8,24 +8,26 @@ use ImportableOldRevision;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use OldRevisionImporter;
 use RuntimeException;
+use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Unregistered native importer decorator. Pilot import is unsupported, not silently skipped. */
+/** Native importer decorator. Drawings are never imported, and pages that own drawings take no imports. */
 class PageOwnedPilotImporter implements OldRevisionImporter {
 	private OldRevisionImporter $inner;
-	private array $ownerKeys;
+	private PageOwnedScope $scope;
 
 	/**
 	 * @param OldRevisionImporter $inner Original native service
-	 * @param string[] $ownerKeys Exact pilot owner prefixed DB keys
+	 * @param PageOwnedScope $scope
 	 */
-	public function __construct( OldRevisionImporter $inner, array $ownerKeys ) {
+	public function __construct( OldRevisionImporter $inner, PageOwnedScope $scope ) {
 		$this->inner = $inner;
-		$this->ownerKeys = $ownerKeys;
+		$this->scope = $scope;
 	}
 
 	/** @inheritDoc */
 	public function import( ImportableOldRevision $importableRevision ) {
-		if ( in_array( $importableRevision->getTitle()->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+		// An imported revision can become current and drop the drawing slot without save admission.
+		if ( $this->scope->ownsDrawings( $importableRevision->getTitle(), IDBAccessObject::READ_LATEST ) ) {
 			throw new RuntimeException( 'layers-admission-unauthorized' );
 		}
 		foreach ( $importableRevision->getSlotRoles() as $role ) {
