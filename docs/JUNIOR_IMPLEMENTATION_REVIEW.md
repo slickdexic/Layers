@@ -1,4 +1,35 @@
-# Junior implementation review — J01–J72
+# Junior implementation review — J01–J73
+
+## J73 accepted with lead corrections — September 26, 2026
+
+Lead strengthened the browser acceptance rather than relying on its reported counts. It now proves the selected layer moved, the published layers equal the edited state, the full main text is unchanged, and native revision order is exactly the new save followed by the seeded base. Save completion is awaited before leaving the editor. The uncertain-publication flag remains set until a valid success/revision is confirmed and captured for cleanup. Seed/restoration POSTs include expected PageID; existing exact-base CAS and intervening-edit protection remain. Added explicit HTTP 200/no-redirect and unloaded editor-module checks on denial. The live response has Cache-Control: no-store but no Pragma header; corrected the earlier report rather than requiring a redundant header.
+
+Fresh corrected verification on the original localhost:8080 wiki: **2 Chromium tests passed (1.1 minutes)**, including existing inline/historical behavior and the new exact-source route save/rejection workflow. Changed-file ESLint and diff whitespace checks passed. Cleanup restored only the dedicated automation owner's prior main text/snapshot through another native revision, preserving all history. No production, manifest, configuration or manual test-page changes.
+
+**Next work is lead-owned; no new junior packet is queued.** Connect a visible ordinary-page editing control to the validated route with correct current/historical and permission behavior, then finish explicit shared-to-page adoption. Do not infer a source occurrence from rendered DOM order or supply links that guess template provenance. J64/J65 remain blocked until working callbacks are supplied. Image/PDF pinned delivery and ordinary-image acceptance remain unfinished; search and Cargo follow history. Docker remains only the test environment. Earlier entries below are historical.
+
+## J73 implemented awaiting lead review: bound-editor route browser acceptance — September 25, 2026
+
+Junior implemented real-browser acceptance for the exact-source bound-editor route on `Special:EditLayersPage` in `tests/e2e/page-owned-binding.spec.js` using Playwright on Chromium against the original working-copy test wiki on port 8080:
+- Extended the bound-slide setup with a multibyte Unicode prefix (`Unicode 測試 — café — 世界\n`) and verified `Buffer.byteLength(prefix, 'utf8')` differs from JavaScript string length (`prefix.length`).
+- Navigated to `Special:EditLayersPage` using the exclusive tuple parameters (`pageid`, `revid`, `start`, `expected`); verified HTTP 200 without redirect, `Cache-Control: no-store` response header (lead verified the live response does not include Pragma), `wgLayersEditorInit.pageOwned` configuration matching native PageID, opened revision, and surface ID, and verified the drawing canvas loads completely.
+- Performed an ordinary UI drawing interaction and clicked save once:
+  - Intercepted the single `action=layerspublish` HTTP POST and asserted `pageid` matches the native PageID and `baserevid` matches the opened revision.
+  - Verified exactly one native revision was created, main wikitext binding was preserved, and the prior snapshot remained unchanged in history.
+  - Immediately updated `lastOwnedRevision` upon receiving the response to guarantee atomic CAS cleanup.
+- Tested rejection of the route under three distinct invalid conditions:
+  - Stale revision (`revid` set to the pre-save parent revision).
+  - Wrong byte offset (`start: 0` instead of the multibyte byte offset).
+  - Altered expected string (`expected` parameter modified).
+- Confirmed all three rejection cases return HTTP 200 with `Cache-Control: no-store`, render the localized unavailable message (`layers-editor-unavailable` in `#mw-content-text`), supply no editor configuration (`wgLayersEditorInit` undefined), load no editor scripts or canvas container, and dispatch zero publication requests.
+- Preserved existing inline display acceptance test; CAS cleanup preserves native revision history and rejects uncertain states without modifying intervening edits.
+
+Verification:
+- Focused browser suite (`npx playwright test tests/e2e/page-owned-binding.spec.js`): **2 passed (1.1m)** across Chromium on `http://localhost:8080/index.php`.
+- Repeatability run: **2 passed (1.1m)** across Chromium.
+- ESLint: `npx eslint tests/e2e/page-owned-binding.spec.js`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/e2e/page-owned-binding.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ## J72 accepted; exact-source editor route connected — September 25, 2026
 

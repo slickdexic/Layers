@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## J73 accepted with lead corrections — September 26, 2026
+
+Lead strengthened the browser acceptance rather than relying on its reported counts. It now proves the selected layer moved, the published layers equal the edited state, the full main text is unchanged, and native revision order is exactly the new save followed by the seeded base. Save completion is awaited before leaving the editor. The uncertain-publication flag remains set until a valid success/revision is confirmed and captured for cleanup. Seed/restoration POSTs include expected PageID; existing exact-base CAS and intervening-edit protection remain. Added explicit HTTP 200/no-redirect and unloaded editor-module checks on denial. The live response has Cache-Control: no-store but no Pragma header; corrected the earlier report rather than requiring a redundant header.
+
+Fresh corrected verification on the original localhost:8080 wiki: **2 Chromium tests passed (1.1 minutes)**, including existing inline/historical behavior and the new exact-source route save/rejection workflow. Changed-file ESLint and diff whitespace checks passed. Cleanup restored only the dedicated automation owner's prior main text/snapshot through another native revision, preserving all history. No production, manifest, configuration or manual test-page changes.
+
+**Next work is lead-owned; no new junior packet is queued.** Connect a visible ordinary-page editing control to the validated route with correct current/historical and permission behavior, then finish explicit shared-to-page adoption. Do not infer a source occurrence from rendered DOM order or supply links that guess template provenance. J64/J65 remain blocked until working callbacks are supplied. Image/PDF pinned delivery and ordinary-image acceptance remain unfinished; search and Cargo follow history. Docker remains only the test environment. Earlier entries below are historical.
+
 ## J72 accepted; exact-source editor route connected — September 25, 2026
 
 Reviewed J72's native rejection coverage and added PageID/revision upper-bound cases. Lead connected the existing Special:EditLayersPage route to prepareBoundEditor using the complete tuple pageid, revid, start, expected. Numeric parameters require canonical bounded decimal strings; start may be zero. Bound requests cannot use revid=current, mix owner/surface selectors, or fall back to the older route when malformed. The service still verifies exact authorized current source, saved binding, pilot scope and selected slide surface. Existing no-store/noindex and safe error handling remain in place; no manifest or configuration changes.

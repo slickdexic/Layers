@@ -373,3 +373,347 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		await restore();
 	}
 } );
+
+test( 'exact-source bound-editor route admits valid embedding, saves once, and rejects stale or forged parameters', async ( { page, context } ) => {
+	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
+		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const url = new URL( config.base );
+	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
+	expect( url.protocol ).toBe( 'http:' );
+	expect( url.port ).toBe( '8080' );
+	expect( url.search + url.hash + url.username + url.password ).toBe( '' );
+	const base = url.origin;
+
+	if ( ( url.pathname && url.pathname !== '/' && url.pathname !== '/index.php' ) ||
+		config.base.includes( '/tmp/' ) || config.base.includes( 'browser-' )
+	) {
+		throw new Error( 'Acceptance configuration must target the original wiki root' );
+	}
+
+	const owner = 'Layers_browser_acceptance';
+	const api = async ( data, post = false ) => {
+		const params = { ...data, format: 'json', formatversion: '2' };
+		const response = post ?
+			await context.request.post( base + '/api.php', { form: params } ) :
+			await context.request.get( base + '/api.php', { params } );
+		return response.json();
+	};
+
+	// 1. Authenticate as the QA actor
+	const loginToken = ( await api( { action: 'query', meta: 'tokens', type: 'login' } ) ).query.tokens.logintoken;
+	const login = await api( {
+		action: 'login',
+		lgname: config.username,
+		lgpassword: config.password,
+		lgtoken: loginToken
+	}, true );
+	expect( login.login.result ).toBe( 'Success' );
+
+	const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+
+	// Read and retain the automated owner's current state
+	const initialPageQuery = await api( {
+		action: 'query',
+		prop: 'info|revisions',
+		titles: owner,
+		rvprop: 'ids|content',
+		rvslots: 'main'
+	} );
+	const pageData = initialPageQuery.query.pages[ 0 ];
+	expect( pageData.missing ).toBeUndefined();
+	const pageId = pageData.pageid;
+	expect( typeof pageId ).toBe( 'number' );
+	expect( pageId ).toBeGreaterThan( 0 );
+
+	const initialRevId = pageData.revisions[ 0 ].revid;
+	const initialMainText = pageData.revisions[ 0 ].slots.main.content;
+
+	const initialLayers = await api( { action: 'layersread', owner, revid: String( initialRevId ) } );
+	const initialSnapshot = initialLayers.layersread.snapshot;
+
+	let needsRestore = false;
+	let lastOwnedRevision = null;
+	let publicationPending = false;
+	try {
+		// 1. Extend the bound-slide setup with a Unicode prefix and compute UTF-8 byte offset
+		needsRestore = true;
+		const surfaceId = 'slide_bound_j73';
+		const binding = `v1:${ pageId }:${ surfaceId }`;
+		const unicodePrefix = 'Unicode 測試 — café — 世界\n';
+		const embedText = `{{#Slide:WelcomePresentation|layersbinding=${ binding }|width=400}}`;
+		const seedMainText = `${ initialMainText }\n\n== Bound Section ==\n${ unicodePrefix }${ embedText }`;
+
+		const seededSnapshot = {
+			schemaVersion: 1,
+			surfaces: [
+				{
+					id: surfaceId,
+					kind: 'slide',
+					label: 'Bound Slide J73',
+					canvas: {
+						width: 800,
+						height: 600,
+						backgroundColor: '#ffffff',
+						backgroundVisible: true,
+						backgroundOpacity: 1
+					},
+					layers: [
+						{
+							id: 'rect1',
+							type: 'rectangle',
+							x: 50,
+							y: 50,
+							width: 200,
+							height: 100,
+							fill: '#ff0000',
+							stroke: 'none'
+						},
+						{
+							id: 'label1',
+							type: 'text',
+							x: 60,
+							y: 80,
+							text: 'Bound Slide J73 Text',
+							fontSize: 20,
+							color: '#000000'
+						}
+					],
+					readingOrder: [ 'rect1', 'label1' ]
+				}
+			]
+		};
+
+		publicationPending = true;
+		const seedPub = await api( {
+			action: 'layerspublish',
+			owner,
+			pageid: String( pageId ),
+			baserevid: String( initialRevId ),
+			data: JSON.stringify( seededSnapshot ),
+			maintext: seedMainText,
+			summary: 'J73: seed bound slide embed with Unicode prefix',
+			token: csrfToken
+		}, true );
+		expect( seedPub.layerspublish ).toBeDefined();
+		expect( seedPub.layerspublish.result ).toBe( 'Success' );
+		const seedRevId = seedPub.layerspublish.revid;
+		lastOwnedRevision = seedRevId;
+		publicationPending = false;
+		expect( seedRevId ).toBeGreaterThan( initialRevId );
+
+		// Compute the exact UTF-8 byte offset, asserting it differs from JavaScript character count
+		const prefixBeforeEmbed = seedMainText.slice( 0, seedMainText.indexOf( embedText ) );
+		const byteOffset = Buffer.byteLength( prefixBeforeEmbed, 'utf8' );
+		const charOffset = prefixBeforeEmbed.length;
+		expect( byteOffset ).toBeGreaterThan( charOffset );
+
+		// Navigate to the tuple route Special:EditLayersPage?pageid=...&revid=...&start=...&expected=...
+		const editorUrl = `${ base }/index.php?` + new URLSearchParams( {
+			title: 'Special:EditLayersPage',
+			pageid: String( pageId ),
+			revid: String( seedRevId ),
+			start: String( byteOffset ),
+			expected: embedText
+		} );
+
+		const editorResponse = await page.goto( editorUrl );
+		expect( editorResponse.status() ).toBe( 200 );
+		expect( editorResponse.request().redirectedFrom() ).toBeNull();
+
+		// Assert real HTTP response Cache-Control includes no-store
+		const cacheControl = editorResponse.headers()[ 'cache-control' ] || '';
+		expect( cacheControl.toLowerCase() ).toContain( 'no-store' );
+
+		// Verify bootstrap PageID/revision/surface match
+		const bootstrap = await page.evaluate( () => {
+			const init = window.wgLayersEditorInit ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+			return init;
+		} );
+		expect( bootstrap ).toBeDefined();
+		expect( bootstrap.pageOwned.pageId ).toBe( pageId );
+		expect( bootstrap.pageOwned.revisionId ).toBe( seedRevId );
+		expect( bootstrap.pageOwned.surfaceId ).toBe( surfaceId );
+
+		// Verify canvas loads
+		await expect( page.locator( '.layers-canvas' ) ).toBeVisible();
+		await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
+
+		// 2. Make one ordinary UI drawing edit and save once
+		const beforeEdit = await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
+		await page.locator( '.layer-item:not(.background-layer-item) .layer-grab-area' ).first().click();
+		await page.keyboard.press( 'ArrowRight' );
+		const editedLayers = await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
+		expect( editedLayers[ 0 ].x ).toBe( beforeEdit[ 0 ].x + 1 );
+
+		let saveRequests = 0;
+		page.on( 'request', ( request ) => {
+			if ( ( request.postData() || '' ).includes( 'action=layerspublish' ) ) {
+				saveRequests++;
+			}
+		} );
+
+		let capturedPostData = null;
+		const responsePromise = page.waitForResponse( ( response ) => {
+			if ( response.url().includes( 'api.php' ) &&
+				( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+				capturedPostData = response.request().postData();
+				return true;
+			}
+			return false;
+		} );
+
+		publicationPending = true;
+		await page.locator( '.save-button' ).click();
+		const savedResponse = await responsePromise;
+		const saved = await savedResponse.json();
+		expect( saveRequests ).toBe( 1 );
+
+		// Inspect pageid and baserevid on actual editor POST
+		const postParams = new URLSearchParams( capturedPostData );
+		expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
+		expect( postParams.get( 'baserevid' ) ).toBe( String( seedRevId ) );
+		expect( saved.error ).toBeUndefined();
+
+		expect( saved.layerspublish?.result ).toBe( 'Success' );
+		const newRevision = saved.layerspublish.revid;
+		expect( Number.isInteger( newRevision ) ).toBe( true );
+		expect( newRevision ).toBeGreaterThan( seedRevId );
+		// Update last-confirmed-revision cleanup tracker immediately
+		lastOwnedRevision = newRevision;
+		publicationPending = false;
+		await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );
+		const published = await api( { action: 'layersread', owner, revid: String( newRevision ) } );
+		expect( published.layersread.snapshot.surfaces[ 0 ].layers ).toEqual( editedLayers );
+		const history = await api( { action: 'query', prop: 'revisions', titles: owner,
+			rvprop: 'ids', rvlimit: '2' } );
+		expect( history.query.pages[ 0 ].pageid ).toBe( pageId );
+		expect( history.query.pages[ 0 ].revisions.map( ( revision ) => revision.revid ) )
+			.toEqual( [ newRevision, seedRevId ] );
+
+		// Assert preserved main binding in the newly saved revision
+		const newRevPage = await api( {
+			action: 'query',
+			prop: 'revisions',
+			revids: String( newRevision ),
+			rvprop: 'content',
+			rvslots: 'main'
+		} );
+		const savedMainText = newRevPage.query.pages[ 0 ].revisions[ 0 ].slots.main.content;
+		expect( savedMainText ).toBe( seedMainText );
+
+		// Assert unchanged old snapshot
+		const oldSnapshotCheck = await api( {
+			action: 'layersread',
+			owner,
+			revid: String( seedRevId )
+		} );
+		expect( oldSnapshotCheck.layersread.snapshot ).toEqual( seededSnapshot );
+
+		// 3. Navigate the same route at the old revision, at a wrong offset, and with an altered expected string
+		const denialCases = [
+			{
+				name: 'old-stale-revision',
+				params: {
+					title: 'Special:EditLayersPage',
+					pageid: String( pageId ),
+					revid: String( seedRevId ),
+					start: String( byteOffset ),
+					expected: embedText
+				}
+			},
+			{
+				name: 'wrong-byte-offset',
+				params: {
+					title: 'Special:EditLayersPage',
+					pageid: String( pageId ),
+					revid: String( newRevision ),
+					start: String( byteOffset + 8 ),
+					expected: embedText
+				}
+			},
+			{
+				name: 'altered-expected-string',
+				params: {
+					title: 'Special:EditLayersPage',
+					pageid: String( pageId ),
+					revid: String( newRevision ),
+					start: String( byteOffset ),
+					expected: embedText.replace( 'WelcomePresentation', 'ForgedPresentation' )
+				}
+			}
+		];
+
+		for ( const denialCase of denialCases ) {
+			const denialUrl = `${ base }/index.php?` + new URLSearchParams( denialCase.params );
+			const denialResponse = await page.goto( denialUrl );
+			expect( denialResponse.status() ).toBe( 200 );
+			expect( denialResponse.request().redirectedFrom() ).toBeNull();
+
+			const denialCache = denialResponse.headers()[ 'cache-control' ] || '';
+			expect( denialCache.toLowerCase() ).toContain( 'no-store' );
+
+			await expect( page.locator( '#mw-content-text' ) ).toContainText( 'The page-owned Layers editor is unavailable' );
+
+			const denialBootstrap = await page.evaluate( () => window.wgLayersEditorInit ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) ) );
+			expect( denialBootstrap ).toBeFalsy();
+			expect( [ 'loading', 'loaded', 'executing', 'ready' ] ).not.toContain(
+				await page.evaluate( () => mw.loader.getState( 'ext.layers.editor' ) ) );
+
+			await expect( page.locator( '#layers-editor-container' ) ).toHaveCount( 0 );
+			await expect( page.locator( '.layers-canvas' ) ).toHaveCount( 0 );
+			await expect( page.locator( '.layers-page-revision-check-button' ) ).toHaveCount( 0 );
+			await expect( page.locator( '.save-button' ) ).toHaveCount( 0 );
+		}
+
+		// Ensure no publication requests occurred during denial navigations
+		expect( saveRequests ).toBe( 1 );
+	} finally {
+		const restore = async () => {
+			if ( needsRestore ) {
+				if ( publicationPending || !Number.isInteger( lastOwnedRevision ) ) {
+					throw new Error( 'J73 cleanup requires review: publication outcome is uncertain; no restore attempted' );
+				}
+				const latestQuery = await api( {
+					action: 'query',
+					prop: 'info|revisions',
+					titles: owner,
+					rvprop: 'ids'
+				} );
+				const latest = latestQuery.query.pages[ 0 ];
+				if ( latest.pageid !== pageId || latest.revisions[ 0 ].revid !== lastOwnedRevision ) {
+					throw new Error( 'J73 cleanup requires review: another edit intervened; no restore attempted' );
+				}
+				const restoreRes = await api( {
+					action: 'layerspublish',
+					owner,
+					pageid: String( pageId ),
+					baserevid: String( lastOwnedRevision ),
+					data: JSON.stringify( initialSnapshot ),
+					maintext: initialMainText,
+					summary: 'J73 cleanup: restore automated owner state',
+					token: csrfToken
+				}, true );
+				if ( !restoreRes.layerspublish || restoreRes.layerspublish.result !== 'Success' ) {
+					throw new Error( 'J73 cleanup failed; no retry or forced overwrite attempted' );
+				}
+				const restoredRevision = restoreRes.layerspublish.revid;
+				const verifyRead = await api( { action: 'layersread', owner, revid: String( restoredRevision ) } );
+				expect( verifyRead.layersread.snapshot ).toEqual( initialSnapshot );
+				const verifyPage = await api( {
+					action: 'query',
+					prop: 'revisions',
+					revids: String( restoredRevision ),
+					rvprop: 'content',
+					rvslots: 'main'
+				} );
+				expect( verifyPage.query.pages[ 0 ].revisions[ 0 ].slots.main.content ).toBe( initialMainText );
+			}
+		};
+		await restore();
+	}
+} );

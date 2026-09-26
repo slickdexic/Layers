@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J73 accepted with lead corrections — September 26, 2026
+
+Lead strengthened the browser acceptance rather than relying on its reported counts. It now proves the selected layer moved, the published layers equal the edited state, the full main text is unchanged, and native revision order is exactly the new save followed by the seeded base. Save completion is awaited before leaving the editor. The uncertain-publication flag remains set until a valid success/revision is confirmed and captured for cleanup. Seed/restoration POSTs include expected PageID; existing exact-base CAS and intervening-edit protection remain. Added explicit HTTP 200/no-redirect and unloaded editor-module checks on denial. The live response has Cache-Control: no-store but no Pragma header; corrected the earlier report rather than requiring a redundant header.
+
+Fresh corrected verification on the original localhost:8080 wiki: **2 Chromium tests passed (1.1 minutes)**, including existing inline/historical behavior and the new exact-source route save/rejection workflow. Changed-file ESLint and diff whitespace checks passed. Cleanup restored only the dedicated automation owner's prior main text/snapshot through another native revision, preserving all history. No production, manifest, configuration or manual test-page changes.
+
+**Next work is lead-owned; no new junior packet is queued.** Connect a visible ordinary-page editing control to the validated route with correct current/historical and permission behavior, then finish explicit shared-to-page adoption. Do not infer a source occurrence from rendered DOM order or supply links that guess template provenance. J64/J65 remain blocked until working callbacks are supplied. Image/PDF pinned delivery and ordinary-image acceptance remain unfinished; search and Cargo follow history. Docker remains only the test environment. Earlier entries below are historical.
+
 ## J72 accepted; exact-source editor route connected — September 25, 2026
 
 Reviewed J72's native rejection coverage and added PageID/revision upper-bound cases. Lead connected the existing Special:EditLayersPage route to prepareBoundEditor using the complete tuple pageid, revid, start, expected. Numeric parameters require canonical bounded decimal strings; start may be zero. Bound requests cannot use revid=current, mix owner/surface selectors, or fall back to the older route when malformed. The service still verifies exact authorized current source, saved binding, pilot scope and selected slide surface. Existing no-store/noindex and safe error handling remain in place; no manifest or configuration changes.
@@ -235,13 +243,13 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4d | Junior J70: editor PageID browser acceptance | Accepted with lead corrections |
 | 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections |
 | 4f | Junior J72: exact-source bound-editor rejection tests | Accepted with lead additions |
-| 4g | Junior J73: bound-editor route browser acceptance | Ready; packet below |
+| 4g | Junior J73: bound-editor route browser acceptance | Accepted with lead corrections; next work lead-owned |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J73 — Exact-source bound-editor route browser acceptance (ready)
+### J73 — Exact-source bound-editor route browser acceptance (accepted with lead corrections)
 
 **Frozen route:** Special:EditLayersPage accepts pageid, revid, start, expected as an exclusive bound-entry tuple. start is a UTF-8 byte offset (zero allowed), expected is complete literal embedding text, pageid/revid are positive native IDs. No owner/surface parameters or revid=current. The route is read-only admission; later editor Save publishes through the existing native API.
 
@@ -251,6 +259,29 @@ This queue supersedes all older assignment tables below. Full architectural deci
 2. Make one ordinary UI drawing edit and save once. Inspect pageid and baserevid on the actual editor POST; assert exactly one new native revision, preserved main binding, and unchanged old snapshot. Update the test's last-confirmed-revision cleanup tracker immediately when publication is confirmed. Hold cleanup on uncertain outcome; do not overwrite intervening edits.
 3. Navigate the same route at the old revision and at a wrong offset/altered expected string. Require fixed unavailable output, no editor configuration/module/container and no publication. Check real HTTP no-store policy on success and denial. Preserve existing inline/historical tests.
 4. Run the focused spec on the original wiki and changed-file lint/docs checks. Record results; do not claim an ordinary-page edit button exists or broaden to image/PDF. If cleanup or fixture ownership cannot be maintained safely, return the exact blocker for lead work.
+
+Fresh verification:
+- Extended `tests/e2e/page-owned-binding.spec.js` on Chromium against the original wiki at `http://localhost:8080/index.php`, preserving the existing inline display test:
+  1. *Bound-entry tuple admission with Unicode prefix*:
+     - Seeded slide snapshot and wikitext embedding preceded by a multibyte UTF-8 prefix (`Unicode 測試 — café — 世界\n`).
+     - Computed the selected embed's UTF-8 byte offset using `Buffer.byteLength(prefix, 'utf8')` and verified it strictly exceeds the JavaScript UTF-16 character length (`byteOffset > charOffset`).
+     - Navigated to `Special:EditLayersPage?pageid=...&revid=...&start=...&expected=...`. Verified `Cache-Control: no-store`, bootstrap configuration matches server PageID, revision ID, and surface ID (`slide_bound_j73`), and `.layers-canvas` loads.
+  2. *UI drawing edit and atomic save*:
+     - Selected a non-background layer in the editor UI, applied a keyboard translation edit, and triggered save.
+     - Intercepted the actual `action=layerspublish` HTTP POST: verified `saveRequests === 1`, with `pageid` matching native PageID and `baserevid` matching the explicit opened revision.
+     - Verified new native revision was produced, main wikitext retained the exact slide binding, and the earlier revision's snapshot remained unchanged.
+     - Immediately updated the test cleanup tracker (`lastOwnedRevision`) to the confirmed new revision.
+  3. *Denial routes and HTTP no-store verification*:
+     - Navigated the tuple route with the now-stale revision ID, with a wrong byte offset (`byteOffset + 8`), and with an altered expected string.
+     - Verified all three cases return HTTP 200 with `Cache-Control: no-store`, render the localized unavailable message (`The page-owned Layers editor is unavailable...`), supply no `wgLayersEditorInit` configuration, render no `#layers-editor-container`, `.layers-canvas`, or save buttons, and dispatch zero publication requests.
+  4. *CAS history preservation and cleanup*:
+     - Exact CAS cleanup restored the dedicated automation owner's original wikitext and snapshot without deleting revision history or overwriting intervening edits.
+- Browser test results:
+  - Focused suite (`npx playwright test tests/e2e/page-owned-binding.spec.js`): **2 tests passed (1.1m)** across Chromium on the original loopback wiki (repeatability run: **2 passed in 1.1m**).
+- Code style:
+  - `npx eslint tests/e2e/page-owned-binding.spec.js`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/e2e/page-owned-binding.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ### J72 — Exact-source bound-editor rejection coverage (implemented awaiting lead review)
 
