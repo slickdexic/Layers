@@ -1,5 +1,24 @@
 # Layers implementation handoff plan
 
+## J76 ready: every layer type through the page-owned editor — September 26, 2026
+
+Page history now draws image, Shape Library/emoji, marker and folder layers, and the page-owned editor offers their tools again (see the [current status](CURRENT_STATUS.md)). Native and unit tests cover saving and painting, but no browser run has yet created these layers through the editor UI in page-owned mode. Earlier entries below are historical.
+
+### J76 — Every layer type through the page-owned editor (ready)
+
+**Purpose:** prove in real Chromium on the original test wiki that a page-owned drawing made with every tool saves, shows on the page, in history, in a diff and in the viewer, and can be restored. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-journey-layer-types.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes.
+
+1. Seed the owner with one bound slide by exact-base publication, as the existing specs do, and open its edit link.
+2. Through the toolbar only (no `stateManager` writes): place a marker; insert one Shape Library shape and one emoji; import a small PNG with the image import button (use a fixture under `tests/fixtures/assets/`); put two of the new layers in a folder; set one layer's blend mode to multiply in the properties panel. Save once. The response must be `layerspublish` success, one new tagged revision.
+3. On the page, in the viewer for that revision and on the diff against the previous revision, sample pixels inside each new layer and inside the multiplied area, and check none shows the "could not be displayed" status.
+4. Hide the folder in the editor and save: its members must disappear from the page and from the viewer for the new revision, and still show for the previous one.
+5. Open the first revision's viewer and use **Restore this version**: the page shows the restored drawing and history gains exactly one tagged revision.
+6. Restore the owner with the usual exact-base cleanup.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
 ## Namespace enrollment — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: enrollment (titles or namespaces) only decides where ownership may start, and only `PageOwnedScope` interprets it. Guards stay keyed to owned drawings; never make one depend on enrollment. No queue change. Earlier entries below are historical.
