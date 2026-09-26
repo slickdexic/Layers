@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Searchable page-owned drawing text (pilot, September 26): core database search indexes a page's text together with the labels and visible text, text box and callout layers of its page-owned drawings, and reindexes on drawing-only saves. New `maintenance/reindexPageDrawings.php` indexes existing pages. CirrusSearch and legacy file sets are not covered yet.
+
 - Drawing changes on diff pages (pilot, September 26): diffs of pages that own drawings show each added, removed or changed drawing at both revisions, fetched per reader like page drawings. Page-history rows now link image and PDF drawings to the viewer, not only slides.
 
 - Restore an earlier drawing version (pilot, September 26): `Special:ViewLayersPage` offers editors "Restore this version" for an earlier version of a page-owned drawing. It publishes one tagged revision replacing only that drawing, and refuses stale or repeated submissions.

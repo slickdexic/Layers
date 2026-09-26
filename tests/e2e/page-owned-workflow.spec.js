@@ -283,7 +283,7 @@ test( 'native editor save preserves the old revision and opens it from page hist
 		before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x + 1 );
 	const viewer = await context.newPage();
 	await viewer.goto( config.base + '/index.php?' + new URLSearchParams( { title: owner, action: 'history' } ) );
-	await viewer.locator( '.layers-history-view-link[href*="revid=' + revision + '"]' ).click();
+	await viewer.locator( '.layers-history-view-link[href*="revid=' + revision + '&"][href*="surface=presentation"]' ).click();
 	await expect( viewer.locator( '.ext-layers-historical-canvas' ) ).toBeVisible();
 	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).surface ) ).toEqual(
 		before.layersread.snapshot.surfaces[ 0 ] );
@@ -476,7 +476,7 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	// Verify the historical viewer uses that explicit revision (hiddenRevision) after later publication
 	const viewer = await context.newPage();
 	await viewer.goto( config.base + '/index.php?' + new URLSearchParams( { title: owner, action: 'history' } ) );
-	await viewer.locator( '.layers-history-view-link[href*="revid=' + hiddenRevision + '"]' ).click();
+	await viewer.locator( '.layers-history-view-link[href*="revid=' + hiddenRevision + '&"][href*="surface=presentation"]' ).click();
 	await expect( viewer.locator( '.ext-layers-historical-canvas' ) ).toBeVisible();
 	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).revisionId ) ).toBe( hiddenRevision );
 	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).surface.canvas.backgroundVisible ) ).toBe( false );

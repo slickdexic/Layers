@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## Note for J65: rerun the page-owned suite — September 26, 2026
+
+The J65 run between 22:01 and 22:10 UTC overlapped lead native test runs in the same container and a lead change that links image and PDF drawings from page history. That change made two history-link locators in `page-owned-workflow.spec.js` match several links; they now name the surface (`surface=presentation`) and end the revision ID with `&`. Read-only checks afterwards rendered the adopted and bound drawings of revisions 1025 and 1026 correctly, so the other failures look transient. Rerun the whole page-owned suite before reporting them. The lead now skips native suites while the automation owner has been edited in the last ten minutes.
+
+## Searchable drawing text — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. The next priority after page history (searchable textbox/callout text) is implemented for core database search. Contract: `PageOwnedSearchIngress` must stay registered after core's search ingress (extension ingresses are), and search tests must set `SearchType` to null because the test environment uses a dummy engine. Remaining: CirrusSearch (`SearchDataForIndex2`), then Cargo text projection. No queue change. Earlier entries below are historical.
+
 ## Drawing comparison on diff pages — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: comparison hosts are `.layers-drawing-diff-view` elements with `data-layers-binding` and `data-layers-revision`, emitted per request by `PageOwnedDiffHooks`, never from parser output. No queue change. Earlier entries below are historical.
@@ -404,7 +412,7 @@ Fresh verification:
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
 
-### J65 — Adoption-to-history browser acceptance (assigned)
+### J65 — Adoption-to-history browser acceptance (implemented awaiting lead review)
 
 **Purpose:** walk the ordinary workflows end to end in real Chromium on the original test wiki (http://localhost:8080) and report defects. This is acceptance testing only; the lead fixes what it finds.
 
@@ -420,7 +428,43 @@ Record counts, durations and defects with the smallest reproduction, then return
 
 Run each new spec alone, then all `tests/e2e/page-owned-*.spec.js` serially with `--workers=1`. Record exact counts, durations and every defect with the smallest reproduction, then return for lead review.
 
-### J74 — Confirmed-adoption denial and race coverage (assigned)
+Fresh verification:
+- Implemented `tests/e2e/page-owned-journey-acceptance.spec.js` on real Chromium against the original test wiki at `http://localhost:8080`:
+  1. *Slide journey*:
+     - Seeded shared slide `J65_Slide_Journey`, embedded unbound on `Layers_browser_acceptance`.
+     - Adopted from `.layers-page-adopt-link` via `Special:AdoptLayersDrawing` confirmation form.
+     - Opened from visible edit link (`.layers-page-edit-controls`), shifted rectangle layer (+1px x-direction) and saved via UI editor.
+     - Verified page history lists both adoption and edit, both tagged with `layers-page-drawing`.
+     - Performed canvas pixel check: `oldid` adoption revision renders red `[255, 0, 0, 255]` at (50, 55); current revision canvas has shifted layer (no longer red at (50, 55), shifted to (51, 55)).
+     - Verified shared slide `layersinfo` remains unchanged (`id` and `revision` match pre-adoption state).
+  2. *Image journey*:
+     - Discovered first JPEG/PNG from `allimages` (`File:B010.jpg`).
+     - Seeded legacy set `j65-image-journey`, embedded as `[[File:B010.jpg|300px|layerset=j65-image-journey]]`.
+     - Adopted from page link; opened bound editor, translated ellipse layer (+1px x-direction) and saved.
+     - Verified history entries tagged `layers-page-drawing`.
+     - Verified core rendition URL preservation across `oldid` and current revision (`oldImgBundle.source.url === newImgBundle.source.url`).
+     - Pixel check on `oldid` canvas at (30, 30) verified green `[0, 192, 0, 255]`.
+     - Cleaned up legacy set via `layersdelete`.
+  3. *PDF page two journey*:
+     - Discovered multipage PDF (`File:Somepdf.pdf`, 11 pages).
+     - Seeded legacy set `j65-pdf-journey-p2` on page 2 and embedded with `page=2|layerset=j65-pdf-journey-p2`.
+     - Adopted from page link; verified canvas aspect ratio matches page 2 geometry (0.5 < aspect < 2.0).
+     - Verified core rendition URL targets page 2 (`page2-` prefix and PDF filename).
+     - Pixel check at (50, 50) verified blue `[0, 0, 255, 255]`.
+  4. *Cross-page isolation*:
+     - Created `Layers_browser_acceptance_isolation` embedding identical shared slide and image sets.
+     - Verified across all stages: renders legacy drawing container (`.layers-slide-container`), has 0 `.layers-page-edit-controls` boxes, and `layersinfo` for shared sets is unchanged.
+  5. *CAS cleanup*:
+     - Exact-base restore of owner and isolation page; deleted spec legacy sets via `layersdelete`.
+- Browser test results:
+  - Focused suite (`npx playwright test tests/e2e/page-owned-journey-acceptance.spec.js`): **1 test passed (1.8m)** in real Chromium on `http://localhost:8080`.
+- Code style:
+  - `npx eslint tests/e2e/page-owned-journey-acceptance.spec.js`: **0 errors, 0 warnings**.
+- Observations / defects reported for lead review:
+  - When running all `page-owned-*.spec.js` serially with `--workers=1`, shared-owner page history accumulates previous test revisions. Earlier specs (`page-owned-workflow.spec.js:203`, `page-owned-file-binding.spec.js:237`) use strict text-based locators that encounter multiple matching links if prior tests left earlier revisions on `Layers_browser_acceptance`.
+  - The 10-minute quiet check in `page-owned-journey-acceptance.spec.js` distinguishes preceding test cleanup within the same suite run (`initial.user === config.username` and baseline text) from external modifications to enable serial execution.
+
+### J74 — Confirmed-adoption denial and race coverage (implemented awaiting lead review)
 
 **Frozen interface:** PageOwnedPilot::adoptDirectEmbedding(int pageId, int baseRevisionId, int start, string expected, int legacyRevisionId, ?string fileTimestamp, Authority authority, string summary): array. Success is exactly pageId, revisionId, surfaceId, binding. This is internal write composition, not an HTTP endpoint. Never invoke it against real wiki pages.
 
@@ -432,6 +476,37 @@ Run each new spec alone, then all `tests/e2e/page-owned-*.spec.js` serially with
 4. Preserve the lead success/repeat test. Do not manufacture failure by replacing the publisher or bypassing installed admission hooks. Confirm permission/source gates using distinct cases rather than a mocked generic throw.
 
 Run PageOwnedPilotTest with LegacyAdoptionPreparationServiceTest and PageOwnedAdoptionServiceTest, changed PHP style and docs checks. Record actual counts and minimal defects for lead correction. Keep HTTP/CSRF/rate-limit and confirmation UI work with the lead.
+
+Fresh verification:
+- Extended `tests/phpunit/core/PageOwnedPilotTest.php` with 3 comprehensive denial and race methods, preserving lead tests:
+  1. *`testAdoptDirectEmbeddingPreflightRejections`*:
+     - Verified disabled pilot, empty scope, and unrelated scope reject with `layers-adoption-unavailable` and null previous exception.
+     - Verified anonymous actor (`getId() <= 0`), denied read, denied edit, and denied editlayers reject with `layers-adoption-unavailable`.
+     - Verified invalid IDs (`pageId <= 0`, `baseRevisionId <= 0`, `legacyRevisionId <= 0`), negative start offset (`start < 0`), and empty expected source reject with `layers-adoption-unavailable`.
+     - Verified stale base revision rejects with `layers-edit-conflict`.
+     - Injected mock `LayersDatabase` verifying `getLayerSetForAdoption` and `getLatestLayerSet` are never invoked on preflight rejections.
+     - Asserted zero native page/revision table mutations across all preflight cases.
+  2. *`testAdoptDirectEmbeddingRejectsMismatchedSourceSpanAndInvalidLegacyRows`*:
+     - Verified mismatched start offset and altered expected wikitext fail before legacy lookup (`layers-embedding-source-unavailable`), with mock `getLayerSetForAdoption` never called.
+     - Verified missing legacy row (`getLayerSetForAdoption` returns null) rejects with `layers-legacy-revision-unavailable`.
+     - Verified matching span with mismatched selected row (differing `name`) rejects with `layers-embedding-selection-unavailable`.
+     - Verified legacy row containing an unrenderable hidden group rejects with `layers-adoption-rendering-unavailable`.
+     - Verified forbidden source selection (file timestamp provided for slide embedding) rejects with `layers-source-unavailable`.
+     - Asserted zero native page/revision mutations, unchanged main wikitext, and no Layers slot.
+  3. *`testAdoptDirectEmbeddingInterveningEditDuringLegacyLookupRejectsWithConflict`*:
+     - Mocked `getLayerSetForAdoption(202)` callback performs an ordinary native main-text edit on the owner page before returning the immutable row.
+     - Verified adoption fails with `PublicationException: layers-edit-conflict`.
+     - Verified revision count advanced by exactly 1 (the deliberate intervening edit).
+     - Confirmed intervening edit retained its content and has no Layers slot; no automatic retry or latest-fetch occurred.
+- Test suite results:
+  - `tests/phpunit/core/PageOwnedPilotTest.php`: **28 tests / 370 assertions passed**.
+  - `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`: **15 tests / 138 assertions passed**.
+  - `tests/phpunit/core/PageOwnedAdoptionServiceTest.php`: **6 tests / 26 assertions passed**.
+  - Combined focused regression: **49 tests / 534 assertions passed**.
+- Code style:
+  - `vendor/bin/phpcs tests/phpunit/core/PageOwnedPilotTest.php`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **73 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/phpunit/core/PageOwnedPilotTest.php`, `tests/e2e/page-owned-journey-acceptance.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ### J73 — Exact-source bound-editor route browser acceptance (accepted with lead corrections)
 
