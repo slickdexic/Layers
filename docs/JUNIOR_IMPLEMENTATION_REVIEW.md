@@ -1,4 +1,30 @@
-# Junior implementation review — J01–J70
+# Junior implementation review — J01–J71
+
+## J71 accepted with corrections; next work is lead-owned — September 25, 2026
+
+Lead reviewed the competing adoption test and added direct native revision-row counts before preparation, after each publication and after stale rejection. Latest-revision checks alone did not prove no extra revision was inserted. Replaced substring location with DirectEmbeddingRewriter scanning of the committed main content, selecting the sole remaining unbound occurrence. Added full snapshot equality after the rejected attempt. Existing Unicode preservation, exact immutable legacy-row selection, distinct server IDs and historical-content checks remain intact.
+
+Fresh corrected native regression: **21 tests / 164 assertions passed** (PHPUnit 9.6.36, PHP 8.3.31); changed-file PHP style passed. These are internal service composition tests using isolated native tables, not public adoption/browser acceptance. No production, configuration, manifest or real wiki content changes. Docker is only the test runner.
+
+**No new junior packet is queued.** The next necessary work is lead-owned ordinary-entry integration: authorize a selected binding against exact page source, connect an explicit adoption confirmation to native atomic publication, and supply real ownership-control callbacks. J64/J65 remain blocked until those interfaces work. Pinned image/PDF delivery remains a required part of the ordinary-image acceptance target; the slide pilot must not be presented as completion. Search and Cargo follow page history. Earlier queue/checkpoint entries below are historical.
+
+## J71 implemented awaiting lead review: competing prepared adoptions — September 25, 2026
+
+Junior implemented the competing prepared adoption test suite in `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`:
+- Creates an owner page with two identical literal slide embeddings (`{{#Slide:WelcomePresentation|layerset=default|width=400}}`) separated by Unicode (`Unicode café — 世界\n`).
+- Prepares two proposals via `DirectAdoptionPreparationService` against the same base revision (one per occurrence), selecting the same synthetic immutable legacy row (`202`). Asserts distinct server-generated surface IDs (`surface_[a-f0-9]{32}`), distinct binding tokens, and verifies no revision was created and main content / slot absence remain unchanged.
+- Publishes the first proposal via `PageOwnedAdoptionService::publishPreparedSurface`. Asserts exactly one new revision with the first targeted binding and snapshot; second occurrence and surrounding Unicode text remain unchanged; parent base revision remains unchanged.
+- Publishes the second prepared proposal against the original base revision. Confirms `PublicationException` with message `layers-edit-conflict` is thrown, no new revision is created, main text is unchanged, and no appended surface is produced (no automatic retry or latest-base substitution).
+- Simulates deliberate renewed selection: scans the first committed revision's main text for the remaining unbound occurrence to compute its new byte offset (verifying it differs from the stale offset). Prepares against the first revision and publishes once. Asserts both bindings survive in main text, first surface is canonical-byte equivalent, second surface has distinct identity, and drawing values remain intact.
+- Verifies both native revisions and the original parent base revision remain unchanged and readable. Keeps exact legacy row selection observable: `getLayerSetForAdoption(202)` called exactly 3 times, `getLatestLayerSet()` never called.
+
+Verification:
+- Focused suite (`LegacyAdoptionPreparationServiceTest.php`): **15 tests / 132 assertions passed**.
+- Supporting suite (`PageOwnedAdoptionServiceTest.php`): **6 tests / 26 assertions passed**.
+- Combined focused suites: **21 tests / 158 assertions passed**.
+- PHPCS style: `phpcs --standard=MediaWiki` on `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ## J70 accepted with corrections; J71 ready — September 25, 2026
 

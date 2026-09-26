@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## J71 accepted with corrections; next work is lead-owned — September 25, 2026
+
+Lead reviewed the competing adoption test and added direct native revision-row counts before preparation, after each publication and after stale rejection. Latest-revision checks alone did not prove no extra revision was inserted. Replaced substring location with DirectEmbeddingRewriter scanning of the committed main content, selecting the sole remaining unbound occurrence. Added full snapshot equality after the rejected attempt. Existing Unicode preservation, exact immutable legacy-row selection, distinct server IDs and historical-content checks remain intact.
+
+Fresh corrected native regression: **21 tests / 164 assertions passed** (PHPUnit 9.6.36, PHP 8.3.31); changed-file PHP style passed. These are internal service composition tests using isolated native tables, not public adoption/browser acceptance. No production, configuration, manifest or real wiki content changes. Docker is only the test runner.
+
+**No new junior packet is queued.** The next necessary work is lead-owned ordinary-entry integration: authorize a selected binding against exact page source, connect an explicit adoption confirmation to native atomic publication, and supply real ownership-control callbacks. J64/J65 remain blocked until those interfaces work. Pinned image/PDF delivery remains a required part of the ordinary-image acceptance target; the slide pilot must not be presented as completion. Search and Cargo follow page history. Earlier queue/checkpoint entries below are historical.
+
 ## J70 accepted with corrections; J71 ready — September 25, 2026
 
 Lead reviewed J70 and corrected two acceptance gaps. Counting responses inside waitForResponse could only count the first matching response; persistent request listeners now verify the normal and boolean workflows make one editor publication through completion. The existing failure cleanup could modify a newer unrelated revision; it now requires the exact last confirmed revision and original PageID, refuses uncertain outcomes, and uses native CAS with expected PageID. It preserves revisions rather than deleting history. The browser target is explicitly restricted to the original loopback wiki on port 8080 with no alternate path or embedded credentials. Replaced an unbounded interception Promise with a bounded wait.
@@ -209,13 +217,13 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4b | Junior J68: bound-read identity lifecycle tests | Accepted with lead corrections |
 | 4c | Junior J69: expected PageID publication client | Accepted; lead session/bootstrap wiring verified |
 | 4d | Junior J70: editor PageID browser acceptance | Accepted with lead corrections |
-| 4e | Junior J71: competing prepared adoptions | Ready; packet below |
+| 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections; no next junior packet |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
 
-### J71 — Competing prepared adoptions (ready)
+### J71 — Competing prepared adoptions (accepted with lead corrections)
 
 **Purpose:** test the existing native preparation/publication composition before lead exposes ordinary-page adoption.
 
@@ -228,6 +236,21 @@ This queue supersedes all older assignment tables below. Full architectural deci
 5. Keep exact legacy row selection observable; no latest named-set fallback. Reuse existing helpers. Do not weaken rendering gates, permission checks or lifecycle guards.
 
 Run the focused composition suite and PageOwnedAdoptionServiceTest, PHP style and documentation checks. Record actual counts. Report any production defect for lead correction; do not invent new APIs. Lead retains adoption confirmation, ordinary overlay routing and pinned image/PDF delivery. J64/J65 remain blocked.
+
+Fresh verification:
+- Implemented `testCompetingPreparedAdoptionsRejectStaleBaseAndSucceedOnRenewedSelection` in `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php` strictly following steps 1–5:
+  1. Creates owner containing two identical literal slide embeddings separated by Unicode (`Unicode café — 世界\n`). Prepares two proposals through `DirectAdoptionPreparationService` against the same base revision, one per occurrence, selecting synthetic immutable legacy row 202. Asserts distinct server-generated surface IDs (`surface_[a-f0-9]{32}`), distinct bindings, no revision created during preparation, and unchanged base wikitext and lack of Layers slot.
+  2. Publishes the first proposal via `PageOwnedAdoptionService::publishPreparedSurface`. Asserts exactly one new revision contains its targeted binding and snapshot; the other occurrence and surrounding Unicode text remain unchanged; parent base revision remains intact and readable.
+  3. Publishes the second prepared proposal against its original base revision. Asserts `PublicationException` with message `layers-edit-conflict`, no new revision created, no main-text change, and no appended surface (no automatic retry or latest-base substitution).
+  4. Simulates deliberate renewed selection: scans first committed revision's main text for the remaining unbound occurrence to compute new byte offset (verifying it differs from stale offset). Prepares against first revision and publishes once. Asserts both bindings survive, the first surface remains canonical-byte equivalent, the second surface has distinct identity, and drawing values remain intact.
+  5. Verifies both native revisions and the original parent base revision remain unchanged and readable. Keeps exact legacy row selection observable: `getLayerSetForAdoption(202)` called exactly 3 times, `getLatestLayerSet()` never called.
+- PHPUnit execution:
+  - `LegacyAdoptionPreparationServiceTest.php`: **15 tests / 132 assertions passed**.
+  - `PageOwnedAdoptionServiceTest.php`: **6 tests / 26 assertions passed**.
+  - Combined focused suites: **21 tests / 158 assertions passed**.
+- PHP style (`phpcs --standard=MediaWiki`): **0 errors, 0 warnings** on `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`.
+- Documentation check (`npm run check:docs`): **68 maintained/policy documents, 53 historical records passed**.
+- Bounded scope: Changes confined strictly to `tests/phpunit/core/LegacyAdoptionPreparationServiceTest.php`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ### J70 — Server-derived editor PageID browser acceptance (accepted with lead corrections)
 

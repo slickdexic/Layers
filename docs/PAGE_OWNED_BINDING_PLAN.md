@@ -2,6 +2,16 @@
 
 September 23, 2026. **Approved direction; implementation pending.** This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
+## Next lead deliverable after J71 — September 25, 2026
+
+Internal preparation and atomic publication now pass competing-adoption regression tests. This does not yet expose a supported ordinary-page ownership action. The next deliverable is the request-to-service connection, not another standalone test helper.
+
+1. **Bound editor entry:** accept an explicit owner PageID, current base revision and selected direct occurrence. Resolve the current native owner and actor rights, read that exact main content, scan the occurrence and obtain its binding from server-read source. Require binding PageID to match the native owner and its surface to exist in that revision. A valid-looking browser token alone is insufficient. Refuse historical editing, stale bases, cross-owner bindings, template-generated ambiguity and unavailable rendering; never fall back to a shared save. Keep current pilot scope/lifecycle protections until their replacements are tested.
+2. **Adoption confirmation and write:** identify the exact immutable legacy row and occurrence for explicit confirmation. The write receives selection identity and base revision, not authoritative caller-provided snapshot or rewritten main text. Re-run authorization and server preparation at dispatch, then pass only that trusted result to atomic publication. Do not reuse an old prepared main document with a newer base. Return the committed page/surface/revision only after success. A lost response requires deliberate exact-history reconciliation; no automatic duplicate adoption or retry.
+3. **Unlock UI work only on a working contract:** provide J64 with callbacks, allowed states, fixed user messages and rejection behavior once the above path is implemented and tested. J65 then exercises ordinary overlay → explicit ownership → edit/save → owner history, including preservation of the shared original and other consumers. Image annotations and pinned historical media remain part of the acceptance target; a slide-only route is an intermediate delivery.
+
+The server-derived PageID recently added to the existing pilot editor protects publication identity. It is not proof that a selected embedding is owned by the page. Draft identity migration, media delivery and production lifecycle policy remain lead responsibilities; no junior should infer those designs from the test utilities.
+
 ## Outcome and acceptance target
 
 On the original localhost:8080 wiki, an author explicitly makes the annotations on File:ImageTest02.jpg embedded in DeleteMe004 owned by DeleteMe004. Editing through that page's ordinary overlay and saving creates a native DeleteMe004 revision. Viewing the previous revision displays the previous annotations against the recorded media version. The same source file on another page remains unchanged. Use separate native test pages for automation; do not overwrite the user's drawing to manufacture a passing demonstration.

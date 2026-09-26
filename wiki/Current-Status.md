@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## J71 accepted with corrections; next work is lead-owned — September 25, 2026
+
+Lead reviewed the competing adoption test and added direct native revision-row counts before preparation, after each publication and after stale rejection. Latest-revision checks alone did not prove no extra revision was inserted. Replaced substring location with DirectEmbeddingRewriter scanning of the committed main content, selecting the sole remaining unbound occurrence. Added full snapshot equality after the rejected attempt. Existing Unicode preservation, exact immutable legacy-row selection, distinct server IDs and historical-content checks remain intact.
+
+Fresh corrected native regression: **21 tests / 164 assertions passed** (PHPUnit 9.6.36, PHP 8.3.31); changed-file PHP style passed. These are internal service composition tests using isolated native tables, not public adoption/browser acceptance. No production, configuration, manifest or real wiki content changes. Docker is only the test runner.
+
+**No new junior packet is queued.** The next necessary work is lead-owned ordinary-entry integration: authorize a selected binding against exact page source, connect an explicit adoption confirmation to native atomic publication, and supply real ownership-control callbacks. J64/J65 remain blocked until those interfaces work. Pinned image/PDF delivery remains a required part of the ordinary-image acceptance target; the slide pilot must not be presented as completion. Search and Cargo follow page history. Earlier queue/checkpoint entries below are historical.
+
 ## J70 accepted with corrections; J71 ready — September 25, 2026
 
 Lead reviewed J70 and corrected two acceptance gaps. Counting responses inside waitForResponse could only count the first matching response; persistent request listeners now verify the normal and boolean workflows make one editor publication through completion. The existing failure cleanup could modify a newer unrelated revision; it now requires the exact last confirmed revision and original PageID, refuses uncertain outcomes, and uses native CAS with expected PageID. It preserves revisions rather than deleting history. The browser target is explicitly restricted to the original loopback wiki on port 8080 with no alternate path or embedded credentials. Replaced an unbounded interception Promise with a bounded wait.
