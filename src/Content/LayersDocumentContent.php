@@ -12,6 +12,7 @@ class LayersDocumentContent extends JsonContent {
 	public const MODEL = 'layers-document';
 
 	private ?string $canonicalText = null;
+	private ?bool $readable = null;
 
 	/**
 	 * @param string $text
@@ -24,7 +25,7 @@ class LayersDocumentContent extends JsonContent {
 		parent::__construct( $text, $modelId );
 	}
 
-	/** @return bool */
+	/** @return bool Strict current-rule validity, required for saving */
 	public function isValid() {
 		try {
 			$this->getCanonicalText();
@@ -32,6 +33,19 @@ class LayersDocumentContent extends JsonContent {
 		} catch ( \InvalidArgumentException $e ) {
 			return false;
 		}
+	}
+
+	/** @return bool Structural validity for reading stored history; see DocumentSchema::decodeStored() */
+	public function isReadable(): bool {
+		if ( $this->readable === null ) {
+			try {
+				( new DocumentSchema() )->decodeStored( $this->getText() );
+				$this->readable = true;
+			} catch ( \InvalidArgumentException $e ) {
+				$this->readable = false;
+			}
+		}
+		return $this->readable;
 	}
 
 	/** @return string */

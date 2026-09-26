@@ -1,9 +1,10 @@
 /** Exact-surface painter for the historical viewer. No editor, storage or data requests. */
 ( function () {
 	'use strict';
-	// Resource-backed/custom layers and groups need separate fidelity/error handling before exposure.
-	const supported = new Set( [ 'text', 'textbox', 'callout', 'rectangle', 'rect', 'circle',
-		'ellipse', 'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension' ] );
+	// Mirrors PageOwnedRenderCapability::LAYER_TYPES, which publication enforces (check-parallel-lists.js).
+	const RENDERABLE_LAYER_TYPES = [ 'text', 'textbox', 'callout', 'rectangle', 'circle',
+		'ellipse', 'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension' ];
+	const supported = new Set( RENDERABLE_LAYER_TYPES );
 
 	/**
 	 * Paint an already validated, isolated slide at its original coordinate resolution.

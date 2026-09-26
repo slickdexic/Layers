@@ -8,6 +8,8 @@ use MediaWiki\Content\Content;
 use MediaWiki\Content\JsonContentHandler;
 use MediaWiki\Content\Transform\PreSaveTransformParams;
 use MediaWiki\Content\ValidationParams;
+use MediaWiki\Context\IContextSource;
+use MediaWiki\Title\Title;
 
 /** Core saves validate the snapshot via Content::isValid, including non-API writes. */
 class LayersDocumentContentHandler extends JsonContentHandler {
@@ -37,6 +39,20 @@ class LayersDocumentContentHandler extends JsonContentHandler {
 	/** @return LayersDocumentContent */
 	public function makeEmptyContent() {
 		return new LayersDocumentContent( '{"schemaVersion":1,"surfaces":[]}' );
+	}
+
+	/** @inheritDoc */
+	protected function getSlotDiffRendererWithOptions( IContextSource $context, $options = [] ) {
+		return new LayersSlotDiffRenderer( $this->createTextSlotDiffRenderer( $options ) );
+	}
+
+	/**
+	 * Snapshots live only in the dedicated Layers slot, never as a page's main content.
+	 * @param Title $title
+	 * @return bool
+	 */
+	public function canBeUsedOn( Title $title ) {
+		return false;
 	}
 
 	/**

@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Page-owned history pilot hardening (lead review, September 26): pages with bound slides are cached like any other page, with drawings fetched per reader through `layersread` `binding=`. Page-owned saves carry the `layers-page-drawing` change tag and run core edit filters on page-text changes. Saves cannot introduce layer types page history cannot display; stored revisions are read structurally so later validation changes never hide old history; one unavailable file no longer hides other drawings. Ordinary page markup no longer disables page-owned editing, diffs show changed properties per line, the content model is always registered, and page-owned editor code ships in its own `ext.layers.editor.pageOwned` module.
+
 - Lead review: recheck recovery destination after confirmation; isolate set-load busy state and fallback selection from stale responses; share browser cleanup with tested helper and reject malformed inventory. J24 browser acceptance remains pending.
 
 - J19–J21 review corrections: reject legacy imports when shared validation fails, retain rejected recovery UI, bind set responses to their originating request, and limit browser cleanup to exact tracked current-run names. Further recovery/integration acceptance remains tracked in J22–J24.

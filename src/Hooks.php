@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
+use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\Logger\LoggerFactory;
@@ -29,6 +30,22 @@ class Hooks {
 	 */
 	public static function onChangeTagsAllowedAdd( array &$allowedTags ): void {
 		$allowedTags[] = 'layers-data-change';
+	}
+
+	/**
+	 * Declare the tags Layers applies itself, so Special:Tags lists them as software-defined.
+	 * @param string[] &$tags
+	 */
+	public static function onListDefinedTags( &$tags ): void {
+		$tags[] = 'layers-data-change';
+		$tags[] = PagePublicationService::CHANGE_TAG;
+	}
+
+	/**
+	 * @param string[] &$tags
+	 */
+	public static function onChangeTagsListActive( &$tags ): void {
+		self::onListDefinedTags( $tags );
 	}
 
 	/**

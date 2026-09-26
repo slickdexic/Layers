@@ -448,6 +448,8 @@ class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$out->getModules(),
 			'Successful request must add ext.layers.editor module'
 		);
+		$this->assertContains( 'ext.layers.editor.pageOwned', $out->getModules(),
+			'Page-owned editing code ships only with the page-owned route' );
 		$this->assertStringContainsString(
 			'<div id="layers-editor-container"></div>',
 			$out->getHTML(),

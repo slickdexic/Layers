@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
+use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
@@ -16,6 +17,8 @@ class ApiLayersRead extends ApiBase {
 	private TitleFactory $titles;
 	private bool $enabled;
 	private array $ownerKeys;
+	/** @var callable|null (Title, int, string[], Authority): array Authorized bound surfaces keyed by binding */
+	private $boundReader;
 
 	/**
 	 * @param ApiMain $main
@@ -24,15 +27,17 @@ class ApiLayersRead extends ApiBase {
 	 * @param TitleFactory $titles
 	 * @param bool $enabled Default-off experimental gate
 	 * @param string[] $ownerKeys Exact prefixed DB keys; empty permits no pilot pages
+	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
 	 */
 	public function __construct( ApiMain $main, string $name, PageReadService $reader,
-		TitleFactory $titles, bool $enabled = false, array $ownerKeys = []
+		TitleFactory $titles, bool $enabled = false, array $ownerKeys = [], ?callable $boundReader = null
 	) {
 		parent::__construct( $main, $name );
 		$this->reader = $reader;
 		$this->titles = $titles;
 		$this->enabled = $enabled;
 		$this->ownerKeys = $ownerKeys;
+		$this->boundReader = $boundReader;
 	}
 
 	public function execute() {
@@ -50,6 +55,17 @@ class ApiLayersRead extends ApiBase {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}
 		try {
+			if ( $params['binding'] !== null ) {
+				if ( !$this->boundReader ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				// Unavailable, foreign and malformed bindings are omitted rather than distinguished.
+				$bindings = ( $this->boundReader )( $owner, $params['revid'], $params['binding'],
+					$this->getAuthority() );
+				$bindings[ApiResult::META_TYPE] = 'assoc';
+				$this->getResult()->addValue( null, $this->getModuleName(), [ 'bindings' => $bindings ] );
+				return;
+			}
 			$bundle = $this->reader->read( $owner, $params['revid'], $this->getAuthority() );
 		} catch ( \DomainException $e ) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
@@ -65,7 +81,9 @@ class ApiLayersRead extends ApiBase {
 		return [
 			'owner' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true, self::PARAM_MAX_BYTES => 512 ],
 			'revid' => [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
-				self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ]
+				self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
+			'binding' => [ self::PARAM_TYPE => 'string', self::PARAM_ISMULTI => true,
+				self::PARAM_ISMULTI_LIMIT1 => 50, self::PARAM_ISMULTI_LIMIT2 => 50, self::PARAM_MAX_BYTES => 128 ]
 		];
 	}
 }

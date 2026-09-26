@@ -24,7 +24,8 @@ class ApiLayersPublish extends ApiBase {
 		'layers-owner-edit-denied', 'layers-invalid-publication-request',
 		'layers-main-model-change-denied', 'layers-invalid-snapshot',
 		'layers-source-unavailable', 'layers-edit-conflict', 'layers-revision-save-failed',
-		'layers-admission-unauthorized', 'layers-slot-removal-denied'
+		'layers-admission-unauthorized', 'layers-slot-removal-denied', 'layers-content-not-renderable',
+		'layers-edit-filtered'
 	];
 
 	/**

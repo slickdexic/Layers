@@ -367,6 +367,7 @@
 	 */
 	function autoBootstrap() {
 		let dependencyRetries = 0;
+		let pageOwnedRequested = false;
 		const timing = getTiming();
 
 		function tryBootstrap() {
@@ -391,6 +392,14 @@
 				debugLog( 'wgLayersEditorInit config: ' + ( init ? 'present' : 'not found' ) );
 
 				if ( !init ) {
+					return;
+				}
+
+				// Page-history editing ships separately so ordinary editors never download it.
+				if ( init.pageOwned && !pageOwnedRequested && mw.loader && typeof mw.loader.using === 'function' &&
+					!( window.Layers && window.Layers.Editor && window.Layers.Editor.PageOwnedEditorSession ) ) {
+					pageOwnedRequested = true;
+					mw.loader.using( 'ext.layers.editor.pageOwned' ).then( tryBootstrap, tryBootstrap );
 					return;
 				}
 

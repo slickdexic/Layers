@@ -6,21 +6,32 @@ namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\CommentStore\CommentStoreComment;
 use MediaWiki\Content\WikitextContent;
+use MediaWiki\Context\DerivativeContext;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\HookContainer\HookContainer;
+use MediaWiki\Page\WikiPage;
 use MediaWiki\Page\WikiPageFactory;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\Status\Status;
 use MediaWiki\Storage\PreparedUpdate;
 use MediaWiki\Title\Title;
+use MediaWiki\User\UserFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
 
 /** Internal publication orchestration; exposed only through guarded request boundaries. */
 class PagePublicationService {
+	/** Software change tag on every page-owned Layers revision; defined in Hooks::onListDefinedTags(). */
+	public const CHANGE_TAG = 'layers-page-drawing';
+
 	private WikiPageFactory $pages;
 	private PageHistoryAccess $access;
 	private SourceVersionResolver $sources;
 	private PageRevisionWriter $writer;
 	private PublicationAdmissionContext $context;
+	private ?HookContainer $hooks;
+	private ?UserFactory $users;
 
 	/**
 	 * @param WikiPageFactory $pages
@@ -28,16 +39,20 @@ class PagePublicationService {
 	 * @param SourceVersionResolver $sources
 	 * @param PageRevisionWriter $writer
 	 * @param ?PublicationAdmissionContext $context
+	 * @param ?HookContainer $hooks Runs EditFilterMergedContent on main-text changes; null skips filters
+	 * @param ?UserFactory $users Required with $hooks
 	 */
 	public function __construct( WikiPageFactory $pages, PageHistoryAccess $access,
 		SourceVersionResolver $sources, PageRevisionWriter $writer,
-		?PublicationAdmissionContext $context = null
+		?PublicationAdmissionContext $context = null, ?HookContainer $hooks = null, ?UserFactory $users = null
 	) {
 		$this->pages = $pages;
 		$this->access = $access;
 		$this->sources = $sources;
 		$this->writer = $writer;
 		$this->context = $context ?? new PublicationAdmissionContext();
+		$this->hooks = $users ? $hooks : null;
+		$this->users = $users;
 	}
 
 	/**
@@ -88,8 +103,15 @@ class PagePublicationService {
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-invalid-snapshot', 0, $e );
 		}
+		$document = json_decode( $content->getText() );
+		$changed = $this->changedSurfaceIds( $owner, $baseRevisionId, $document, $authority );
+		foreach ( $document->surfaces as $surface ) {
+			if ( in_array( $surface->id, $changed, true ) && !PageOwnedRenderCapability::isRenderable( $surface ) ) {
+				throw new PublicationException( 'layers-content-not-renderable' );
+			}
+		}
 		try {
-			$this->sources->resolve( $content, $authority );
+			$this->sources->resolve( $content, $authority, $changed );
 		} catch ( \DomainException $e ) {
 			throw new PublicationException( 'layers-source-unavailable', 0, $e );
 		}
@@ -99,12 +121,17 @@ class PagePublicationService {
 			PublicationAdmissionIntent::ACTION_REPLACE;
 
 		$page = $this->pages->newFromTitle( $owner );
+		if ( $main !== null ) {
+			$this->assertPassesEditFilters( $page, $main, $summary, $authority );
+		}
 		if ( $expectedPageId !== null ) {
 			// Source preparation can run callbacks or take long enough for a move.
 			$this->assertOwnerIdentity( $owner, $expectedPageId );
 		}
+		$updater = $page->newPageUpdater( $authority );
+		$updater->addTag( self::CHANGE_TAG );
 		try {
-			$revision = $this->writer->save( $page->newPageUpdater( $authority ), $baseRevisionId,
+			$revision = $this->writer->save( $updater, $baseRevisionId,
 				$content, CommentStoreComment::newUnsavedComment( $summary ), $main,
 				function ( PreparedUpdate $prepared, callable $commit ) use (
 					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId
@@ -154,6 +181,57 @@ class PagePublicationService {
 			throw new PublicationException( 'layers-revision-save-failed', 0, $e );
 		}
 		return $revision->getId();
+	}
+
+	/**
+	 * Apply the same filters EditPage runs (AbuseFilter, SpamBlacklist, ConfirmEdit, ...) to a main-text change.
+	 * @param WikiPage $page
+	 * @param WikitextContent $main
+	 * @param string $summary
+	 * @param Authority $authority
+	 */
+	private function assertPassesEditFilters( WikiPage $page, WikitextContent $main, string $summary,
+		Authority $authority
+	): void {
+		if ( !$this->hooks || !$this->users ) {
+			return;
+		}
+		$context = new DerivativeContext( RequestContext::getMain() );
+		$context->setTitle( $page->getTitle() );
+		$context->setWikiPage( $page );
+		$context->setAuthority( $authority );
+		$status = Status::newGood();
+		$continue = $this->hooks->run( 'EditFilterMergedContent',
+			[ $context, $main, $status, $summary, $this->users->newFromAuthority( $authority ), false ] );
+		if ( !$continue || !$status->isOK() ) {
+			throw new PublicationException( 'layers-edit-filtered' );
+		}
+	}
+
+	/**
+	 * Surfaces absent from, or different to, the base revision's stored snapshot.
+	 * Unchanged surfaces were admitted when first published; rechecking them would lock
+	 * a page whose older source file was later deleted.
+	 * @param Title $owner
+	 * @param int $baseRevisionId
+	 * @param \stdClass $document Canonical proposed document
+	 * @param Authority $authority
+	 * @return string[]
+	 */
+	private function changedSurfaceIds( Title $owner, int $baseRevisionId, \stdClass $document,
+		Authority $authority
+	): array {
+		$stored = [];
+		foreach ( $this->access->getStoredSurfaces( $owner, $baseRevisionId, $authority ) as $surface ) {
+			$stored[$surface->id] = JsonSnapshotCodec::encode( $surface );
+		}
+		$changed = [];
+		foreach ( $document->surfaces as $surface ) {
+			if ( ( $stored[$surface->id] ?? null ) !== JsonSnapshotCodec::encode( $surface ) ) {
+				$changed[] = $surface->id;
+			}
+		}
+		return $changed;
 	}
 
 	/**

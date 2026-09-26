@@ -35,6 +35,8 @@ const API_INFO = 'src/Api/ApiLayersInfo.php';
 const NORMALIZER = 'resources/ext.layers.shared/LayerDataNormalizer.js';
 const RENDERER = 'src/ThumbnailRenderer.php';
 const RATE_LIMITER = 'src/Security/RateLimiter.php';
+const RENDER_CAPABILITY = 'src/Revision/PageOwnedRenderCapability.php';
+const HISTORY_RENDERER = 'resources/ext.layers/viewer/PageOwnedRevisionRenderer.js';
 
 const errors = [];
 
@@ -256,6 +258,36 @@ if ( allowedTypesBody !== null && unsupportedBody !== null && nonVisualBody !== 
 }
 
 // ---------------------------------------------------------------------------
+// 3. Page-owned renderable layer types
+// ---------------------------------------------------------------------------
+
+// Publication refuses what the historical renderer cannot draw; if the lists drift,
+// a save succeeds and the drawing then shows as unavailable in page history.
+const capabilityBody = phpConstBody( read( RENDER_CAPABILITY ), 'LAYER_TYPES' );
+const historyRendererBody = jsArrayBody( read( HISTORY_RENDERER ), 'RENDERABLE_LAYER_TYPES' );
+if ( capabilityBody === null ) {
+	errors.push( 'Could not find `const LAYER_TYPES = [ ... ];` in ' + RENDER_CAPABILITY );
+}
+if ( historyRendererBody === null ) {
+	errors.push( 'Could not find `const RENDERABLE_LAYER_TYPES = [ ... ];` in ' + HISTORY_RENDERER );
+}
+if ( capabilityBody !== null && historyRendererBody !== null ) {
+	const renderable = captureAll( capabilityBody, /'([A-Za-z0-9_]+)'/g );
+	assertSameSet(
+		'Page-owned renderable layer types differ between publication and the historical renderer.',
+		RENDER_CAPABILITY, renderable,
+		HISTORY_RENDERER, captureAll( historyRendererBody, /'([A-Za-z0-9_]+)'/g )
+	);
+	if ( allowedTypesBody !== null ) {
+		const accepted = captureAll( allowedTypesBody, /'([A-Za-z0-9_]+)'/g );
+		const unknown = renderable.filter( ( t ) => !accepted.includes( t ) );
+		if ( unknown.length ) {
+			errors.push( 'Renderable page-owned types not accepted by ' + VALIDATOR + ': ' + unknown.join( ', ' ) );
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 
 if ( errors.length ) {
 	process.stdout.write( '\n\u274c Parallel list check failed\n\n' );
@@ -263,4 +295,4 @@ if ( errors.length ) {
 	process.exit( 1 );
 }
 
-process.stdout.write( 'Parallel lists agree (boolean properties, layer types).\n' );
+process.stdout.write( 'Parallel lists agree (boolean properties, layer types, page-owned renderable types).\n' );

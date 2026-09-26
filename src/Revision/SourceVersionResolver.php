@@ -25,20 +25,24 @@ class SourceVersionResolver {
 	}
 
 	/**
-	 * Validate the complete snapshot and resolve each image/PDF source.
+	 * Validate the snapshot structure and resolve image/PDF sources.
 	 * Slides have no file and produce no entry. Does not retain assets or save.
 	 *
 	 * @param LayersDocumentContent $content
 	 * @param Authority $authority Request actor; owner authorization is a separate gate
+	 * @param string[]|null $surfaceIds Resolve only these surfaces; null resolves all
 	 * @return File[] Resolved files keyed by surface ID, for immediate server-side use
-	 * @throws \InvalidArgumentException On an invalid snapshot
-	 * @throws \DomainException On an unavailable or mismatched source
+	 * @throws \DomainException On an unreadable snapshot or an unavailable or mismatched source
 	 */
-	public function resolve( LayersDocumentContent $content, Authority $authority ): array {
-		$document = json_decode( $content->getCanonicalText(), false, 64, JSON_THROW_ON_ERROR );
+	public function resolve( LayersDocumentContent $content, Authority $authority, ?array $surfaceIds = null ): array {
+		if ( !$content->isReadable() ) {
+			throw new \DomainException( 'layers-source-unavailable' );
+		}
+		$document = json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR );
 		$files = [];
 		foreach ( $document->surfaces as $surface ) {
-			if ( $surface->kind === 'slide' ) {
+			if ( $surface->kind === 'slide' ||
+				( $surfaceIds !== null && !in_array( $surface->id, $surfaceIds, true ) ) ) {
 				continue;
 			}
 			$source = $surface->source;

@@ -17,11 +17,22 @@ use MediaWiki\Revision\SlotRecord;
  * @group Database
  */
 class PageRevisionWriterTest extends \MediaWikiIntegrationTestCase {
+	use ExcludesInstalledPilot;
+
 	protected function setUp(): void {
 		parent::setUp();
+		$this->excludeInstalledPilot();
 		$this->getServiceContainer()->getSlotRoleRegistry()->defineRoleWithModel(
 			PageRevisionWriter::SLOT, CONTENT_MODEL_JSON, [ 'display' => 'none' ], false
 		);
+	}
+
+	protected function tearDown(): void {
+		try {
+			parent::tearDown();
+		} finally {
+			$this->installedPilotOverride = null;
+		}
 	}
 
 	private function snapshot( string $text ): JsonContent {

@@ -2162,9 +2162,12 @@ class LayersEditor {
 				if ( this.uiManager ) {
 					this.uiManager.hideSpinner();
 				}
-				const errorMsg = ( error && error.info ) ? error.info :
+				let errorMsg = ( error && error.info ) ? error.info :
 					( error && error.message ) ? error.message :
 					( window.layersMessages ? window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) : 'Failed to save layers' );
+				if ( error && error.code === 'layers-content-not-renderable' && typeof mw !== 'undefined' && mw.msg ) {
+					errorMsg = mw.msg( 'layers-content-not-renderable' );
+				}
 				if ( typeof mw !== 'undefined' && mw.notify ) {
 					mw.notify( errorMsg, { type: 'error' } );
 				}

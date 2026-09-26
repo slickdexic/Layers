@@ -1,5 +1,29 @@
 # Layers implementation handoff plan
 
+## Lead review remediation; queue unchanged, next lead steps revised — September 26, 2026
+
+See the matching [current status](CURRENT_STATUS.md) entry for the fixes and fresh verification. Contract changes juniors must respect:
+
+- `PageOwnedRenderCapability::LAYER_TYPES` is the only list of page-owned renderable layer types. Publication refuses new or changed surfaces outside it with `layers-content-not-renderable`. Keep it equal to `RENDERABLE_LAYER_TYPES` in `PageOwnedRevisionRenderer.js`; `npm run check:parallel` enforces this.
+- Stored snapshots are read with `DocumentSchema::decodeStored()` / `LayersDocumentContent::isReadable()`. Never use `isValid()` or `getCanonicalText()` on a read path; they apply current save-time rules.
+- Source availability is per surface. Pass the needed surface IDs to `PageReadService::read()` / `SourceVersionResolver::resolve()`; publication checks only surfaces that differ from the base revision.
+- `DirectEmbeddingRewriter` takes the wiki's registered extension tags (`Parser::getTags()`); ordinary HTML and single brackets are plain text. Construct it through `PageOwnedPilot` or pass the native list.
+- Native tests that register their own `layers` role or model must use the `ExcludesInstalledPilot` trait.
+
+- Bound slides are delivered by `layersread` `binding=` from the browser; never put drawing data in page output or `mw.config`, and never disable page caching for it.
+- Page-text changes made with a publication run `EditFilterMergedContent`; every publication carries the `layers-page-drawing` change tag.
+- Page-owned editor classes live in `ext.layers.editor.pageOwned`; declare their messages there, not in `ext.layers.editor`.
+
+J74 remains ready as written. Both earlier prerequisites (edit filters on `maintext`; cacheable client-side delivery) are done. Next lead step is the adoption POST/CSRF boundary, then image/PDF pinned delivery. Earlier entries below are historical.
+
+## Confirmed adoption composition implemented; J74 ready — September 26, 2026
+
+Lead added PageOwnedPilot::adoptDirectEmbedding(pageId, baseRevisionId, start, expected, legacyRevisionId, fileTimestamp, authority, summary). This internal write composition accepts only selection identity. It checks pilot enablement, login, basic bounds, native owner/base/edit authority and configured scope before obtaining legacy data. It then prepares the exact saved source occurrence and exact immutable legacy row once, retains the resulting document/main server-side, and publishes through the pilot's existing admission-aware publisher. It returns only confirmed page/revision/surface/binding identity. No client-prepared snapshot/main/surface is accepted and there is no automatic retry. Existing slide-only rendering and image/PDF delivery gates remain in force.
+
+Fresh native pilot/preparation/adoption regression: **46 tests / 490 assertions passed**. The new test verifies one native revision, exact binding rewrite, drawing values/types including false/zero, immutable pre-adoption main content, no prior Layers slot, exact legacy lookup once and no latest lookup, and stale-repeat rejection without another revision. Changed PHP style passed. An independent read-only architectural review confirmed use of the existing publisher/admission context and identified the native service injection seam for junior tests.
+
+**J74 is ready** for bounded denial/race tests. Lead next implements explicit confirmation and the HTTP write boundary: POST-only, native CSRF, editlayers-save limiter, fixed error messages and deliberate reconciliation after an unknown outcome. This method is not exposed by an API or button yet. J64/J65 remain blocked until those UI callbacks exist. Layers is a MediaWiki extension; Docker remains only its test environment. Earlier entries below are historical.
+
 ## Visible page-owned editing controls verified — September 26, 2026
 
 Lead added a page-level edit list for authorized current-page readers with edit/editlayers permission. Each entry is derived from a direct saved slide binding in the exact displayed/current main revision, and opens the validated bound-editor tuple route. The list is generated per request outside shared parser output; it does not attach guessed source offsets to rendered overlays. Repeated references to one surface are deduplicated. Malformed/unbound/template-contained candidates do not become links. Historical oldid/diff views, stale revisions, disabled scope and readers lacking editing rights receive no controls. A localized notice explains that these drawings save to page history. No new manifest registration or runtime dependencies were added.
@@ -252,10 +276,24 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections |
 | 4f | Junior J72: exact-source bound-editor rejection tests | Accepted with lead additions |
 | 4g | Junior J73: bound-editor route browser acceptance | Accepted with lead corrections; next work lead-owned |
+| 4h | Junior J74: confirmed-adoption denial and race coverage | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
+
+### J74 — Confirmed-adoption denial and race coverage (ready)
+
+**Frozen interface:** PageOwnedPilot::adoptDirectEmbedding(int pageId, int baseRevisionId, int start, string expected, int legacyRevisionId, ?string fileTimestamp, Authority authority, string summary): array. Success is exactly pageId, revisionId, surfaceId, binding. This is internal write composition, not an HTTP endpoint. Never invoke it against real wiki pages.
+
+**Allowed changes:** tests/phpunit/core/PageOwnedPilotTest.php, this packet and review ledger. Native isolated tables, existing configure() helper and synthetic adoption fixture only. No production, manifest, services, messages, configuration, real pages/files, commits or pushes. Configure first, then inject the legacy mock with setService('LayersDatabase', $mock); the method resolves that service lazily.
+
+1. Verify disabled/empty/unrelated scope, anonymous actor, invalid IDs/start/empty source, stale base and denied read/edit/editlayers reject with no revision/page-row mutation. Require no getLayerSetForAdoption or getLatestLayerSet call for preflight denial. Use current valid bases when testing scope/rights so a stale-base error cannot mask the intended branch.
+2. Verify a mismatched exact source span fails before legacy lookup; a matching span with mismatched selected row, missing row, unsupported hidden group or forbidden source selection cannot publish. Assert fixed PublicationException codes and unchanged main/snapshot. Use real preparer and publisher; mock only the legacy database boundary.
+3. During the exact legacy lookup callback, make an ordinary native main-text edit that advances the owner. Return the selected immutable row afterward. Adoption must fail with layers-edit-conflict; retain that intervening edit, add no adoption revision or Layers surface, and do not retry/latest-fetch. Count revisions before and after: only the deliberate intervening edit may be new.
+4. Preserve the lead success/repeat test. Do not manufacture failure by replacing the publisher or bypassing installed admission hooks. Confirm permission/source gates using distinct cases rather than a mocked generic throw.
+
+Run PageOwnedPilotTest with LegacyAdoptionPreparationServiceTest and PageOwnedAdoptionServiceTest, changed PHP style and docs checks. Record actual counts and minimal defects for lead correction. Keep HTTP/CSRF/rate-limit and confirmation UI work with the lead.
 
 ### J73 — Exact-source bound-editor route browser acceptance (accepted with lead corrections)
 

@@ -6,6 +6,24 @@ namespace MediaWiki\Extension\Layers\Revision;
 
 /** Conservative raw-source subset, not a general MediaWiki parser. No expansion or writes. */
 class DirectEmbeddingRewriter {
+	/** Used when no native tag list is supplied (unit tests, pure helpers). */
+	public const DEFAULT_EXTENSION_TAGS = [ 'nowiki', 'pre', 'source', 'syntaxhighlight', 'math', 'ref', 'gallery' ];
+
+	/** @var array<string,true> Lowercase tag names whose bodies are not ordinary page wikitext */
+	private array $opaqueTags = [];
+
+	/**
+	 * @param string[]|null $extensionTags Registered parser tags, e.g. Parser::getTags()
+	 */
+	public function __construct( ?array $extensionTags = null ) {
+		// Content inside <includeonly> is never rendered on the page itself.
+		foreach ( array_merge( $extensionTags ?? self::DEFAULT_EXTENSION_TAGS, [ 'includeonly' ] ) as $tag ) {
+			if ( is_string( $tag ) && $tag !== '' ) {
+				$this->opaqueTags[strtolower( $tag )] = true;
+			}
+		}
+	}
+
 	/**
 	 * Find complete top-level literal embeds; all offsets are UTF-8 byte offsets.
 	 * Resolver must use native Title namespace rules and return canonical File: DB-key text,
@@ -27,9 +45,7 @@ class DirectEmbeddingRewriter {
 			}
 			$open = $this->opener( $text, $i );
 			if ( $open === null ) {
-				if ( $text[$i] === '[' || $text[$i] === ']' || substr( $text, $i, 2 ) === '}}' ) {
-					$this->reject();
-				}
+				// Single brackets (external links, prose) and stray closers are plain text to the preprocessor.
 				$i++;
 				continue;
 			}
@@ -149,21 +165,34 @@ class DirectEmbeddingRewriter {
 			}
 			return $end + 3;
 		}
-		// Only explicitly opaque bodies are skipped. Unknown/HTML containers reject.
-		if ( !preg_match( '/\G<(nowiki|pre|source|syntaxhighlight|math|ref|gallery)(?=[ \t\r\n\f\/>])' .
+		if ( !preg_match( '/\G<\/?([A-Za-z][A-Za-z0-9_:.-]*)/', $text, $name, 0, $offset ) ) {
+			return $offset + 1;
+		}
+		$tag = strtolower( $name[1] );
+		if ( in_array( $tag, [ 'noinclude', 'onlyinclude' ], true ) ||
+			( $tag === 'includeonly' && $name[0][1] === '/' ) ) {
+			// Transclusion markers: their content is rendered on the page itself.
+			$close = strpos( $text, '>', $offset );
+			return $close === false ? $offset + 1 : $close + 1;
+		}
+		if ( $name[0][1] === '/' || !isset( $this->opaqueTags[$tag] ) ) {
+			// Ordinary HTML such as <br>, <div> or <span> is plain text to the preprocessor.
+			return $offset + 1;
+		}
+		if ( !preg_match( '/\G<' . preg_quote( $name[1], '/' ) . '(?=[ \t\r\n\f\/>])' .
 			'(?:[^<>"\']|"[^"]*"|\'[^\']*\')*>/i', $text, $match, 0, $offset ) ) {
-			$this->reject();
+			return $offset + 1;
 		}
 		$after = $offset + strlen( $match[0] );
 		if ( preg_match( '/\/\s*>\z/', $match[0] ) ) {
 			return $after;
 		}
-		$tag = preg_quote( $match[1], '/' );
-		if ( !preg_match( '/<\/' . $tag . '\s*>/i', $text, $close, PREG_OFFSET_CAPTURE, $after ) ) {
+		$quoted = preg_quote( $name[1], '/' );
+		if ( !preg_match( '/<\/' . $quoted . '\s*>/i', $text, $close, PREG_OFFSET_CAPTURE, $after ) ) {
 			$this->reject();
 		}
 		$end = $close[0][1];
-		if ( preg_match( '/<' . $tag . '\b/i', substr( $text, $after, $end - $after ) ) ) {
+		if ( preg_match( '/<' . $quoted . '(?=[ \t\r\n\f\/>])/i', substr( $text, $after, $end - $after ) ) ) {
 			$this->reject();
 		}
 		return $end + strlen( $close[0][0] );

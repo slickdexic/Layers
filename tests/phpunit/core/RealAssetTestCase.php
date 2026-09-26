@@ -97,6 +97,18 @@ abstract class RealAssetTestCase extends \MediaWikiIntegrationTestCase {
 		] );
 	}
 
+	/** Change the first image/PDF surface so publication must revalidate its source. */
+	protected static function withChangedAssetSurface( string $json ): string {
+		$document = json_decode( $json );
+		foreach ( $document->surfaces as $surface ) {
+			if ( $surface->kind !== 'slide' ) {
+				$surface->label .= ' (changed)';
+				break;
+			}
+		}
+		return json_encode( $document );
+	}
+
 	protected function makeSlideSurface( string $id = 'presentation', string $label = 'Welcome Slide' ): array {
 		return [
 			'id' => $id,

@@ -22,7 +22,9 @@
 		'layers-edit-conflict',
 		'layers-publication-disabled',
 		'layers-admission-unauthorized',
-		'layers-slot-removal-denied'
+		'layers-slot-removal-denied',
+		'layers-content-not-renderable',
+		'layers-edit-filtered'
 	] );
 
 	/**

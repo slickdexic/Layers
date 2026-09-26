@@ -80,6 +80,60 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		return $pilot;
 	}
 
+	public function testConfirmedAdoptionComposesExactSelectionAndRejectsRepeat(): void {
+		$page = $this->getExistingTestPage();
+		$embed = '{{#Slide:WelcomePresentation|layerset=default|width=400}}';
+		$prefix = "説明 — café\n";
+		$this->editPage( $page, $prefix . $embed );
+		$pilot = $this->configure( true, [ $page->getTitle()->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$base = $lookup->getRevisionByTitle( $page->getTitle() )->getId();
+		$fixture = json_decode( file_get_contents( __DIR__ . '/../../fixtures/adoption/slide-falsy-zero.json' ), true );
+		$row = $fixture['legacyRecord']['database']['row'];
+		$legacy = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacy->expects( $this->once() )->method( 'getLayerSetForAdoption' )->with( 202 )->willReturn( [
+			'id' => 202, 'imgName' => $row['ls_img_name'], 'sha1' => $row['ls_img_sha1'],
+			'mime' => 'application/x-layers-slide', 'name' => $row['ls_name'], 'page' => $row['ls_page'],
+			'revision' => $row['ls_revision'], 'timestamp' => $row['ls_timestamp'], 'json' => $row['ls_json_blob']
+		] );
+		$legacy->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacy );
+		$count = fn () => (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'revision' )->where( [ 'rev_page' => $page->getId() ] )->caller( __METHOD__ )->fetchField();
+		$before = $count();
+		$result = $pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+			202, null, $actor, 'Adopt confirmed drawing' );
+		$this->assertSame( [ 'pageId', 'revisionId', 'surfaceId', 'binding' ], array_keys( $result ) );
+		$this->assertSame( $page->getId(), $result['pageId'] );
+		$this->assertSame( 'v1:' . $page->getId() . ':' . $result['surfaceId'], $result['binding'] );
+		$this->assertSame( $before + 1, $count() );
+		$revision = $lookup->getRevisionById( $result['revisionId'] );
+		$this->assertSame( $base, $revision->getParentId() );
+		$this->assertSame( $prefix . '{{#Slide:WelcomePresentation|layersbinding=' . $result['binding'] .
+			'|width=400}}', $revision->getContent( 'main' )->getText() );
+		$document = json_decode( $revision->getContent( 'layers' )->getText(), true );
+		$this->assertSame( $result['surfaceId'], $document['surfaces'][0]['id'] );
+		$this->assertFalse( $document['surfaces'][0]['canvas']['backgroundVisible'] );
+		$expectedLayers = json_decode( $row['ls_json_blob'], true )['layers'];
+		foreach ( $expectedLayers as &$layer ) {
+			ksort( $layer );
+		}
+		unset( $layer );
+		$this->assertSame( $expectedLayers, $document['surfaces'][0]['layers'] );
+		$this->assertSame( $prefix . $embed, $lookup->getRevisionById( $base )->getContent( 'main' )->getText() );
+		$this->assertFalse( $lookup->getRevisionById( $base )->hasSlot( 'layers' ) );
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Do not retry' );
+			$this->fail( 'Expected stale adoption rejection' );
+		} catch ( \MediaWiki\Extension\Layers\Revision\PublicationException $e ) {
+			$this->assertSame( 'layers-edit-conflict', $e->getMessage() );
+		}
+		$this->assertSame( $before + 1, $count() );
+	}
+
 	public function testSharedPublisherAdmissionAndExactReader(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$this->configure( true, [ $title->getPrefixedDBkey() ] );
@@ -1404,10 +1458,8 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( 'slide', $slideData['surface']['kind'] );
 		$this->assertSame( $mixedRevId, $slideData['revisionId'] );
 
-		// 4c. Whole-document source-authorization rule:
-		// When the reader cannot authorize read of the source image file,
-		// resolving sources fails and attempting to view even the slide surface
-		// in the mixed document must throw layers-revision-unavailable without partial rendering.
+		// 4c. Per-surface source rule: a reader who cannot read the image file still sees the
+		// unrelated slide, because one unavailable source must not hide other drawings.
 		$restrictedReader = $this->createMock( Authority::class );
 		$restrictedReader->method( 'getUser' )->willReturn( $reader );
 		$fileTitle = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:J56_Asset_Viewer.png' );
@@ -1425,13 +1477,10 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				return true;
 			}
 		);
-		try {
-			$mixedPilot->prepareViewer(
-				$mixedTitle->getPrefixedText(), $mixedRevId, 'presentation', $restrictedReader );
-			$this->fail( 'Expected prepareViewer for slide surface to reject when source file read is denied' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-revision-unavailable', $e->getMessage() );
-		}
+		$restrictedSlide = $mixedPilot->prepareViewer(
+			$mixedTitle->getPrefixedText(), $mixedRevId, 'presentation', $restrictedReader );
+		$this->assertSame( 'presentation', $restrictedSlide['surface']['id'] );
+		$this->assertSame( $slideData, $restrictedSlide );
 	}
 
 	private function uploadFixtureFile(

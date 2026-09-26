@@ -140,6 +140,19 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
 
+### Page-owned revision history (in progress; default off)
+
+The goal is that Layers changes appear in the owning page's native history. This is a scoped pilot: `$wgLayersPageOwnedPilotEnabled` (default false) and `$wgLayersPageOwnedPilotOwners` (exact page DB keys; never remove one while pilot revisions exist). Legacy `layer_sets` saves are unchanged and are NOT page history. Read [docs/CURRENT_STATUS.md](../docs/CURRENT_STATUS.md) and [docs/PAGE_OWNED_BINDING_PLAN.md](../docs/PAGE_OWNED_BINDING_PLAN.md) before changing anything here; queue and packets are in [docs/IMPLEMENTATION_HANDOFF_PLAN.md](../docs/IMPLEMENTATION_HANDOFF_PLAN.md).
+
+- **Storage:** a complete snapshot of every drawing (surface) owned by the page, in a dedicated MCR slot `layers` with content model `layers-document` (`src/Content/`). Format: `src/Revision/DocumentSchema.php`. The model is always registered; the slot role, admission hook and lifecycle guards are installed only for configured owners (`src/Hooks/PageOwnedPilotRegistration.php`).
+- **Writes:** only `PagePublicationService::publish()` (via `layerspublish` or `PageOwnedPilot`), with an explicit base revision and native compare-and-swap. `PageOwnedAdmissionHooks` (MultiContentSave) rejects any other change to the slot. Never add another write path.
+- **Reads:** exact revision only, never latest. Read paths use `LayersDocumentContent::isReadable()` (structural), never `isValid()`/`getCanonicalText()`, which apply current save rules and would make old history unreadable. Resolve file sources only for the surfaces a read needs.
+- **Binding:** wikitext embeds carry `layersbinding=v1:<pageId>:<surfaceId>` (`PageOwnedBinding`, `PageOwnedBindingOptions`). Identity is native PageID plus surface ID; titles and labels are never identity. `BoundSlideHooks` emits identity-only placeholders (`VARY_REVISION`); the browser fetches drawings through `layersread` `binding=`. Never put drawing data in page output or disable page caching for it.
+- **Native integration:** every publication is tagged `layers-page-drawing`; page-text changes run `EditFilterMergedContent`. Page-owned editor code is the separate `ext.layers.editor.pageOwned` module.
+- **Renderability:** `PageOwnedRenderCapability::LAYER_TYPES` must equal `RENDERABLE_LAYER_TYPES` in `PageOwnedRevisionRenderer.js` (`npm run check:parallel`). Publication refuses new or changed surfaces outside it.
+- **Source editing:** `DirectEmbeddingRewriter` is a conservative raw-wikitext scanner that follows preprocessor rules and needs the wiki's `Parser::getTags()`. Do not replace it with a regex.
+- **Tests:** native integration tests live in `tests/phpunit/core/` and run inside the test container with `tests/phpunit/core.xml`. Tests that define their own slot/model must use the `ExcludesInstalledPilot` trait. Docker is only the test environment, never a Layers dependency (see `AGENTS.md`).
+
 ## 2) API contracts (client ↔ server)
 
 Base route: MediaWiki Action API. Client uses `new mw.Api()`.

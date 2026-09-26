@@ -268,7 +268,7 @@ describe( 'PageOwnedRevisionRenderer', () => {
 
 			it( 'supports all valid synchronous text and vector layer types without error', () => {
 				const supportedTypes = [
-					'text', 'textbox', 'callout', 'rectangle', 'rect', 'circle',
+					'text', 'textbox', 'callout', 'rectangle', 'circle',
 					'ellipse', 'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension'
 				];
 				const layers = supportedTypes.map( ( type, index ) => ( {
@@ -290,7 +290,7 @@ describe( 'PageOwnedRevisionRenderer', () => {
 
 				view.mount( parent );
 
-				expect( painter.drawLayer ).toHaveBeenCalledTimes( 14 );
+				expect( painter.drawLayer ).toHaveBeenCalledTimes( supportedTypes.length );
 				const paintedIds = painter.drawLayer.mock.calls.map( ( call ) => call[ 0 ].id );
 				expect( paintedIds ).toEqual( layers.map( ( l ) => l.id ).reverse() );
 				expect( parent.querySelector( '.ext-layers-historical-canvas' ) ).not.toBeNull();

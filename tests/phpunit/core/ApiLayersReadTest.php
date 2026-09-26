@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
+use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 
@@ -21,6 +22,8 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private array $ownerKeys = [];
 	private ?PageReadService $reader = null;
 	private ?\MediaWiki\Api\ApiMain $apiMain = null;
+	/** @var callable|null */
+	private $boundReader = null;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -34,7 +37,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$reader = $this->reader ?? new PageReadService( new PageHistoryAccess( $s->getRevisionLookup() ),
 					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ) );
 				return new ApiLayersRead( $main, $name, $reader, $s->getTitleFactory(),
-					$this->enabled, $this->ownerKeys );
+					$this->enabled, $this->ownerKeys, $this->boundReader );
 			} ]
 		] ) );
 	}
@@ -68,6 +71,32 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( [], $result['sourceGeometry'] );
 		$this->assertSame( [ 'revisionId', 'snapshot', 'sourceGeometry' ], array_keys( $result ) );
 		$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+	}
+
+	public function testBindingReadReturnsOnlyAuthorizedSelectedDrawings(): void {
+		[ $title, $id, $user ] = $this->publish();
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, $this->ownerKeys );
+		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
+		$surfaceId = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) )
+			->surfaces[0]->id;
+		$binding = 'v1:' . $title->getArticleID() . ':' . $surfaceId;
+		$this->overrideUserPermissions( $user, [ 'read' ] );
+		$result = $this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+			'revid' => $id, 'binding' => $binding . '|v1:2147483647:' . $surfaceId . '|not-a-binding',
+			'smaxage' => 3600 ], null, false, $user )[0]['layersread'];
+		$this->assertSame( [ $binding ], array_keys( $result['bindings'] ) );
+		$this->assertSame( $id, $result['bindings'][$binding]['revisionId'] );
+		$this->assertSame( $surfaceId, $result['bindings'][$binding]['surface']['id'] );
+		$this->assertSame( $title->getPrefixedDBkey(), $result['bindings'][$binding]['owner'] );
+		$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+		// Nothing available is an empty result, not an error distinguishing the reason.
+		$this->assertSame( [], $this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+			'revid' => $id, 'binding' => 'v1:2147483647:' . $surfaceId ], null, false, $user )
+			[0]['layersread']['bindings'] );
+		$this->boundReader = null;
+		$this->expectApiErrorCode( 'layers-revision-unavailable' );
+		$this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+			'revid' => $id, 'binding' => $binding ], null, false, $user );
 	}
 
 	public function testHiddenHistoricalContentIsUnavailable(): void {

@@ -52,6 +52,40 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 		return $user;
 	}
 
+	public function testRevisionsAreTaggedAndMainTextPassesEditFilters(): void {
+		$page = $this->getNonexistingTestPage();
+		$actor = $this->actor();
+		$s = $this->getServiceContainer();
+		$service = new PagePublicationService( $s->getWikiPageFactory(),
+			new PageHistoryAccess( $s->getRevisionLookup() ),
+			new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ),
+			new PageRevisionWriter(), $this->context, $s->getHookContainer(), $s->getUserFactory() );
+		$seen = [];
+		$this->setTemporaryHook( 'EditFilterMergedContent',
+			static function ( $context, $content, $status ) use ( &$seen ) {
+				$seen[] = $context->getTitle()->getPrefixedDBkey();
+				if ( str_contains( $content->getText(), 'BLOCKED' ) ) {
+					$status->fatal( 'spamprotectiontext' );
+				}
+			} );
+		$id = $service->publish( $page->getTitle(), $actor, 0, $this->snapshot(), 'Create',
+			new WikitextContent( 'Owner page' ) );
+		$this->assertSame( [ $page->getTitle()->getPrefixedDBkey() ], $seen );
+		$this->assertContains( PagePublicationService::CHANGE_TAG,
+			$s->getChangeTagsStore()->getTags( $s->getConnectionProvider()->getReplicaDatabase(), null, $id ) );
+		try {
+			$service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Changed' ), 'Filtered',
+				new WikitextContent( 'BLOCKED link farm' ) );
+			$this->fail( 'Edit filters must apply to page text published with a drawing' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-edit-filtered', $e->getMessage() );
+		}
+		// A drawing-only change leaves the main text as saved and needs no text filtering.
+		$next = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Changed' ), 'Drawing only' );
+		$this->assertCount( 2, $seen );
+		$this->assertSame( $next, $s->getRevisionLookup()->getRevisionByTitle( $page->getTitle() )->getId() );
+	}
+
 	public function testCreateUpdateReadAndNoOpThroughCompleteService(): void {
 		$page = $this->getNonexistingTestPage();
 		$actor = $this->actor();

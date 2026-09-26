@@ -8,7 +8,6 @@ use MediaWiki\Extension\Layers\Api\ApiLayersMergeHistory;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
-use MediaWiki\Extension\Layers\Content\LayersDocumentContentHandler;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Hook\MediaWikiServicesHook;
 use MediaWiki\MediaWikiServices;
@@ -50,10 +49,8 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 			return;
 		}
 		// Install protection for retained owners even when the API switch is disabled.
+		// The content model itself is registered in extension.json so stored revisions always load.
 		// Callbacks are lazy: do not instantiate dependent services during container setup.
-		$services->addServiceManipulator( 'ContentHandlerFactory', static function ( $factory ) {
-			$factory->defineContentHandler( LayersDocumentContent::MODEL, LayersDocumentContentHandler::class );
-		} );
 		$services->addServiceManipulator( 'SlotRoleRegistry', static function ( $registry ) {
 			$registry->defineRoleWithModel( PageRevisionWriter::SLOT, LayersDocumentContent::MODEL,
 				[ 'display' => 'none' ], false );

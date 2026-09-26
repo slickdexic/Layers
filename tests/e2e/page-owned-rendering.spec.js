@@ -84,5 +84,6 @@ test( 'actual text, textbox and callout painters produce visible content', async
 test( 'history module does not start or load the editable UI', async ( { page } ) => {
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.history' ) ) ).toBe( 'ready' );
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.editor' ) ) ).toBe( 'registered' );
+	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.editor.pageOwned' ) ) ).toBe( 'registered' );
 	await expect( page.locator( '.layers-editor-container' ) ).toHaveCount( 0 );
 } );

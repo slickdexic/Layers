@@ -27,6 +27,38 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		$this->assertNotSame( $canonical, $schema->canonicalize( json_encode( $reordered ) ) );
 	}
 
+	/**
+	 * A later, stricter layer validator must not make stored history unreadable.
+	 */
+	public function testStoredDocumentsAreReadableWhenLayerRulesTighten(): void {
+		$schema = new DocumentSchema();
+		$doc = self::fixture();
+		$doc->surfaces[0]->layers[0]->propertyRetiredByLaterRelease = 'kept';
+		$json = json_encode( $doc );
+		try {
+			$schema->canonicalize( $json );
+			$this->fail( 'Save-time validation must reject properties the current validator drops' );
+		} catch ( \InvalidArgumentException $e ) {
+			$this->assertSame( 'invalid-or-lossy-layer-data', $e->getMessage() );
+		}
+		$stored = $schema->decodeStored( $json );
+		$this->assertSame( 'kept', $stored->surfaces[0]->layers[0]->propertyRetiredByLaterRelease );
+
+		foreach ( [ '{"schemaVersion":2,"surfaces":[]}', '{"schemaVersion":1,"surfaces":[],"extra":1}',
+			'{"schemaVersion":1,"surfaces":[{"id":"a","id":"b"}]}' ] as $broken ) {
+			try {
+				$schema->decodeStored( $broken );
+				$this->fail( 'Structural read validation must still reject ' . $broken );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertNotSame( '', $e->getMessage() );
+			}
+		}
+		$untyped = self::fixture();
+		unset( $untyped->surfaces[0]->layers[0]->type );
+		$this->expectExceptionMessage( 'invalid-layer-type' );
+		$schema->decodeStored( json_encode( $untyped ) );
+	}
+
 	public function testEmptyDocumentAndEmptySurfaceRemainValid(): void {
 		$schema = new DocumentSchema();
 		$this->assertSame( '{"schemaVersion":1,"surfaces":[]}',

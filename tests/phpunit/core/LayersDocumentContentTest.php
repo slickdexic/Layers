@@ -15,12 +15,23 @@ use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
  * @group Database
  */
 class LayersDocumentContentTest extends \MediaWikiIntegrationTestCase {
+	use ExcludesInstalledPilot;
+
 	protected function setUp(): void {
 		parent::setUp();
+		$this->excludeInstalledPilot();
 		$this->getServiceContainer()->getContentHandlerFactory()->defineContentHandler(
 			LayersDocumentContent::MODEL, LayersDocumentContentHandler::class );
 		$this->getServiceContainer()->getSlotRoleRegistry()->defineRoleWithModel(
 			PageRevisionWriter::SLOT, LayersDocumentContent::MODEL, [ 'display' => 'none' ], false );
+	}
+
+	protected function tearDown(): void {
+		try {
+			parent::tearDown();
+		} finally {
+			$this->installedPilotOverride = null;
+		}
 	}
 
 	private function fixture(): string {
@@ -42,6 +53,22 @@ class LayersDocumentContentTest extends \MediaWikiIntegrationTestCase {
 			new LayersDocumentContent( $stored->getText() ),
 			CommentStoreComment::newUnsavedComment( 'Formatting only' ) );
 		$this->assertSame( $first->getId(), $again->getId() );
+	}
+
+	public function testRevisionDiffShowsChangedPropertiesOnTheirOwnLines(): void {
+		$old = json_decode( $this->fixture() );
+		$new = json_decode( $this->fixture() );
+		$new->surfaces[0]->layers[0]->text = 'Revised label';
+		$renderer = $this->getServiceContainer()->getContentHandlerFactory()
+			->getContentHandler( LayersDocumentContent::MODEL )
+			->getSlotDiffRenderer( \MediaWiki\Context\RequestContext::getMain() );
+		$diff = $renderer->getDiff(
+			new LayersDocumentContent( ( new DocumentSchema() )->canonicalize( json_encode( $old ) ) ),
+			new LayersDocumentContent( ( new DocumentSchema() )->canonicalize( json_encode( $new ) ) ) );
+		$this->assertStringContainsString( 'Revised label', $diff );
+		// Only the edited property differs; canonical storage is one line, so a raw diff would be one huge row.
+		$this->assertSame( 1, substr_count( $diff, 'class="diff-deletedline' ) );
+		$this->assertContains( 'layers-readable-json-1', $renderer->getExtraCacheKeys() );
 	}
 
 	/**

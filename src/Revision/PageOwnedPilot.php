@@ -47,7 +47,8 @@ class PageOwnedPilot {
 		$access = new PageHistoryAccess( $services->getRevisionLookup() );
 		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
 		$this->publisher = new PagePublicationService( $services->getWikiPageFactory(), $access, $sources,
-			new PageRevisionWriter(), new PublicationAdmissionContext() );
+			new PageRevisionWriter(), new PublicationAdmissionContext(), $services->getHookContainer(),
+			$services->getUserFactory() );
 		$this->reader = new PageReadService( $access, $sources );
 	}
 
@@ -68,7 +69,7 @@ class PageOwnedPilot {
 	 */
 	public function newReadApi( ApiMain $main, string $name ): ApiLayersRead {
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
-			$this->enabled, $this->ownerKeys );
+			$this->enabled, $this->ownerKeys, [ $this, 'prepareBoundViewers' ] );
 	}
 
 	/**
@@ -97,7 +98,7 @@ class PageOwnedPilot {
 		try {
 			$lookup = $this->services->getRevisionLookup();
 			( new PageHistoryAccess( $lookup ) )->assertCanPrepareEdit( $owner, $authority );
-			$bundle = $this->reader->read( $owner, $revisionId, $authority );
+			$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [ $surfaceId ] );
 			$current = $lookup->getRevisionByTitle( $owner, 0, IDBAccessObject::READ_LATEST );
 			if ( !$current || $current->getId() !== $revisionId || $current->getPageId() < 1 ||
 				$current->getPageId() !== $owner->getArticleID()
@@ -137,6 +138,58 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * Publish a deliberately confirmed direct adoption from selection identity only.
+	 * Internal composition: HTTP callers must enforce POST, CSRF, rate limits and confirmation.
+	 * Never accepts a client-prepared snapshot, surface ID or rewritten main content.
+	 *
+	 * @param int $pageId
+	 * @param int $baseRevisionId
+	 * @param int $start UTF-8 byte offset of the selected direct embedding
+	 * @param string $expected Complete original source bytes
+	 * @param int $legacyRevisionId Explicit immutable legacy row ID, never latest
+	 * @param string|null $fileTimestamp Exact upload version; null for slides
+	 * @param Authority $authority Original actor
+	 * @param string $summary
+	 * @return array Confirmed native page/revision/surface identity
+	 * @throws PublicationException No automatic retry, including uncertain publication failures
+	 */
+	public function adoptDirectEmbedding( int $pageId, int $baseRevisionId, int $start, string $expected,
+		int $legacyRevisionId, ?string $fileTimestamp, Authority $authority, string $summary
+	): array {
+		if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+			throw new PublicationException( 'layers-publication-disabled' );
+		}
+		if ( $start < 0 || $expected === '' || $legacyRevisionId < 1 || $legacyRevisionId > 2147483647 ) {
+			throw new PublicationException( 'layers-invalid-publication-request' );
+		}
+		$lookup = $this->services->getRevisionLookup();
+		$identities = new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
+			new PageHistoryAccess( $lookup ) );
+		try {
+			$owner = $identities->resolveForEdit( $pageId, $baseRevisionId, $authority );
+		} catch ( \DomainException $e ) {
+			throw new PublicationException( $e->getMessage() );
+		}
+		if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+			throw new PublicationException( 'layers-publication-disabled' );
+		}
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		$legacy = new LegacyAdoptionPreparationService( $identities,
+			$this->services->getService( 'LayersDatabase' ), new LegacyMediaResolver( $sources ),
+			new LegacySurfaceConverter() );
+		$preparer = new DirectAdoptionPreparationService( $identities, $lookup,
+			$this->services->getTitleFactory(), $legacy, $this->newRewriter() );
+		$proposal = $preparer->prepare( $pageId, $baseRevisionId, $start, $expected,
+			$legacyRevisionId, $fileTimestamp, $authority );
+		$revisionId = ( new PageOwnedAdoptionService( $identities, $lookup, $this->publisher ) )
+			->publishPreparedSurface( $pageId, $baseRevisionId, $authority,
+				$proposal['document'], $proposal['main'], $summary );
+		return [ 'pageId' => $pageId, 'revisionId' => $revisionId,
+			'surfaceId' => $proposal['surfaceId'], 'binding' => $proposal['binding'] ];
+	}
+
+	/**
 	 * List independently editable saved direct bindings for a page-level control.
 	 * Never maps rendered occurrences to source offsets or exposes template-generated candidates.
 	 * @param int $pageId
@@ -161,21 +214,30 @@ class PageOwnedPilot {
 			if ( !$main instanceof WikitextContent ) {
 				return [];
 			}
-			$candidates = ( new DirectEmbeddingRewriter() )->scan( $main->getText(), static fn () => null );
+			// One exact read for every entry; the editor route repeats full admission when opened.
+			$slides = [];
+			foreach ( $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces']
+				as $surface
+			) {
+				if ( $surface['kind'] === 'slide' ) {
+					$slides[$surface['id']] = true;
+				}
+			}
+			$candidates = $this->newRewriter()->scan( $main->getText(), static fn () => null );
 			$selections = [];
 			foreach ( $candidates as $candidate ) {
 				try {
 					$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
-					if ( !$binding || $binding['pageId'] !== $pageId || isset( $selections[$binding['surfaceId']] ) ) {
+					if ( !$binding || $candidate['kind'] !== 'slide' || $binding['pageId'] !== $pageId ||
+						!isset( $slides[$binding['surfaceId']] ) || isset( $selections[$binding['surfaceId']] ) ) {
 						continue;
 					}
-					$this->prepareEditor( $owner->getPrefixedText(), $revisionId, $binding['surfaceId'], $authority );
 					$selections[$binding['surfaceId']] = [ 'label' => $candidate['target'], 'params' => [
 						'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
 						'expected' => $candidate['raw']
 					] ];
-				} catch ( \DomainException | \InvalidArgumentException $e ) {
-					// A malformed or unavailable binding must not redirect another drawing's entry.
+				} catch ( \InvalidArgumentException $e ) {
+					// A malformed binding must not redirect another drawing's entry.
 				}
 			}
 			return array_values( $selections );
@@ -216,7 +278,7 @@ class PageOwnedPilot {
 				throw new \DomainException();
 			}
 			// File-backed editing remains closed until pinned source delivery is integrated.
-			$candidates = ( new DirectEmbeddingRewriter() )->scan( $main->getText(), static fn () => null );
+			$candidates = $this->newRewriter()->scan( $main->getText(), static fn () => null );
 			foreach ( $candidates as $candidate ) {
 				if ( $candidate['kind'] !== 'slide' || $candidate['start'] !== $start ||
 					$candidate['raw'] !== $expected ) {
@@ -292,7 +354,7 @@ class PageOwnedPilot {
 		) {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
-		$bundle = $this->reader->read( $owner, $revisionId, $authority );
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [ $surfaceId ] );
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
 			if ( $surface['id'] === $surfaceId ) {
 				// Pinned image/PDF delivery must precede asset-backed viewer exposure.
@@ -318,7 +380,8 @@ class PageOwnedPilot {
 			$owner->hasFragment() || $revisionId < 1 || $revisionId > 2147483647 ) {
 			return [];
 		}
-		$bundle = $this->reader->read( $owner, $revisionId, $authority );
+		// Listing only; the viewer resolves the selected surface's source when a link is opened.
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [] );
 		$surfaces = [];
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
 			if ( $surface['kind'] === 'slide' ) {
@@ -338,14 +401,43 @@ class PageOwnedPilot {
 	public function prepareBoundViewer( \MediaWiki\Title\Title $owner, int $revisionId,
 		string $binding, Authority $authority
 	): array {
+		$bundles = $this->prepareBoundViewers( $owner, $revisionId, [ $binding ], $authority );
+		if ( !isset( $bundles[$binding] ) ) {
+			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+		return $bundles[$binding];
+	}
+
+	/**
+	 * Authorize every binding of one displayed revision with a single snapshot read.
+	 * @param \MediaWiki\Title\Title $owner Native displayed owner
+	 * @param int $revisionId Exact displayed revision
+	 * @param string[] $bindings Canonical PageID bindings
+	 * @param Authority $authority Actual reader
+	 * @return array[] Authorized slide bundles keyed by binding, for uncached response output only
+	 */
+	public function prepareBoundViewers( \MediaWiki\Title\Title $owner, int $revisionId,
+		array $bindings, Authority $authority
+	): array {
 		if ( !$this->enabled || !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
-			throw new \DomainException( 'layers-revision-unavailable' );
+			return [];
 		}
-		$bundle = $this->reader->readBoundSurface( $owner, $revisionId, $binding, $authority );
-		if ( $bundle['surface']['kind'] !== 'slide' ) {
-			throw new \DomainException( 'layers-revision-unavailable' );
+		$result = [];
+		$bundles = $this->reader->readBoundSurfaces( $owner, $revisionId, $bindings, $authority );
+		foreach ( $bundles as $binding => $bundle ) {
+			if ( $bundle['surface']['kind'] === 'slide' ) {
+				$result[$binding] = $bundle + [ 'owner' => $owner->getPrefixedDBkey() ];
+			}
 		}
-		return $bundle + [ 'owner' => $owner->getPrefixedDBkey() ];
+		return $result;
+	}
+
+	/**
+	 * Scanner honouring this wiki's registered extension tags, whose bodies are opaque to wikitext links.
+	 * @return DirectEmbeddingRewriter
+	 */
+	private function newRewriter(): DirectEmbeddingRewriter {
+		return new DirectEmbeddingRewriter( $this->services->getParserFactory()->getMainInstance()->getTags() );
 	}
 
 	/** @return PageOwnedAdmissionHooks */

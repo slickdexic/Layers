@@ -94,10 +94,35 @@ class PageHistoryAccess {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::FOR_THIS_USER, $authority );
-		if ( !$content instanceof LayersDocumentContent || !$content->isValid() ) {
+		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		return $content;
+	}
+
+	/**
+	 * Stored surfaces of an owner's revision, for change detection only. Never returned to a client.
+	 * Anything unavailable yields no surfaces, so every proposed surface is treated as changed.
+	 *
+	 * @param Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return \stdClass[]
+	 */
+	public function getStoredSurfaces( Title $owner, int $revisionId, Authority $authority ): array {
+		if ( $revisionId <= 0 ) {
+			return [];
+		}
+		$revision = $this->revisionLookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+		if ( !$revision || $revision->getPageId() !== $owner->getArticleID( IDBAccessObject::READ_LATEST ) ||
+			!$revision->hasSlot( PageRevisionWriter::SLOT ) ) {
+			return [];
+		}
+		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::FOR_THIS_USER, $authority );
+		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
+			return [];
+		}
+		return json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR )->surfaces;
 	}
 
 	/**

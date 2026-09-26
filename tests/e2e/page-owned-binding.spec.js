@@ -66,6 +66,16 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 	const initialLayers = await api( { action: 'layersread', owner, revid: String( initialRevId ) } );
 	const initialSnapshot = initialLayers.layersread.snapshot;
 
+	// The page carries binding identities only; the viewer fetches each reader's drawings.
+	const visitBound = async ( target, reload = false ) => {
+		const read = page.waitForResponse( ( r ) => r.url().includes( 'action=layersread' ) &&
+			r.url().includes( 'binding=' ) );
+		const response = reload ? await page.reload() : await page.goto( target );
+		const readResponse = await read;
+		expect( readResponse.headers()[ 'cache-control' ] || '' ).toContain( 'private' );
+		return { response, bindings: ( await readResponse.json() ).layersread.bindings };
+	};
+
 	const assertPaintedColor = async ( rgb ) => {
 		const canvas = page.locator( '.layers-bound-slide canvas' ).first();
 		await expect( canvas ).toBeVisible();
@@ -153,12 +163,15 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		} );
 		page.on( 'pageerror', () => consoleFailures.push( 'Uncaught browser error' ) );
 
-		const response1 = await page.goto( `${ base }/index.php?title=${ owner }` );
+		const visit1 = await visitBound( `${ base }/index.php?title=${ owner }` );
+		const response1 = visit1.response;
 		expect( response1.ok() ).toBe( true );
 
-		// Assert real HTML response Cache-Control includes no-store
+		// Page HTML is cacheable like any other page and never contains drawing data
 		const cacheControl = response1.headers()[ 'cache-control' ] || '';
-		expect( cacheControl.toLowerCase() ).toContain( 'no-store' );
+		expect( cacheControl.toLowerCase() ).not.toContain( 'no-store' );
+		expect( await response1.text() ).not.toContain( 'Revision One Drawing' );
+		expect( await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) ) ).toBeNull();
 
 		// Verify .layers-bound-slide contains a painted canvas
 		const boundSlide = page.locator( '.layers-bound-slide' );
@@ -185,8 +198,8 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		} );
 		expect( isPainted1 ).toBe( true );
 
-		// Verify bootstrap bundle has exactly the published revision/surface
-		const boundSlides1 = await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) );
+		// Verify the fetched bundle has exactly the published revision/surface
+		const boundSlides1 = visit1.bindings;
 		expect( boundSlides1 ).toBeDefined();
 		expect( boundSlides1[ firstBinding ] ).toBeDefined();
 		expect( boundSlides1[ firstBinding ].revisionId ).toBe( firstRevId );
@@ -262,8 +275,8 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		expect( secondRevId ).toBeGreaterThan( firstRevId );
 
 		// Visit the first page revision with native oldid
-		await page.goto( `${ base }/index.php?title=${ owner }&oldid=${ firstRevId }` );
-		const oldBoundSlides = await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) );
+		const oldBoundSlides = ( await visitBound( `${ base }/index.php?title=${ owner }&oldid=${ firstRevId }` ) )
+			.bindings;
 		await assertPaintedColor( [ 255, 0, 0 ] );
 		expect( oldBoundSlides[ firstBinding ] ).toBeDefined();
 		expect( oldBoundSlides[ firstBinding ].revisionId ).toBe( firstRevId );
@@ -272,8 +285,7 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		expect( oldBoundSlides[ firstBinding ].surface.layers[ 0 ].x ).toBe( 50 );
 
 		// Verify current page displays the second drawing
-		await page.goto( `${ base }/index.php?title=${ owner }` );
-		const currentBoundSlides = await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) );
+		const currentBoundSlides = ( await visitBound( `${ base }/index.php?title=${ owner }` ) ).bindings;
 		await assertPaintedColor( [ 0, 0, 255 ] );
 		expect( currentBoundSlides[ firstBinding ] ).toBeDefined();
 		expect( currentBoundSlides[ firstBinding ].revisionId ).toBe( secondRevId );
@@ -282,17 +294,16 @@ test( 'read-only inline bound slide renders, isolates revisions, and reloads on 
 		expect( currentBoundSlides[ firstBinding ].surface.layers[ 0 ].x ).toBe( 100 );
 
 		// Reload both URLs to exercise parser-cache reuse; old revision must never receive new drawing
-		await page.goto( `${ base }/index.php?title=${ owner }&oldid=${ firstRevId }` );
-		await page.reload();
-		const reloadedOldBoundSlides = await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) );
+		// Let the first visit's read finish, or the reload discards it while it is being awaited.
+		await visitBound( `${ base }/index.php?title=${ owner }&oldid=${ firstRevId }` );
+		const reloadedOldBoundSlides = ( await visitBound( null, true ) ).bindings;
 		await assertPaintedColor( [ 255, 0, 0 ] );
 		expect( reloadedOldBoundSlides[ firstBinding ].revisionId ).toBe( firstRevId );
 		expect( reloadedOldBoundSlides[ firstBinding ].surface.layers[ 0 ].fill ).toBe( '#ff0000' );
 		expect( reloadedOldBoundSlides[ firstBinding ].surface.layers[ 1 ].text ).toBe( 'Revision One Drawing' );
 
-		await page.goto( `${ base }/index.php?title=${ owner }` );
-		await page.reload();
-		const reloadedCurrentBoundSlides = await page.evaluate( () => mw.config.get( 'wgLayersBoundSlides' ) );
+		await visitBound( `${ base }/index.php?title=${ owner }` );
+		const reloadedCurrentBoundSlides = ( await visitBound( null, true ) ).bindings;
 		await assertPaintedColor( [ 0, 0, 255 ] );
 		expect( reloadedCurrentBoundSlides[ firstBinding ].revisionId ).toBe( secondRevId );
 		expect( reloadedCurrentBoundSlides[ firstBinding ].surface.layers[ 0 ].fill ).toBe( '#0000ff' );

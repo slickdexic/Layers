@@ -260,6 +260,10 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
 		$this->assertFalse( $manifest['config']['LayersPageOwnedPilotEnabled']['value'] );
 		$this->assertSame( [], $manifest['config']['LayersPageOwnedPilotOwners']['value'] );
-		$this->assertArrayNotHasKey( LayersDocumentContent::MODEL, $manifest['ContentHandlers'] ?? [] );
+		// Registered so stored revisions always load; it grants no write path by itself.
+		$this->assertArrayHasKey( LayersDocumentContent::MODEL, $manifest['ContentHandlers'] ?? [] );
+		$this->assertFalse( $this->getServiceContainer()->getContentHandlerFactory()
+			->getContentHandler( LayersDocumentContent::MODEL )
+			->canBeUsedOn( $this->getServiceContainer()->getTitleFactory()->newFromText( 'Any page' ) ) );
 	}
 }

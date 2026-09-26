@@ -90,3 +90,6 @@ resources/ext.layers.editor/shapeLibrary/ShapeLibraryData.original.js
 
 # Locally generated JavaScript documentation; the curated API guide is maintained separately.
 docs/API.generated.md
+
+# Python bytecode from the page-owned HTTP test harness
+__pycache__/

@@ -18,20 +18,23 @@ class DirectAdoptionPreparationService {
 	private RevisionLookup $revisions;
 	private TitleFactory $titles;
 	private LegacyAdoptionPreparationService $legacy;
+	private DirectEmbeddingRewriter $rewriter;
 
 	/**
 	 * @param PageOwnedIdentityResolver $identities
 	 * @param RevisionLookup $revisions
 	 * @param TitleFactory $titles
 	 * @param LegacyAdoptionPreparationService $legacy
+	 * @param DirectEmbeddingRewriter|null $rewriter Scanner configured with the wiki's extension tags
 	 */
 	public function __construct( PageOwnedIdentityResolver $identities, RevisionLookup $revisions,
-		TitleFactory $titles, LegacyAdoptionPreparationService $legacy
+		TitleFactory $titles, LegacyAdoptionPreparationService $legacy, ?DirectEmbeddingRewriter $rewriter = null
 	) {
 		$this->identities = $identities;
 		$this->revisions = $revisions;
 		$this->titles = $titles;
 		$this->legacy = $legacy;
+		$this->rewriter = $rewriter ?? new DirectEmbeddingRewriter();
 	}
 
 	/**
@@ -72,7 +75,7 @@ class DirectAdoptionPreparationService {
 			return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() &&
 				!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
 		};
-		$rewriter = new DirectEmbeddingRewriter();
+		$rewriter = $this->rewriter;
 		try {
 			$selected = null;
 			foreach ( $rewriter->scan( $main->getText(), $resolveFile ) as $candidate ) {
@@ -100,25 +103,16 @@ class DirectAdoptionPreparationService {
 	}
 
 	/**
-	 * Refuse known unsupported historical-viewer content before returning an adoptable proposal.
+	 * Refuse content the historical viewer cannot draw before returning an adoptable proposal.
 	 * This is a capability boundary, not proof of visual parity for every effect/font.
-	 * Keep aligned with PageOwnedRevisionRenderer; expand only with native/browser acceptance.
 	 * Structural conversion remains reusable for image/PDF preparation without public exposure.
 	 * @param string $document Already validated server-produced single-surface document
 	 */
 	private function assertViewerCapabilities( string $document ): void {
 		$surface = json_decode( $document )->surfaces[0];
-		if ( $surface->kind !== 'slide' ) {
+		// Hidden unsupported content must survive future editing too; never silently discard it.
+		if ( $surface->kind !== 'slide' || !PageOwnedRenderCapability::isRenderable( $surface ) ) {
 			throw new PublicationException( 'layers-adoption-rendering-unavailable' );
-		}
-		$types = [ 'text', 'textbox', 'callout', 'rectangle', 'rect', 'circle', 'ellipse',
-			'polygon', 'star', 'line', 'arrow', 'path', 'dimension', 'angleDimension' ];
-		foreach ( $surface->layers as $layer ) {
-			// Hidden unsupported content must survive future editing too; never silently discard it.
-			if ( !in_array( $layer->type, $types, true ) ||
-				isset( $layer->parentGroup ) || isset( $layer->parentId ) ) {
-				throw new PublicationException( 'layers-adoption-rendering-unavailable' );
-			}
 		}
 	}
 }

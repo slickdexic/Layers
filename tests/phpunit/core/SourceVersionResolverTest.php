@@ -108,8 +108,15 @@ class SourceVersionResolverTest extends \MediaWikiIntegrationTestCase {
 	public function testInvalidSnapshotRejectedBeforeLookup(): void {
 		$repo = $this->createMock( LocalRepo::class );
 		$repo->expects( $this->never() )->method( 'findFile' );
-		$this->expectException( \InvalidArgumentException::class );
+		$this->expectException( \DomainException::class );
+		$this->expectExceptionMessage( 'layers-source-unavailable' );
 		$this->resolver( $repo )->resolve( new LayersDocumentContent( '{}' ), $this->authority() );
+	}
+
+	public function testSelectedSurfacesSkipOtherSources(): void {
+		$repo = $this->createMock( LocalRepo::class );
+		$repo->expects( $this->never() )->method( 'findFile' );
+		$this->assertSame( [], $this->resolver( $repo )->resolve( $this->document(), $this->authority(), [] ) );
 	}
 
 	public function testRealLocalUploadReplacementPreservesExactOldVersion(): void {

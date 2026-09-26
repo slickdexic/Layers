@@ -24,6 +24,31 @@ class DocumentSchema {
 	 * @throws \InvalidArgumentException On malformed or unsupported content
 	 */
 	public function canonicalize( string $json ): string {
+		$result = JsonSnapshotCodec::encode( $this->decode( $json, true ) );
+		if ( strlen( $result ) > self::MAX_BYTES ) {
+			throw new \InvalidArgumentException( 'document-too-large' );
+		}
+		return $result;
+	}
+
+	/**
+	 * Structural validation for an already stored revision. Layer property rules are enforced
+	 * only when saving, so tightening them later cannot make existing history unreadable.
+	 *
+	 * @param string $json Stored snapshot
+	 * @return \stdClass
+	 * @throws \InvalidArgumentException On malformed or structurally unsupported content
+	 */
+	public function decodeStored( string $json ): \stdClass {
+		return $this->decode( $json, false );
+	}
+
+	/**
+	 * @param string $json
+	 * @param bool $strict Apply current layer property validation
+	 * @return \stdClass
+	 */
+	private function decode( string $json, bool $strict ): \stdClass {
 		if ( strlen( $json ) > self::MAX_BYTES ) {
 			throw new \InvalidArgumentException( 'document-too-large' );
 		}
@@ -41,7 +66,7 @@ class DocumentSchema {
 		$ids = [];
 		$totalLayers = 0;
 		foreach ( $document->surfaces as $surface ) {
-			$this->surface( $surface );
+			$this->surface( $surface, $strict );
 			if ( isset( $ids[$surface->id] ) ) {
 				throw new \InvalidArgumentException( 'duplicate-surface-id' );
 			}
@@ -51,15 +76,14 @@ class DocumentSchema {
 				throw new \InvalidArgumentException( 'too-many-total-layers' );
 			}
 		}
-		$result = JsonSnapshotCodec::encode( $document );
-		if ( strlen( $result ) > self::MAX_BYTES ) {
-			throw new \InvalidArgumentException( 'document-too-large' );
-		}
-		return $result;
+		return $document;
 	}
 
-	/** @param mixed $surface */
-	private function surface( $surface ): void {
+	/**
+	 * @param mixed $surface
+	 * @param bool $strict
+	 */
+	private function surface( $surface, bool $strict ): void {
 		$this->objectKeys( $surface, [ 'id', 'kind', 'label', 'canvas', 'layers' ],
 			[ 'source', 'readingOrder' ], 'surface' );
 		$this->identifier( $surface->id );
@@ -92,7 +116,7 @@ class DocumentSchema {
 		} else {
 			$this->source( $surface->source ?? null, $surface->kind );
 		}
-		$this->layers( $surface );
+		$this->layers( $surface, $strict );
 	}
 
 	/**
@@ -121,8 +145,11 @@ class DocumentSchema {
 		$this->integer( $source->page, 1, $kind === 'image' ? 1 : 100000, 'source-page' );
 	}
 
-	/** @param \stdClass $surface */
-	private function layers( \stdClass $surface ): void {
+	/**
+	 * @param \stdClass $surface
+	 * @param bool $strict
+	 */
+	private function layers( \stdClass $surface, bool $strict ): void {
 		$this->listValue( $surface->layers, self::MAX_LAYERS_PER_SURFACE, 'layers' );
 		$byId = [];
 		foreach ( $surface->layers as $layer ) {
@@ -133,8 +160,19 @@ class DocumentSchema {
 			if ( isset( $byId[$layer->id] ) ) {
 				throw new \InvalidArgumentException( 'duplicate-layer-id' );
 			}
+			if ( !is_string( $layer->type ?? null ) ) {
+				throw new \InvalidArgumentException( 'invalid-layer-type' );
+			}
 			$byId[$layer->id] = $layer;
 		}
+		if ( $strict ) {
+			$this->strictLayers( $surface );
+		}
+		$this->references( $surface, $byId );
+	}
+
+	/** @param \stdClass $surface */
+	private function strictLayers( \stdClass $surface ): void {
 		try {
 			$raw = json_decode( json_encode( $surface->layers, JSON_THROW_ON_ERROR ), true, 64, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
@@ -146,7 +184,6 @@ class DocumentSchema {
 			JsonSnapshotCodec::encode( $result->getData() ) ) {
 			throw new \InvalidArgumentException( 'invalid-or-lossy-layer-data' );
 		}
-		$this->references( $surface, $byId );
 	}
 
 	/**

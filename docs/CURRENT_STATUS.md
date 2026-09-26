@@ -1,5 +1,45 @@
 # Current status and limitations
 
+## Page views cacheable, edits tagged and filtered — September 26, 2026
+
+Second lead round on the page-owned history pilot, in the working tree and not yet committed.
+
+- **Cacheable pages:** page HTML with bound slides now carries binding identities only. The viewer fetches each reader's drawings with `layersread` `binding=` (private, exact revision, up to 50 per request; unavailable bindings are omitted rather than distinguished). Pages are no longer marked `no-store`, and page views no longer read the primary database for drawings. Edit links for current-revision editors are still added per request and never enter parser output.
+- **Native change tag:** every page-owned save carries the software-defined `layers-page-drawing` tag, so Layers edits can be filtered in Recent Changes, watchlists and history. `layers-data-change` is now declared as software-defined too.
+- **Edit filters:** any page-text change published with a drawing (`layerspublish maintext`, adoption's binding edit) runs `EditFilterMergedContent`, so AbuseFilter, SpamBlacklist and ConfirmEdit apply as they do in EditPage. Rejections return `layers-edit-filtered`.
+- **Smaller ordinary editor:** page-owned editor code (about 64 KB) moved to `ext.layers.editor.pageOwned`, loaded only by the page-owned route and on demand by EditorBootstrap. `ext.layers.editor` is at 97% of its budget (was 100%); the legacy editor was smoke-checked in Chromium with all tools and no page errors.
+- API help messages now exist for `layersread` and `layerspublish pageid`.
+
+Fresh verification: native page-owned group **302 tests / 2,159 assertions passed**; standalone PHPUnit **1,293 tests, 1 skipped**; Jest **199 suites / 14,993 tests**; every repository gate and Grunt lint/banana pass; PHP style 0 errors (2 old stub warnings). All **10 page-owned Chromium acceptance tests passed** on the original wiki after the change, including history, conflict, recovery, false-boolean round-trip and lost-response reconciliation.
+
+**Still open, lead-owned:** image/PDF pinned delivery, lifecycle guards keyed to titles rather than PageID, the adoption HTTP boundary and its UI (J64/J65), and a public cache policy for anonymous binding reads. Earlier entries below are historical.
+
+## Lead review remediation — September 26, 2026
+
+A full review of the page-owned history work found defects that every gate had passed. They are fixed in the working tree; nothing is committed yet.
+
+- **Parser cache:** bound slides now mark parser output `VARY_REVISION`. Save-time and edit-stash renders have no revision ID, so without the flag core could keep their unavailable placeholder as the cached page after an ordinary text edit.
+- **Unviewable saves refused:** `PageOwnedRenderCapability` is the single list of layer types the historical renderer draws. Publication refuses new or changed surfaces containing anything else (`layers-content-not-renderable`), adoption uses the same list, and `check-parallel-lists.js` keeps the PHP and JS copies equal. The page-owned editor hides the marker tool, image import, shape library and emoji picker. Groups can still be made in the editor; the server refuses them with a localized message.
+- **Ordinary pages are eligible:** the source scanner refused the whole page for any `<br>`, `<div>`, `<references />`, external link or bracket in prose, which removed every edit link and made adoption impossible. It now follows preprocessor rules: ordinary HTML and single brackets are text, bodies of the wiki's registered extension tags and `<includeonly>` are skipped, and `<noinclude>`/`<onlyinclude>` markers are transparent.
+- **History stays readable:** stored revisions are read with structural validation only (`DocumentSchema::decodeStored`). Tightening layer validation later can no longer make old revisions unreadable; saving still applies current rules.
+- **One missing file hides only its drawing:** selected-surface reads resolve only that surface's source, and publication rechecks sources and renderability only for surfaces the save adds or changes. An identical republish is a no-op. The full `layersread` API still resolves every source.
+- **Fewer reads per view:** all bound slides of a displayed revision are authorized with one snapshot read, the page edit list reads once instead of once per binding, and history rows no longer look up files.
+- **Readable diffs:** Layers slot diffs pretty-print the snapshot, so an edit shows the changed properties instead of one very long line.
+- **Content model always registered:** `layers-document` is now in the manifest's `ContentHandlers` (never usable as main page content), so stored revisions still load if the pilot owner list changes. The writable slot role, admission hook and lifecycle guards remain scoped to configured owners.
+- **Test isolation:** `LayersDocumentContentTest` and `PageRevisionWriterTest` no longer collide with the host wiki's installed pilot (19 errors before). Abandoned, untracked RenderJob/container prototypes were moved out of the working tree to a sibling `Layers-abandoned-render-prototypes` folder with their original paths.
+
+Fresh verification: native page-owned group **300 tests / 2,144 assertions passed** (27 classes; previously 297 tests with 19 errors); standalone PHPUnit **1,293 tests, 1 skipped**; Jest **199 suites / 14,990 tests**; every repository gate passes; PHP style is back to 0 errors and the 2 old stub warnings. The live test wiki still serves pilot pages. Browser acceptance was not rerun.
+
+**Still open at this checkpoint** (resolved in the entry above): `maintext` bypassed `EditFilterMergedContent`, bound pages disabled caching and read the primary database, and `ext.layers.editor` was at 100% of its budget. Image/PDF delivery, title-keyed lifecycle guards and adoption's HTTP boundary remain. Earlier entries below are historical.
+
+## Confirmed adoption composition implemented; J74 ready — September 26, 2026
+
+Lead added PageOwnedPilot::adoptDirectEmbedding(pageId, baseRevisionId, start, expected, legacyRevisionId, fileTimestamp, authority, summary). This internal write composition accepts only selection identity. It checks pilot enablement, login, basic bounds, native owner/base/edit authority and configured scope before obtaining legacy data. It then prepares the exact saved source occurrence and exact immutable legacy row once, retains the resulting document/main server-side, and publishes through the pilot's existing admission-aware publisher. It returns only confirmed page/revision/surface/binding identity. No client-prepared snapshot/main/surface is accepted and there is no automatic retry. Existing slide-only rendering and image/PDF delivery gates remain in force.
+
+Fresh native pilot/preparation/adoption regression: **46 tests / 490 assertions passed**. The new test verifies one native revision, exact binding rewrite, drawing values/types including false/zero, immutable pre-adoption main content, no prior Layers slot, exact legacy lookup once and no latest lookup, and stale-repeat rejection without another revision. Changed PHP style passed. An independent read-only architectural review confirmed use of the existing publisher/admission context and identified the native service injection seam for junior tests.
+
+**J74 is ready** for bounded denial/race tests. Lead next implements explicit confirmation and the HTTP write boundary: POST-only, native CSRF, editlayers-save limiter, fixed error messages and deliberate reconciliation after an unknown outcome. This method is not exposed by an API or button yet. J64/J65 remain blocked until those UI callbacks exist. Layers is a MediaWiki extension; Docker remains only its test environment. Earlier entries below are historical.
+
 ## Visible page-owned editing controls verified — September 26, 2026
 
 Lead added a page-level edit list for authorized current-page readers with edit/editlayers permission. Each entry is derived from a direct saved slide binding in the exact displayed/current main revision, and opens the validated bound-editor tuple route. The list is generated per request outside shared parser output; it does not attach guessed source offsets to rendered overlays. Repeated references to one surface are deduplicated. Malformed/unbound/template-contained candidates do not become links. Historical oldid/diff views, stale revisions, disabled scope and readers lacking editing rights receive no controls. A localized notice explains that these drawings save to page history. No new manifest registration or runtime dependencies were added.

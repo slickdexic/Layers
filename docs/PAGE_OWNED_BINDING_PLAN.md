@@ -2,6 +2,16 @@
 
 September 23, 2026. **Approved direction; implementation pending.** This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
+## Source scanning follows preprocessor rules — September 26, 2026
+
+The earlier allowlist refused a whole page for any unknown HTML tag, external link or single bracket, so almost no real page could be edited or adopted. `DirectEmbeddingRewriter` now treats those as the preprocessor does: plain text. Bodies of the wiki's registered extension tags (from `Parser::getTags()`) and of `<includeonly>` are skipped; `<noinclude>` and `<onlyinclude>` markers are transparent. Unterminated comments or extension tags, control bytes and unbalanced `[[`/`{{` still refuse the page. A candidate whose caption contains links, templates or markup is still not selectable. This remains a conservative raw-source subset, not a general parser.
+
+## Confirmation delivery sequence — September 26, 2026
+
+The internal pilot now composes exact-source adoption and native atomic publication through adoptDirectEmbedding; J74 verifies rejection and race behavior. The HTTP boundary remains to be implemented. Its confirmation must identify the owner page, selected embedding and immutable legacy row, explain that a copy becomes page-owned while the shared original remains unchanged, and submit only that selection plus explicit base and native CSRF token. It must not send back a supposedly trusted prepared document or server-generated surface identity. Publication re-prepares against the same selected row/base and uses the installed admission context.
+
+The lead owns POST-only enforcement, native rate limiting, safe result/error handling and unknown-outcome reconciliation before ownership controls are delegated. Do not wire a GET link directly to the new write method. No automatic adoption retry, latest-row substitution or silent rebase. On success, ordinary page controls can open the new binding; on conflict, confirmation must be renewed explicitly. The first supported renderer remains the existing text/vector slide subset; image/PDF delivery and unsupported slide content must stay visibly unavailable rather than be converted with loss.
+
 ## Current author entry — September 26, 2026
 
 Already page-owned slides in the scoped pilot now have visible page-level edit links on an ordinary current-page view. The accompanying notice says that changes are saved in page history. Links are built from authorized direct saved bindings and carry exact source/revision parameters; clicking always rechecks them. The page-level list deliberately avoids guessing a mapping between parser-generated overlays and source occurrences. Repeated references to one drawing share an entry. Historical URLs and read-only accounts have no edit list.

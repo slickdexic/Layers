@@ -114,8 +114,9 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() ) ] );
 		$s = $this->getServiceContainer();
 		( new PageOwnedPilotRegistration() )->onMediaWikiServices( $s );
-		$this->assertSame( $retained,
-			$s->getContentHandlerFactory()->isDefinedModel( LayersDocumentContent::MODEL ) );
+		// The model is always registered so stored revisions load; only the writable role is scoped.
+		$this->assertTrue( $s->getContentHandlerFactory()->isDefinedModel( LayersDocumentContent::MODEL ) );
+		$this->assertSame( $retained, $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
 		$this->assertSame( $retained, $s->getMergeHistoryFactory() instanceof PageOwnedPilotMergeFactory );
 		$this->assertSame( $retained, $s->getWikiRevisionOldRevisionImporter() instanceof PageOwnedPilotImporter );
 		$status = Status::newGood();

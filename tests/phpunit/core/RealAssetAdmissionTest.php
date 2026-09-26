@@ -498,14 +498,17 @@ class RealAssetAdmissionTest extends RealAssetTestCase {
 		$this->assertSame( LayersDocumentContent::MODEL, $inheritedSlot->getModel() );
 		$this->assertSame( $initialLayersBytes, $inheritedSlot->serialize() );
 
-		// Republish the real referenced assets: their missing bytes must reject the save.
+		// An identical republish is a no-op: unchanged surfaces were admitted when first published.
+		$this->assertSame( $savedRev->getId(), $this->publisher->publish(
+			$page->getTitle(), $actor, $savedRev->getId(), $docJson, 'Unchanged republish' ) );
 
+		// Changing a surface whose real source bytes are missing must reject the save.
 		try {
 			$this->publisher->publish(
 				$page->getTitle(),
 				$actor,
 				$savedRev->getId(),
-				$docJson,
+				self::withChangedAssetSurface( $docJson ),
 				'Mutation attempt'
 			);
 			$this->fail( 'Publication with missing real source bytes must fail' );
@@ -932,13 +935,13 @@ class RealAssetAdmissionTest extends RealAssetTestCase {
 		$this->assertSame( LayersDocumentContent::MODEL, $inheritedSlot->getModel() );
 		$this->assertSame( $initialLayersBytes, $inheritedSlot->serialize() );
 
-		// Re-publishing the missing archived PDF bytes fails closed
+		// Changing the surface pinned to the missing archived PDF bytes fails closed
 		try {
 			$this->publisher->publish(
 				$page->getTitle(),
 				$actor,
 				$savedRev->getId(),
-				$archivedDoc,
+				self::withChangedAssetSurface( $archivedDoc ),
 				'Mutation attempt with missing archived bytes'
 			);
 			$this->fail( 'Mutating layers with missing archived bytes must throw PublicationException' );

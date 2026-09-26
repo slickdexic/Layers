@@ -1,5 +1,13 @@
 # Junior implementation review — J01–J73
 
+## Confirmed adoption composition implemented; J74 ready — September 26, 2026
+
+Lead added PageOwnedPilot::adoptDirectEmbedding(pageId, baseRevisionId, start, expected, legacyRevisionId, fileTimestamp, authority, summary). This internal write composition accepts only selection identity. It checks pilot enablement, login, basic bounds, native owner/base/edit authority and configured scope before obtaining legacy data. It then prepares the exact saved source occurrence and exact immutable legacy row once, retains the resulting document/main server-side, and publishes through the pilot's existing admission-aware publisher. It returns only confirmed page/revision/surface/binding identity. No client-prepared snapshot/main/surface is accepted and there is no automatic retry. Existing slide-only rendering and image/PDF delivery gates remain in force.
+
+Fresh native pilot/preparation/adoption regression: **46 tests / 490 assertions passed**. The new test verifies one native revision, exact binding rewrite, drawing values/types including false/zero, immutable pre-adoption main content, no prior Layers slot, exact legacy lookup once and no latest lookup, and stale-repeat rejection without another revision. Changed PHP style passed. An independent read-only architectural review confirmed use of the existing publisher/admission context and identified the native service injection seam for junior tests.
+
+**J74 is ready** for bounded denial/race tests. Lead next implements explicit confirmation and the HTTP write boundary: POST-only, native CSRF, editlayers-save limiter, fixed error messages and deliberate reconciliation after an unknown outcome. This method is not exposed by an API or button yet. J64/J65 remain blocked until those UI callbacks exist. Layers is a MediaWiki extension; Docker remains only its test environment. Earlier entries below are historical.
+
 ## Visible page-owned editing controls verified — September 26, 2026
 
 Lead added a page-level edit list for authorized current-page readers with edit/editlayers permission. Each entry is derived from a direct saved slide binding in the exact displayed/current main revision, and opens the validated bound-editor tuple route. The list is generated per request outside shared parser output; it does not attach guessed source offsets to rendered overlays. Repeated references to one surface are deduplicated. Malformed/unbound/template-contained candidates do not become links. Historical oldid/diff views, stale revisions, disabled scope and readers lacking editing rights receive no controls. A localized notice explains that these drawings save to page history. No new manifest registration or runtime dependencies were added.

@@ -6,8 +6,10 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Hooks\BoundSlideHooks;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Parser\ParserOptions;
+use MediaWiki\Parser\ParserOutputFlags;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
@@ -41,6 +43,11 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertStringNotContainsString( 'layers-slide-container', $parsed->getRawText() );
 		$this->assertStringNotContainsString( 'PRIVATE_', json_encode( $parsed->toJsonArray() ) );
 		$this->assertSame( $first, $parsed->getExtensionData( BoundSlideHooks::DATA_KEY )[$binding]['revisionId'] );
+		$this->assertTrue( $parsed->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
+		// A pre-save/edit-stash render has no revision ID and must not become canonical output.
+		$unsaved = $s->getParserFactory()->create()->parse( $text, $title, ParserOptions::newFromAnon() );
+		$this->assertStringNotContainsString( 'layers-bound-slide', $unsaved->getRawText() );
+		$this->assertTrue( $unsaved->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
 		$pilot = new PageOwnedPilot( $s, true, [ $title->getPrefixedDBkey() ] );
 		$context = new RequestContext();
 		$context->setTitle( $title );
@@ -52,7 +59,10 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 			BoundSlideHooks::output( $output, $cached, $pilot );
 		}, true );
 		$out->addParserOutput( $parsed, ParserOptions::newFromAnon() );
-		$bundle = $out->getJsConfigVars()['wgLayersBoundSlides'][$binding];
+		// The response carries identities only; each reader's browser fetches drawings via layersread.
+		$this->assertArrayNotHasKey( 'wgLayersBoundSlides', $out->getJsConfigVars() );
+		$this->assertStringNotContainsString( 'PRIVATE_', json_encode( $out->getJsConfigVars() ) . $out->getHTML() );
+		$bundle = $pilot->prepareBoundViewers( $title, $first, [ $binding ], $actor )[$binding];
 		$this->assertSame( $first, $bundle['revisionId'] );
 		$this->assertSame( 'PRIVATE_OLD_DRAWING', $bundle['surface']['layers'][0]['text'] );
 		$this->assertStringNotContainsString( 'PRIVATE_', json_encode( $parsed->toJsonArray() ) );
@@ -85,32 +95,67 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$readerOutput->setRevisionId( $second );
 		BoundSlideHooks::output( $readerOutput, $currentParsed, $pilot );
 		$this->assertStringNotContainsString( 'layers-page-edit-link', $readerOutput->getHTML() );
-		$this->assertSame( $second, $readerOutput->getJsConfigVars()['wgLayersBoundSlides'][$binding]['revisionId'] );
+		$this->assertContains( 'ext.layers.history', $readerOutput->getModules() );
+		$this->assertSame( $second,
+			$pilot->prepareBoundViewers( $title, $second, [ $binding ], $reader )[$binding]['revisionId'] );
 
+		// Pages with bound slides stay as cacheable as any other page.
 		$out->sendCacheControl();
-		$this->assertStringContainsString( 'no-store',
+		$this->assertStringNotContainsString( 'no-store',
 			$context->getRequest()->response()->getHeaders()['CACHE-CONTROL'] );
 		$before = json_encode( $parsed->toJsonArray() );
 		// A stale parser object cannot inject an old drawing into a different displayed revision.
 		$mismatch = new OutputPage( $context );
 		$mismatch->setRevisionId( $second );
 		BoundSlideHooks::output( $mismatch, $parsed, $pilot );
-		$this->assertSame( [], $mismatch->getJsConfigVars()['wgLayersBoundSlides'] );
 		$this->assertNotContains( 'ext.layers.history', $mismatch->getModules() );
-		$disabled = new OutputPage( $context );
-		$disabled->setRevisionId( $first );
-		BoundSlideHooks::output( $disabled, $parsed, new PageOwnedPilot( $s, false, [ $title->getPrefixedDBkey() ] ) );
-		$this->assertSame( [], $disabled->getJsConfigVars()['wgLayersBoundSlides'] );
+		$this->assertSame( [], ( new PageOwnedPilot( $s, false, [ $title->getPrefixedDBkey() ] ) )
+			->prepareBoundViewers( $title, $first, [ $binding ], $actor ) );
 		$this->assertSame( $before, json_encode( $parsed->toJsonArray() ) );
 		$deniedAuthority = $this->createMock( \MediaWiki\Permissions\Authority::class );
 		$deniedAuthority->method( 'authorizeRead' )->willReturn( false );
-		$deniedContext = new RequestContext();
-		$deniedContext->setTitle( $title );
-		$deniedContext->setAuthority( $deniedAuthority );
-		$denied = new OutputPage( $deniedContext );
-		$denied->setRevisionId( $first );
-		BoundSlideHooks::output( $denied, $parsed, $pilot );
-		$this->assertSame( [], $denied->getJsConfigVars()['wgLayersBoundSlides'] );
-		$this->assertStringNotContainsString( 'PRIVATE_', json_encode( $denied->getJsConfigVars() ) );
+		$this->assertSame( [], $pilot->prepareBoundViewers( $title, $first, [ $binding ], $deniedAuthority ) );
+	}
+
+	/**
+	 * Ordinary page markup must not remove page-owned editing, several bindings share one read,
+	 * and a save cannot introduce content the historical viewer would refuse to draw.
+	 */
+	public function testRealisticPageKeepsEditEntriesAndRefusesUnrenderableSaves(): void {
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
+			'LayersPageOwnedPilotOwners' => [ 'BoundSlideRealistic' ] ] );
+		$registered = TestingAdmissionRegistration::install( $this );
+		$s = $this->getServiceContainer();
+		$page = $this->getExistingTestPage( 'BoundSlideRealistic' );
+		$title = $page->getTitle();
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$document = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
+		$appendix = json_decode( json_encode( $document->surfaces[0] ) );
+		$appendix->id = 'appendix';
+		$document->surfaces[] = $appendix;
+		$first = 'v1:' . $page->getId() . ':' . $document->surfaces[0]->id;
+		$second = 'v1:' . $page->getId() . ':appendix';
+		$text = "Intro<br>See [https://example.test docs] and item[0].\n{{#Slide:Demo|layersbinding=$first}}\n" .
+			"<div class=\"box\">{{#Slide:Appendix|layersbinding=$second}}</div>\n== Notes ==\n<references />";
+		$revision = $registered['publisher']->publish( $title, $actor, $page->getLatest(), json_encode( $document ),
+			'Bind two slides', new WikitextContent( $text ), $page->getId() );
+		$pilot = new PageOwnedPilot( $s, true, [ $title->getPrefixedDBkey() ] );
+
+		$entries = $pilot->listBoundEditorSelections( $page->getId(), $revision, $actor );
+		$this->assertSame( [ 'Demo', 'Appendix' ], array_column( $entries, 'label' ) );
+		$bundles = $pilot->prepareBoundViewers( $title, $revision,
+			[ $first, $second, 'v1:2147483647:appendix', 'not-a-binding' ], $actor );
+		$this->assertSame( [ $first, $second ], array_keys( $bundles ) );
+		$this->assertSame( 'appendix', $bundles[$second]['surface']['id'] );
+
+		$document->surfaces[1]->layers[] = (object)[ 'id' => 'pin', 'type' => 'marker', 'x' => 10, 'y' => 10 ];
+		try {
+			$registered['publisher']->publish( $title, $actor, $revision, json_encode( $document ), 'Add marker' );
+			$this->fail( 'A marker would make the saved drawing unviewable in page history' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-content-not-renderable', $e->getMessage() );
+		}
+		$this->assertSame( $revision, $s->getRevisionLookup()->getRevisionByTitle( $title )->getId() );
 	}
 }

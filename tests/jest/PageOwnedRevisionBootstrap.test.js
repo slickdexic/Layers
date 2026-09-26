@@ -57,4 +57,49 @@ describe( 'Historical viewer bootstrap', () => {
 		expect( container.textContent ).not.toContain( 'private' );
 		dispose();
 	} );
+
+	describe( 'inline loading through the read API', () => {
+		function host( binding, revision ) {
+			const el = document.createElement( 'div' );
+			el.className = 'layers-bound-slide';
+			el.dataset.layersBinding = binding;
+			el.dataset.layersRevision = revision;
+			el.textContent = 'Unavailable';
+			container.append( el );
+			return el;
+		}
+
+		it( 'requests only bindings of the displayed revision, once each, and mounts the reply', async () => {
+			host( 'v1:10:a', '42' );
+			host( 'v1:10:a', '42' );
+			host( 'v1:10:b', '41' );
+			const api = { get: jest.fn( () => Promise.resolve( { layersread: { bindings: { 'v1:10:a': bundle } } } ) ) };
+			const dispose = await mount.loadInline( container, api, 'Owner', 42 );
+			expect( api.get ).toHaveBeenCalledTimes( 1 );
+			expect( api.get ).toHaveBeenCalledWith( { action: 'layersread', formatversion: 2, owner: 'Owner',
+				revid: 42, binding: [ 'v1:10:a' ] } );
+			expect( container.querySelectorAll( 'canvas' ) ).toHaveLength( 2 );
+			expect( container.children[ 2 ].textContent ).toBe( 'Unavailable' );
+			dispose();
+		} );
+
+		it( 'splits large pages into API-sized requests', async () => {
+			for ( let i = 0; i < 51; i++ ) {
+				host( 'v1:10:s' + i, '42' );
+			}
+			const api = { get: jest.fn( () => Promise.resolve( { layersread: { bindings: [] } } ) ) };
+			await mount.loadInline( container, api, 'Owner', 42 );
+			expect( api.get.mock.calls.map( ( call ) => call[ 0 ].binding.length ) ).toEqual( [ 50, 1 ] );
+		} );
+
+		it( 'leaves placeholders unavailable when the read fails or nothing is bound', async () => {
+			host( 'v1:10:a', '42' );
+			const failing = { get: jest.fn( () => Promise.reject( new Error( 'private' ) ) ) };
+			( await mount.loadInline( container, failing, 'Owner', 42 ) )();
+			expect( container.textContent ).toBe( 'Unavailable' );
+			const unused = { get: jest.fn() };
+			await mount.loadInline( container, unused, 'Owner', 7 );
+			expect( unused.get ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

@@ -79,11 +79,51 @@ class DirectEmbeddingRewriterTest extends \MediaWikiUnitTestCase {
 		return array_map( static function ( $text ) {
 			return [ $text ];
 		}, [ '<!-- [[File:A.jpg]]', '<ref>[[File:A.jpg]]', '{{Box|[[File:A.jpg]]',
-			'<nowiki-x>[[File:A.jpg]]</nowiki>', '<ref:custom>[[File:A.jpg]]</ref>',
-			"[[File:A.jpg|\0layers=one]]",
-			'[[File:A.jpg', '}} [[File:A.jpg]]', '<div>[[File:A.jpg]]</div>',
-			'[https://example.test [[File:A.jpg]]]', '<nowiki><nowiki></nowiki>[[File:A.jpg]]</nowiki>',
+			"[[File:A.jpg|\0layers=one]]", '<includeonly>[[File:A.jpg]]',
+			'[[File:A.jpg', '<nowiki><nowiki></nowiki>[[File:A.jpg]]</nowiki>',
 			str_repeat( '{{T|', 66 ) . '[[File:A.jpg]]' . str_repeat( '}}', 66 ) ] );
+	}
+
+	/**
+	 * Ordinary HTML, single brackets and stray closers are plain text to MediaWiki's preprocessor;
+	 * they must not make a whole page ineligible.
+	 * @dataProvider providePlainTextSurroundings
+	 * @param string $prefix
+	 * @param string $suffix
+	 */
+	public function testPlainTextSyntaxDoesNotRejectPage( string $prefix, string $suffix ): void {
+		$visible = '[[File:Visible.jpg|layers=one]]';
+		$found = ( new DirectEmbeddingRewriter() )->scan( $prefix . $visible . $suffix, [ $this, 'file' ] );
+		$this->assertCount( 1, $found );
+		$this->assertSame( strlen( $prefix ), $found[0]['start'] );
+		$this->assertSame( $visible, $found[0]['raw'] );
+	}
+
+	/** @return array */
+	public static function providePlainTextSurroundings(): array {
+		return [
+			'line break' => [ "Line one<br>Line two<br />\n", '' ],
+			'html container' => [ '<div class="note">', '</div>' ],
+			'references list' => [ "Text\n", "\n== Refs ==\n<references />" ],
+			'external link before' => [ 'See [https://example.test docs]. ', '' ],
+			'external link around' => [ '[https://example.test ', ']' ],
+			'prose brackets' => [ 'Use array[0] and x] here. ', '' ],
+			'stray template closer' => [ '}} ', '' ],
+			'lookalike tag names' => [ '<nowiki-x>', '</nowiki>' ],
+			'namespaced lookalike' => [ '<ref:custom>', '</ref>' ],
+			'noinclude markers' => [ '<noinclude>', '</noinclude>' ],
+			'onlyinclude markers' => [ '<onlyinclude>', '</onlyinclude>' ],
+			'includeonly skipped' => [ '<includeonly>[[File:Hidden.jpg]]</includeonly>', '' ],
+			'unterminated attribute' => [ '<ref name="x ', '' ],
+		];
+	}
+
+	public function testNativeExtensionTagBodiesAreOpaque(): void {
+		$text = '<poem>[[File:Inside.jpg]]</poem>[[File:Visible.jpg]]';
+		$this->assertCount( 2, ( new DirectEmbeddingRewriter() )->scan( $text, [ $this, 'file' ] ) );
+		$found = ( new DirectEmbeddingRewriter( [ 'poem' ] ) )->scan( $text, [ $this, 'file' ] );
+		$this->assertCount( 1, $found );
+		$this->assertSame( '[[File:Visible.jpg]]', $found[0]['raw'] );
 	}
 
 	public function testRejectsStalePartialAndAlreadyBoundSelections(): void {

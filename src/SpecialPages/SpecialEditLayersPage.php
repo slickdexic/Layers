@@ -74,7 +74,7 @@ class SpecialEditLayersPage extends SpecialPage {
 		}
 		$out->setPageTitle( $this->msg( 'layers-editor-title' )->text() );
 		$out->addJsConfigVars( 'wgLayersEditorInit', $init );
-		$out->addModules( 'ext.layers.editor' );
+		$out->addModules( [ 'ext.layers.editor', 'ext.layers.editor.pageOwned' ] );
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
 	}
 
