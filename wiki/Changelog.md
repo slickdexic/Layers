@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Image and PDF drawings viewable in page history (pilot, September 26): read bundles carry MediaWiki's own rendition of the exact pinned file version (archived versions included), issued only to authorized readers; `Special:ViewLayersPage` draws image/PDF surfaces over it. Replaces the unregistered private-renderer plan.
+
 - Adoption presentation review (J64, September 26): page drawing controls are a labelled box with a real heading and Codex-token styles that follow night mode (`ext.layers.pageControls.styles`); the confirmation page uses a Codex form with Cancel and requires login; refusals are styled error boxes (the message box styles were previously never loaded) with a return link and clearer wording.
 
 - Shared slides can be adopted into page history (pilot, September 26): editors of a pilot owner page get a "Make … owned by this page" link per direct shared slide, confirmed on `Special:AdoptLayersDrawing` (GET previews without writing; POST with edit token adopts once, rate limited, tagged `layers-page-drawing`). Unrenderable drawings, stale confirmations and repeats are refused. Also fixed `layersinfo` returning `name: null` for slides opened without a set name or by revision ID, and made "most recent set" deterministic for saves in the same second.

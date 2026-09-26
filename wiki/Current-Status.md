@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## Image and PDF drawings viewable in history — September 26, 2026
+
+Page-owned image and PDF surfaces can now be viewed at any revision, drawn over the exact file version they were made on.
+
+- **Delivery decision:** the source is MediaWiki's own rendition of the pinned version (`File::transform()` on the resolved current or archived file, at most 2048 px wide), returned only inside `layersread`'s private response after the reader is authorized for the revision and that file version. Core already serves every file version to anyone who can read the File page, so Layers never exposes more than core does; on private wikis the URL is core's protected one (for example `img_auth.php`). Hidden, deleted or mismatched versions yield no rendition. This replaces the private-renderer plan, whose unsolved resource budgets had led to the abandoned supervisor work; see the [delivery decision](../docs/PAGE_OWNED_ASSET_DELIVERY_DESIGN.md).
+- **Viewer:** `Special:ViewLayersPage` shows image and PDF surfaces: the historical renderer loads the rendition, scales it to the surface canvas, applies the background visibility and opacity, and draws the layers on top. It loads only http(s) URLs, draws nothing until the image has decoded, and shows the usual failure message if it cannot load.
+- **Read bundles:** `layersread owner+revid` adds `sourceRenditions`; bound entries and `prepareViewer()` carry `source`. Details in the [read contract](../docs/PAGE_OWNED_READ_CONTRACT.md).
+
+Fresh verification: new native `SourceRenditionsTest` (archived PNG and archived PDF page 2 after replacement, hidden version, pilot viewer); the pilot viewer test now expects image surfaces to be viewable and refused only for readers who cannot read the file. Full native configuration **354 tests passed, 1 skipped**; standalone PHPUnit **1,294 tests, 1 skipped**; Jest **15,010 tests**; `npm test` and every gate pass; PHP style 0 errors. Chromium: the rendering spec now paints a real same-origin image under a layer and hides it with the background (**4/4 passed**).
+
+**Not yet:** bound file embeds on page views (`[[File:…|layersbinding=…]]`), the page-owned editor for image/PDF surfaces, and adoption of file embeds. Title-keyed lifecycle guards and an anonymous cache policy also remain. Earlier entries below are historical.
+
 ## Adoption presentation reviewed (J64) — September 26, 2026
 
 The shared-slide adoption UI from the entry below was reworked and then reviewed by junior packet J64 (accepted with lead corrections).

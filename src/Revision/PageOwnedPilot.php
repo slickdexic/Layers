@@ -50,7 +50,7 @@ class PageOwnedPilot {
 		$this->publisher = new PagePublicationService( $services->getWikiPageFactory(), $access, $sources,
 			new PageRevisionWriter(), new PublicationAdmissionContext(), $services->getHookContainer(),
 			$services->getUserFactory() );
-		$this->reader = new PageReadService( $access, $sources );
+		$this->reader = new PageReadService( $access, $sources, new SourceRenditions( $services->getUrlUtils() ) );
 	}
 
 	/**
@@ -501,12 +501,14 @@ class PageOwnedPilot {
 		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [ $surfaceId ] );
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
 			if ( $surface['id'] === $surfaceId ) {
-				// Pinned image/PDF delivery must precede asset-backed viewer exposure.
-				if ( $surface['kind'] !== 'slide' ) {
-					break;
+				$view = [ 'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId, 'surface' => $surface ];
+				if ( $surface['kind'] === 'slide' ) {
+					return $view;
 				}
-				return [ 'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId,
-					'surface' => $surface ];
+				if ( isset( $bundle['sourceRenditions'][$surfaceId] ) ) {
+					return $view + [ 'source' => $bundle['sourceRenditions'][$surfaceId] ];
+				}
+				break;
 			}
 		}
 		throw new \DomainException( 'layers-revision-unavailable' );

@@ -1,5 +1,17 @@
 # Internal exact-revision read contract
 
+## Source renditions in read bundles — September 26, 2026
+
+The pilot's `PageReadService` now adds core renditions of each image/PDF surface's exact pinned source version (see the [delivery decision](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md)):
+
+| Where | Field | Content |
+| --- | --- | --- |
+| `read()` / `layersread owner+revid` | `sourceRenditions` | Map keyed by image/PDF surface ID: `url` (absolute http(s) core URL of that version, archived versions included), `width`, `height` (display pixels, at most 2048 wide) |
+| `readBoundSurfaces()` / `layersread binding=` | `source` on each image/PDF entry | Same shape |
+| `PageOwnedPilot::prepareViewer()` | `source` | Same shape; required for image/PDF surfaces |
+
+Slides have no rendition. A rendition failure is treated like an unavailable source: `read()` rejects the bundle, a bound read omits only that binding. `sourceGeometry` is unchanged and still gives handler pixels. The historical viewer draws image/PDF surfaces over the rendition, scaled to the surface canvas; bound file embeds on page views are not implemented yet.
+
 ## Inline bound-slide display implemented; browser gate pending — September 25, 2026
 
 Lead connected native SlideHooks to the ordered binding adapter. In the existing enabled/scoped pilot, valid bindings produce identity-only placeholders with the exact native parser revision (including core's explicit revision-record callback path). Preview/no-revision, foreign PageID, disabled/out-of-scope and malformed/conflicting bindings fail closed. Shared legacy slides continue through the original path.

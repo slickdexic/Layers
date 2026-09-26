@@ -1380,7 +1380,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( [ 'text-1' ], $new['surface']['readingOrder'] );
 	}
 
-	public function testHistoricalViewerAssetBackedRejectionAndWholeDocumentSourceRule(): void {
+	public function testHistoricalViewerAssetBackedSurfacesAndPerSurfaceSourceRule(): void {
 		$imageFixture = __DIR__ . '/../../fixtures/assets/test-image.png';
 		$this->assertFileExists( $imageFixture );
 		$pngFile = $this->uploadFixtureFile( $imageFixture, 'File:J56_Asset_Viewer.png', '20260906120000' );
@@ -1444,13 +1444,10 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$reader = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $reader, [ 'read' ] );
 
-		// 4a. Selecting the image surface in prepareViewer is currently rejected
-		try {
-			$mixedPilot->prepareViewer( $mixedTitle->getPrefixedText(), $mixedRevId, 'diagram', $reader );
-			$this->fail( 'Expected preparation of asset-backed image surface to reject' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-revision-unavailable', $e->getMessage() );
-		}
+		// 4a. The image surface is viewable with a core rendition of its exact pinned version
+		$imageData = $mixedPilot->prepareViewer( $mixedTitle->getPrefixedText(), $mixedRevId, 'diagram', $reader );
+		$this->assertSame( 'image', $imageData['surface']['kind'] );
+		$this->assertStringContainsString( $pngFile->getName(), rawurldecode( $imageData['source']['url'] ) );
 
 		// 4b. Selecting the slide surface in the mixed document succeeds when source is authorized
 		$slideData = $mixedPilot->prepareViewer( $mixedTitle->getPrefixedText(), $mixedRevId, 'presentation', $reader );
@@ -1481,6 +1478,12 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$mixedTitle->getPrefixedText(), $mixedRevId, 'presentation', $restrictedReader );
 		$this->assertSame( 'presentation', $restrictedSlide['surface']['id'] );
 		$this->assertSame( $slideData, $restrictedSlide );
+		try {
+			$mixedPilot->prepareViewer( $mixedTitle->getPrefixedText(), $mixedRevId, 'diagram', $restrictedReader );
+			$this->fail( 'A reader who cannot read the file must not receive its rendition' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-revision-unavailable', $e->getMessage() );
+		}
 	}
 
 	private function uploadFixtureFile(

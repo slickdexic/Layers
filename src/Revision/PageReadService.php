@@ -8,14 +8,18 @@ use MediaWiki\Permissions\Authority;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Internal exact-revision read bundle. No endpoint, asset delivery or cache registration. */
+/** Internal exact-revision read bundle. No endpoint or cache registration. */
 class PageReadService {
 	private PageHistoryAccess $access;
 	private SourceVersionResolver $sources;
+	private ?SourceRenditions $renditions;
 
-	public function __construct( PageHistoryAccess $access, SourceVersionResolver $sources ) {
+	public function __construct( PageHistoryAccess $access, SourceVersionResolver $sources,
+		?SourceRenditions $renditions = null
+	) {
 		$this->access = $access;
 		$this->sources = $sources;
+		$this->renditions = $renditions;
 	}
 
 	/**
@@ -78,12 +82,15 @@ class PageReadService {
 			}
 			try {
 				// Each surface's source is checked on its own, so one unavailable file hides only its drawing.
-				$this->sources->resolve( $content, $authority, [ $surface['id'] ] );
+				$files = $this->sources->resolve( $content, $authority, [ $surface['id'] ] );
+				$source = isset( $files[$surface['id']] ) && $this->renditions ?
+					$this->renditions->forSurface( $files[$surface['id']], $surface ) : null;
 			} catch ( \DomainException $e ) {
 				continue;
 			}
 			foreach ( array_keys( $wanted, $surface['id'], true ) as $binding ) {
-				$bundles[$binding] = [ 'pageId' => $ownerId, 'revisionId' => $revisionId, 'surface' => $surface ];
+				$bundles[$binding] = [ 'pageId' => $ownerId, 'revisionId' => $revisionId, 'surface' => $surface ] +
+					( $source ? [ 'source' => $source ] : [] );
 			}
 		}
 		return $bundles;
@@ -91,7 +98,8 @@ class PageReadService {
 
 	/**
 	 * Read one complete authorized snapshot and the exact source geometry of the requested surfaces.
-	 * No latest fallback. Adds no asset URLs, backend paths or File objects.
+	 * No latest fallback. With a renditions factory, also returns core rendition URLs of the exact
+	 * pinned source versions; never backend paths or File objects.
 	 * A missing/denied source among the requested surfaces rejects the bundle; other surfaces' sources
 	 * are not consulted, so one unavailable file cannot hide unrelated drawings.
 	 *
@@ -114,6 +122,7 @@ class PageReadService {
 		}
 		$snapshot = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR );
 		$geometry = [];
+		$renditions = [];
 		foreach ( $snapshot['surfaces'] as $surface ) {
 			if ( !isset( $files[$surface['id']] ) ) {
 				continue;
@@ -131,7 +140,15 @@ class PageReadService {
 				'height' => $height,
 				'units' => 'file-handler-pixels'
 			];
+			if ( $this->renditions ) {
+				try {
+					$renditions[$surface['id']] = $this->renditions->forSurface( $file, $surface );
+				} catch ( \DomainException $e ) {
+					throw new \DomainException( 'layers-revision-unavailable', 0, $e );
+				}
+			}
 		}
-		return [ 'revisionId' => $revisionId, 'snapshot' => $snapshot, 'sourceGeometry' => $geometry ];
+		return [ 'revisionId' => $revisionId, 'snapshot' => $snapshot, 'sourceGeometry' => $geometry ] +
+			( $this->renditions ? [ 'sourceRenditions' => $renditions ] : [] );
 	}
 }

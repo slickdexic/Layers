@@ -81,6 +81,44 @@ test( 'actual text, textbox and callout painters produce visible content', async
 	}
 } );
 
+test( 'image surface paints its source rendition under the layers and hides it with the background', async ( { page } ) => {
+	const result = await page.evaluate( async () => {
+		const paint = ( backgroundVisible ) => new Promise( ( resolve ) => {
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 270;
+			canvas.height = 270;
+			const ctx = canvas.getContext( '2d' );
+			const surface = { id: 'photo', kind: 'image', canvas: { width: 270, height: 270, backgroundVisible,
+				backgroundOpacity: 1 }, layers: [ { id: 'box', type: 'rectangle', x: 200, y: 200, width: 60,
+				height: 60, fill: '#ff0000', stroke: 'none' } ] };
+			let failed = false;
+			window.Layers.Viewer.renderPageOwnedRevision( canvas, surface, () => {
+				failed = true;
+			}, window.Layers.LayerRenderer, null, { url: new URL( '/resources/assets/mediawiki.png',
+				location.href ).href } );
+			const done = () => {
+				const box = Array.from( ctx.getImageData( 230, 230, 1, 1 ).data );
+				const pixels = ctx.getImageData( 0, 0, 190, 190 ).data;
+				let ink = 0;
+				for ( let index = 3; index < pixels.length; index += 4 ) {
+					ink += pixels[ index ] > 0 ? 1 : 0;
+				}
+				resolve( { failed, box, ink } );
+			};
+			// Layers are painted in the rendition's load handler; wait until they appear.
+			const probe = () => requestAnimationFrame( failed || ctx.getImageData( 230, 230, 1, 1 ).data[ 3 ] ?
+				done : probe );
+			probe();
+		} );
+		return { shown: await paint( true ), hidden: await paint( false ) };
+	} );
+	expect( result.shown.failed ).toBe( false );
+	expect( result.shown.box ).toEqual( [ 255, 0, 0, 255 ] );
+	expect( result.shown.ink ).toBeGreaterThan( 1000 );
+	expect( result.hidden.box ).toEqual( [ 255, 0, 0, 255 ] );
+	expect( result.hidden.ink ).toBe( 0 );
+} );
+
 test( 'history module does not start or load the editable UI', async ( { page } ) => {
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.history' ) ) ).toBe( 'ready' );
 	expect( await page.evaluate( () => mw.loader.getState( 'ext.layers.editor' ) ) ).toBe( 'registered' );

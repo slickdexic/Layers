@@ -1,5 +1,17 @@
 # Layers implementation handoff plan
 
+## Pinned source delivery decided and implemented for history viewing — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry and the [delivery decision](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md). Readers now receive core renditions of the exact pinned file version; `PageAssetService`/`PrivateRasterRenderer` are superseded and must not be registered.
+
+Next lead steps, in order:
+
+1. **Bound file embeds (B03).** Extend `WikitextHooks::onInternalParseBeforeLinks` to queue and strip `|layersbinding=` from direct file links exactly like `layerset=` (positional queue per file name), consume it in `onParserMakeImageParams` with the same checks as `BoundSlideHooks::placeholder()` (pilot scope, known revision, PageID match, `VARY_REVISION`), and in `onThumbnailBeforeProduceHTML` mark the image `layers-bound-file` with `data-layers-binding`/`data-layers-revision` instead of legacy layer data. The history module then overlays a canvas drawing the pinned rendition and layers on that image. `prepareBoundViewers()` must return image/PDF entries, and the client must match host type to surface kind.
+2. **Page-owned editor for image/PDF surfaces.** `prepareEditor()` must pass the rendition and keep layer coordinates in surface-canvas space even when the rendition is narrower than the canvas.
+3. **File adoption.** Allow image/PDF surfaces in `DirectAdoptionPreparationService::assertViewerCapabilities()` once 1 and 2 are accepted, with the file version taken from the displayed revision.
+
+J74 remains ready. J65 remains blocked on steps 1–3. Earlier entries below are historical.
+
 ## J64 accepted with lead corrections — September 26, 2026
 
 The adoption links, confirmation page and refusals were reworked for presentation and accessibility, then reviewed by J64; see the [current status](CURRENT_STATUS.md) entry and the J64 packet below. Contracts juniors must respect:

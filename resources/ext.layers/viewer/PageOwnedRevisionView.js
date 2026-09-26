@@ -26,13 +26,27 @@
 		return err;
 	}
 
+	/**
+	 * Server-issued rendition of the surface's exact source version.
+	 *
+	 * @param {*} source
+	 * @return {boolean}
+	 */
+	function isValidSource( source ) {
+		return typeof source === 'object' && source !== null && !Array.isArray( source ) &&
+			typeof source.url === 'string' && /^https?:\/\//i.test( source.url ) &&
+			Number.isInteger( source.width ) && source.width > 0 && source.width <= MAX_DIMENSION &&
+			Number.isInteger( source.height ) && source.height > 0 && source.height <= MAX_DIMENSION;
+	}
+
 	class PageOwnedRevisionView {
 		/**
 		 * @param {Object} options
 		 * @param {Object} options.bundle Authorized exact snapshot bundle from prepareViewer
 		 * @param {string} options.bundle.owner Nonempty owner title
 		 * @param {number} options.bundle.revisionId Positive integer revision ID (1..2147483647)
-		 * @param {Object} options.bundle.surface Selected slide surface object
+		 * @param {Object} options.bundle.surface Selected slide, image or PDF surface object
+		 * @param {Object} [options.bundle.source] Exact source rendition { url, width, height }; required for image/PDF
 		 * @param {Object} options.adapter PageOwnedSnapshotAdapter-compatible instance
 		 * @param {Function} options.render Injected synchronous renderer factory
 		 * @param {Function} options.message Injected localization function
@@ -62,7 +76,12 @@
 				throw createInvalidRevisionViewError();
 			}
 
-			if ( surface.kind !== 'slide' ) {
+			if ( ![ 'slide', 'image', 'pdf' ].includes( surface.kind ) ) {
+				throw createInvalidRevisionViewError();
+			}
+
+			const source = surface.kind === 'slide' ? null : bundle.source;
+			if ( surface.kind !== 'slide' && !isValidSource( source ) ) {
 				throw createInvalidRevisionViewError();
 			}
 
@@ -112,6 +131,7 @@
 			this._owner = owner;
 			this._revisionId = revisionId;
 			this._surface = clonedDoc.surfaces[ 0 ];
+			this._source = source ? { url: source.url, width: source.width, height: source.height } : null;
 			this._render = render;
 			this._message = message;
 
@@ -229,7 +249,8 @@
 
 			let returnedCleanup;
 			try {
-				returnedCleanup = this._render( canvas, surfaceCopy, handleFailure );
+				returnedCleanup = this._render( canvas, surfaceCopy, handleFailure,
+					this._source ? Object.assign( {}, this._source ) : null );
 			} catch ( err ) {
 				handleFailure();
 				return;

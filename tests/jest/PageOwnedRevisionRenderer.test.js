@@ -81,6 +81,88 @@ describe( 'PageOwnedRevisionRenderer', () => {
 			expect( failure ).not.toHaveBeenCalled();
 			dispose();
 		} );
+
+		describe( 'image and PDF surfaces', () => {
+			let images, originalImage;
+
+			beforeEach( () => {
+				images = [];
+				originalImage = window.Image;
+				window.Image = function () {
+					this.complete = false;
+					this.naturalWidth = 0;
+					images.push( this );
+				};
+				context.drawImage = jest.fn();
+				surface.kind = 'pdf';
+				surface.canvas = { width: 800, height: 600, backgroundVisible: true, backgroundOpacity: 0.5 };
+			} );
+
+			afterEach( () => {
+				window.Image = originalImage;
+			} );
+
+			const load = ( image ) => {
+				image.complete = true;
+				image.naturalWidth = 400;
+				image.onload();
+			};
+
+			it( 'draws nothing until the rendition decodes, then scales it to the canvas under the layers', () => {
+				const dispose = render( canvas, surface, failure, Renderer, null, { url: 'https://wiki.test/thumb/p2.jpg' } );
+				expect( images ).toHaveLength( 1 );
+				expect( images[ 0 ].src ).toBe( 'https://wiki.test/thumb/p2.jpg' );
+				expect( context.clearRect ).not.toHaveBeenCalled();
+				load( images[ 0 ] );
+				expect( context.drawImage ).toHaveBeenCalledWith( images[ 0 ], 0, 0, 800, 600 );
+				expect( context.globalAlpha ).toBe( 0.5 );
+				expect( context.fillRect ).not.toHaveBeenCalled();
+				expect( painter.drawLayer.mock.calls.map( ( call ) => call[ 0 ].id ) ).toEqual( [ 'bottom', 'top' ] );
+				expect( failure ).not.toHaveBeenCalled();
+				dispose();
+			} );
+
+			it( 'hides the rendition when the background is hidden but still draws the layers', () => {
+				surface.canvas.backgroundVisible = 0;
+				render( canvas, surface, failure, Renderer, null, { url: 'https://wiki.test/a.png' } );
+				load( images[ 0 ] );
+				expect( context.drawImage ).not.toHaveBeenCalled();
+				expect( painter.drawLayer ).toHaveBeenCalledTimes( 2 );
+			} );
+
+			it( 'waits for the rendition even when fonts are ready first', async () => {
+				const ready = Promise.resolve();
+				render( canvas, surface, failure, Renderer, { ready }, { url: 'https://wiki.test/a.png' } );
+				await ready;
+				expect( context.clearRect ).not.toHaveBeenCalled();
+				load( images[ 0 ] );
+				expect( context.drawImage ).toHaveBeenCalledTimes( 1 );
+			} );
+
+			it( 'fails once when the rendition cannot load and ignores it after disposal', () => {
+				render( canvas, surface, failure, Renderer, null, { url: 'https://wiki.test/a.png' } );
+				images[ 0 ].onerror();
+				expect( failure ).toHaveBeenCalledTimes( 1 );
+				expect( images[ 0 ].onload ).toBeNull();
+				const dispose = render( canvas, surface, failure, Renderer, null, { url: 'https://wiki.test/b.png' } );
+				dispose();
+				expect( images[ 1 ].onload ).toBeNull();
+				expect( context.drawImage ).not.toHaveBeenCalled();
+				expect( failure ).toHaveBeenCalledTimes( 1 );
+			} );
+
+			it.each( [
+				[ 'no rendition', undefined ],
+				[ 'non-string URL', { url: 5 } ],
+				[ 'script URL', { url: 'javascript:alert(1)' } ],
+				[ 'data URL', { url: 'data:image/png;base64,AAAA' } ]
+			] )( 'refuses %s before loading anything', ( name, source ) => {
+				render( canvas, surface, failure, Renderer, null, source );
+				expect( images ).toHaveLength( 0 );
+				expect( Renderer ).not.toHaveBeenCalled();
+				expect( failure ).toHaveBeenCalledTimes( 1 );
+			} );
+		} );
 	} );
 
 	describe( 'PageOwnedRevisionView and PageOwnedRevisionRenderer integration', () => {

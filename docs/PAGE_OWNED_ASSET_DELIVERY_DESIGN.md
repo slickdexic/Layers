@@ -10,6 +10,21 @@ All active work must use MediaWiki extension mechanisms and respect the supporte
 
 September 12, 2026. **Private renderer and authorized preparation service implemented and core-tested; the staging path validator is implemented; resource admission, production configuration wiring and HTTP transport remain unimplemented.** The [internal reader](PAGE_OWNED_READ_CONTRACT.md) and exact source resolver already have core evidence. They do not make a normal file/thumbnail URL safe for owner-revision-controlled delivery.
 
+## Decision: core renditions of the exact pinned version — September 26, 2026
+
+This supersedes the private-renderer boundary below. Image and PDF surfaces are displayed from MediaWiki's own rendition of the exact file version the surface is pinned to, obtained with `File::transform()` on the resolved `LocalFile`/`OldLocalFile` (`src/Revision/SourceRenditions.php`, at most 2048 px wide). The read bundle carries that URL and its display size; the viewer scales it to the surface canvas and draws the layers over it.
+
+Why:
+
+- **It is the supported mechanism.** Core already serves every file version, archived ones included, to anyone who can read the File page (the file history table links them). A Layers URL is never more than core would show that reader.
+- **Protection follows the wiki.** On a private wiki the URL is whatever core issues, for example an `img_auth.php` URL that re-checks read permission on every request. Layers adds no bearer URL and no second delivery path.
+- **Hiding a version is core's job.** When a version is revision-deleted or the file is deleted, core moves its bytes out of the public zone and purges its thumbnails; the resolver also stops returning a rendition, because it refuses hidden, deleted or mismatched versions.
+- **Resource limits are core's.** Thumbnails go through core's pipeline (`$wgMaxImageArea`, shell limits, PoolCounter for on-demand rendering). The private renderer needed its own budgets, deadlines and concurrency control, which is what led to the abandoned supervisor work.
+
+The URL is produced only after the reader is authorized for the owner revision and the source version (`SourceVersionResolver`), and only inside `layersread`'s private, uncached response. Page HTML still carries identities only. The viewer loads only `http(s)` URLs and never reads pixels back. `PageAssetService`, `PrivateRasterRenderer`, `PrivateStagingDirectory` and `SourceRenderAdmission` stay unregistered and are superseded; their tests remain as evidence about core media handlers.
+
+Remaining work: bound file embeds on page views, the page-owned editor for image/PDF surfaces, and adoption of file embeds. Everything below this section is historical.
+
 ## Chosen boundary
 
 The first delivery path will produce a private raster rendition of an exact image or PDF surface and stream it only through an authorized request. Standalone slides need no source delivery; the viewer draws their stored canvas/layers. Images and PDF pages use the same owner, revision, surface and permission policy. This path does not export annotated slides or burn annotations into source thumbnails.

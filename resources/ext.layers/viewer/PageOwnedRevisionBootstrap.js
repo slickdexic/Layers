@@ -8,8 +8,8 @@
 				bundle,
 				adapter: new window.Layers.Editor.PageOwnedSnapshotAdapter(),
 				message: ( ...args ) => mw.msg( ...args ),
-				render: ( canvas, surface, failure ) => window.Layers.Viewer.renderPageOwnedRevision(
-					canvas, surface, failure, window.Layers.LayerRenderer, document.fonts )
+				render: ( canvas, surface, failure, source ) => window.Layers.Viewer.renderPageOwnedRevision(
+					canvas, surface, failure, window.Layers.LayerRenderer, document.fonts, source )
 			} );
 			view.mount( container );
 		} catch ( error ) {

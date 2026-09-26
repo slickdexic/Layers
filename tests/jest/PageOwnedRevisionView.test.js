@@ -63,6 +63,53 @@ describe( 'PageOwnedRevisionView', () => {
 		} );
 	} );
 
+	describe( 'image and PDF surfaces', () => {
+		const pdfBundle = ( source ) => ( {
+			owner: 'Test_Page',
+			revisionId: 42,
+			surface: Object.assign( JSON.parse( JSON.stringify( validSurface ) ), {
+				id: 'page-two', kind: 'pdf',
+				source: { repository: 'local', fileTitle: 'File:Plan.pdf', timestamp: '20260906120000',
+					sha1: 'abcdefghijklmnopqrstuvwxyz01234', page: 2 }
+			} ),
+			source
+		} );
+
+		it( 'passes a copy of the exact source rendition to the renderer', () => {
+			const source = { url: 'https://wiki.test/thumb/Plan.pdf/page2-800px-Plan.pdf.jpg', width: 800, height: 600 };
+			const renderFn = jest.fn( () => () => {} );
+			const parent = document.createElement( 'div' );
+			new PageOwnedRevisionView( { bundle: pdfBundle( source ), adapter, render: renderFn,
+				message: messageMock } ).mount( parent );
+			expect( renderFn ).toHaveBeenCalledTimes( 1 );
+			const [ canvas, surface, , passed ] = renderFn.mock.calls[ 0 ];
+			expect( [ canvas.width, canvas.height, surface.kind, surface.source.page ] ).toEqual( [ 800, 600, 'pdf', 2 ] );
+			expect( passed ).toEqual( source );
+			expect( passed ).not.toBe( source );
+		} );
+
+		it( 'passes no rendition for slides', () => {
+			const renderFn = jest.fn( () => () => {} );
+			new PageOwnedRevisionView( { bundle: Object.assign( {}, baseBundle, { source: { url: 'https://x.test/a.png',
+				width: 1, height: 1 } } ), adapter, render: renderFn, message: messageMock } )
+				.mount( document.createElement( 'div' ) );
+			expect( renderFn.mock.calls[ 0 ][ 3 ] ).toBeNull();
+		} );
+
+		it.each( [
+			[ 'missing', undefined ],
+			[ 'relative URL', { url: '/images/a.png', width: 10, height: 10 } ],
+			[ 'script URL', { url: 'javascript:alert(1)', width: 10, height: 10 } ],
+			[ 'zero width', { url: 'https://x.test/a.png', width: 0, height: 10 } ],
+			[ 'fractional height', { url: 'https://x.test/a.png', width: 10, height: 1.5 } ],
+			[ 'oversized', { url: 'https://x.test/a.png', width: 20000, height: 10 } ],
+			[ 'array', [] ]
+		] )( 'rejects a %s rendition', ( _, source ) => {
+			expect( () => new PageOwnedRevisionView( { bundle: pdfBundle( source ), adapter,
+				render: jest.fn( () => () => {} ), message: messageMock } ) ).toThrow( 'Invalid revision view' );
+		} );
+	} );
+
 	describe( 'constructor validation', () => {
 		it( 'accepts valid options with real adapter', () => {
 			const view = new PageOwnedRevisionView( {
@@ -107,8 +154,8 @@ describe( 'PageOwnedRevisionView', () => {
 			[ 'missing surface', { owner: 'P', revisionId: 1 } ],
 			[ 'null surface', { owner: 'P', revisionId: 1, surface: null } ],
 			[ 'array surface', { owner: 'P', revisionId: 1, surface: [] } ],
-			[ 'image surface kind', { owner: 'P', revisionId: 1, surface: { id: 's', kind: 'image' } } ],
-			[ 'pdf surface kind', { owner: 'P', revisionId: 1, surface: { id: 's', kind: 'pdf' } } ],
+			[ 'image surface without rendition', { owner: 'P', revisionId: 1, surface: { id: 's', kind: 'image' } } ],
+			[ 'pdf surface without rendition', { owner: 'P', revisionId: 1, surface: { id: 's', kind: 'pdf' } } ],
 			[ 'unknown surface kind', { owner: 'P', revisionId: 1, surface: { id: 's', kind: 'unknown' } } ],
 			[ 'empty surface id', { owner: 'P', revisionId: 1, surface: { id: '', kind: 'slide' } } ],
 			[ 'missing surface id', { owner: 'P', revisionId: 1, surface: { kind: 'slide' } } ]
