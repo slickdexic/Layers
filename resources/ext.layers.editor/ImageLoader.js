@@ -94,6 +94,7 @@
 		 * @param {Object} options - Configuration options
 		 * @param {string} [options.filename] - The filename to load
 		 * @param {string} [options.backgroundImageUrl] - Direct URL to background image
+		 * @param {boolean} [options.exact] - Load only backgroundImageUrl: no page, redirect or placeholder fallbacks
 		 * @param {Function} [options.onLoad] - Callback when image loads successfully
 		 * @param {Function} [options.onError] - Callback when all load attempts fail
 		 */
@@ -102,6 +103,7 @@
 			this.options = options;
 			this.filename = options.filename || '';
 			this.backgroundImageUrl = options.backgroundImageUrl || '';
+			this.exact = options.exact === true;
 			this.onLoad = options.onLoad || function () {};
 			this.onError = options.onError || function () {};
 			this.image = null;
@@ -124,6 +126,9 @@
 
 			if ( urls.length > 0 ) {
 				this.tryLoadImage( urls, 0 );
+			} else if ( this.exact ) {
+				this.isLoading = false;
+				this.onError( new Error( 'No exact background image' ) );
 			} else {
 				this.loadTestImage();
 			}
@@ -135,6 +140,10 @@
 		 * @return {string[]} Array of URLs to try
 		 */
 		buildUrlList() {
+			// A pinned file version must never be replaced by the page's or the latest image.
+			if ( this.exact ) {
+				return this.backgroundImageUrl ? [ this.backgroundImageUrl ] : [];
+			}
 			const imageUrls = [];
 			const filename = this.filename;
 			const currentOrigin = window.location.origin;
@@ -257,6 +266,11 @@
 		 */
 		tryLoadImage( urls, index, withCors = false ) {
 			if ( index >= urls.length ) {
+				if ( this.exact ) {
+					this.isLoading = false;
+					this.onError( new Error( 'Exact background image failed to load' ) );
+					return;
+				}
 				// All URLs failed, try test image
 				this.loadTestImage();
 				return;

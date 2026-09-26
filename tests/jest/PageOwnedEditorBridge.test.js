@@ -92,4 +92,42 @@ describe( 'PageOwnedEditorBridge', () => {
 		await expect( saving ).rejects.toMatchObject( { code: 'layers-editor-session-unavailable' } );
 		expect( set ).not.toHaveBeenCalled();
 	} );
+
+	describe( 'image and PDF surfaces', () => {
+		const forSurface = ( surfaceId, config ) => {
+			editor.config = config;
+			session = new Session( { owner: 'Owner', surfaceId, revisionId: 12 }, {
+				reader: { read: jest.fn().mockResolvedValue( { revisionId: 12, snapshot: fixture } ) },
+				publisher: new Publisher( api ), adapter: new Adapter()
+			} );
+			bridge = new Bridge( editor, session );
+		};
+
+		it( 'edits a PDF page in image mode with its canvas fixed to the pinned source page', async () => {
+			forSurface( 'reference', { isSlide: false, imageUrl: 'https://wiki.test/thumb/page2-800px-Reference.pdf.jpg' } );
+			editor.stateManager.set( 'slideCanvasWidth', 1234 );
+			await bridge.load();
+			expect( editor.stateManager.get( 'isSlide' ) ).toBe( false );
+			expect( editor.stateManager.get( 'baseWidth' ) ).toBe( 800 );
+			expect( editor.canvasManager.setBaseDimensions ).toHaveBeenCalledWith( 800, 600 );
+			editor.stateManager.set( 'backgroundOpacity', 0.25 );
+			editor.stateManager.set( 'slideBackgroundColor', '#000000' );
+			api.postWithToken.mockResolvedValue( { layerspublish: { result: 'Success', revid: 13 } } );
+			await bridge.save( 'Annotate page two' );
+			const saved = JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data );
+			const pdf = saved.surfaces.find( ( surface ) => surface.id === 'reference' );
+			expect( pdf.canvas ).toEqual( Object.assign( {}, fixture.surfaces[ 2 ].canvas, { backgroundOpacity: 0.25 } ) );
+			expect( pdf.source ).toEqual( fixture.surfaces[ 2 ].source );
+		} );
+
+		it.each( [
+			[ 'an image without its rendition', 'diagram', { isSlide: false } ],
+			[ 'an image opened in slide mode', 'diagram', { isSlide: true, imageUrl: 'https://wiki.test/a.png' } ],
+			[ 'a slide opened in image mode', 'presentation', { isSlide: false, imageUrl: 'https://wiki.test/a.png' } ]
+		] )( 'refuses %s', async ( name, surfaceId, config ) => {
+			forSurface( surfaceId, config );
+			await expect( bridge.load() ).rejects.toMatchObject( { code: 'layers-editor-surface-unavailable' } );
+			expect( editor.canvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+	} );
 } );

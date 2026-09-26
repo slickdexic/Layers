@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## Image and PDF drawings editable in page history — September 26, 2026
+
+Page-owned image and PDF surfaces can now be edited, not only viewed.
+
+- **Entry:** the page's "Drawings on this page" box now lists bound file embeds too ("Edit page drawing: <file>"). A slide embed opens only slide surfaces and a file embed only image/PDF surfaces, both in the list and when the editor route checks the exact source.
+- **Editor:** `prepareEditor()` opens an image/PDF surface in the ordinary image mode with the pinned rendition as `imageUrl` and the surface canvas as `baseWidth`/`baseHeight`, so layer coordinates stay in the source page's space even when the rendition is narrower. The canvas size, background colour and source are never changed by the editor; only layers and the background image's visibility and opacity are saved.
+- **Exactness:** in page-owned mode the background loader tries only that rendition. Before, a failed load fell back to the page's image, `Special:Redirect/file` (the latest version) or a placeholder. A failed background now keeps the layers' coordinate space instead of resetting to 800×600 (this also fixes legacy images whose base size is known).
+
+Fresh verification: native tests cover the image-mode bootstrap, the edit list and the bound-editor route, including refusal of a slide embed bound to an image surface. Full native configuration **358 tests passed, 1 skipped**; standalone PHPUnit **1,294 tests, 1 skipped**; Jest **15,019 tests**; `npm test` passes; PHP style 0 errors. Chromium: the bound-file spec now opens the drawing from the page's edit link, checks image mode, canvas size and the exact background, moves the layer, saves once, and checks the new revision kept the canvas and source. All **14 page-owned Chromium tests passed**, slide editing included.
+
+**Not yet:** adoption of shared drawings on file embeds, title-keyed lifecycle guards, and an anonymous cache policy. Earlier entries below are historical.
+
 ## Bound file embeds show page-owned drawings — September 26, 2026
 
 `[[File:X|…|layersbinding=v1:<pageId>:<surfaceId>]]` on a pilot owner page now shows that page's drawing over the exact file version it was made on.

@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Image/PDF page-owned editing implemented (step 2 of B03) — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contracts: an image/PDF editor bootstrap has `isSlide: false`, the rendition as `imageUrl` and the surface canvas as `baseWidth`/`baseHeight`; `PageOwnedEditorBridge` saves only layers, `backgroundVisible` and `backgroundOpacity` for those surfaces; `ImageLoader` `exact` mode (used whenever `pageOwned` is set) never falls back to another image. Embed kind must match surface kind. Next lead step is adoption of file embeds (step 3). J74 remains ready; J65 stays blocked on step 3. Earlier entries below are historical.
+
 ## Bound file embeds implemented (step 1 of B03) — September 26, 2026
 
 Step 1 of the previous entry is done; see the [current status](CURRENT_STATUS.md) entry. Contracts juniors must respect: `layersbinding=` on a file link is honoured only through `WikitextHooks`' positional queue and `BoundFileHooks`; an embed with a binding never falls back to legacy layer data; image hosts are `img.layers-bound-file` and only accept image/PDF bundles that carry `source`. Next lead step is the page-owned editor for image/PDF surfaces, then file adoption. J74 remains ready; J65 stays blocked on those two steps. Earlier entries below are historical.

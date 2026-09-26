@@ -121,6 +121,38 @@ describe( 'ImageLoader', () => {
 		} );
 	} );
 
+	describe( 'exact mode', () => {
+		it( 'tries only the given URL, never the page image or the latest file version', () => {
+			const img = document.createElement( 'img' );
+			img.className = 'mw-file-element';
+			img.src = 'https://wiki.example.com/images/Test.pdf';
+			document.body.appendChild( img );
+			const loader = new ImageLoader( { filename: 'Test.pdf', exact: true,
+				backgroundImageUrl: 'https://wiki.example.com/images/thumb/archive/page2-Test.pdf.jpg' } );
+			expect( loader.buildUrlList() ).toEqual( [ 'https://wiki.example.com/images/thumb/archive/page2-Test.pdf.jpg' ] );
+			img.remove();
+		} );
+
+		it( 'reports failure instead of loading fallbacks or a placeholder', () => {
+			const onError = jest.fn();
+			const onLoad = jest.fn();
+			const loader = new ImageLoader( { filename: 'Test.pdf', exact: true, onError, onLoad,
+				backgroundImageUrl: 'https://wiki.example.com/images/archive/a.png' } );
+			loader.load();
+			// A cross-origin URL is retried once with CORS before it counts as failed.
+			mockImage.onerror();
+			if ( !onError.mock.calls.length ) {
+				mockImage.onerror();
+			}
+			expect( onError ).toHaveBeenCalledTimes( 1 );
+			expect( onLoad ).not.toHaveBeenCalled();
+			const attempts = global.Image.mock.calls.length;
+			new ImageLoader( { filename: 'Test.pdf', exact: true, onError, onLoad } ).load();
+			expect( onError ).toHaveBeenCalledTimes( 2 );
+			expect( global.Image ).toHaveBeenCalledTimes( attempts );
+		} );
+	} );
+
 	describe( 'buildUrlList', () => {
 		it( 'should include backgroundImageUrl first if provided', () => {
 			const loader = new ImageLoader( {

@@ -167,7 +167,7 @@ class LayersEditor {
 					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( { editor: this } ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
 					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
 					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
-					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl, baseWidth: this.config.baseWidth || null, baseHeight: this.config.baseHeight || null, isSlide: this.stateManager && this.stateManager.get( 'isSlide' ) || false } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl, baseWidth: this.config.baseWidth || null, baseHeight: this.config.baseHeight || null, exactBackground: Boolean( this.config.pageOwned ), isSlide: this.stateManager && this.stateManager.get( 'isSlide' ) || false } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
 					instances[ name ] = constructors[ name ]();
@@ -501,6 +501,7 @@ class LayersEditor {
 				backgroundImageUrl: this.imageUrl,
 				baseWidth: this.config.baseWidth || null,
 				baseHeight: this.config.baseHeight || null,
+				exactBackground: Boolean( this.config.pageOwned ),
 				isSlide: this.stateManager.get( 'isSlide' ) || false
 			} ), [] );
 		}

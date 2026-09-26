@@ -80,7 +80,9 @@ test( 'a bound file embed shows the page-owned drawing over its exact file versi
 		const read = page.waitForResponse( ( r ) => r.url().includes( 'action=layersread' ) &&
 			r.url().includes( 'binding=' ) );
 		const response = await page.goto( `${ base }/index.php?title=${ owner }` );
-		expect( await response.text() ).not.toContain( 'layersbinding' );
+		// The option never leaks into caption, alt or title text (the edit link's query may carry it).
+		expect( await response.text() ).not.toMatch( /(?:alt|title)="[^"]*layersbinding/ );
+		expect( await page.locator( '#mw-content-text' ).innerText() ).not.toContain( 'layersbinding' );
 		const bundle = ( await ( await read ).json() ).layersread.bindings[ binding ];
 		expect( bundle.revisionId ).toBe( lastOwnedRevision );
 		expect( bundle.source.url ).toContain( encodeURIComponent( file.name ).replace( /%20/g, '_' ).split( '.' )[ 0 ] );
@@ -102,6 +104,42 @@ test( 'a bound file embed shows the page-owned drawing over its exact file versi
 		expect( photo.slice( 0, 3 ) ).not.toEqual( [ 255, 0, 0 ] );
 		// Without thumb, core uses the caption as the image's alt text; the canvas keeps it as its name.
 		await expect( canvas ).toHaveAttribute( 'aria-label', 'Bound photo' );
+
+		// The page's edit link opens the image surface in image mode over the same pinned rendition.
+		const editLink = page.locator( '.layers-page-edit-link' );
+		await expect( editLink ).toHaveCount( 1 );
+		await expect( editLink ).toContainText( file.name );
+		await Promise.all( [ page.waitForNavigation(), editLink.click() ] );
+		const init = await page.evaluate( () => mw.config.get( 'wgLayersEditorInit' ) );
+		expect( [ init.isSlide, init.baseWidth, init.baseHeight, init.imageUrl, init.pageOwned.surfaceId ] )
+			.toEqual( [ false, file.width, file.height, bundle.source.url, surfaceId ] );
+		await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 &&
+			window.layersEditorInstance.canvasManager?.backgroundImage?.complete );
+		const editor = await page.evaluate( () => {
+			const instance = window.layersEditorInstance;
+			return { isSlide: instance.stateManager.get( 'isSlide' ), width: instance.canvasManager.canvas.width,
+				height: instance.canvasManager.canvas.height, background: instance.canvasManager.backgroundImage.src };
+		} );
+		expect( editor ).toEqual( { isSlide: false, width: file.width, height: file.height,
+			background: bundle.source.url } );
+		await page.locator( '.layer-item:not(.background-layer-item) .layer-grab-area' ).first().click();
+		await page.keyboard.press( 'ArrowRight' );
+		const edited = await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
+		expect( edited[ 0 ].x ).toBe( 21 );
+		const saving = page.waitForResponse( ( r ) => r.url().includes( 'api.php' ) &&
+			( r.request().postData() || '' ).includes( 'action=layerspublish' ) );
+		publicationPending = true;
+		await page.locator( '.save-button' ).click();
+		const saved = await ( await saving ).json();
+		expect( saved.layerspublish && saved.layerspublish.result ).toBe( 'Success' );
+		lastOwnedRevision = saved.layerspublish.revid;
+		publicationPending = false;
+		const after = ( await api( { action: 'layersread', owner, revid: String( lastOwnedRevision ) } ) )
+			.layersread.snapshot.surfaces.find( ( item ) => item.id === surfaceId );
+		const before = snapshot.surfaces.find( ( item ) => item.id === surfaceId );
+		expect( after.layers[ 0 ].x ).toBe( 21 );
+		expect( [ after.canvas, after.source ] ).toEqual( [ before.canvas, before.source ] );
+		expect( ( await latest() ).text ).toContain( `layersbinding=${ binding }` );
 	} finally {
 		const restore = async () => {
 			if ( lastOwnedRevision === null ) {

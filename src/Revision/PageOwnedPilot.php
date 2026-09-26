@@ -82,7 +82,7 @@ class PageOwnedPilot {
 	 * @param int $revisionId Explicit current revision; no latest fallback
 	 * @param string $surfaceId Literal selected surface ID
 	 * @param Authority $authority Request authority, never a privileged substitute
-	 * @return array Editor initialization without snapshot data or source URLs
+	 * @return array Editor initialization without snapshot data; image/PDF surfaces carry their exact rendition URL
 	 * @throws \DomainException Fixed unavailable result
 	 */
 	public function prepareEditor( string $ownerText, int $revisionId, string $surfaceId,
@@ -113,16 +113,20 @@ class PageOwnedPilot {
 			if ( $surface['id'] !== $surfaceId ) {
 				continue;
 			}
-			// Asset-backed surfaces need pinned source delivery before editor exposure.
-			if ( $surface['kind'] !== 'slide' ) {
+			if ( $surface['kind'] === 'slide' ) {
+				$mode = [ 'imageUrl' => null, 'isSlide' => true, 'autoCreate' => false,
+					'canvasWidth' => $surface['canvas']['width'], 'canvasHeight' => $surface['canvas']['height'],
+					'backgroundColor' => $surface['canvas']['backgroundColor'] ?? null ];
+			} elseif ( isset( $bundle['sourceRenditions'][$surfaceId] ) ) {
+				// Layer coordinates stay in the surface canvas even when the rendition is narrower.
+				$mode = [ 'imageUrl' => $bundle['sourceRenditions'][$surfaceId]['url'], 'isSlide' => false,
+					'autoCreate' => false, 'baseWidth' => $surface['canvas']['width'],
+					'baseHeight' => $surface['canvas']['height'] ];
+			} else {
 				break;
 			}
 			$config = $this->services->getMainConfig();
-			return [
-				'filename' => $owner->getPrefixedText(), 'imageUrl' => null, 'isSlide' => true,
-				'autoCreate' => false, 'canvasWidth' => $surface['canvas']['width'],
-				'canvasHeight' => $surface['canvas']['height'],
-				'backgroundColor' => $surface['canvas']['backgroundColor'] ?? null,
+			return [ 'filename' => $owner->getPrefixedText() ] + $mode + [
 				'pageOwned' => [
 					'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId,
 					'pageId' => $current->getPageId(),
@@ -310,6 +314,16 @@ class PageOwnedPilot {
 		return $identities;
 	}
 
+	/** @return callable Canonical `File:` target of a link head, or null for anything that is not a file */
+	private function fileTargets(): callable {
+		$titles = $this->services->getTitleFactory();
+		return static function ( string $name ) use ( $titles ): ?string {
+			$title = $titles->newFromText( $name );
+			return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() &&
+				!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
+		};
+	}
+
 	/** @return PageOwnedIdentityResolver */
 	private function newIdentityResolver(): PageOwnedIdentityResolver {
 		$lookup = $this->services->getRevisionLookup();
@@ -359,24 +373,25 @@ class PageOwnedPilot {
 				return [];
 			}
 			// One exact read for every entry; the editor route repeats full admission when opened.
-			$slides = [];
+			$kinds = [];
 			foreach ( $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces']
 				as $surface
 			) {
-				if ( $surface['kind'] === 'slide' ) {
-					$slides[$surface['id']] = true;
-				}
+				$kinds[$surface['id']] = $surface['kind'] === 'slide' ? 'slide' : 'file';
 			}
-			$candidates = $this->newRewriter()->scan( $main->getText(), static fn () => null );
+			$candidates = $this->newRewriter()->scan( $main->getText(), $this->fileTargets() );
 			$selections = [];
 			foreach ( $candidates as $candidate ) {
 				try {
 					$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
-					if ( !$binding || $candidate['kind'] !== 'slide' || $binding['pageId'] !== $pageId ||
-						!isset( $slides[$binding['surfaceId']] ) || isset( $selections[$binding['surfaceId']] ) ) {
+					// A slide embed edits only slides, a file embed only image/PDF surfaces.
+					if ( !$binding || $binding['pageId'] !== $pageId ||
+						( $kinds[$binding['surfaceId']] ?? null ) !== $candidate['kind'] ||
+						isset( $selections[$binding['surfaceId']] ) ) {
 						continue;
 					}
-					$selections[$binding['surfaceId']] = [ 'label' => $candidate['target'], 'params' => [
+					$label = $candidate['kind'] === 'file' ? substr( $candidate['target'], 5 ) : $candidate['target'];
+					$selections[$binding['surfaceId']] = [ 'label' => $label, 'params' => [
 						'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
 						'expected' => $candidate['raw']
 					] ];
@@ -393,7 +408,7 @@ class PageOwnedPilot {
 	/**
 	 * Internal ordinary-entry admission from an exact saved direct embedding.
 	 * Source bytes are checked against native main content; caller IDs are not binding proof.
-	 * No public route is installed here. Existing pilot scope and slide-only gates remain.
+	 * No public route is installed here. Slide embeds open slides, file embeds image/PDF surfaces.
 	 *
 	 * @param int $pageId Native owner identity
 	 * @param int $revisionId Explicit current base
@@ -421,11 +436,9 @@ class PageOwnedPilot {
 			if ( !$main instanceof WikitextContent ) {
 				throw new \DomainException();
 			}
-			// File-backed editing remains closed until pinned source delivery is integrated.
-			$candidates = $this->newRewriter()->scan( $main->getText(), static fn () => null );
+			$candidates = $this->newRewriter()->scan( $main->getText(), $this->fileTargets() );
 			foreach ( $candidates as $candidate ) {
-				if ( $candidate['kind'] !== 'slide' || $candidate['start'] !== $start ||
-					$candidate['raw'] !== $expected ) {
+				if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
 					continue;
 				}
 				$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
@@ -434,7 +447,9 @@ class PageOwnedPilot {
 				}
 				$init = $this->prepareEditor( $owner->getPrefixedText(), $revisionId,
 					$binding['surfaceId'], $authority );
-				if ( $init['pageOwned']['pageId'] !== $pageId ) {
+				if ( $init['pageOwned']['pageId'] !== $pageId ||
+					$init['isSlide'] !== ( $candidate['kind'] === 'slide' )
+				) {
 					throw new \DomainException();
 				}
 				return $init;

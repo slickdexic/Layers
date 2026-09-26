@@ -924,7 +924,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
-	public function testEditorPreparationMetadataIntegrityAndAssetBackedRejection(): void {
+	public function testEditorPreparationMetadataIntegrityAndAssetBackedImageMode(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
 		$actor = $this->getTestUser()->getUser();
@@ -1029,13 +1029,15 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( 'presentation', $slideInit['pageOwned']['surfaceId'] );
 		$this->assertTrue( $slideInit['isSlide'] );
 
-		// Asset-backed image surface rejects with layers-editor-unavailable
-		try {
-			$mixedPilot->prepareEditor( $mixedTitle->getPrefixedText(), $mixedRevId, 'diagram', $actor );
-			$this->fail( 'Expected preparation of asset-backed image surface to reject' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
-		}
+		// An image surface opens in image mode over its exact rendition, in the surface's coordinate space
+		$imageInit = $mixedPilot->prepareEditor( $mixedTitle->getPrefixedText(), $mixedRevId, 'diagram', $actor );
+		$this->assertFalse( $imageInit['isSlide'] );
+		$this->assertSame( 'diagram', $imageInit['pageOwned']['surfaceId'] );
+		$this->assertStringContainsString( 'J53_Asset_Rejection.png', $imageInit['imageUrl'] );
+		$canvas = $mixedDoc['surfaces'][1]['canvas'];
+		$this->assertSame( [ $canvas['width'], $canvas['height'] ],
+			[ $imageInit['baseWidth'], $imageInit['baseHeight'] ] );
+		$this->assertArrayNotHasKey( 'canvasWidth', $imageInit );
 	}
 
 	public function testHistoricalViewerRejectsInvalidInputsScopesAndUnavailableRevisions(): void {

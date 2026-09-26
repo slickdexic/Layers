@@ -583,6 +583,7 @@ class CanvasManager {
 			this.imageLoader = new ImageLoaderClass( {
 				filename: filename,
 				backgroundImageUrl: backgroundImageUrl,
+				exact: this.config.exactBackground === true,
 				onLoad: ( image, info ) => {
 					this.handleImageLoaded( image, info );
 				},
@@ -667,9 +668,9 @@ class CanvasManager {
 			this.renderer.setBackgroundImage( null );
 		}
 
-		// Set default canvas size from constants
-		this.canvas.width = this.defaultCanvasWidth || 800;
-		this.canvas.height = this.defaultCanvasHeight || 600;
+		// Keep the layers' coordinate space when it is known; only the picture is missing.
+		this.canvas.width = this.baseWidth || this.defaultCanvasWidth || 800;
+		this.canvas.height = this.baseHeight || this.defaultCanvasHeight || 600;
 
 		// Resize canvas to fit container
 		this.resizeCanvas();

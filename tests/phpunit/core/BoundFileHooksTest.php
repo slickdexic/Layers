@@ -75,6 +75,32 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( 'Bound_file_embed.png', $bundle['source']['url'] );
 	}
 
+	public function testFileEmbedOpensItsImageSurfaceInImageModeOnly(): void {
+		[ $title, $pageId, $revisionId, $text, $actor ] = $this->boundImagePage( 'Bound_file_editor_owner' );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
+		$this->assertCount( 1, $entries );
+		$this->assertSame( 'Bound_file_embed.png', $entries[0]['label'] );
+		$params = $entries[0]['params'];
+		$this->assertSame( strpos( $text, '[[File:' ), $params['start'] );
+		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $params['start'], $params['expected'], $actor );
+		$this->assertFalse( $init['isSlide'] );
+		$this->assertSame( [ 1, 1 ], [ $init['baseWidth'], $init['baseHeight'] ] );
+		$this->assertStringContainsString( 'Bound_file_embed.png', $init['imageUrl'] );
+		$this->assertSame( 'photo', $init['pageOwned']['surfaceId'] );
+		$this->assertArrayNotHasKey( 'canvasWidth', $init );
+		// A slide embed bound to the same image surface is not an entry to it.
+		$slideText = "{{#Slide:Photo|layersbinding=v1:$pageId:photo}}";
+		$slideRevision = $this->editPage( $title, $slideText )->getNewRevision()->getId();
+		$this->assertSame( [], $pilot->listBoundEditorSelections( $pageId, $slideRevision, $actor ) );
+		try {
+			$pilot->prepareBoundEditor( $pageId, $slideRevision, 0, $slideText, $actor );
+			$this->fail( 'A slide embed must not open an image surface' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+		}
+	}
+
 	public function testRefusedBindingShowsThePlainImageWithoutAnyDrawing(): void {
 		[ $title, $pageId, $revisionId ] = $this->boundImagePage( 'Bound_file_refused_owner' );
 		$other = $pageId + 1000;

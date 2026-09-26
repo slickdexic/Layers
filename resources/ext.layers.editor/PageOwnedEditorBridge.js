@@ -1,12 +1,14 @@
-/** Maps a page-owned slide session to the existing editor state without legacy API calls. */
+/** Maps a page-owned surface session to the existing editor state without legacy API calls. */
 ( function () {
 	'use strict';
 
-	const canvasFields = {
+	const slideFields = {
 		width: 'slideCanvasWidth', height: 'slideCanvasHeight',
 		backgroundColor: 'slideBackgroundColor', backgroundVisible: 'backgroundVisible',
 		backgroundOpacity: 'backgroundOpacity'
 	};
+	// An image/PDF canvas is the pinned source page; only how its picture shows is editable.
+	const sourceFields = { backgroundVisible: 'backgroundVisible', backgroundOpacity: 'backgroundOpacity' };
 
 	class PageOwnedEditorBridge {
 		/**
@@ -19,6 +21,12 @@
 			this.disposed = false;
 			this.loaded = false;
 			this.saving = false;
+			this.isSlide = true;
+		}
+
+		/** @return {Object} Surface canvas fields mapped to editor state keys @private */
+		_fields() {
+			return this.isSlide ? slideFields : sourceFields;
 		}
 
 		/** @return {Promise<Object>} Loaded selected surface, with no legacy normalization or draft recovery */
@@ -27,10 +35,12 @@
 			this._requireActive();
 			const draft = this.session.getDraft();
 			const surface = draft.snapshot.surfaces.find( ( item ) => item.id === draft.surfaceId );
-			// Source-media rendering is a separate integration gate; never render it as a blank slide.
-			if ( surface.kind !== 'slide' ) {
+			// The background must be the pinned file version the server issued; never draw one as a blank slide.
+			const config = this.editor.config || {};
+			if ( surface.kind === 'slide' ? config.isSlide === false : config.isSlide !== false || !config.imageUrl ) {
 				throw this._error( 'layers-editor-surface-unavailable' );
 			}
+			this.isSlide = surface.kind === 'slide';
 			this._applyState( state );
 			this.editor.stateManager.set( 'isDirty', false );
 			this.loaded = true;
@@ -56,8 +66,8 @@
 		/** @param {Object} state Canvas/layers pair @private */
 		_applyState( state ) {
 			const store = this.editor.stateManager;
-			store.set( 'isSlide', true );
-			for ( const [ field, key ] of Object.entries( canvasFields ) ) {
+			store.set( 'isSlide', this.isSlide );
+			for ( const [ field, key ] of Object.entries( this._fields() ) ) {
 				store.set( key, state.canvas[ field ] );
 			}
 			store.set( 'baseWidth', state.canvas.width );
@@ -87,7 +97,7 @@
 				throw this._error( 'layers-editor-session-unavailable' );
 			}
 			const state = this.session.getEditorState();
-			for ( const [ field, key ] of Object.entries( canvasFields ) ) {
+			for ( const [ field, key ] of Object.entries( this._fields() ) ) {
 				const value = this.editor.stateManager.get( key );
 				if ( value !== undefined ) {
 					state.canvas[ field ] = value;
