@@ -10,6 +10,8 @@
 
 `$wgLayersPageOwnedPilotOwners` defaults to `[]`. Entries are exact canonical local prefixed DB keys. A retained scope installs the native content role and save/import/move/restore/merge guards even with publication disabled. Never remove retained owners while current or archived pilot revisions exist. These pilot restrictions are not completed production lifecycle support. See [Current Status](Current-Status.md) before considering enablement. No Docker runtime is involved.
 
+`$wgLayersPageOwnedPilotNamespaces` defaults to `[]`. Entries are namespace IDs (for example `[ NS_MAIN ]`); every page in them may start owning drawings, as if its title were listed in `$wgLayersPageOwnedPilotOwners`. Enrollment only decides where ownership may start; the guards apply to pages that own drawings. Either list being non-empty installs the content role and guards, so do not empty both while page-owned drawings exist.
+
 Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
 
 ## Registered settings

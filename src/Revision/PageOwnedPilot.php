@@ -33,9 +33,12 @@ class PageOwnedPilot {
 	 * @param MediaWikiServices $services Fully initialized native service container
 	 * @param bool $enabled Default-off API switch; guards are independent of this switch
 	 * @param string[] $ownerKeys Enrolled titles as exact prefixed DB keys; see PageOwnedScope
+	 * @param int[] $namespaces Enrolled namespaces
 	 */
-	public function __construct( MediaWikiServices $services, bool $enabled = false, array $ownerKeys = [] ) {
-		$this->scope = PageOwnedScope::newFromServices( $services, $ownerKeys );
+	public function __construct( MediaWikiServices $services, bool $enabled = false, array $ownerKeys = [],
+		array $namespaces = []
+	) {
+		$this->scope = PageOwnedScope::newFromServices( $services, $ownerKeys, $namespaces );
 		$this->services = $services;
 		$this->enabled = $enabled;
 		$access = new PageHistoryAccess( $services->getRevisionLookup() );

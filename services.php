@@ -21,7 +21,8 @@ return [
 		$config = $services->getMainConfig();
 		return new PageOwnedPilot( $services,
 			$config->has( 'LayersPageOwnedPilotEnabled' ) ? $config->get( 'LayersPageOwnedPilotEnabled' ) : false,
-			$config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [] );
+			$config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [],
+			$config->has( 'LayersPageOwnedPilotNamespaces' ) ? $config->get( 'LayersPageOwnedPilotNamespaces' ) : [] );
 	},
 	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
 		return new LayersLogger();

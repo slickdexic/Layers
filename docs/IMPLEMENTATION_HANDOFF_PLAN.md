@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Namespace enrollment — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: enrollment (titles or namespaces) only decides where ownership may start, and only `PageOwnedScope` interprets it. Guards stay keyed to owned drawings; never make one depend on enrollment. No queue change. Earlier entries below are historical.
+
 ## Page history draws every layer type — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contracts: `PageOwnedRenderCapability::LAYER_TYPES` and `RENDERABLE_LAYER_TYPES` list every validator type; a new layer type must be drawable by `PageOwnedRevisionRenderer` before it is added to both. The page-owned toolbar no longer hides the marker tool, Shape Library, emoji picker or image import. J75 is unaffected. Earlier entries below are historical.

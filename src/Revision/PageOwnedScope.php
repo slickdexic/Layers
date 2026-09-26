@@ -17,11 +17,14 @@ use Wikimedia\Rdbms\IDBAccessObject;
 /**
  * Which pages take part in the page-owned pilot. A page owns drawings once its current revision carries
  * the drawing slot, which only publication can write, and keeps them under any later title. Enrolled
- * titles decide where ownership may start; with none, the pilot is not installed and nothing takes part.
+ * titles and namespaces decide where ownership may start; with neither, the pilot is not installed and
+ * nothing takes part.
  */
 final class PageOwnedScope {
 	/** @var string[] */
 	private array $enrolled;
+	/** @var int[] */
+	private array $namespaces;
 	private TitleFactory $titles;
 	private RevisionLookup $revisions;
 	private IConnectionProvider $db;
@@ -33,9 +36,10 @@ final class PageOwnedScope {
 	 * @param RevisionLookup $revisions
 	 * @param IConnectionProvider $db
 	 * @param NameTableStore $slotRoles
+	 * @param int[] $namespaces Namespaces all of whose pages are enrolled
 	 */
 	public function __construct( array $enrolled, TitleFactory $titles, RevisionLookup $revisions,
-		IConnectionProvider $db, NameTableStore $slotRoles
+		IConnectionProvider $db, NameTableStore $slotRoles, array $namespaces = []
 	) {
 		foreach ( $enrolled as $key ) {
 			$title = is_string( $key ) && $key !== '' ? $titles->newFromText( $key ) : null;
@@ -43,7 +47,13 @@ final class PageOwnedScope {
 				throw new \InvalidArgumentException( 'Invalid Layers pilot owner scope' );
 			}
 		}
+		foreach ( $namespaces as $namespace ) {
+			if ( !is_int( $namespace ) || $namespace < 0 ) {
+				throw new \InvalidArgumentException( 'Invalid Layers pilot namespace scope' );
+			}
+		}
 		$this->enrolled = array_values( array_unique( $enrolled ) );
+		$this->namespaces = array_values( array_unique( $namespaces ) );
 		$this->titles = $titles;
 		$this->revisions = $revisions;
 		$this->db = $db;
@@ -53,11 +63,14 @@ final class PageOwnedScope {
 	/**
 	 * @param MediaWikiServices $services
 	 * @param string[] $enrolled
+	 * @param int[] $namespaces
 	 * @return self
 	 */
-	public static function newFromServices( MediaWikiServices $services, array $enrolled ): self {
+	public static function newFromServices( MediaWikiServices $services, array $enrolled,
+		array $namespaces = []
+	): self {
 		return new self( $enrolled, $services->getTitleFactory(), $services->getRevisionLookup(),
-			$services->getConnectionProvider(), $services->getSlotRoleStore() );
+			$services->getConnectionProvider(), $services->getSlotRoleStore(), $namespaces );
 	}
 
 	/**
@@ -65,7 +78,8 @@ final class PageOwnedScope {
 	 * @return bool
 	 */
 	public function isEnrolled( PageReference $page ): bool {
-		return in_array( $this->titles->newFromPageReference( $page )->getPrefixedDBkey(), $this->enrolled, true );
+		return in_array( $page->getNamespace(), $this->namespaces, true ) ||
+			in_array( $this->titles->newFromPageReference( $page )->getPrefixedDBkey(), $this->enrolled, true );
 	}
 
 	/**
@@ -84,7 +98,7 @@ final class PageOwnedScope {
 	 * @return bool
 	 */
 	public function includes( PageReference $page, int $flags = IDBAccessObject::READ_NORMAL ): bool {
-		return $this->enrolled !== [] && ( $this->isEnrolled( $page ) || $this->ownsDrawings( $page, $flags ) );
+		return $this->isActive() && ( $this->isEnrolled( $page ) || $this->ownsDrawings( $page, $flags ) );
 	}
 
 	/**
@@ -94,8 +108,13 @@ final class PageOwnedScope {
 	 * @return bool
 	 */
 	public function includesRevision( PageReference $page, RevisionRecord $revision ): bool {
-		return $this->enrolled !== [] &&
+		return $this->isActive() &&
 			( $revision->hasSlot( PageRevisionWriter::SLOT ) || $this->isEnrolled( $page ) );
+	}
+
+	/** @return bool Whether anything is enrolled; with nothing enrolled no page takes part */
+	private function isActive(): bool {
+		return $this->enrolled !== [] || $this->namespaces !== [];
 	}
 
 	/**

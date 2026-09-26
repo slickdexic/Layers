@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Whole namespaces can take part in page history — September 26, 2026
+
+The pilot could only be switched on for pages listed one by one, by exact title, in `$wgLayersPageOwnedPilotOwners`. That made it impractical beyond a few test pages. `$wgLayersPageOwnedPilotNamespaces` now enrolls every page of the given namespaces as well, for example `[ NS_MAIN ]`.
+
+- **What enrollment does:** it only decides where ownership may start, so editors of an enrolled page see adoption offers for its shared slides and file drawings. A page that owns no drawings otherwise behaves like any other page, and a page that owns drawings keeps them wherever it is moved. Every guard (save admission, import, merge, undelete) is keyed to owned drawings, not to enrollment, so enrolling a namespace refuses nothing new.
+- **Switching off:** with both lists empty the pilot is not installed and nothing takes part, as before. Do not empty both while page-owned drawings exist.
+- Code: `PageOwnedScope` (namespaces validated as non-negative integers), `PageOwnedPilot`, service wiring and `PageOwnedPilotRegistration`.
+
+Fresh verification: a new registration test enrolls only the main namespace and checks that the slot role and guards are installed, that a new main-namespace page can publish while a Project page is refused, that a talk page is not enrolled, and that invalid namespace settings are rejected. Full native configuration **385 tests passed, 1 skipped**.
+
 ## Page history draws every layer type — September 26, 2026
 
 Page-owned drawings can now contain everything the editor makes: imported images, Shape Library shapes and emoji, numbered markers and layer folders. Before, the page-history painter could not draw these, so the page-owned editor hid their tools, and saving or adopting a drawing that used them was refused. Many real drawings could therefore not be moved into page history at all.

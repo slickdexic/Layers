@@ -11,6 +11,7 @@ use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotRegistration;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilotImporter;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilotMergeFactory;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Revision\SlotRecord;
@@ -158,6 +159,44 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			'revid' => $result['revid'] ], null, false, $actor )[0]['layersread'];
 		$this->assertSame( $result['revid'], $read['revisionId'] );
 		$this->assertSame( [], $read['snapshot']['surfaces'] );
+	}
+
+	public function testEnrolledNamespaceLetsItsPagesStartOwningDrawings(): void {
+		$modules = $this->getServiceContainer()->getMainConfig()->get( 'APIModules' );
+		$this->overrideConfigValues( [
+			'LayersPageOwnedPilotOwners' => [],
+			'LayersPageOwnedPilotNamespaces' => [ NS_MAIN ],
+			'LayersPageOwnedPilotEnabled' => true,
+			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() )
+		] );
+		$s = $this->getServiceContainer();
+		( new PageOwnedPilotRegistration() )->onMediaWikiServices( $s );
+		// Namespace enrollment alone installs the slot role and its guards.
+		$this->assertTrue( $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
+		$this->assertInstanceOf( PageOwnedPilotImporter::class, $s->getWikiRevisionOldRevisionImporter() );
+		$actor = $this->getAuthorizedActor();
+		$publish = fn ( string $owner ) => $this->doApiRequestWithToken( [ 'action' => 'layerspublish',
+			'owner' => $owner, 'baserevid' => 0, 'data' => '{"schemaVersion":1,"surfaces":[]}',
+			'maintext' => 'Namespace enrollment' ], null, $actor )[0]['layerspublish'];
+		$this->assertSame( 'Success', $publish( 'Layers namespace enrolled page' )['result'] );
+		try {
+			$publish( 'Project:Layers namespace outside page' );
+			$this->fail( 'A page outside the enrolled namespace must not start owning drawings' );
+		} catch ( ApiUsageException $e ) {
+			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-publication-disabled' ) );
+		}
+		$scope = $s->getService( 'LayersPageOwnedPilot' )->getScope();
+		$titles = $s->getTitleFactory();
+		$this->assertTrue( $scope->isEnrolled( $titles->newFromText( 'Any main namespace page' ) ) );
+		$this->assertFalse( $scope->isEnrolled( $titles->newFromText( 'Talk:Any main namespace page' ) ) );
+		foreach ( [ [ -1 ], [ '0' ], [ 1.5 ] ] as $invalid ) {
+			try {
+				PageOwnedScope::newFromServices( $s, [], $invalid );
+				$this->fail( 'Invalid namespace scope accepted' );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertSame( 'Invalid Layers pilot namespace scope', $e->getMessage() );
+			}
+		}
 	}
 
 	public function testPublicationGateDisabledWithRetainedOwnersRejects(): void {
