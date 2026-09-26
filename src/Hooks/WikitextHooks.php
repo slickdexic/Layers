@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Context\RequestContext;
+use MediaWiki\Extension\Layers\Cargo\PageOwnedCargoStore;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
@@ -380,6 +381,12 @@ class WikitextHooks {
 		// (e.g. via Cargo format=template hint pass) so the correct named set
 		// is used when ThumbnailBeforeProduceHTML fires for non-wikitext renders.
 		$parser->setFunctionHook( 'layers_hint', [ self::class, 'parserFunctionLayersHint' ] );
+
+		// {{#layers_cargo_store:}} hands page-owned drawing rows to Cargo's own #cargo_store.
+		if ( class_exists( \CargoStore::class ) ) {
+			$parser->setFunctionHook( 'layers_cargo_store', [ PageOwnedCargoStore::class, 'parserFunction' ],
+				Parser::SFH_OBJECT_ARGS );
+		}
 
 		return true;
 	}

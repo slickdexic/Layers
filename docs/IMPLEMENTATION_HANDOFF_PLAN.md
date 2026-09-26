@@ -1,5 +1,25 @@
 # Layers implementation handoff plan
 
+## Cargo text projection implemented; J75 ready — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_cargo_store:}}` only hands rows to Cargo's `CargoStore::run()` and returns an empty string; it never writes Cargo tables itself and always passes all six fields. **J75 is ready** (packet below). Earlier entries below are historical.
+
+### J75 — Cargo projection acceptance on the test wiki (ready)
+
+**Purpose:** prove on the original test wiki that page-owned drawing text reaches a real Cargo table and stays current. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-cargo.spec.js`, this packet and the review ledger. On the wiki, the spec may create and edit `Template:Layers_cargo_acceptance` and create its Cargo table `Layers_cargo_acceptance`, and may use only the automation owner `Layers_browser_acceptance` and `Layers_browser_acceptance_isolation`. The J65 wiki rules apply: the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages, files or tables. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes.
+
+1. Create the template with the `#cargo_declare` block from [wikitext usage](WIKITEXT_USAGE.md) (table `Layers_cargo_acceptance`) and `{{#layers_cargo_store:}}` inside `<includeonly>`. Create the table (the template page's create/recreate data action). Skip with a clear message if the account lacks the Cargo rights to do so.
+2. Add the template to the owner's page text by an ordinary edit. Query `action=cargoquery` for `_pageID` 228: there must be one row per drawing of the current revision, with the expected ID, label, kind and text.
+3. Change one text layer through the page-owned editor (a drawing-only save). The row must show the new text and not the old.
+4. Hide that layer and save: its text must disappear from the row.
+5. Roll back or restore the previous drawing version: the row must follow.
+6. Put the template on the isolation page, which owns no drawings: it must store no rows.
+7. Remove the template from both pages: both pages' rows must be gone. Restore the owner with the usual exact-base cleanup; leave the template and table in place.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
 ## J65, J65b and J74 accepted — September 26, 2026
 
 See the [review ledger](JUNIOR_IMPLEMENTATION_REVIEW.md). Lead corrections: the J65 journey's ten-minute check no longer depends on `process.argv` (Playwright workers never see it), and two locators in older specs now name the surface or file they want. Browser specs that edit the automation owner still must not run concurrently. CirrusSearch-style engines now receive drawing text too (`SearchDataForIndex2`). No junior packet is queued; Cargo text projection is next and lead-owned. Earlier entries below are historical.

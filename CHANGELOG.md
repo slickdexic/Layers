@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Page-owned drawing text in Cargo (pilot, September 26): `{{#layers_cargo_store:}}` in a template with `#cargo_declare` stores one row per page-owned drawing (ID, label, kind, pinned file and PDF page, visible layer text) through Cargo's own `#cargo_store`, so Cargo refreshes the rows on every save, drawing-only saves included. Registered only when Cargo is installed; shows nothing on the page. Legacy file sets are not covered.
+
 - Searchable page-owned drawing text (pilot, September 26): core database search indexes a page's text together with the labels and visible text, text box and callout layers of its page-owned drawings, and reindexes on drawing-only saves. New `maintenance/reindexPageDrawings.php` indexes existing pages. Engines that index content handler data, such as CirrusSearch, get the same text in `auxiliary_text`. Legacy file sets are not covered.
 
 - Drawing changes on diff pages (pilot, September 26): diffs of pages that own drawings show each added, removed or changed drawing at both revisions, fetched per reader like page drawings. Page-history rows now link image and PDF drawings to the viewer, not only slides.

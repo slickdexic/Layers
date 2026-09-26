@@ -12,5 +12,6 @@ $magicWords['en'] = [
 	'layerslink' => [ 0, 'layerslink' ],
 	'setlayers' => [ 0, 'setlayers' ],
 	'layers_hint' => [ 0, 'layers_hint' ],
+	'layers_cargo_store' => [ 0, 'layers_cargo_store' ],
 	'Slide' => [ 0, 'slide', 'Slide' ],
 ];

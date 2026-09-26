@@ -222,6 +222,44 @@ visible output). This is the low-level building block that v1.5.74 and
 v1.5.75 use internally; in most cases you should prefer the automatic
 detection described above.
 
+### Page-owned drawing text in Cargo: `{{#layers_cargo_store:}}` (pilot)
+
+On a page whose drawings are part of its revision history (the page-owned
+pilot), `{{#layers_cargo_store:}}` stores one row per drawing in a Cargo
+table, so drawing text can be queried like any other Cargo data. It shows
+nothing on the page and is available only when Cargo is installed. Declare
+the fields you want; undeclared ones are ignored:
+
+```text
+<noinclude>{{#cargo_declare:_table=Page_drawings
+ |surface_id=String
+ |surface_label=String
+ |surface_kind=String
+ |source_file=Page
+ |source_page=Integer
+ |drawing_text=Text}}</noinclude><includeonly>{{#layers_cargo_store:}}</includeonly>
+```
+
+Add the template to the owner page, create the table from the template page,
+then query it:
+
+```text
+{{#cargo_query:tables=Page_drawings
+ |fields=_pageName, surface_label, drawing_text
+ |where=drawing_text LIKE '%valve%'}}
+```
+
+- Rows describe the drawings of the page's current revision. Cargo replaces
+  them whenever the page is saved, including saves that change only a
+  drawing, and rebuilds them when you recreate the table's data.
+- Without `_table=`, the table declared by the calling template is used;
+  `{{#layers_cargo_store:_table=Name}}` names one explicitly.
+- `drawing_text` holds the text of visible text, text box and callout
+  layers, one per line. `surface_kind` is `slide`, `image` or `pdf`;
+  `source_file` and `source_page` are filled for image and PDF drawings.
+- Only page-owned drawings are stored. Shared layer sets on files are not,
+  and a revision whose content is hidden stores no rows.
+
 ---
 
 ## How It Works

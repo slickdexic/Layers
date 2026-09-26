@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## Page-owned drawing text can be stored in Cargo — September 26, 2026
+
+A page's own drawings can now be stored as Cargo rows, so their text can be queried with `#cargo_query` like any other Cargo data. This was the next priority after page history and search.
+
+- **How:** a template declares a table with some or all of the fields `surface_id`, `surface_label`, `surface_kind`, `source_file`, `source_page` and `drawing_text`, and calls `{{#layers_cargo_store:}}` (or `{{#layers_cargo_store:_table=Name}}`). Put the template on the owner page. The function shows nothing on the page.
+- **When rows change:** the rows are passed to Cargo's own `#cargo_store`, so Cargo writes and replaces them on every save of the page (drawing-only saves included, because Cargo reparses the page after each save) and rebuilds them on "recreate data". Layers adds no write path of its own. Cargo's reparse carries no revision ID, which the parser treats as a preview, so only while Cargo is storing does the function read the page's current revision; any other parse without a revision ID stores nothing.
+- **What is stored:** one row per drawing of the page's current revision: its ID, label and kind (`slide`, `image` or `pdf`), the pinned file and PDF page for image and PDF drawings, and the text of its visible text, text box and callout layers, one per line. Every field is passed, blank ones empty, so Cargo never fills them from the template's own arguments. Nothing is stored outside the pilot, for a page that owns no drawings, or for a revision whose content is hidden. Shared (legacy) layer sets are not covered, and there are still no field bindings (drawing elements that show Cargo values).
+- Code: `PageOwnedCargoStore`, registered in `WikitextHooks::onParserFirstCallInit()` only when Cargo is installed; text extraction shared with search (`PageDrawingSearchText::layerText()`). Usage is in [wikitext usage](https://github.com/slickdexic/Layers/blob/main/docs/WIKITEXT_USAGE.md).
+
+Fresh verification: new `PageOwnedCargoStoreTest` checks the rows for two revisions (multi-line text containing `=`), the exact `#cargo_store` arguments with and without `_table`, that the page shows nothing, that rows built the way Cargo reparses after a save (its origin set, no revision ID) describe the revision just saved while an ordinary parse without a revision ID projects nothing, and that nothing is projected when the pilot is off, the owner list is empty, or another page is parsed. Full native configuration **384 tests passed, 1 skipped**; search tests still pass after the shared extraction change. Storing into a real Cargo table on the test wiki is J75.
+
 ## Text in page-owned drawings is searchable — September 26, 2026
 
 The wiki's own search now finds a page by the words in its page-owned drawings, which was the next priority after page history.
