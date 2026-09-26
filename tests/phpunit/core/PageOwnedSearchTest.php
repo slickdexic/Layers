@@ -7,14 +7,18 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
+use MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks;
+use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 use MediaWikiIntegrationTestCase;
+use SearchEngine;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
 /**
  * Text inside a page's own drawings is found by the wiki's search.
  * @covers \MediaWiki\Extension\Layers\Search\PageOwnedSearchIngress
+ * @covers \MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks
  * @covers \MediaWiki\Extension\Layers\Revision\PageDrawingSearchText
  * @group Database
  */
@@ -84,6 +88,30 @@ class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
 		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
 		( new \ReindexPageDrawings() )->execute();
 		$this->assertContains( $title->getPrefixedDBkey(), $this->search( 'zebraexisting' ) );
+	}
+
+	public function testSearchEngineDocumentsCarryDrawingText(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
+			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$editor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
+			$this->document( 'zebracirrus' ), 'Drawing', new WikitextContent( 'Page' ) );
+		$fields = $this->documentFields( $title );
+		$this->assertSame( [ 'Existing', "Welcome Slide\nChecklist zebracirrus" ], $fields['auxiliary_text'] );
+		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
+		$this->assertSame( [ 'Existing' ], $this->documentFields( $title )['auxiliary_text'] );
+	}
+
+	private function documentFields( Title $title ): array {
+		$services = $this->getServiceContainer();
+		$page = $services->getWikiPageFactory()->newFromTitle( $title );
+		$fields = [ 'auxiliary_text' => [ 'Existing' ] ];
+		( new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )->onSearchDataForIndex2(
+			$fields, $page->getContentHandler(), $page, new ParserOutput(), $this->createMock( SearchEngine::class ),
+			$services->getRevisionLookup()->getRevisionByTitle( $title ) );
+		return $fields;
 	}
 
 	public function testExtractedTextIsWhatReadersSee(): void {

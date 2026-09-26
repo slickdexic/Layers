@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## J65, J65b and J74 accepted — September 26, 2026
+
+See the [review ledger](JUNIOR_IMPLEMENTATION_REVIEW.md). Lead corrections: the J65 journey's ten-minute check no longer depends on `process.argv` (Playwright workers never see it), and two locators in older specs now name the surface or file they want. Browser specs that edit the automation owner still must not run concurrently. CirrusSearch-style engines now receive drawing text too (`SearchDataForIndex2`). No junior packet is queued; Cargo text projection is next and lead-owned. Earlier entries below are historical.
+
 ## Note for J65: rerun the page-owned suite — September 26, 2026
 
 The J65 run between 22:01 and 22:10 UTC overlapped lead native test runs in the same container and a lead change that links image and PDF drawings from page history. That change made two history-link locators in `page-owned-workflow.spec.js` match several links; they now name the surface (`surface=presentation`) and end the revision ID with `&`. Read-only checks afterwards rendered the adopted and bound drawings of revisions 1025 and 1026 correctly, so the other failures look transient. Rerun the whole page-owned suite before reporting them. The lead now skips native suites while the automation owner has been edited in the last ten minutes.
@@ -397,7 +401,7 @@ Fresh verification:
 - Seeding publications in the spec now check for success before reading the new revision ID.
 - The run overlapped a lead capture on the same automation owner; both sides' exact-base cleanup refused to overwrite, and the owner ended in its original state. Browser work on the shared owner must not run concurrently.
 
-### J65b — Move continuity browser acceptance (ready after J65)
+### J65b — Move continuity browser acceptance (accepted with lead corrections)
 
 **Purpose:** prove in real Chromium on the original test wiki that a page-owned drawing survives a native page move, then put the page back.
 
@@ -412,7 +416,46 @@ Fresh verification:
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
 
-### J65 — Adoption-to-history browser acceptance (implemented awaiting lead review)
+Fresh verification:
+- Implemented `tests/e2e/page-owned-journey-move.spec.js` on real Chromium against the original test wiki at `http://localhost:8080`:
+  1. *Account rights and quiet window*:
+     - Read `meta=userinfo&uiprop=rights` and confirmed `move` and `suppressredirect` permissions for `noredirect` moves.
+     - Enforced 10-minute quiet rule before execution.
+  2. *Seed bound slide and record PageID*:
+     - Recorded native PageID (`228`), base revision, snapshot, and wikitext.
+     - Seeded one bound slide embedding (`{{#Slide:WelcomePresentation|layersbinding=v1:228:slide_journey_move|width=400}}`) by exact-base publication, recording `preMoveRevId`.
+  3. *Native move to new title (`Layers_browser_acceptance_moved`)*:
+     - Executed `action=move` with `from=Layers_browser_acceptance`, `to=Layers_browser_acceptance_moved`, `noredirect=1`.
+     - Verified old title `Layers_browser_acceptance` does not exist (`missing: ""`).
+     - Verified new title retains the exact PageID (`228`).
+     - Verified drawing's canvas renders on the moved page (pixel check at (60, 60) confirmed red `[255, 0, 0, 255]`).
+     - Opened page's edit link (`.layers-page-edit-link`), translated non-background layer (+1px x-direction) in UI editor, and saved.
+     - Verified new revision was created, tagged `layers-page-drawing`.
+     - Verified history link to `preMoveRevId` with `surface=slide_journey_move` rendered in `action=history` (`.layers-history-view-link`).
+     - Verified `action=layersread` under the new title returns the edited layer geometry.
+  4. *Viewer restoration (`Special:ViewLayersPage` - Step 3a)*:
+     - Opened pre-move revision from history view link into `Special:ViewLayersPage`.
+     - Verified pre-move drawing rendered on `.ext-layers-historical-canvas`.
+     - Clicked **Restore this version** (`.mw-htmlform-submit button`).
+     - Verified form submission published one new page revision and redirected back to `Layers_browser_acceptance_moved`.
+     - Verified page shows restored drawing again (canvas pixel check at (50, 55) confirmed red `[255, 0, 0, 255]`).
+     - Verified history gained exactly one tagged revision (`layers-page-drawing`) with restore edit summary.
+     - Verified page wikitext did not change (`latest.text === preRestore.text`).
+  5. *Move back and cleanup*:
+     - Moved page back to `Layers_browser_acceptance` with `noredirect=1`.
+     - Verified PageID remained unchanged (`228`).
+     - Verified drawing still renders at original title (pixel check passed).
+     - Cleaned up automated owner via exact-base publication restoring initial wikitext and snapshot.
+     - `finally` block guarantees fallback move back to original title if any step fails while at the moved title; never deletes pages.
+- Browser test results:
+  - Focused suite (`npx playwright test tests/e2e/page-owned-journey-move.spec.js`): **1 test passed (47.7s)** in real Chromium on `http://localhost:8080`.
+  - Repeatability run: **1 test passed (48.8s)** in real Chromium.
+- Code style:
+  - `npx eslint tests/e2e/page-owned-journey-move.spec.js`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **73 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/e2e/page-owned-journey-move.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
+
+### J65 — Adoption-to-history browser acceptance (accepted with lead corrections)
 
 **Purpose:** walk the ordinary workflows end to end in real Chromium on the original test wiki (http://localhost:8080) and report defects. This is acceptance testing only; the lead fixes what it finds.
 
@@ -464,7 +507,7 @@ Fresh verification:
   - When running all `page-owned-*.spec.js` serially with `--workers=1`, shared-owner page history accumulates previous test revisions. Earlier specs (`page-owned-workflow.spec.js:203`, `page-owned-file-binding.spec.js:237`) use strict text-based locators that encounter multiple matching links if prior tests left earlier revisions on `Layers_browser_acceptance`.
   - The 10-minute quiet check in `page-owned-journey-acceptance.spec.js` distinguishes preceding test cleanup within the same suite run (`initial.user === config.username` and baseline text) from external modifications to enable serial execution.
 
-### J74 — Confirmed-adoption denial and race coverage (implemented awaiting lead review)
+### J74 — Confirmed-adoption denial and race coverage (accepted with lead corrections)
 
 **Frozen interface:** PageOwnedPilot::adoptDirectEmbedding(int pageId, int baseRevisionId, int start, string expected, int legacyRevisionId, ?string fileTimestamp, Authority authority, string summary): array. Success is exactly pageId, revisionId, surfaceId, binding. This is internal write composition, not an HTTP endpoint. Never invoke it against real wiki pages.
 

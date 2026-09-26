@@ -106,9 +106,8 @@ test( 'a bound file embed shows the page-owned drawing over its exact file versi
 		await expect( canvas ).toHaveAttribute( 'aria-label', 'Bound photo' );
 
 		// The page's edit link opens the image surface in image mode over the same pinned rendition.
-		const editLink = page.locator( '.layers-page-edit-link' );
+		const editLink = page.locator( '.layers-page-edit-link' ).filter( { hasText: file.name } );
 		await expect( editLink ).toHaveCount( 1 );
-		await expect( editLink ).toContainText( file.name );
 		await Promise.all( [ page.waitForNavigation(), editLink.click() ] );
 		const init = await page.evaluate( () => mw.config.get( 'wgLayersEditorInit' ) );
 		expect( [ init.isSlide, init.baseWidth, init.baseHeight, init.imageUrl, init.pageOwned.surfaceId ] )

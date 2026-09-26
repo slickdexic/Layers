@@ -1,5 +1,129 @@
 # Junior implementation review — J01–J74
 
+## J65, J65b and J74 accepted with lead corrections — September 26, 2026
+
+Lead reran everything on the current branch: full native configuration **381 tests passed, 1 skipped**, and one serial Chromium run of all eight page-owned specs: **16 of 17 passed** (8.1 min). The 17th, the J65 journey, stopped at its own ten-minute check (defect 2 below); after the correction it **passed** run straight after another spec that edits the owner (2 tests, 2.1 min).
+
+- **J74 accepted.** The tests exercise the real preparer and publisher and mock only the legacy database. The report said every preflight denial returns `layers-adoption-unavailable`; the tests correctly assert the actual fixed codes (`layers-publication-disabled`, `layers-owner-unavailable`, `layers-invalid-publication-request`, `layers-edit-conflict`, then the source, selection, rendering and source-version codes). The denied-permission cases reuse one test user with successive permission overrides; each override precedes its call, so this is correct as written.
+- **J65 accepted.** Slide, image and PDF page-two journeys, pixel checks at the old and current revisions, the pinned rendition across revisions, and cross-page isolation all pass. Defect 1 (several matching links when the whole suite runs) was real: the lead's image/PDF history links made two locators in `page-owned-workflow.spec.js` ambiguous, and leftover drawings from a failed run made the edit link in `page-owned-file-binding.spec.js` ambiguous. Both now name what they want (the surface, or the file name). Defect 2 (the ten-minute rule inside one serial run) was only half fixed: the exception also required spec names in `process.argv`, which Playwright worker processes never see, so the spec stopped whenever another spec had just run (it did in the lead's first full run). The lead removed that condition, matching J65b: within ten minutes a spec proceeds only when the last edit is the QA account's own finished cleanup, with the original page text restored.
+- **J65b accepted.** The move keeps PageID 228, drawings render and save under the new title, the pre-move revision opens from history and **Restore this version** saves exactly one tagged revision without touching the page text, and the page moves back with `noredirect`.
+
+## J65b implemented awaiting lead review: move continuity browser acceptance — September 26, 2026
+
+Junior implemented real-browser move continuity acceptance in `tests/e2e/page-owned-journey-move.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Verified QA actor rights (`move` and `suppressredirect`) to ensure clean moves without leaving redirect pages (`noredirect: 1`).
+- Enforced 10-minute quiet check before executing; runs serial (`--workers=1`).
+- **Setup & Baseline**:
+  - Recorded native PageID (`228`), base revision, snapshot, and wikitext on dedicated automation owner `Layers_browser_acceptance`.
+  - Seeded one bound slide embedding (`{{#Slide:WelcomePresentation|layersbinding=v1:228:slide_journey_move|width=400}}`) by exact-base publication, capturing pre-move revision ID.
+- **Native Move to New Title**:
+  - Moved owner to `Layers_browser_acceptance_moved` via `action=move` with `noredirect=1`.
+  - Verified old title `Layers_browser_acceptance` ceased to exist (`missing: ""`).
+  - Verified new title retains the exact PageID (`228`).
+  - Verified drawing canvas renders on the moved page (pixel check at (60, 60) confirmed red `[255, 0, 0, 255]`).
+- **UI Editing Under Moved Title**:
+  - Opened page's edit link (`.layers-page-edit-link`), translated non-background layer (+1px x-direction) in UI editor, and saved.
+  - Verified new revision was created, tagged `layers-page-drawing`.
+  - Verified history link to pre-move revision with `surface=slide_journey_move` rendered in `action=history` (`.layers-history-view-link`).
+  - Verified `action=layersread` with moved title returns the edited layer geometry.
+- **Drawing Version Restoration from History Viewer (Step 3a)**:
+  - Opened pre-move revision from history view link into `Special:ViewLayersPage`.
+  - Verified pre-move drawing rendered on `.ext-layers-historical-canvas`.
+  - Clicked **Restore this version** (`.mw-htmlform-submit button`).
+  - Verified form submission published one new page revision and redirected back to `Layers_browser_acceptance_moved`.
+  - Verified page shows restored drawing again (canvas pixel check at (50, 55) confirmed red `[255, 0, 0, 255]`).
+  - Verified history gained exactly one tagged revision (`layers-page-drawing`) with restore edit summary.
+  - Verified page wikitext did not change (`latest.text === preRestore.text`).
+- **Move Back & Cleanup**:
+  - Moved page back to `Layers_browser_acceptance` with `noredirect=1`.
+  - Verified PageID remained unchanged (`228`).
+  - Verified drawing still renders at original title (pixel check passed).
+  - Cleaned up automated owner via exact-base publication restoring initial wikitext and snapshot.
+  - `finally` block guarantees fallback move back to original title if any step fails while at the moved title; never deletes pages.
+
+Verification:
+- Focused browser suite (`npx playwright test tests/e2e/page-owned-journey-move.spec.js`): **1 test passed (47.7s)** in real Chromium on `http://localhost:8080`.
+- Repeatability run: **1 test passed (48.8s)** in real Chromium.
+- Code style:
+  - `npx eslint tests/e2e/page-owned-journey-move.spec.js`: **0 errors, 0 warnings**.
+- Full test suite (`npm test`): **199 suites / 15,021 tests passed**.
+- Documentation check (`npm run check:docs`): **73 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/e2e/page-owned-journey-move.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
+
+## J74 implemented awaiting lead review: confirmed-adoption denial and race coverage — September 26, 2026
+
+Junior implemented comprehensive denial and race coverage for internal confirmed adoption (`PageOwnedPilot::adoptDirectEmbedding`) in `tests/phpunit/core/PageOwnedPilotTest.php`:
+- Preserved lead success and stale-repeat test `testConfirmedAdoptionComposesExactSelectionAndRejectsRepeat`.
+- Preserved lead lifecycle test updates (`testDisabledApisRetainImportProtection` and case 3 of `testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds`).
+- Implemented `testAdoptDirectEmbeddingPreflightRejections`:
+  - Verified disabled pilot, empty scope, and unrelated scope (page owning no drawings and not enrolled) reject with `layers-adoption-unavailable` and null previous exception.
+  - Verified anonymous actor (`getId() <= 0`), denied read, denied edit, and denied editlayers reject with `layers-adoption-unavailable`.
+  - Verified invalid numeric IDs (`pageId <= 0`, `baseRevisionId <= 0`, `legacyRevisionId <= 0`), negative start offset (`start < 0`), and empty expected wikitext source reject with `layers-adoption-unavailable`.
+  - Verified stale base revision ID rejects with `layers-edit-conflict`.
+  - Verified mock `LayersDatabase` methods `getLayerSetForAdoption` and `getLatestLayerSet` are never called on preflight denial.
+  - Asserted zero native page/revision table mutations across all preflight rejections.
+- Implemented `testAdoptDirectEmbeddingRejectsMismatchedSourceSpanAndInvalidLegacyRows`:
+  - Proved mismatched exact source span (wrong start byte offset, altered expected wikitext) fails before legacy lookup (`layers-embedding-source-unavailable`), with `getLayerSetForAdoption` never called.
+  - Proved missing legacy row (`getLayerSetForAdoption` returns null) rejects with `layers-legacy-revision-unavailable`.
+  - Proved matching span with mismatched selected row (differing `name`) rejects with `layers-embedding-selection-unavailable`.
+  - Proved legacy row containing an unrenderable hidden group rejects with `layers-adoption-rendering-unavailable`.
+  - Proved forbidden source selection (file timestamp provided for slide embedding) rejects with `layers-source-unavailable`.
+  - Asserted zero mutations to revisions, main text, or slot absence.
+- Implemented `testAdoptDirectEmbeddingInterveningEditDuringLegacyLookupRejectsWithConflict`:
+  - During the `getLayerSetForAdoption(202)` callback, performed an ordinary native main-text edit advancing the owner page.
+  - Verified adoption fails with `PublicationException: layers-edit-conflict`.
+  - Confirmed revision count advanced by exactly 1 (the deliberate intervening edit).
+  - Confirmed intervening edit retained its main text and has no Layers slot; no automatic retry or latest-fetch occurred.
+
+Verification:
+- Focused suite (`PageOwnedPilotTest`): **28 tests / 370 assertions passed**.
+- Supporting suites: `LegacyAdoptionPreparationServiceTest` (**15 tests / 138 assertions**), `PageOwnedAdoptionServiceTest` (**6 tests / 26 assertions**).
+- Combined focused regression: **49 tests / 534 assertions passed**.
+- PHP style: `vendor/bin/phpcs tests/phpunit/core/PageOwnedPilotTest.php`: **0 errors, 0 warnings**.
+- Documentation check (`npm run check:docs`): **73 maintained/policy documents, 53 historical records passed**.
+- Changes strictly confined to `tests/phpunit/core/PageOwnedPilotTest.php`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`. Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
+
+## J65 implemented awaiting lead review: adoption-to-history browser acceptance — September 26, 2026
+
+Junior implemented real-browser end-to-end acceptance in `tests/e2e/page-owned-journey-acceptance.spec.js` using Playwright on Chromium against the original working-copy test wiki on `http://localhost:8080`:
+- Adheres to all J65 wiki rules: operates exclusively on dedicated automation owner `Layers_browser_acceptance` and dedicated ordinary page `Layers_browser_acceptance_isolation`; never touches `Layers_history_test` or deletes pages/files; enforces 10-minute quiet check before executing; runs serial (`--workers=1`).
+- **Slide journey**:
+  - Seeded shared slide `J65_Slide_Journey`, embedded unbound on `Layers_browser_acceptance`.
+  - Adopted from `.layers-page-adopt-link` via `Special:AdoptLayersDrawing` confirmation form.
+  - Opened from visible edit link (`.layers-page-edit-controls`), shifted rectangle layer (+1px x-direction) and saved via UI editor.
+  - Verified page history lists both adoption and edit, both tagged with `layers-page-drawing`.
+  - Performed canvas pixel check: `oldid` adoption revision renders red `[255, 0, 0, 255]` at (50, 55); current revision canvas has shifted layer (no longer red at (50, 55), shifted to (51, 55)).
+  - Verified shared slide `layersinfo` remains unchanged (`id` and `revision` match pre-adoption state).
+- **Image journey**:
+  - Discovered first JPEG/PNG from `allimages` (`File:B010.jpg`).
+  - Seeded legacy set `j65-image-journey`, embedded as `[[File:B010.jpg|300px|layerset=j65-image-journey]]`.
+  - Adopted from page link; opened bound editor, translated ellipse layer (+1px x-direction) and saved.
+  - Verified history entries tagged `layers-page-drawing`.
+  - Verified core rendition URL preservation across `oldid` and current revision (`oldImgBundle.source.url === newImgBundle.source.url`).
+  - Pixel check on `oldid` canvas at (30, 30) verified green `[0, 192, 0, 255]`.
+  - Cleaned up legacy set via `layersdelete`.
+- **PDF page two journey**:
+  - Discovered multipage PDF (`File:Somepdf.pdf`, 11 pages).
+  - Seeded legacy set `j65-pdf-journey-p2` on page 2 and embedded with `page=2|layerset=j65-pdf-journey-p2`.
+  - Adopted from page link; verified canvas aspect ratio matches page 2 geometry (0.5 < aspect < 2.0).
+  - Verified core rendition URL targets page 2 (`page2-` prefix and PDF filename).
+  - Pixel check at (50, 50) verified blue `[0, 0, 255, 255]`.
+- **Cross-page isolation**:
+  - Created `Layers_browser_acceptance_isolation` embedding identical shared slide and image sets.
+  - Verified across all stages: renders legacy drawing container (`.layers-slide-container`), has 0 `.layers-page-edit-controls` boxes, and `layersinfo` for shared sets is unchanged.
+- **CAS cleanup**:
+  - Exact-base restore of owner `Layers_browser_acceptance` and isolation page `Layers_browser_acceptance_isolation`; deleted spec-created legacy sets only via `layersdelete`.
+
+Verification:
+- Focused browser suite (`npx playwright test tests/e2e/page-owned-journey-acceptance.spec.js`): **1 test passed (1.8m)** in real Chromium on `http://localhost:8080`.
+- Code style:
+  - `npx eslint tests/e2e/page-owned-journey-acceptance.spec.js`: **0 errors, 0 warnings**.
+- Full test suite (`npm test`): **199 suites / 15,021 tests passed**.
+- Documentation check (`npm run check:docs`): **73 maintained/policy documents, 53 historical records passed**.
+- Observations / defects reported for lead review:
+  1. Serial suite locator collisions: Running all `page-owned-*.spec.js` serially against the single shared automation owner page `Layers_browser_acceptance` causes earlier tests (`page-owned-workflow.spec.js:203`, `page-owned-file-binding.spec.js:237`) to fail when strict text locators match multiple historical links created by previous tests.
+  2. 10-minute quiet check in test suites: The J65 10-minute quiet rule correctly prevents running against an owner modified by another user/process. Within a serial test runner run, distinguishing cleanup performed by the same automated QA user from external edits allows suite execution.
+
 ## J64 accepted with lead corrections: slide adoption presentation, accessibility and refusal review — September 26, 2026
 
 Junior reviewed and verified the presentation of the shared-slide notice, adoption links, confirmation page, and refusal messages (wording, accessibility, keyboard use, dark mode) in a real Chromium browser on the original test wiki, extending `tests/e2e/page-owned-adoption.spec.js`:

@@ -8,6 +8,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Extension\Layers\SpecialPages\SpecialEditLayersPage;
 use MediaWiki\FileRepo\File\LocalFile;
 use MediaWiki\Permissions\Authority;
@@ -131,6 +132,326 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$this->assertSame( 'layers-edit-conflict', $e->getMessage() );
 		}
 		$this->assertSame( $before + 1, $count() );
+	}
+
+	public function testAdoptDirectEmbeddingPreflightRejections(): void {
+		$page = $this->getExistingTestPage();
+		$embed = '{{#Slide:WelcomePresentation|layerset=default|width=400}}';
+		$prefix = "Header\n";
+		$this->editPage( $page, $prefix . $embed );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$base = $lookup->getRevisionByTitle( $page->getTitle() )->getId();
+
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+
+		$revCount = fn () => (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'revision' )->where( [ 'rev_page' => $page->getId() ] )->caller( __METHOD__ )->fetchField();
+		$pageCount = fn () => (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'page' )->caller( __METHOD__ )->fetchField();
+		$initialRevs = $revCount();
+		$initialPages = $pageCount();
+
+		$legacy = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacy->expects( $this->never() )->method( 'getLayerSetForAdoption' );
+		$legacy->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacy );
+
+		// 1a. Disabled pilot
+		$pilotDisabled = $this->configure( false, [ $page->getTitle()->getPrefixedDBkey() ] );
+		try {
+			$pilotDisabled->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Disabled pilot' );
+			$this->fail( 'Expected publication-disabled on disabled pilot' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-publication-disabled', $e->getMessage() );
+		}
+
+		// 1b. Empty scope
+		$pilotEmpty = $this->configure( true, [] );
+		try {
+			$pilotEmpty->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Empty scope' );
+			$this->fail( 'Expected publication-disabled on empty scope' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-publication-disabled', $e->getMessage() );
+		}
+
+		// 1c. Unrelated scope
+		$pilotUnrelated = $this->configure( true, [ 'Unrelated_Owner_Page' ] );
+		try {
+			$pilotUnrelated->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Unrelated scope' );
+			$this->fail( 'Expected publication-disabled on unrelated scope' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-publication-disabled', $e->getMessage() );
+		}
+
+		// Configure valid pilot for remaining checks
+		$pilot = $this->configure( true, [ $page->getTitle()->getPrefixedDBkey() ] );
+
+		// 1d. Anonymous actor
+		$anon = $this->getServiceContainer()->getUserFactory()->newAnonymous();
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $anon, 'Anonymous actor' );
+			$this->fail( 'Expected publication-disabled on anonymous actor' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-publication-disabled', $e->getMessage() );
+		}
+
+		// 1e. Invalid bounds / IDs / start / empty source
+		$invalidOwnerBounds = [
+			'pageId zero' => [ 0, $base, strlen( $prefix ), $embed, 202 ],
+			'pageId negative' => [ -1, $base, strlen( $prefix ), $embed, 202 ],
+			'baseRevisionId zero' => [ $page->getId(), 0, strlen( $prefix ), $embed, 202 ],
+			'baseRevisionId negative' => [ $page->getId(), -5, strlen( $prefix ), $embed, 202 ],
+		];
+		foreach ( $invalidOwnerBounds as $label => [ $pid, $bid, $st, $exp, $lrev ] ) {
+			try {
+				$pilot->adoptDirectEmbedding( $pid, $bid, $st, $exp, $lrev, null, $actor, 'Invalid bounds' );
+				$this->fail( "Expected layers-owner-unavailable for {$label}" );
+			} catch ( PublicationException $e ) {
+				$this->assertSame( 'layers-owner-unavailable', $e->getMessage(),
+					"Mismatch for {$label}" );
+			}
+		}
+
+		$invalidRequestBounds = [
+			'start negative' => [ $page->getId(), $base, -1, $embed, 202 ],
+			'empty expected source' => [ $page->getId(), $base, strlen( $prefix ), '', 202 ],
+			'legacyRevisionId zero' => [ $page->getId(), $base, strlen( $prefix ), $embed, 0 ],
+			'legacyRevisionId negative' => [ $page->getId(), $base, strlen( $prefix ), $embed, -10 ],
+			'legacyRevisionId exceeds max' => [ $page->getId(), $base, strlen( $prefix ), $embed, 2147483648 ],
+		];
+		foreach ( $invalidRequestBounds as $label => [ $pid, $bid, $st, $exp, $lrev ] ) {
+			try {
+				$pilot->adoptDirectEmbedding( $pid, $bid, $st, $exp, $lrev, null, $actor, 'Invalid bounds' );
+				$this->fail( "Expected invalid-publication-request for {$label}" );
+			} catch ( PublicationException $e ) {
+				$this->assertSame( 'layers-invalid-publication-request', $e->getMessage(),
+					"Mismatch for {$label}" );
+			}
+		}
+
+		// 1f. Stale base
+		$this->editPage( $page, $prefix . $embed . "\nUpdated" );
+		$currentBase = $lookup->getRevisionByTitle( $page->getTitle() )->getId();
+		$this->assertGreaterThan( $base, $currentBase );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Stale base' );
+			$this->fail( 'Expected layers-edit-conflict on stale base' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-edit-conflict', $e->getMessage() );
+		}
+
+		// 1g. Denied permissions tested against current valid base
+		$noRead = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $noRead, [] );
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $currentBase, strlen( $prefix ), $embed,
+				202, null, $noRead, 'No read' );
+			$this->fail( 'Expected layers-owner-unavailable for denied read' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+
+		$noEdit = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $noEdit, [ 'read' ] );
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $currentBase, strlen( $prefix ), $embed,
+				202, null, $noEdit, 'No edit' );
+			$this->fail( 'Expected layers-owner-unavailable for denied edit' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+
+		$noEditLayers = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $noEditLayers, [ 'read', 'edit' ] );
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $currentBase, strlen( $prefix ), $embed,
+				202, null, $noEditLayers, 'No editlayers' );
+			$this->fail( 'Expected layers-owner-unavailable for denied editlayers' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-owner-unavailable', $e->getMessage() );
+		}
+
+		$this->assertSame( $initialRevs + 1, $revCount(), 'No extra revisions from preflight denial' );
+		$this->assertSame( $initialPages, $pageCount(), 'No page row mutation from preflight denial' );
+	}
+
+	public function testAdoptDirectEmbeddingRejectsMismatchedSourceSpanAndInvalidLegacyRows(): void {
+		$page = $this->getExistingTestPage();
+		$embed = '{{#Slide:WelcomePresentation|layerset=default|width=400}}';
+		$prefix = "Intro\n";
+		$text = $prefix . $embed;
+		$this->editPage( $page, $text );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$base = $lookup->getRevisionByTitle( $page->getTitle() )->getId();
+
+		$pilot = $this->configure( true, [ $page->getTitle()->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+
+		$fixture = json_decode( file_get_contents( __DIR__ . '/../../fixtures/adoption/slide-falsy-zero.json' ), true );
+		$row = $fixture['legacyRecord']['database']['row'];
+		$validRow = [
+			'id' => 202, 'imgName' => $row['ls_img_name'], 'sha1' => $row['ls_img_sha1'],
+			'mime' => 'application/x-layers-slide', 'name' => $row['ls_name'], 'page' => $row['ls_page'],
+			'revision' => $row['ls_revision'], 'timestamp' => $row['ls_timestamp'], 'json' => $row['ls_json_blob']
+		];
+
+		$revCount = fn () => (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'revision' )->where( [ 'rev_page' => $page->getId() ] )->caller( __METHOD__ )->fetchField();
+		$initialRevs = $revCount();
+
+		// 2a. Mismatched exact source span fails BEFORE legacy lookup
+		$legacyNever = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacyNever->expects( $this->never() )->method( 'getLayerSetForAdoption' );
+		$legacyNever->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacyNever );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ) + 2, $embed,
+				202, null, $actor, 'Wrong start offset' );
+			$this->fail( 'Expected layers-embedding-source-unavailable for wrong start' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-embedding-source-unavailable', $e->getMessage() );
+		}
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ),
+				'{{#Slide:WelcomePresentation|layerset=default|width=999}}', 202, null, $actor, 'Altered source' );
+			$this->fail( 'Expected layers-embedding-source-unavailable for altered source' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-embedding-source-unavailable', $e->getMessage() );
+		}
+
+		// 2b. Missing legacy row
+		$legacyMissing = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacyMissing->expects( $this->once() )->method( 'getLayerSetForAdoption' )->with( 999 )->willReturn( null );
+		$legacyMissing->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacyMissing );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				999, null, $actor, 'Missing legacy row' );
+			$this->fail( 'Expected layers-legacy-revision-unavailable for missing row' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-legacy-revision-unavailable', $e->getMessage() );
+		}
+
+		// 2c. Matching span with mismatched selected row
+		$mismatchedRow = $validRow;
+		$mismatchedRow['name'] = 'other_set';
+		$legacyMismatched = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacyMismatched->expects( $this->once() )->method( 'getLayerSetForAdoption' )
+			->with( 202 )->willReturn( $mismatchedRow );
+		$legacyMismatched->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacyMismatched );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Mismatched set name' );
+			$this->fail( 'Expected layers-embedding-selection-unavailable for mismatched row' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-embedding-selection-unavailable', $e->getMessage() );
+		}
+
+		// 2d. Unsupported hidden group layer
+		$groupBlob = json_decode( $validRow['json'], true );
+		$groupBlob['layers'][] = [
+			'id' => 'grp_hidden', 'type' => 'group', 'children' => [], 'visible' => false
+		];
+		$groupRow = $validRow;
+		$groupRow['json'] = json_encode( $groupBlob );
+		$legacyGroup = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacyGroup->expects( $this->once() )->method( 'getLayerSetForAdoption' )
+			->with( 202 )->willReturn( $groupRow );
+		$legacyGroup->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacyGroup );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Hidden group' );
+			$this->fail( 'Expected layers-adoption-rendering-unavailable for hidden group' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-adoption-rendering-unavailable', $e->getMessage() );
+		}
+
+		// 2e. Forbidden source selection: file timestamp given for slide embed
+		$legacyValid = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacyValid->expects( $this->once() )->method( 'getLayerSetForAdoption' )
+			->with( 202 )->willReturn( $validRow );
+		$legacyValid->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacyValid );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, '20260924000000', $actor, 'Slide with file timestamp' );
+			$this->fail( 'Expected layers-source-unavailable when file timestamp provided for slide' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-source-unavailable', $e->getMessage() );
+		}
+
+		// Assert zero mutations to revisions, main wikitext, or slots
+		$this->assertSame( $initialRevs, $revCount() );
+		$this->assertSame( $text, $lookup->getRevisionById( $base )->getContent( 'main' )->getText() );
+		$this->assertFalse( $lookup->getRevisionById( $base )->hasSlot( 'layers' ) );
+	}
+
+	public function testAdoptDirectEmbeddingInterveningEditDuringLegacyLookupRejectsWithConflict(): void {
+		$page = $this->getExistingTestPage();
+		$embed = '{{#Slide:WelcomePresentation|layerset=default|width=400}}';
+		$prefix = "Initial section\n";
+		$initialText = $prefix . $embed;
+		$this->editPage( $page, $initialText );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$base = $lookup->getRevisionByTitle( $page->getTitle() )->getId();
+
+		$pilot = $this->configure( true, [ $page->getTitle()->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+
+		$fixture = json_decode( file_get_contents( __DIR__ . '/../../fixtures/adoption/slide-falsy-zero.json' ), true );
+		$row = $fixture['legacyRecord']['database']['row'];
+		$validRow = [
+			'id' => 202, 'imgName' => $row['ls_img_name'], 'sha1' => $row['ls_img_sha1'],
+			'mime' => 'application/x-layers-slide', 'name' => $row['ls_name'], 'page' => $row['ls_page'],
+			'revision' => $row['ls_revision'], 'timestamp' => $row['ls_timestamp'], 'json' => $row['ls_json_blob']
+		];
+
+		$revCount = fn () => (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'revision' )->where( [ 'rev_page' => $page->getId() ] )->caller( __METHOD__ )->fetchField();
+		$before = $revCount();
+
+		$interveningText = "Deliberate intervening edit while legacy row is being looked up";
+		$legacy = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$legacy->expects( $this->once() )->method( 'getLayerSetForAdoption' )->with( 202 )
+			->willReturnCallback( function () use ( $page, $interveningText, $validRow ) {
+				$this->editPage( $page, $interveningText );
+				return $validRow;
+			} );
+		$legacy->expects( $this->never() )->method( 'getLatestLayerSet' );
+		$this->setService( 'LayersDatabase', $legacy );
+
+		try {
+			$pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
+				202, null, $actor, 'Adoption during concurrent edit' );
+			$this->fail( 'Expected layers-edit-conflict when owner revision advances during legacy lookup' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-edit-conflict', $e->getMessage() );
+		}
+
+		// Count revisions before and after: only the deliberate intervening edit may be new
+		$this->assertSame( $before + 1, $revCount(), 'Only the deliberate intervening edit may be new' );
+
+		// The latest revision is the intervening edit, retaining its content and having no layers slot
+		$latestRev = $lookup->getRevisionByTitle( $page->getTitle() );
+		$this->assertSame( $interveningText, $latestRev->getContent( 'main' )->getText() );
+		$this->assertFalse( $latestRev->hasSlot( 'layers' ), 'No Layers slot was created on the intervening edit' );
 	}
 
 	public function testSharedPublisherAdmissionAndExactReader(): void {
