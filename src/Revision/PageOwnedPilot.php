@@ -571,7 +571,8 @@ class PageOwnedPilot {
 		$result = [];
 		$bundles = $this->reader->readBoundSurfaces( $owner, $revisionId, $bindings, $authority );
 		foreach ( $bundles as $binding => $bundle ) {
-			if ( $bundle['surface']['kind'] === 'slide' ) {
+			// Image/PDF entries need a rendition; the client matches each host to its surface kind.
+			if ( $bundle['surface']['kind'] === 'slide' || isset( $bundle['source'] ) ) {
 				$result[$binding] = $bundle + [ 'owner' => $owner->getPrefixedDBkey() ];
 			}
 		}

@@ -333,6 +333,7 @@
 				"ext.layers/viewer/PageOwnedRevisionRenderer.js",
 				"ext.layers/viewer/PageOwnedRevisionBootstrap.js"
 			],
+			"styles": [ "ext.layers/viewer/PageOwnedRevisionView.css" ],
 			"messages": [ "layers-page-history-caption", "layers-page-history-render-failed" ]
 		},
 		"ext.layers.shared": {

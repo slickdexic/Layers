@@ -18,7 +18,11 @@
 }
 
 .ext-layers-historical-view .ext-layers-historical-status {
-	color: #72777d;
+	color: var( --color-subtle, #54595d );
 	font-size: 0.875em;
 	margin-top: 0.5em;
+}
+
+.ext-layers-historical-view--inline {
+	display: block;
 }

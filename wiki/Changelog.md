@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Bound file embeds (pilot, September 26): `[[File:X|layersbinding=…]]` on a pilot owner page shows the page's drawing over the exact pinned file version; refused bindings show the plain image, never a shared drawing. The historical view stylesheet is now shipped with `ext.layers.history`.
+
 - Image and PDF drawings viewable in page history (pilot, September 26): read bundles carry MediaWiki's own rendition of the exact pinned file version (archived versions included), issued only to authorized readers; `Special:ViewLayersPage` draws image/PDF surfaces over it. Replaces the unregistered private-renderer plan.
 
 - Adoption presentation review (J64, September 26): page drawing controls are a labelled box with a real heading and Codex-token styles that follow night mode (`ext.layers.pageControls.styles`); the confirmation page uses a Codex form with Cancel and requires login; refusals are styled error boxes (the message box styles were previously never loaded) with a return link and clearer wording.

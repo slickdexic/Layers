@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Bound file embeds implemented (step 1 of B03) — September 26, 2026
+
+Step 1 of the previous entry is done; see the [current status](CURRENT_STATUS.md) entry. Contracts juniors must respect: `layersbinding=` on a file link is honoured only through `WikitextHooks`' positional queue and `BoundFileHooks`; an embed with a binding never falls back to legacy layer data; image hosts are `img.layers-bound-file` and only accept image/PDF bundles that carry `source`. Next lead step is the page-owned editor for image/PDF surfaces, then file adoption. J74 remains ready; J65 stays blocked on those two steps. Earlier entries below are historical.
+
 ## Pinned source delivery decided and implemented for history viewing — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry and the [delivery decision](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md). Readers now receive core renditions of the exact pinned file version; `PageAssetService`/`PrivateRasterRenderer` are superseded and must not be registered.

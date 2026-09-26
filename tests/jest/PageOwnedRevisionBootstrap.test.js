@@ -58,6 +58,70 @@ describe( 'Historical viewer bootstrap', () => {
 		dispose();
 	} );
 
+	describe( 'bound file embeds', () => {
+		const pdfBundle = {
+			owner: 'Owner', revisionId: 42,
+			surface: Object.assign( {}, fixture.surfaces[ 0 ], { id: 'plan', kind: 'pdf', source: {
+				repository: 'local', fileTitle: 'File:Plan.pdf', timestamp: '20260906120000',
+				sha1: 'abcdefghijklmnopqrstuvwxyz01234', page: 2 } } ),
+			source: { url: 'https://wiki.test/thumb/archive/page2-800px-Plan.pdf.jpg', width: 800, height: 600 }
+		};
+		function image( binding, revision ) {
+			const link = document.createElement( 'a' );
+			link.href = '/wiki/File:Plan.pdf';
+			const img = document.createElement( 'img' );
+			img.className = 'mw-file-element layers-bound-file';
+			img.setAttribute( 'width', '240' );
+			img.setAttribute( 'alt', 'Site plan' );
+			img.dataset.layersBinding = binding;
+			img.dataset.layersRevision = revision;
+			link.append( img );
+			container.append( link );
+			return link;
+		}
+
+		it( 'replaces the image inside its link with a labelled canvas of the exact rendition', async () => {
+			const link = image( 'v1:10:plan', '42' );
+			const api = { get: jest.fn( () => Promise.resolve( { layersread: { bindings: { 'v1:10:plan': pdfBundle } } } ) ) };
+			const dispose = await mount.loadInline( container, api, 'Owner', 42 );
+			expect( api.get.mock.calls[ 0 ][ 0 ].binding ).toEqual( [ 'v1:10:plan' ] );
+			expect( link.querySelector( 'img' ) ).toBeNull();
+			const host = link.querySelector( '.layers-bound-file-view' );
+			expect( host.style.width ).toBe( '240px' );
+			const canvas = host.querySelector( 'canvas' );
+			expect( canvas.getAttribute( 'role' ) ).toBe( 'img' );
+			expect( canvas.getAttribute( 'aria-label' ) ).toBe( 'Site plan' );
+			expect( host.querySelector( 'figcaption' ) ).toBeNull();
+			const call = window.Layers.Viewer.renderPageOwnedRevision.mock.calls[ 0 ];
+			expect( call[ 5 ] ).toEqual( pdfBundle.source );
+			dispose();
+		} );
+
+		it( 'never puts an image surface in a slide host or a slide in an image host', () => {
+			const link = image( 'v1:10:a', '42' );
+			const slide = document.createElement( 'div' );
+			slide.className = 'layers-bound-slide';
+			slide.dataset.layersBinding = 'v1:10:plan';
+			slide.dataset.layersRevision = '42';
+			slide.textContent = 'Unavailable';
+			container.append( slide );
+			mount.mountInline( container, { 'v1:10:a': bundle, 'v1:10:plan': pdfBundle } );
+			expect( link.querySelector( 'img' ) ).not.toBeNull();
+			expect( slide.textContent ).toBe( 'Unavailable' );
+			expect( window.Layers.Viewer.renderPageOwnedRevision ).not.toHaveBeenCalled();
+		} );
+
+		it( 'leaves the plain image when its drawing is unavailable or from another revision', () => {
+			const current = image( 'v1:10:plan', '42' );
+			const stale = image( 'v1:10:plan', '41' );
+			mount.mountInline( container, {} );
+			expect( container.querySelectorAll( 'img' ) ).toHaveLength( 2 );
+			mount.mountInline( container, { 'v1:10:plan': pdfBundle } );
+			expect( current.querySelector( 'img' ) ).toBeNull();
+			expect( stale.querySelector( 'img' ) ).not.toBeNull();
+		} );
+	} );
+
 	describe( 'inline loading through the read API', () => {
 		function host( binding, revision ) {
 			const el = document.createElement( 'div' );

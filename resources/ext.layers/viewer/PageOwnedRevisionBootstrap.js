@@ -1,16 +1,17 @@
 /** Standalone historical view startup. Never loads the editor or resolves latest content. */
 ( function () {
 	'use strict';
-	function mount( container, bundle ) {
+	const HOSTS = '.layers-bound-slide, img.layers-bound-file';
+	function mount( container, bundle, options ) {
 		let view;
 		try {
-			view = new window.Layers.Viewer.PageOwnedRevisionView( {
+			view = new window.Layers.Viewer.PageOwnedRevisionView( Object.assign( {
 				bundle,
 				adapter: new window.Layers.Editor.PageOwnedSnapshotAdapter(),
 				message: ( ...args ) => mw.msg( ...args ),
 				render: ( canvas, surface, failure, source ) => window.Layers.Viewer.renderPageOwnedRevision(
 					canvas, surface, failure, window.Layers.LayerRenderer, document.fonts, source )
-			} );
+			}, options ) );
 			view.mount( container );
 		} catch ( error ) {
 			if ( view ) {
@@ -26,17 +27,33 @@
 	}
 	function mountInline( root, bundles ) {
 		const disposers = [];
-		root.querySelectorAll( '.layers-bound-slide' ).forEach( ( container ) => {
+		root.querySelectorAll( HOSTS ).forEach( ( container ) => {
 			const binding = container.getAttribute( 'data-layers-binding' );
 			if ( !bundles || !Object.prototype.hasOwnProperty.call( bundles, binding ) ) {
 				return;
 			}
 			const bundle = bundles[ binding ];
-			if ( !bundle || String( bundle.revisionId ) !== container.getAttribute( 'data-layers-revision' ) ) {
+			if ( !bundle || !bundle.surface ||
+				String( bundle.revisionId ) !== container.getAttribute( 'data-layers-revision' ) ) {
 				return;
 			}
-			container.textContent = '';
-			disposers.push( mount( container, bundle ) );
+			const isFile = container.tagName === 'IMG';
+			if ( isFile !== ( bundle.surface.kind === 'image' || bundle.surface.kind === 'pdf' ) ) {
+				return;
+			}
+			if ( !isFile ) {
+				container.textContent = '';
+				disposers.push( mount( container, bundle ) );
+				return;
+			}
+			// Keep core's layout box and link; the canvas replaces the (possibly newer) image version.
+			const host = document.createElement( 'span' );
+			host.className = 'layers-bound-file-view';
+			host.style.display = 'inline-block';
+			host.style.maxWidth = '100%';
+			host.style.width = ( parseInt( container.getAttribute( 'width' ), 10 ) || container.width ) + 'px';
+			container.replaceWith( host );
+			disposers.push( mount( host, bundle, { inline: true, label: container.getAttribute( 'alt' ) || '' } ) );
 		} );
 		return () => disposers.forEach( ( dispose ) => dispose() );
 	}
@@ -51,7 +68,7 @@
 	 */
 	function loadInline( root, api, owner, revisionId ) {
 		const bindings = [];
-		root.querySelectorAll( '.layers-bound-slide' ).forEach( ( host ) => {
+		root.querySelectorAll( HOSTS ).forEach( ( host ) => {
 			const binding = host.getAttribute( 'data-layers-binding' );
 			if ( binding && host.getAttribute( 'data-layers-revision' ) === String( revisionId ) &&
 				!bindings.includes( binding ) ) {
@@ -78,7 +95,7 @@
 	if ( typeof $ === 'function' && typeof mw !== 'undefined' ) {
 		$( () => {
 			const container = document.getElementById( 'layers-history-container' );
-			if ( !container && !document.querySelector( '.layers-bound-slide' ) ) {
+			if ( !container && !document.querySelector( HOSTS ) ) {
 				return;
 			}
 			let dispose = () => {};

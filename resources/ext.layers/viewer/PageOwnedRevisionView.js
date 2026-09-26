@@ -50,6 +50,8 @@
 		 * @param {Object} options.adapter PageOwnedSnapshotAdapter-compatible instance
 		 * @param {Function} options.render Injected synchronous renderer factory
 		 * @param {Function} options.message Injected localization function
+		 * @param {boolean} [options.inline] Replace an embedded image: no caption block, canvas fills the host
+		 * @param {string} [options.label] Accessible name for an inline canvas, such as the image's alt text
 		 */
 		constructor( options ) {
 			if ( typeof options !== 'object' || options === null || Array.isArray( options ) ) {
@@ -134,6 +136,8 @@
 			this._source = source ? { url: source.url, width: source.width, height: source.height } : null;
 			this._render = render;
 			this._message = message;
+			this._inline = options.inline === true;
+			this._label = typeof options.label === 'string' ? options.label : '';
 
 			this._mounted = false;
 			this._disposed = false;
@@ -176,9 +180,11 @@
 			}
 
 			this._mounted = true;
+			const inline = this._inline;
 
-			const figure = document.createElement( 'figure' );
-			figure.className = 'ext-layers-historical-view';
+			const figure = document.createElement( inline ? 'span' : 'figure' );
+			figure.className = inline ? 'ext-layers-historical-view ext-layers-historical-view--inline' :
+				'ext-layers-historical-view';
 
 			const caption = document.createElement( 'figcaption' );
 			caption.className = 'ext-layers-historical-caption';
@@ -199,16 +205,22 @@
 			canvas.className = 'ext-layers-historical-canvas';
 			canvas.width = width;
 			canvas.height = height;
-			canvas.setAttribute( 'aria-label', captionText );
+			canvas.setAttribute( 'aria-label', inline && this._label ? this._label : captionText );
+			if ( inline ) {
+				canvas.setAttribute( 'role', 'img' );
+				canvas.style.width = '100%';
+			}
 			canvas.style.maxWidth = '100%';
 			canvas.style.height = 'auto';
 
-			const status = document.createElement( 'div' );
+			const status = document.createElement( inline ? 'span' : 'div' );
 			status.className = 'ext-layers-historical-status';
 			status.setAttribute( 'role', 'status' );
 			status.setAttribute( 'aria-live', 'polite' );
 
-			figure.appendChild( caption );
+			if ( !inline ) {
+				figure.appendChild( caption );
+			}
 			figure.appendChild( canvas );
 			figure.appendChild( status );
 			parent.appendChild( figure );

@@ -25,6 +25,21 @@ class BoundSlideHooks {
 	 * @return array Parser-function output
 	 */
 	public static function placeholder( Parser $parser, array $binding ): array {
+		[ $value, $revisionId ] = self::register( $parser, $binding );
+		$html = Html::element( 'div', [ 'class' => 'layers-bound-slide', 'data-layers-binding' => $value,
+			'data-layers-revision' => $revisionId ], $parser->msg( 'layers-revision-unavailable' )->text() );
+		return [ $html, 'noparse' => true, 'isHTML' => true ];
+	}
+
+	/**
+	 * Admit a binding for the page being parsed and record it in cacheable parser output.
+	 * Shared by slide placeholders and bound file embeds.
+	 * @param Parser $parser
+	 * @param array $binding Validated canonical identity
+	 * @return array [ canonical binding value, exact revision ID ]
+	 * @throws \DomainException layers-page-binding-unavailable
+	 */
+	public static function register( Parser $parser, array $binding ): array {
 		// Save-time and edit-stash renders lack the new revision ID; core must re-render after insertion.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$config = MediaWikiServices::getInstance()->getMainConfig();
@@ -43,9 +58,7 @@ class BoundSlideHooks {
 		$data = $output->getExtensionData( self::DATA_KEY ) ?? [];
 		$data[$value] = [ 'revisionId' => $revision->getId(), 'pageId' => $binding['pageId'] ];
 		$output->setExtensionData( self::DATA_KEY, $data );
-		$html = Html::element( 'div', [ 'class' => 'layers-bound-slide', 'data-layers-binding' => $value,
-			'data-layers-revision' => $revision->getId() ], $parser->msg( 'layers-revision-unavailable' )->text() );
-		return [ $html, 'noparse' => true, 'isHTML' => true ];
+		return [ $value, $revision->getId() ];
 	}
 
 	/**

@@ -1,5 +1,18 @@
 # Current status and limitations
 
+## Bound file embeds show page-owned drawings — September 26, 2026
+
+`[[File:X|…|layersbinding=v1:<pageId>:<surfaceId>]]` on a pilot owner page now shows that page's drawing over the exact file version it was made on.
+
+- **Parsing:** `WikitextHooks` queues `layersbinding=` per file occurrence in render order, exactly like `layerset=`, and strips it so it never becomes caption or alt text. `BoundFileHooks` admits it with the same checks as bound slides (pilot scope, known revision, matching PageID, `VARY_REVISION`; shared code in `BoundSlideHooks::register()`). Core renders the image as usual; an admitted embed only gains `layers-bound-file`, `data-layers-binding` and `data-layers-revision`. A refused binding (wrong page, malformed, outside the pilot) shows the plain image and never a shared or latest drawing.
+- **Page view:** the history module requests the binding through `layersread`, then replaces the image inside its file link with a canvas at the same display width that draws the pinned rendition and the layers. The canvas is labelled with the image's alt text. If the reader may not see the drawing, the plain image stays. Slide hosts only accept slide surfaces and image hosts only image/PDF surfaces.
+- **Styles:** the historical view stylesheet was never shipped; `ext.layers.history` now loads it (block canvas, theme-aware status colour).
+- Edit links are still offered only for slides; the page-owned editor does not support image/PDF surfaces yet.
+
+Fresh verification: new native `BoundFileHooksTest` (marked image, stripped option, exact revision, drawing and rendition served; wrong-page, malformed, empty and out-of-scope bindings show the plain image). Full native configuration **357 tests passed, 1 skipped**; Jest **15,013 tests**; `npm test` passes; PHP style 0 errors. New Chromium spec binds an existing wiki image on the automation owner, checks the canvas replaces the image in its link at 300 px, the layer and the photo pixels, then restores the owner. All **14 page-owned Chromium tests passed** after the change.
+
+**Not yet:** the page-owned editor for image/PDF surfaces and adoption of file embeds. Earlier entries below are historical.
+
 ## Image and PDF drawings viewable in history — September 26, 2026
 
 Page-owned image and PDF surfaces can now be viewed at any revision, drawn over the exact file version they were made on.

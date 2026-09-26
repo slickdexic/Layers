@@ -10,7 +10,7 @@ The pilot's `PageReadService` now adds core renditions of each image/PDF surface
 | `readBoundSurfaces()` / `layersread binding=` | `source` on each image/PDF entry | Same shape |
 | `PageOwnedPilot::prepareViewer()` | `source` | Same shape; required for image/PDF surfaces |
 
-Slides have no rendition. A rendition failure is treated like an unavailable source: `read()` rejects the bundle, a bound read omits only that binding. `sourceGeometry` is unchanged and still gives handler pixels. The historical viewer draws image/PDF surfaces over the rendition, scaled to the surface canvas; bound file embeds on page views are not implemented yet.
+Slides have no rendition. A rendition failure is treated like an unavailable source: `read()` rejects the bundle, a bound read omits only that binding. `sourceGeometry` is unchanged and still gives handler pixels. The historical viewer draws image/PDF surfaces over the rendition, scaled to the surface canvas, both in `Special:ViewLayersPage` and for bound file embeds on page views (`img.layers-bound-file`).
 
 ## Inline bound-slide display implemented; browser gate pending — September 25, 2026
 

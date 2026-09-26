@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Parser\Parser;
 use MediaWiki\Title\Title;
 
 class WikitextHooks {
@@ -191,6 +192,12 @@ class WikitextHooks {
 	private static $fileLinkTypes = [];
 
 	/**
+	 * Page-owned bindings per filename in render order: admitted identity, false when refused, null when absent.
+	 * @var array<string, array<array|false|null>>
+	 */
+	private static array $fileBindings = [];
+
+	/**
 	 * Fallback set-name queue populated by onParserMakeImageParams (indexed by render position).
 	 * Used for template-embedded [[File:...|layerset=...]] references that onParserBeforeInternalParse
 	 * cannot see because they exist inside templates not yet expanded when that hook fires.
@@ -240,6 +247,7 @@ class WikitextHooks {
 		self::$fileSetNames = [];
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
+		self::$fileBindings = [];
 		self::$fileParamLayerset = [];
 		self::$fileParseCount = [];
 		self::$pendingRender = [];
@@ -479,6 +487,13 @@ class WikitextHooks {
 		// then fall back to 'on' (latest available layer set) if no hint is present.
 		if ( $isWikitextRender ) {
 			$fileParams = self::getFileParamsForRender( $filename );
+			if ( $fileParams['binding'] !== null ) {
+				// A page-owned embed never shows a shared drawing, even when its binding was refused.
+				if ( $fileParams['binding'] !== false ) {
+					BoundFileHooks::markImage( $attribs, $fileParams['binding'] );
+				}
+				return true;
+			}
 		} else {
 			$defaultFallback = self::isFilePageContext() ? null : 'on';
 			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
@@ -884,13 +899,15 @@ class WikitextHooks {
 			}
 		}
 		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
+		$binding = self::$fileBindings[$filename][$index] ?? null;
 
 		// Increment counter for next call
 		self::$fileRenderCount[$filename]++;
 
 		return [
 			'setName' => $setName,
-			'linkType' => $linkType
+			'linkType' => $linkType,
+			'binding' => $binding
 		];
 	}
 
@@ -1135,6 +1152,22 @@ class WikitextHooks {
 				}
 			}
 
+			// Page-owned bindings use the same positional queue; admission needs this parse's revision.
+			$bindingMap = [];
+			if ( stripos( $text, 'layersbinding' ) !== false && preg_match_all(
+				'/\[\[' . $ns . ':([^|\]]+)\|[^\]]*?layersbinding\s*=\s*([^|\]]*)/i',
+				$text, $bindingMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE
+			) ) {
+				foreach ( $bindingMatches as $match ) {
+					$bindingMap[self::normalizeFileKey( $match[1][0] )][$match[0][1]] = $match[2][0];
+				}
+			}
+			foreach ( $allFileMatches as $fileMatch ) {
+				$raw = $bindingMap[$fileMatch['filename']][$fileMatch['offset']] ?? null;
+				self::$fileBindings[$fileMatch['filename']][] = $raw === null ? null :
+					( $parser instanceof Parser ? BoundFileHooks::resolve( $parser, $raw ) : false );
+			}
+
 			// Strip our parameters ONLY from within file links, so that they do not
 			// leak into captions. Scoping to the link is what keeps {{#slide:...}}
 			// parser functions and <nowiki>-quoted documentation intact.
@@ -1142,7 +1175,7 @@ class WikitextHooks {
 				'/\[\[' . $ns . ':([^\]]+)\]\]/i',
 				static function ( $match ) {
 					return preg_replace(
-						'/\|(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+/i',
+						'/\|(?:(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+|layersbinding\s*=\s*[^|\]]*)/i',
 						'',
 						$match[0]
 					);
