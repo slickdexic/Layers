@@ -1,5 +1,13 @@
 # Junior implementation review — J01–J71
 
+## Lead bound-editor admission implemented; J72 ready — September 25, 2026
+
+Added PageOwnedPilot::prepareBoundEditor(pageId, revisionId, start, expected, authority), an internal admission method for a selected direct embedding. It resolves native identity/edit rights, requires current explicit revision and retained pilot scope, reads authorized main content, locates exact UTF-8 byte offset and complete source bytes through DirectEmbeddingRewriter, and extracts the binding from those server-read options. Binding owner must match native PageID; existing editor preparation confirms the surface, current revision and server-derived identity. Fixed rejection is layers-editor-unavailable without chained diagnostics. No public route or browser control calls this method yet; file-backed editing remains closed. Existing editor APIs and defaults are unchanged.
+
+Fresh native pilot/editor-route regression: **28 tests / 347 assertions passed**. New integration coverage verifies Unicode offset success, server-derived surface identity, stale-base/wrong-offset/forged-source rejection and unchanged page content/revision. Changed PHP style passed. J71 corrections were saved in local checkpoint **2a6b8c8a**; no push.
+
+**Junior J72 is ready** for bounded rejection coverage of this concrete interface. Lead retains ordinary route/overlay connection, explicit adoption confirmation, and pinned image/PDF delivery. This is progress toward owner-page history, not completion of ordinary editing. Search and Cargo follow history. Docker remains only the test environment; earlier entries below are historical.
+
 ## J71 accepted with corrections; next work is lead-owned — September 25, 2026
 
 Lead reviewed the competing adoption test and added direct native revision-row counts before preparation, after each publication and after stale rejection. Latest-revision checks alone did not prove no extra revision was inserted. Replaced substring location with DirectEmbeddingRewriter scanning of the committed main content, selecting the sole remaining unbound occurrence. Added full snapshot equality after the rejected attempt. Existing Unicode preservation, exact immutable legacy-row selection, distinct server IDs and historical-content checks remain intact.

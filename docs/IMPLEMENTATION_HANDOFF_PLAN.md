@@ -1,5 +1,13 @@
 # Layers implementation handoff plan
 
+## Lead bound-editor admission implemented; J72 ready — September 25, 2026
+
+Added PageOwnedPilot::prepareBoundEditor(pageId, revisionId, start, expected, authority), an internal admission method for a selected direct embedding. It resolves native identity/edit rights, requires current explicit revision and retained pilot scope, reads authorized main content, locates exact UTF-8 byte offset and complete source bytes through DirectEmbeddingRewriter, and extracts the binding from those server-read options. Binding owner must match native PageID; existing editor preparation confirms the surface, current revision and server-derived identity. Fixed rejection is layers-editor-unavailable without chained diagnostics. No public route or browser control calls this method yet; file-backed editing remains closed. Existing editor APIs and defaults are unchanged.
+
+Fresh native pilot/editor-route regression: **28 tests / 347 assertions passed**. New integration coverage verifies Unicode offset success, server-derived surface identity, stale-base/wrong-offset/forged-source rejection and unchanged page content/revision. Changed PHP style passed. J71 corrections were saved in local checkpoint **2a6b8c8a**; no push.
+
+**Junior J72 is ready** for bounded rejection coverage of this concrete interface. Lead retains ordinary route/overlay connection, explicit adoption confirmation, and pinned image/PDF delivery. This is progress toward owner-page history, not completion of ordinary editing. Search and Cargo follow history. Docker remains only the test environment; earlier entries below are historical.
+
 ## J71 accepted with corrections; next work is lead-owned — September 25, 2026
 
 Lead reviewed the competing adoption test and added direct native revision-row counts before preparation, after each publication and after stale rejection. Latest-revision checks alone did not prove no extra revision was inserted. Replaced substring location with DirectEmbeddingRewriter scanning of the committed main content, selecting the sole remaining unbound occurrence. Added full snapshot equality after the rejected attempt. Existing Unicode preservation, exact immutable legacy-row selection, distinct server IDs and historical-content checks remain intact.
@@ -217,11 +225,25 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4b | Junior J68: bound-read identity lifecycle tests | Accepted with lead corrections |
 | 4c | Junior J69: expected PageID publication client | Accepted; lead session/bootstrap wiring verified |
 | 4d | Junior J70: editor PageID browser acceptance | Accepted with lead corrections |
-| 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections; no next junior packet |
+| 4e | Junior J71: competing prepared adoptions | Accepted with lead corrections |
+| 4f | Junior J72: exact-source bound-editor rejection tests | Ready; packet below |
 | 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
 | 6 | Junior J64: ownership controls and accessible messages | Blocked; lead must supply callbacks, state diagram and approved strings |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
 | 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
+
+### J72 — Exact-source bound-editor rejection coverage (ready)
+
+**Frozen interface:** PageOwnedPilot::prepareBoundEditor(int pageId, int revisionId, int start, string expected, Authority authority): array. The lead implementation is internal only and returns the existing editor bootstrap after validating exact saved source. It does not register a route.
+
+**Allowed changes:** tests/phpunit/core/PageOwnedPilotTest.php, this packet and the review ledger. Use native isolated test tables and existing configure/API helpers. No production, manifest, messages, services, wiki settings, real pages/files, commits or pushes.
+
+1. Exercise disabled pilot, empty/unrelated scope, anonymous actor, denied read/edit/editlayers and invalid numeric bounds. Require fixed layers-editor-unavailable with no previous exception; no page/revision mutation.
+2. Publish exact main-source cases with a foreign-owner binding, missing surface, duplicate binding, legacy-selector conflict and unbound legacy slide. Supplying that exact source/offset must still reject. Do not mock prepareEditor or bypass existing source/schema gates.
+3. Prove comments, nowiki and template-generated references cannot qualify as the selected direct occurrence. Use offsets into their literal source and verify rejection without rewriting anything. Include two identical valid direct bindings separated by multibyte text: each correct byte offset is admitted, an interior/wrong offset is rejected.
+4. Preserve the lead success test and current exact-revision requirements. Record native revision counts before/after admission calls, not only latest IDs. Do not claim public routing, image/PDF or browser acceptance.
+
+Run the focused PageOwnedPilotTest plus SpecialEditLayersPageTest, changed-file PHP style and documentation checks. Return actual counts and any minimal production failure sequence for lead review. J64/J65 remain blocked pending ordinary UI callbacks.
 
 ### J71 — Competing prepared adoptions (accepted with lead corrections)
 

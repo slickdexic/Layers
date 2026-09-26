@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Api\ApiMain;
+use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
@@ -12,6 +13,8 @@ use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\MergeHistoryFactory;
 use MediaWiki\Permissions\Authority;
+use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Revision\SlotRecord;
 use OldRevisionImporter;
 use Wikimedia\Rdbms\IDBAccessObject;
 
@@ -129,6 +132,62 @@ class PageOwnedPilot {
 					]
 				]
 			];
+		}
+		throw new \DomainException( 'layers-editor-unavailable' );
+	}
+
+	/**
+	 * Internal ordinary-entry admission from an exact saved direct embedding.
+	 * Source bytes are checked against native main content; caller IDs are not binding proof.
+	 * No public route is installed here. Existing pilot scope and slide-only gates remain.
+	 *
+	 * @param int $pageId Native owner identity
+	 * @param int $revisionId Explicit current base
+	 * @param int $start UTF-8 byte offset of selected direct embedding
+	 * @param string $expected Complete selected embedding bytes
+	 * @param Authority $authority Original request actor
+	 * @return array Authorized editor bootstrap
+	 */
+	public function prepareBoundEditor( int $pageId, int $revisionId, int $start, string $expected,
+		Authority $authority
+	): array {
+		try {
+			if ( !$this->enabled || $start < 0 || $expected === '' || $authority->getUser()->getId() <= 0 ) {
+				throw new \DomainException();
+			}
+			$lookup = $this->services->getRevisionLookup();
+			$owner = ( new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
+				new PageHistoryAccess( $lookup ) ) )->resolveForEdit( $pageId, $revisionId, $authority );
+			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+				throw new \DomainException();
+			}
+			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+			$main = $revision ? $revision->getContent( SlotRecord::MAIN,
+				RevisionRecord::FOR_THIS_USER, $authority ) : null;
+			if ( !$main instanceof WikitextContent ) {
+				throw new \DomainException();
+			}
+			// File-backed editing remains closed until pinned source delivery is integrated.
+			$candidates = ( new DirectEmbeddingRewriter() )->scan( $main->getText(), static fn () => null );
+			foreach ( $candidates as $candidate ) {
+				if ( $candidate['kind'] !== 'slide' || $candidate['start'] !== $start ||
+					$candidate['raw'] !== $expected ) {
+					continue;
+				}
+				$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
+				if ( !$binding || $binding['pageId'] !== $pageId ) {
+					throw new \DomainException();
+				}
+				$init = $this->prepareEditor( $owner->getPrefixedText(), $revisionId,
+					$binding['surfaceId'], $authority );
+				if ( $init['pageOwned']['pageId'] !== $pageId ) {
+					throw new \DomainException();
+				}
+				return $init;
+			}
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			// Fixed denial without reflecting source bytes or privileged diagnostics.
+			throw new \DomainException( 'layers-editor-unavailable' );
 		}
 		throw new \DomainException( 'layers-editor-unavailable' );
 	}

@@ -168,6 +168,43 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$pilot->prepareViewer( $title->getPrefixedText(), $first, 'missing', $actor );
 	}
 
+	public function testBoundEditorDerivesSelectionFromExactSavedSource(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$params = [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(), 'baserevid' => 0,
+			'data' => file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ),
+			'maintext' => 'Initial owner' ];
+		$base = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$pageId = $title->getArticleID();
+		$prefix = "Unicode 世界 — café\n";
+		$embed = '{{#Slide:Welcome|layersbinding=v1:' . $pageId . ':presentation}}';
+		$params['baserevid'] = $base;
+		$params['maintext'] = $prefix . $embed;
+		$current = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
+		$init = $pilot->prepareBoundEditor( $pageId, $current, strlen( $prefix ), $embed, $actor );
+		$this->assertSame( $pageId, $init['pageOwned']['pageId'] );
+		$this->assertSame( $current, $init['pageOwned']['revisionId'] );
+		$this->assertSame( 'presentation', $init['pageOwned']['surfaceId'] );
+		foreach ( [
+			[ $base, strlen( $prefix ), $embed ],
+			[ $current, 0, $embed ],
+			[ $current, strlen( $prefix ), '{{#Slide:Forged|layersbinding=v1:' . $pageId . ':presentation}}' ]
+		] as [ $revision, $start, $expected ] ) {
+			try {
+				$pilot->prepareBoundEditor( $pageId, $revision, $start, $expected, $actor );
+				$this->fail( 'Expected exact-source rejection' );
+			} catch ( \DomainException $e ) {
+				$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
+				$this->assertNull( $e->getPrevious() );
+			}
+		}
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$this->assertSame( $current, $lookup->getRevisionByTitle( $title )->getId() );
+		$this->assertSame( $prefix . $embed, $lookup->getRevisionById( $current )->getContent( 'main' )->getText() );
+	}
+
 	public function testEditorPreparationUsesAuthorizedCurrentRevisionAndServerIdentity(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
