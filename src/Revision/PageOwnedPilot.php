@@ -671,7 +671,9 @@ class PageOwnedPilot {
 	/** @return PageOwnedAdmissionHooks */
 	public function newAdmissionHooks(): PageOwnedAdmissionHooks {
 		return new PageOwnedAdmissionHooks( $this->publisher->getAdmissionContext(),
-			$this->services->getRevisionLookup() );
+			$this->services->getRevisionLookup(), new PageDrawingRevert( $this->services->getConnectionProvider(),
+				$this->services->getSlotRoleStore(), $this->services->getRevisionLookup(),
+				$this->services->getPermissionManager() ) );
 	}
 
 	/** @return PageOwnedPilotLifecycleHooks */

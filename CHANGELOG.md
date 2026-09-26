@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Rollback restores page-owned drawings (pilot, September 26): outside publication, a save may set the drawing slot only to the exact drawings of an earlier, visible revision of the same page, by a user with `editlayers`. Native rollback of drawing edits now works; another page's drawings, hidden drawings, new content and slot removal stay refused.
+
 - Page-owned drawings follow their page (pilot, September 26): one scope rule (`PageOwnedScope`) replaces the title checks. A page that owns drawings keeps them under any title, so owner pages can be moved; the old-title redirect cannot claim them. Undelete restores drawings only onto their own page (no page at the title, one deleted page, its ID free) and otherwise refuses with `layers-restore-drawings-denied`. Import and merge stay refused wherever drawings are involved; enrolled titles that own nothing behave like ordinary pages.
 
 - Shared file drawings can be adopted into page history (pilot, September 26): on a pilot owner page, `[[File:X|layerset=name]]` (and `page=N` for PDFs) is offered for adoption like shared slides. The offer and confirmation are pinned to the file version shown (`filets`); a re-uploaded file refuses the old confirmation. Adoption rewrites the embed to `layersbinding=` in place and stores an image or PDF surface with that version's (or page's) geometry. The adoption notice no longer says only slides.

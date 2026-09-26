@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Native rollback of drawings — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: outside publication, admission accepts a drawing-slot change only when it restores the exact drawings of an earlier, visible revision of the same page and the user has `editlayers` (`PageDrawingRevert`). `TestingAdmissionRegistration` installs the same rule, so a test that expects an unauthorized replacement to fail must use content that no earlier revision of that page had. No queue change. Earlier entries below are historical.
+
 ## Lifecycle guards follow drawing ownership (B04); J65b queued — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contracts juniors must respect: every scope question goes through `PageOwnedPilot::getScope()` (`PageOwnedScope`); never compare a title with `LayersPageOwnedPilotOwners` directly. Moves have no Layers guard. Undelete allows drawings back only onto their own page. A test that expects a guard to refuse must make the protected page own drawings first (publish to it); an enrolled title alone is no longer protected.

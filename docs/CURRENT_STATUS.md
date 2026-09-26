@@ -1,5 +1,14 @@
 # Current status and limitations
 
+## Rollback restores page-owned drawings — September 26, 2026
+
+Native rollback now works on pages that own drawings. Before, rolling back an edit that changed a drawing failed with "Direct or unauthorized changes to the Layers revision slot are not permitted", so vandalised drawings could not be reverted from page history.
+
+- **Rule:** outside publication, a save may set the drawing slot only to the exact drawings of an earlier revision of the same page (`PageDrawingRevert`). That content passed publication when it was first saved. The earlier revision must not have its content hidden by revision deletion, and the user needs `editlayers` as well as core's rollback rights.
+- **Still refused:** copying another page's drawings in (even through `PageUpdater::inheritSlot`), restoring hidden drawings, any new drawing content, and removing the slot. Rolling back to a revision from before the page owned drawings therefore still fails; the page keeps its drawings.
+
+Fresh verification: `PageOwnedRollbackTest` now covers rollback of a drawing change (the previous drawings and text become current), a main-text-only rollback, refusal without `editlayers`, refusal to remove the slot, and refusals for another page's drawings and for hidden drawings. The shared test harness installs the same revert rule as production. Full native configuration **369 tests passed, 1 skipped** (including J74 work in progress); PHP style 0 errors.
+
 ## Page-owned drawings follow their page through moves and restores — September 26, 2026
 
 The pilot's lifecycle guards now follow what a page owns rather than its title (lead B04).

@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContentHandler;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
+use MediaWiki\Extension\Layers\Revision\PageDrawingRevert;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
@@ -61,7 +62,9 @@ class TestingAdmissionRegistration {
 				}
 
 				$ctx = $ctx ?? new PublicationAdmissionContext();
-				$hooks = new PageOwnedAdmissionHooks( $ctx, $services->getRevisionLookup() );
+				$hooks = new PageOwnedAdmissionHooks( $ctx, $services->getRevisionLookup(),
+					new PageDrawingRevert( $services->getConnectionProvider(), $services->getSlotRoleStore(),
+						$services->getRevisionLookup(), $services->getPermissionManager() ) );
 
 				$tc->setTemporaryHook( 'MultiContentSave', $hooks, true );
 

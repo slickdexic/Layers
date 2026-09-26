@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\CommentStore\CommentStoreComment;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\PageDrawingRevert;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Revision\PublicationAdmissionContext;
 use MediaWiki\Extension\Layers\Revision\PublicationAdmissionIntent;
@@ -25,23 +26,28 @@ use Wikimedia\Rdbms\IDBAccessObject;
  * Classifies proposed saves:
  * 1. Ordinary edits retaining inherited unchanged Layers content pass freely.
  * 2. Unrelated pages without Layers slots are completely unaffected.
- * 3. Add or change to Layers slot requires a matching, unconsumed service scope.
+ * 3. Add or change to Layers slot requires a matching, unconsumed service scope, except that native
+ *    reverts may restore the page's own earlier drawings (PageDrawingRevert).
  * 4. Slot removal or foreign model placement is strictly denied.
  */
 class PageOwnedAdmissionHooks implements MultiContentSaveHook {
 	private ?PublicationAdmissionContext $context;
 	private RevisionLookup $revisionLookup;
+	private ?PageDrawingRevert $reverts;
 
 	/**
 	 * @param ?PublicationAdmissionContext $context
 	 * @param RevisionLookup $revisionLookup
+	 * @param PageDrawingRevert|null $reverts Null refuses every change outside publication
 	 */
 	public function __construct(
 		?PublicationAdmissionContext $context,
-		RevisionLookup $revisionLookup
+		RevisionLookup $revisionLookup,
+		?PageDrawingRevert $reverts = null
 	) {
 		$this->context = $context;
 		$this->revisionLookup = $revisionLookup;
+		$this->reverts = $reverts;
 	}
 
 	/**
@@ -132,6 +138,12 @@ class PageOwnedAdmissionHooks implements MultiContentSaveHook {
 
 		// 7. Add or Replace Layers content: requires active, matching admission scope.
 		if ( !$this->context || !$this->context->hasActiveScope() ) {
+			// Rollback and similar reverts may restore this page's own earlier drawings.
+			if ( $parentHasLayers && $this->reverts &&
+				$this->reverts->restoresEarlierDrawings( $revisionRecord, $user )
+			) {
+				return true;
+			}
 			$this->deny( $status, 'layers-admission-unauthorized', 'no_active_scope' );
 			return false;
 		}
