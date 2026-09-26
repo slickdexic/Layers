@@ -66,7 +66,8 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 		}
 		try {
 			$preview = $this->pilot->previewDirectAdoption( $selection['pageid'], $selection['revid'],
-				$selection['start'], $selection['expected'], $selection['legacyrev'], $this->getAuthority() );
+				$selection['start'], $selection['expected'], $selection['legacyrev'], $this->getAuthority(),
+				$selection['filets'] ?? null );
 		} catch ( PublicationException $e ) {
 			$this->showFailure( $e->getMessage(), $selection['pageid'] );
 			return;
@@ -96,7 +97,9 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 				->plaintextParams( $preview['label'], $preview['setName'] )
 				->numParams( $preview['revision'] )
 				->params( $owner->getPrefixedText() )
-				->parseAsBlock() )
+				->parseAsBlock() . ( $preview['file'] ?
+				$this->msg( 'layers-adopt-file-version' )->params( $preview['file']->getPrefixedText() )
+					->parseAsBlock() : '' ) )
 			->setSubmitCallback( function ( array $data ) use ( $selection, $owner ) {
 				return $this->adopt( $selection, $owner, (string)$data['summary'] );
 			} );
@@ -118,7 +121,8 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 		try {
 			// No automatic retry: a repeated or stale submission fails the base-revision check.
 			$this->pilot->adoptDirectEmbedding( $selection['pageid'], $selection['revid'], $selection['start'],
-				$selection['expected'], $selection['legacyrev'], null, $this->getAuthority(), $summary );
+				$selection['expected'], $selection['legacyrev'], $selection['filets'] ?? null, $this->getAuthority(),
+				$summary );
 		} catch ( PublicationException $e ) {
 			return Status::newFatal( self::MESSAGES[$e->getMessage()] ?? 'layers-adopt-unavailable',
 				$owner->getPrefixedText() );
@@ -173,6 +177,14 @@ class SpecialAdoptLayersDrawing extends SpecialPage {
 				return null;
 			}
 			$selection[$field] = (int)$value;
+		}
+		// File embeds name the exact upload version; slides have none.
+		$fileTimestamp = $request->getVal( 'filets' );
+		if ( $fileTimestamp !== null ) {
+			if ( !preg_match( '/^[0-9]{14}$/D', $fileTimestamp ) ) {
+				return null;
+			}
+			$selection['filets'] = $fileTimestamp;
 		}
 		return $selection;
 	}

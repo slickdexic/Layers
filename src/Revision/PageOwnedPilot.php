@@ -8,9 +8,11 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
+use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\FileRepo\File\File;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\MergeHistoryFactory;
 use MediaWiki\Permissions\Authority;
@@ -165,6 +167,7 @@ class PageOwnedPilot {
 			$legacyRevisionId, $authority );
 		$proposal = $this->newAdoptionPreparer( $identities )->prepare( $pageId, $baseRevisionId, $start, $expected,
 			$legacyRevisionId, $fileTimestamp, $authority );
+		$this->assertCurrentFileVersion( $proposal, $fileTimestamp );
 		$revisionId = ( new PageOwnedAdoptionService( $identities, $this->services->getRevisionLookup(),
 			$this->publisher ) )->publishPreparedSurface( $pageId, $baseRevisionId, $authority,
 				$proposal['document'], $proposal['main'], $summary );
@@ -182,16 +185,19 @@ class PageOwnedPilot {
 	 * @param string $expected
 	 * @param int $legacyRevisionId
 	 * @param Authority $authority
-	 * @return array owner Title, label, setName, revision, timestamp and userId of the copied drawing
+	 * @param string|null $fileTimestamp Exact upload version of a file embed; null for slides
+	 * @return array owner Title, label, setName, revision, timestamp and userId of the copied drawing,
+	 *  and for files the file page Title the drawing stays pinned to
 	 * @throws PublicationException Same fixed failures adoption would report
 	 */
 	public function previewDirectAdoption( int $pageId, int $baseRevisionId, int $start, string $expected,
-		int $legacyRevisionId, Authority $authority
+		int $legacyRevisionId, Authority $authority, ?string $fileTimestamp = null
 	): array {
 		$identities = $this->assertAdoptionScope( $pageId, $baseRevisionId, $start, $expected,
 			$legacyRevisionId, $authority );
 		$proposal = $this->newAdoptionPreparer( $identities )->prepare( $pageId, $baseRevisionId, $start, $expected,
-			$legacyRevisionId, null, $authority );
+			$legacyRevisionId, $fileTimestamp, $authority );
+		$this->assertCurrentFileVersion( $proposal, $fileTimestamp );
 		$record = $this->services->getService( 'LayersDatabase' )->getLayerSetForAdoption( $legacyRevisionId );
 		if ( !$record ) {
 			throw new PublicationException( 'layers-legacy-revision-unavailable' );
@@ -201,17 +207,21 @@ class PageOwnedPilot {
 		} catch ( \DomainException $e ) {
 			throw new PublicationException( $e->getMessage() );
 		}
+		$file = $fileTimestamp === null ? null :
+			$this->services->getTitleFactory()->makeTitle( NS_FILE, $proposal['legacySelection']['imgName'] );
 		return [
-			'owner' => $owner,
-			'label' => substr( $proposal['legacySelection']['imgName'], strlen( LayersConstants::SLIDE_PREFIX ) ),
+			'owner' => $owner, 'file' => $file,
+			'label' => $file ? $file->getText() :
+				substr( $proposal['legacySelection']['imgName'], strlen( LayersConstants::SLIDE_PREFIX ) ),
 			'setName' => $proposal['legacySelection']['name'], 'revision' => (int)$record['revision'],
 			'timestamp' => (string)$record['timestamp'], 'userId' => (int)( $record['userId'] ?? 0 )
 		];
 	}
 
 	/**
-	 * Shared slides on the current revision that an editor can make owned by the page.
-	 * Each entry names the exact legacy row the slide shows now; confirmation revalidates everything.
+	 * Shared slides and file drawings on the current revision that an editor can make owned by the page.
+	 * Each entry names the exact legacy row, and for files the exact file version, shown now;
+	 * confirmation revalidates everything.
 	 * @param int $pageId
 	 * @param int $revisionId Displayed revision; must still be current
 	 * @param Authority $authority
@@ -235,10 +245,17 @@ class PageOwnedPilot {
 			}
 			$db = $this->services->getService( 'LayersDatabase' );
 			$entries = [];
-			foreach ( $this->newRewriter()->scan( $main->getText(), static fn () => null ) as $candidate ) {
+			foreach ( $this->newRewriter()->scan( $main->getText(), $this->fileTargets() ) as $candidate ) {
 				try {
-					if ( $candidate['kind'] !== 'slide' ||
-						PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+					if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+						continue;
+					}
+					if ( $candidate['kind'] === 'file' ) {
+						$entry = $this->fileAdoptionCandidate( $candidate, $db );
+						if ( $entry ) {
+							$entry['params'] = [ 'pageid' => $pageId, 'revid' => $revisionId ] + $entry['params'];
+							$entries[] = $entry;
+						}
 						continue;
 					}
 					$imgName = LayersConstants::SLIDE_PREFIX . $candidate['target'];
@@ -266,6 +283,42 @@ class PageOwnedPilot {
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
 			return [];
 		}
+	}
+
+	/**
+	 * A legacy file drawing shown by an explicit named set, pinned to the file version it is shown on now.
+	 * @param array $candidate Direct file embed from the source scanner
+	 * @param LayersDatabase $db
+	 * @return array|null Entry, or null when the embed shows no adoptable drawing
+	 * @throws \InvalidArgumentException When the embed does not match the row exactly
+	 */
+	private function fileAdoptionCandidate( array $candidate, LayersDatabase $db ): ?array {
+		$setName = self::explicitSetName( $candidate['options'] );
+		$title = $this->services->getTitleFactory()->newFromText( $candidate['target'] );
+		$file = $setName !== null && $title ?
+			$this->services->getRepoGroup()->getLocalRepo()->findFile( $title ) : false;
+		if ( !$file || !$file->exists() || $file->isDeleted( File::DELETED_FILE ) ) {
+			return null;
+		}
+		$page = 1;
+		foreach ( $candidate['options'] as $option ) {
+			$parts = explode( '=', $option, 2 );
+			if ( strtolower( trim( $parts[0], " \t\r\n\f" ) ) === 'page' && isset( $parts[1] ) ) {
+				$page = (int)trim( $parts[1], " \t\r\n\f" );
+			}
+		}
+		// Legacy file embeds show the set saved for the current file version.
+		$row = $db->getLayerSetByName( $file->getName(), $file->getSha1(), $setName, max( 1, $page ) );
+		if ( !$row ) {
+			return null;
+		}
+		$rowName = (string)( $row['setName'] ?? $row['name'] ?? '' );
+		DirectEmbeddingSelection::assertMatches( $candidate,
+			[ 'imgName' => $file->getName(), 'name' => $rowName, 'page' => (int)( $row['page'] ?? $page ) ] );
+		return [ 'label' => $file->getTitle()->getText(), 'setName' => $rowName, 'params' => [
+			'start' => $candidate['start'], 'expected' => $candidate['raw'], 'legacyrev' => (int)$row['id'],
+			'filets' => $file->getTimestamp()
+		] ];
 	}
 
 	/**
@@ -312,6 +365,23 @@ class PageOwnedPilot {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
 		return $identities;
+	}
+
+	/**
+	 * A file drawing is adopted only onto the version the page shows now. An older version would
+	 * silently change the page's image, so a confirmation opened before a re-upload is refused.
+	 * @param array $proposal Prepared adoption
+	 * @param string|null $fileTimestamp
+	 */
+	private function assertCurrentFileVersion( array $proposal, ?string $fileTimestamp ): void {
+		if ( $fileTimestamp === null ) {
+			return;
+		}
+		$title = $this->services->getTitleFactory()->makeTitle( NS_FILE, $proposal['legacySelection']['imgName'] );
+		$file = $this->services->getRepoGroup()->getLocalRepo()->findFile( $title, [ 'latest' => true ] );
+		if ( !$file || !$file->exists() || $file->getTimestamp() !== $fileTimestamp ) {
+			throw new PublicationException( 'layers-source-unavailable' );
+		}
 	}
 
 	/** @return callable Canonical `File:` target of a link head, or null for anything that is not a file */

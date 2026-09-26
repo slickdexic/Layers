@@ -1,5 +1,19 @@
 # Current status and limitations
 
+## Shared file drawings can be adopted into page history — September 26, 2026
+
+On a pilot owner page, a legacy file drawing shown with an explicit set (`[[File:X|layerset=name]]`, optionally `page=N`) can now be made owned by the page, as shared slides already could.
+
+- **Offer:** the "Drawings on this page" box lists the file ("Make “X” owned by this page") for editors of the current revision. The offer names the exact legacy row shown now: the set saved for the current file version and that PDF page. A file embed without `layerset=` is not offered, because it shows no specific set.
+- **Pinned version:** each offer carries the file version it was shown on (`filets`, the upload timestamp). The confirmation page says the drawing stays on that version and that later uploads will not change it. If the file was re-uploaded since, the confirmation is refused and nothing is saved, because adopting onto the older version would silently change the page's image; unknown or malformed versions are refused the same way.
+- **Result:** one page revision (tagged `layers-page-drawing`) whose text replaces `layerset=…` with `layersbinding=…` in place, keeping every other option, and whose drawing is an image or PDF surface with the file's (or that PDF page's) own geometry. The page then shows its own copy through the bound-file path; the shared set is unchanged.
+- **Wording:** the notice now reads "Some drawings on this page are shared…" instead of naming slides.
+- Groups, markers, imported images and library shapes still refuse adoption, exactly as for slides.
+
+Fresh verification: new native cases in `PageOwnedAdoptionFlowTest` cover the file offer and page link, the confirmation (intro, version note, hidden `filets`), adoption pinned to the current PNG, adoption of page two of a real multi-page PDF with page two's portrait geometry and rendition, and refusals for unrenderable content, a confirmation opened before a re-upload (the old version still exists and matches the saved set, but the page no longer shows it), and unknown or malformed versions. Full native configuration **362 tests passed, 1 skipped**; standalone PHPUnit **1,294 tests, 1 skipped**; `npm test` passes; PHP style 0 errors. New Chromium spec `page-owned-file-adoption.spec.js` saves its own legacy set on an existing wiki image, embeds it on the automation owner, adopts it through the page link and confirmation, checks the rewritten text, the pinned surface and the pixels, refuses a second confirmation, then restores the owner and deletes its set. All **15 page-owned Chromium tests passed**; the adoption and bound-file specs were rerun after the final version check.
+
+**Not yet:** lifecycle guards keyed to PageID rather than titles (so moves keep drawings), and a public cache policy for anonymous binding reads. J65 is released for everything else. Earlier entries below are historical.
+
 ## Image and PDF drawings editable in page history — September 26, 2026
 
 Page-owned image and PDF surfaces can now be edited, not only viewed.

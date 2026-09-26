@@ -641,6 +641,9 @@ class WikitextHooks {
 
 		// Mark page has layers
 		self::$pageHasLayers = true;
+		if ( $parser instanceof Parser ) {
+			BoundSlideHooks::noteSharedSlide( $parser );
+		}
 		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
 			$output = $parser->getOutput();
 			if ( $output && method_exists( $output, 'setPageProperty' ) ) {
@@ -1085,6 +1088,9 @@ class WikitextHooks {
 					self::$pageHasLayers = true;
 					$normalized = strtolower( $layersValue );
 					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
+					if ( !in_array( $normalized, [ 'off', 'none', 'false' ], true ) && $parser instanceof Parser ) {
+						BoundSlideHooks::noteSharedSlide( $parser );
+					}
 					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
 					$queueLen = count( self::$fileSetNames[$filename] );
 					self::log( "Detected layerset=$layersValue for $filename (occurrence #$queueLen)" );

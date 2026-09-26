@@ -206,7 +206,7 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		await expect( heading ).toHaveAttribute( 'aria-level', '2' );
 
 		const notice = controls.locator( '.layers-page-edit-controls__notice' );
-		await expect( notice ).toContainText( 'These slides use shared drawings' );
+		await expect( notice ).toContainText( 'Some drawings on this page are shared' );
 		await expect( notice ).toContainText( 'shared original is not changed' );
 
 		const adoptLink = controls.locator( '.layers-page-adopt-link' );

@@ -136,7 +136,9 @@ class DirectAdoptionPreparationService {
 	private function assertViewerCapabilities( string $document ): void {
 		$surface = json_decode( $document )->surfaces[0];
 		// Hidden unsupported content must survive future editing too; never silently discard it.
-		if ( $surface->kind !== 'slide' || !PageOwnedRenderCapability::isRenderable( $surface ) ) {
+		if ( !in_array( $surface->kind, [ 'slide', 'image', 'pdf' ], true ) ||
+			!PageOwnedRenderCapability::isRenderable( $surface )
+		) {
 			throw new PublicationException( 'layers-adoption-rendering-unavailable' );
 		}
 	}

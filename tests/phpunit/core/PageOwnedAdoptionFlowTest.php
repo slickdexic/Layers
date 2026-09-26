@@ -282,4 +282,152 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->expectException( UserNotLoggedIn::class );
 		$this->visit( $this->getServiceContainer()->getUserFactory()->newAnonymous(), $params );
 	}
+
+	/**
+	 * A shared file drawing on a pilot page, shown by an explicit set for the current file version.
+	 * @param array $layers Legacy layers
+	 * @param string $name File name
+	 * @param string $fixture Asset fixture
+	 * @param int $filePage Page of a multi-page file
+	 * @return array [ page, actor, base revision ID, file, embed prefix, embed ]
+	 */
+	private function sharedFilePage( array $layers, string $name = 'Shared_adoption.png',
+		string $fixture = 'test-image.png', int $filePage = 1
+	): array {
+		$fileTitle = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $name );
+		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $fileTitle );
+		$this->assertStatusGood( $file->upload( __DIR__ . '/../../fixtures/assets/' . $fixture, 'Fixture', '',
+			0, false, '20260906120000', $this->getTestSysop()->getUser() ) );
+		$record = [ 'id' => 301, 'imgName' => $name, 'sha1' => $file->getSha1(), 'mime' => $file->getMimeType(),
+			'name' => 'default', 'page' => $filePage, 'revision' => 4, 'timestamp' => '20260906130000',
+			'json' => json_encode( [ 'revision' => 4, 'ownerId' => 1, 'schema' => 1, 'created' => '20260906130000',
+				'layers' => $layers, 'backgroundVisible' => true, 'backgroundOpacity' => 1 ] ) ];
+		$db = $this->createMock( LayersDatabase::class );
+		$db->method( 'getLayerSetForAdoption' )->willReturnCallback(
+			static fn ( int $id ) => $id === 301 ? $record : null );
+		$db->method( 'getLayerSetByName' )->willReturnCallback(
+			static fn ( string $img, string $sha1, string $set, int $page = 1 ) =>
+				$img === $name && $sha1 === $record['sha1'] && $set === 'default' && $page === $filePage ?
+					[ 'id' => 301, 'setName' => 'default', 'page' => $filePage ] : null );
+		$prefix = "Photo:\n\n";
+		$embed = '[[File:' . $name . ( $filePage > 1 ? '|page=' . $filePage : '' ) .
+			'|120px|layerset=default|Shared photo]]';
+		$page = $this->getExistingTestPage();
+		$this->editPage( $page, $prefix . $embed );
+		$this->configure( true, [ $page->getTitle()->getPrefixedDBkey() ] );
+		$this->setService( 'LayersDatabase', $db );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$base = $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page->getTitle() )->getId();
+		return [ $page, $actor, $base, $file, $prefix, $embed ];
+	}
+
+	public function testSharedFileDrawingIsAdoptedPinnedToTheCurrentFileVersion(): void {
+		[ $page, $actor, $base, $file, $prefix, $embed ] = $this->sharedFilePage( [
+			[ 'id' => 'note', 'type' => 'text', 'x' => 0, 'y' => 0, 'text' => 'Shared note' ]
+		] );
+		$candidates = $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor );
+		$this->assertSame( [ [ 'label' => 'Shared adoption.png', 'setName' => 'default', 'params' => [
+			'pageid' => $page->getId(), 'revid' => $base, 'start' => strlen( $prefix ), 'expected' => $embed,
+			'legacyrev' => 301, 'filets' => $file->getTimestamp() ] ] ], $candidates );
+		$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse( $prefix . $embed,
+			$page->getTitle(), ParserOptions::newFromAnon(), true, true, $base );
+		$this->assertTrue( $parsed->getExtensionData( BoundSlideHooks::ADOPTABLE_KEY ) );
+		$context = new RequestContext();
+		$context->setTitle( $page->getTitle() );
+		$context->setUser( $actor );
+		$out = new OutputPage( $context );
+		$out->setRevisionId( $base );
+		BoundSlideHooks::output( $out, $parsed, $this->pilot );
+		$this->assertStringContainsString( 'Make “Shared adoption.png” owned by this page', $out->getHTML() );
+		$this->assertStringContainsString( 'filets=' . $file->getTimestamp(), $out->getHTML() );
+		$params = array_map( 'strval', $candidates[0]['params'] );
+		$before = $this->revisionCount( $page->getId() );
+		$shown = $this->visit( $actor, $params, false, true, 'qqx' )->getOutput()->getHTML();
+		$this->assertStringContainsString( '(layers-adopt-intro: Shared adoption.png, default, 4, ', $shown );
+		$this->assertStringContainsString( '(layers-adopt-file-version: File:Shared adoption.png)', $shown );
+		$this->assertStringContainsString( '<input name="filets" type="hidden" value="' . $file->getTimestamp() . '">',
+			$shown );
+		$this->assertSame( $before, $this->revisionCount( $page->getId() ) );
+
+		$done = $this->visit( $actor, $params + [ 'wpsummary' => 'Own the photo drawing' ], true )->getOutput();
+		$this->assertSame( $page->getTitle()->getFullURL(), $done->getRedirect() );
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page->getTitle() );
+		$this->assertSame( $before + 1, $this->revisionCount( $page->getId() ) );
+		$this->assertMatchesRegularExpression( '/^' . preg_quote( $prefix, '/' ) .
+			'\\[\\[File:Shared_adoption\\.png\\|120px\\|layersbinding=v1:' . $page->getId() .
+			':[A-Za-z0-9_-]+\\|Shared photo\\]\\]$/D', $revision->getContent( 'main' )->getText() );
+		$surface = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'][0];
+		$this->assertSame( 'image', $surface['kind'] );
+		$this->assertSame( [ 'File:Shared_adoption.png', $file->getTimestamp(), $file->getSha1(), 1 ], [
+			$surface['source']['fileTitle'], $surface['source']['timestamp'], $surface['source']['sha1'],
+			$surface['source']['page'] ] );
+		$this->assertSame( 'Shared note', $surface['layers'][0]['text'] );
+		$this->assertSame( [], $this->pilot->listAdoptionCandidates( $page->getId(), $revision->getId(), $actor ) );
+	}
+
+	public function testFileAdoptionRefusesAWrongVersionAndUnrenderableContent(): void {
+		[ $page, $actor, $base, $file ] = $this->sharedFilePage( [
+			[ 'id' => 'pin', 'type' => 'marker', 'x' => 5, 'y' => 5, 'text' => '1' ]
+		] );
+		$candidate = $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor )[0];
+		$params = array_map( 'strval', $candidate['params'] );
+		$before = $this->revisionCount( $page->getId() );
+		$html = $this->visit( $actor, $params + [ 'wpsummary' => 'Refuse' ], true, true, 'qqx' )
+			->getOutput()->getHTML();
+		$this->assertStringContainsString( '(layers-adopt-not-renderable', $html );
+		foreach ( [ '20250101000000', '2026090612000', 'latest' ] as $version ) {
+			$html = $this->visit( $actor, array_replace( $params, [ 'filets' => $version ] ), true, true, 'qqx' )
+				->getOutput()->getHTML();
+			$this->assertStringNotContainsString( 'wpEditToken', $html, $version );
+		}
+		$this->assertSame( $before, $this->revisionCount( $page->getId() ) );
+	}
+
+	public function testFileAdoptionOpenedBeforeAReuploadIsRefused(): void {
+		[ $page, $actor, $base, $file ] = $this->sharedFilePage( [
+			[ 'id' => 'note', 'type' => 'text', 'x' => 0, 'y' => 0, 'text' => 'Shared note' ]
+		] );
+		$candidate = $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor )[0];
+		$params = array_map( 'strval', $candidate['params'] );
+		$replacement = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $file->getTitle() );
+		$this->assertStatusGood( $replacement->upload( __DIR__ . '/../../fixtures/assets/test-image-replacement.png',
+			'Replacement', '', 0, false, '20260907120000', $this->getTestSysop()->getUser() ) );
+		$before = $this->revisionCount( $page->getId() );
+		// The old version still exists and matches the saved set, but the page no longer shows it.
+		$html = $this->visit( $actor, $params, false, true, 'qqx' )->getOutput()->getHTML();
+		$this->assertStringContainsString( '(layers-adopt-unavailable', $html );
+		$html = $this->visit( $actor, $params + [ 'wpsummary' => 'Stale' ], true, true, 'qqx' )->getOutput()->getHTML();
+		$this->assertStringContainsString( '(layers-adopt-unavailable', $html );
+		$this->assertSame( $before, $this->revisionCount( $page->getId() ) );
+		$this->assertSame( [], $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor ) );
+	}
+
+	public function testPdfPageDrawingIsAdoptedOnThatPageOfTheCurrentVersion(): void {
+		$this->overrideConfigValue( 'PdfHandlerDpi', 150 );
+		[ $page, $actor, $base, $file, $prefix, $embed ] = $this->sharedFilePage( [
+			[ 'id' => 'box', 'type' => 'rectangle', 'x' => 10, 'y' => 10, 'width' => 40, 'height' => 30 ]
+		], 'Shared_adoption.pdf', 'test-multipage.pdf', 2 );
+		$this->assertSame( 'application/pdf', $file->getMimeType() );
+		$candidates = $this->pilot->listAdoptionCandidates( $page->getId(), $base, $actor );
+		$this->assertCount( 1, $candidates );
+		$this->assertSame( [ 'Shared adoption.pdf', strlen( $prefix ), $embed, $file->getTimestamp() ], [
+			$candidates[0]['label'], $candidates[0]['params']['start'], $candidates[0]['params']['expected'],
+			$candidates[0]['params']['filets'] ] );
+		$adopted = $this->pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed, 301,
+			$file->getTimestamp(), $actor, 'Own page two' );
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $adopted['revisionId'] );
+		$this->assertSame( $prefix . '[[File:Shared_adoption.pdf|page=2|120px|layersbinding=' . $adopted['binding'] .
+			'|Shared photo]]', $revision->getContent( 'main' )->getText() );
+		$surface = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'][0];
+		$this->assertSame( [ 'pdf', 2, $file->getTimestamp() ], [ $surface['kind'], $surface['source']['page'],
+			$surface['source']['timestamp'] ] );
+		// The canvas is that page's geometry, not page one's: page two of the fixture is portrait.
+		$this->assertSame( [ $file->getWidth( 2 ), $file->getHeight( 2 ) ],
+			[ $surface['canvas']['width'], $surface['canvas']['height'] ] );
+		$this->assertLessThan( $surface['canvas']['height'], $surface['canvas']['width'] );
+		$view = $this->pilot->prepareViewer( $page->getTitle()->getPrefixedText(), $adopted['revisionId'],
+			$adopted['surfaceId'], $actor );
+		$this->assertStringContainsString( 'page2-', $view['source']['url'] );
+	}
 }

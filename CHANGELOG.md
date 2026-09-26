@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Shared file drawings can be adopted into page history (pilot, September 26): on a pilot owner page, `[[File:X|layerset=name]]` (and `page=N` for PDFs) is offered for adoption like shared slides. The offer and confirmation are pinned to the file version shown (`filets`); a re-uploaded file refuses the old confirmation. Adoption rewrites the embed to `layersbinding=` in place and stores an image or PDF surface with that version's (or page's) geometry. The adoption notice no longer says only slides.
+
 - Image and PDF page-owned drawings editable (pilot, September 26): bound file embeds get edit links; the editor opens them in image mode over the exact pinned rendition with the surface's own coordinate space, and saves only layers and background visibility/opacity. Page-owned editors never fall back to the latest file version when the background fails to load.
 
 - Bound file embeds (pilot, September 26): `[[File:X|layersbinding=…]]` on a pilot owner page shows the page's drawing over the exact pinned file version; refused bindings show the plain image, never a shared drawing. The historical view stylesheet is now shipped with `ext.layers.history`.

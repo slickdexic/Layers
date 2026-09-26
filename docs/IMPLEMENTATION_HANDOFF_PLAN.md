@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## File adoption implemented (step 3 of B03); J65 released — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. B03 is complete: bound file embeds, image/PDF editing and file adoption. Contracts: a file adoption offer requires an explicit `layerset=`, names the legacy row for the current file version and PDF page, and carries `filets`; `Special:AdoptLayersDrawing` refuses a malformed `filets` and the preparer refuses any version but the current one. **J65 is ready** (packet below) except move continuity, which waits on lead B04 (PageID lifecycle guards). J74 remains ready. Earlier entries below are historical.
+
 ## Image/PDF page-owned editing implemented (step 2 of B03) — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contracts: an image/PDF editor bootstrap has `isSlide: false`, the rendition as `imageUrl` and the surface canvas as `baseWidth`/`baseHeight`; `PageOwnedEditorBridge` saves only layers, `backgroundVisible` and `backgroundOpacity` for those surfaces; `ImageLoader` `exact` mode (used whenever `pageOwned` is set) never falls back to another image. Embed kind must match surface kind. Next lead step is adoption of file embeds (step 3). J74 remains ready; J65 stays blocked on step 3. Earlier entries below are historical.
@@ -318,10 +322,10 @@ This queue supersedes all older assignment tables below. Full architectural deci
 | 4f | Junior J72: exact-source bound-editor rejection tests | Accepted with lead additions |
 | 4g | Junior J73: bound-editor route browser acceptance | Accepted with lead corrections; next work lead-owned |
 | 4h | Junior J74: confirmed-adoption denial and race coverage | Ready; packet below |
-| 5 | Lead B03: ordinary image edit/save and exact historical rendering | Lead-owned |
+| 5 | Lead B03: ordinary image edit/save and exact historical rendering | Implemented: bound files, image/PDF editing, file adoption |
 | 6 | Junior J64: ownership controls and accessible messages | Accepted with lead corrections (slides); packet below |
 | 7 | Lead B04: slide/PDF parity and identity lifecycle | Lead-owned |
-| 8 | Junior J65: end-to-end adoption/history acceptance | Blocked; requires working ordinary entry paths and explicit test setup |
+| 8 | Junior J65: end-to-end adoption/history acceptance | Ready except move continuity (waits on B04); packet below |
 
 ### J64 — Slide adoption presentation and accessible messages (accepted with lead corrections)
 
@@ -363,6 +367,22 @@ Fresh verification:
 - Found during review: error boxes had no styling because `mediawiki.codex.messagebox.styles` was never loaded, so refusals rendered as plain text. The page now loads it. The confirmation form uses Codex instead of OOUI.
 - Seeding publications in the spec now check for success before reading the new revision ID.
 - The run overlapped a lead capture on the same automation owner; both sides' exact-base cleanup refused to overwrite, and the owner ended in its original state. Browser work on the shared owner must not run concurrently.
+
+### J65 — Adoption-to-history browser acceptance (ready)
+
+**Purpose:** walk the ordinary workflows end to end in real Chromium on the original test wiki (http://localhost:8080) and report defects. This is acceptance testing only; the lead fixes what it finds.
+
+**Allowed changes:** new specs `tests/e2e/page-owned-journey-*.spec.js`, this packet and the review ledger. No production code, messages, manifest, services, configuration or `LocalSettings.php`. No commits or pushes.
+
+**Wiki rules:** use only the automation owner `Layers_browser_acceptance` and, for isolation, one dedicated ordinary page `Layers_browser_acceptance_isolation` that the spec creates if missing and restores to its original text afterwards. Never touch `Layers_history_test` or any other page, and never delete pages or files. Before running, read the owner's last revisions through the API: if anything changed in the last ten minutes, stop and report instead of running. Never run concurrently with another browser spec. Clean up exactly like `page-owned-file-adoption.spec.js`: exact-base restore only, no retry, no forced overwrite, and delete only legacy sets the spec itself saved.
+
+1. **Slide journey.** Save a shared slide, embed it on the owner, adopt it from the page link, open it from the page's edit link, change one layer, save. Then check: the page history lists the adoption and the edit, both tagged `layers-page-drawing`; viewing the adoption revision (`oldid`) draws the pre-edit layer and the current page draws the edit (pixel checks, not just element counts); the shared slide's `layersinfo` is unchanged.
+2. **Image journey.** The same for `[[File:X|300px|layerset=<own set>]]` on the first JPEG/PNG from `allimages`, with the set saved and deleted by the spec. After the edit, the old revision must still draw over the same rendition URL.
+3. **PDF page two.** Find a PDF with at least two pages (`allimages` `aimime=application/pdf`, then `imageinfo` `iiprop=size` for `pagecount`); skip with a clear message if none. Adopt `page=2` and check the canvas aspect matches page two and the drawing is over page two's rendition.
+4. **Isolation.** The isolation page embeds the same shared slide and file set. Before and after adoption, and after the owner's edit, it still shows the legacy drawing, has no "Drawings on this page" box, and `layersinfo` for the shared sets is unchanged.
+5. **Not in scope:** move continuity (waits on B04), re-uploading files, and anything requiring configuration changes.
+
+Run each new spec alone, then all `tests/e2e/page-owned-*.spec.js` serially with `--workers=1`. Record exact counts, durations and every defect with the smallest reproduction, then return for lead review.
 
 ### J74 — Confirmed-adoption denial and race coverage (ready)
 
@@ -688,7 +708,7 @@ Fresh verification:
 
 J64 will cover UI presentation for shared, adoption pending, page-owned, conflict and unavailable states, with clear ownership and accessibility. It must not implement publication, identity migration or source delivery.
 
-J65 will cover the real ordinary editor overlay on separate original-wiki test pages: adopt/save/history, other-page isolation, move continuity, slide and PDF page-two fidelity. It must not seed a special-page-only workaround and call the ordinary workflow complete.
+J65 is released above, without move continuity. A follow-up packet will cover move continuity once B04 keys lifecycle guards to PageID. It must not seed a special-page-only workaround and call the ordinary workflow complete.
 
 ## Original wiki browser acceptance passed; J61 accepted — September 23, 2026
 

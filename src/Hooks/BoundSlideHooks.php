@@ -62,8 +62,8 @@ class BoundSlideHooks {
 	}
 
 	/**
-	 * Record, in cacheable parser output, that a shared (legacy) slide was rendered on a pilot page.
-	 * Which slides are adoptable, and by whom, is decided per request in output().
+	 * Record, in cacheable parser output, that a shared (legacy) slide or file drawing was rendered on a
+	 * pilot page. Which drawings are adoptable, and by whom, is decided per request in output().
 	 * @param Parser $parser
 	 */
 	public static function noteSharedSlide( Parser $parser ): void {
