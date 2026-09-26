@@ -1,4 +1,6 @@
 {
+	"layers-page-edit-drawing": "Edit page drawing: $1",
+	"layers-page-edit-history-notice": "Changes to these drawings are saved in this page’s history.",
 	"layers-page-draft-dialog-title": "Recover local Layers edits",
 	"layers-page-draft-dialog-select": "Choose a local draft",
 	"layers-page-draft-dialog-number": "Draft $1",

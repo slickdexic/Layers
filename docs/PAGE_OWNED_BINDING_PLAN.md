@@ -2,6 +2,12 @@
 
 September 23, 2026. **Approved direction; implementation pending.** This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
+## Current author entry — September 26, 2026
+
+Already page-owned slides in the scoped pilot now have visible page-level edit links on an ordinary current-page view. The accompanying notice says that changes are saved in page history. Links are built from authorized direct saved bindings and carry exact source/revision parameters; clicking always rechecks them. The page-level list deliberately avoids guessing a mapping between parser-generated overlays and source occurrences. Repeated references to one drawing share an entry. Historical URLs and read-only accounts have no edit list.
+
+The original-wiki browser test clicks this control, changes the drawing and verifies the resulting native revision. It restores its automated fixture after testing. Shared drawings still need explicit adoption, and image/PDF editing is not opened by this change. The following earlier delivery breakdown remains useful context; its bound-editor route and existing-bound-slide entry are now implemented.
+
 ## Next lead deliverable after J71 — September 25, 2026
 
 Internal preparation and atomic publication now pass competing-adoption regression tests. This does not yet expose a supported ordinary-page ownership action. The next deliverable is the request-to-service connection, not another standalone test helper.

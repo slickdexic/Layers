@@ -1,4 +1,6 @@
 {
+	"layers-page-edit-drawing": "Label for a page-owned drawing edit link. $1 is the direct slide embedding name, rendered as plain text.",
+	"layers-page-edit-history-notice": "Notice above authorized edit links for drawings owned by the displayed page.",
 	"layers-page-draft-dialog-title": "Page-owned draft recovery dialog message.",
 	"layers-page-draft-dialog-select": "Page-owned draft recovery dialog message.",
 	"layers-page-draft-dialog-number": "Page-owned draft recovery dialog message.  $1 is the draft number.",

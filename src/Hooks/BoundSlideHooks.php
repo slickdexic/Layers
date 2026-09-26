@@ -11,6 +11,7 @@ use MediaWiki\MediaWikiServices;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOutput;
+use MediaWiki\SpecialPage\SpecialPage;
 
 /** Cache only binding identities; authorize drawing data for each actual page response. */
 class BoundSlideHooks {
@@ -72,6 +73,31 @@ class BoundSlideHooks {
 		$out->addJsConfigVars( 'wgLayersBoundSlides', $bundles );
 		if ( $bundles ) {
 			$out->addModules( 'ext.layers.history' );
+			$request = $out->getRequest();
+			if ( $request->getVal( 'action', 'view' ) === 'view' &&
+				!$request->getCheck( 'oldid' ) && !$request->getCheck( 'diff' ) ) {
+				try {
+					$entries = $pilot->listBoundEditorSelections( $out->getTitle()->getArticleID(),
+						$out->getRevisionId(), $out->getAuthority() );
+					$items = '';
+					foreach ( $entries as $entry ) {
+						$link = Html::element( 'a', [ 'class' => 'layers-page-edit-link',
+							'href' => SpecialPage::getTitleFor( 'EditLayersPage' )->getLocalURL( $entry['params'] )
+						], $out->msg( 'layers-page-edit-drawing', $entry['label'] )->text() );
+						$items .= Html::rawElement( 'li', [], $link );
+					}
+					if ( $items !== '' ) {
+						$out->addHTML( Html::rawElement( 'nav', [ 'class' => 'layers-page-edit-controls',
+							'aria-label' => $out->msg( 'layers-edit-link-text' )->text()
+						], Html::element( 'p', [], $out->msg( 'layers-page-edit-history-notice' )->text() ) .
+							Html::rawElement( 'ul', [], $items ) ) );
+					}
+				} catch ( \Throwable $e ) {
+					LoggerFactory::getInstance( 'Layers' )->error( 'Bound editor controls failed.',
+						[ 'exception' => $e ] );
+				}
+			}
+
 		}
 	}
 }

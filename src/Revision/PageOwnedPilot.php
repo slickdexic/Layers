@@ -137,6 +137,54 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * List independently editable saved direct bindings for a page-level control.
+	 * Never maps rendered occurrences to source offsets or exposes template-generated candidates.
+	 * @param int $pageId
+	 * @param int $revisionId Explicit displayed revision; must still be current
+	 * @param Authority $authority
+	 * @return array Validated route parameters and escaped-at-output labels
+	 */
+	public function listBoundEditorSelections( int $pageId, int $revisionId, Authority $authority ): array {
+		try {
+			if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+				return [];
+			}
+			$lookup = $this->services->getRevisionLookup();
+			$owner = ( new PageOwnedIdentityResolver( $this->services->getTitleFactory(), $lookup,
+				new PageHistoryAccess( $lookup ) ) )->resolveForEdit( $pageId, $revisionId, $authority );
+			if ( !in_array( $owner->getPrefixedDBkey(), $this->ownerKeys, true ) ) {
+				return [];
+			}
+			$revision = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+			$main = $revision ? $revision->getContent( SlotRecord::MAIN,
+				RevisionRecord::FOR_THIS_USER, $authority ) : null;
+			if ( !$main instanceof WikitextContent ) {
+				return [];
+			}
+			$candidates = ( new DirectEmbeddingRewriter() )->scan( $main->getText(), static fn () => null );
+			$selections = [];
+			foreach ( $candidates as $candidate ) {
+				try {
+					$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
+					if ( !$binding || $binding['pageId'] !== $pageId || isset( $selections[$binding['surfaceId']] ) ) {
+						continue;
+					}
+					$this->prepareEditor( $owner->getPrefixedText(), $revisionId, $binding['surfaceId'], $authority );
+					$selections[$binding['surfaceId']] = [ 'label' => $candidate['target'], 'params' => [
+						'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
+						'expected' => $candidate['raw']
+					] ];
+				} catch ( \DomainException | \InvalidArgumentException $e ) {
+					// A malformed or unavailable binding must not redirect another drawing's entry.
+				}
+			}
+			return array_values( $selections );
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			return [];
+		}
+	}
+
+	/**
 	 * Internal ordinary-entry admission from an exact saved direct embedding.
 	 * Source bytes are checked against native main content; caller IDs are not binding proof.
 	 * No public route is installed here. Existing pilot scope and slide-only gates remain.

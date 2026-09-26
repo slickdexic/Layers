@@ -510,6 +510,8 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$lookup = $this->getServiceContainer()->getRevisionLookup();
 		$this->assertSame( $opaqueMain, $lookup->getRevisionById( $revOpaque )->getContent( 'main' )->getText() );
 
+		$this->assertSame( [], $pilot->listBoundEditorSelections( $pageId, $revOpaque, $actor ) );
+
 		// Part B: Two identical valid direct bindings separated by multibyte text
 		$multibyteSep = "\nUnicode 測試 café — 世界 — 日本語\n";
 		$slideEmbed = '{{#Slide:WelcomePresentation|layersbinding=v1:' . $pageId . ':presentation|width=400}}';
@@ -524,6 +526,11 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$pageCountTwo = (int)$dbr->newSelectQueryBuilder()
 			->select( 'COUNT(*)' )->from( 'page' )->caller( __METHOD__ )->fetchField();
 
+		$selections = $pilot->listBoundEditorSelections( $pageId, $revTwo, $actor );
+		$this->assertCount( 1, $selections );
+		$this->assertSame( [ 'pageid' => $pageId, 'revid' => $revTwo, 'start' => 0,
+			'expected' => $slideEmbed ], $selections[0]['params'] );
+		$this->assertSame( [], $pilot->listBoundEditorSelections( $pageId, $revOpaque, $actor ) );
 		$offset1 = 0;
 		$offset2 = strlen( $slideEmbed . $multibyteSep );
 		$charOffset2 = mb_strlen( $slideEmbed . $multibyteSep, 'UTF-8' );

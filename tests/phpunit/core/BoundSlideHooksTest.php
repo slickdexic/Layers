@@ -57,6 +57,36 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( 'PRIVATE_OLD_DRAWING', $bundle['surface']['layers'][0]['text'] );
 		$this->assertStringNotContainsString( 'PRIVATE_', json_encode( $parsed->toJsonArray() ) );
 		$this->assertContains( 'ext.layers.history', $out->getModules() );
+		$this->assertStringNotContainsString( 'layers-page-edit-link', $out->getHTML() );
+		$currentParsed = $parser->parse( $text, $title, ParserOptions::newFromAnon(), true, true, $second );
+		$current = new OutputPage( $context );
+		$current->setRevisionId( $second );
+		BoundSlideHooks::output( $current, $currentParsed, $pilot );
+		$this->assertStringContainsString( 'layers-page-edit-link', $current->getHTML() );
+		$this->assertStringContainsString( 'pageid=' . $page->getId(), $current->getHTML() );
+		$this->assertStringContainsString( 'revid=' . $second, $current->getHTML() );
+		$this->assertStringContainsString( 'start=0', $current->getHTML() );
+		$this->assertStringContainsString( 'expected=', $current->getHTML() );
+		$this->assertStringNotContainsString( 'layers-page-edit-link', json_encode( $currentParsed->toJsonArray() ) );
+		// Even an explicit oldid pointing at latest remains a view-only history entry.
+		$context->setRequest( new \MediaWiki\Request\FauxRequest( [ 'oldid' => (string)$second ] ) );
+		$historical = new OutputPage( $context );
+		$historical->setRevisionId( $second );
+		BoundSlideHooks::output( $historical, $currentParsed, $pilot );
+		$this->assertStringNotContainsString( 'layers-page-edit-link', $historical->getHTML() );
+		$context->setRequest( new \MediaWiki\Request\FauxRequest() );
+		$reader = $this->getTestUser( [ 'read' ] )->getUser();
+		$this->overrideUserPermissions( $reader, [ 'read' ] );
+		$readerContext = new RequestContext();
+		$readerContext->setTitle( $title );
+		$readerContext->setUser( $reader );
+		$readerContext->setRequest( new \MediaWiki\Request\FauxRequest() );
+		$readerOutput = new OutputPage( $readerContext );
+		$readerOutput->setRevisionId( $second );
+		BoundSlideHooks::output( $readerOutput, $currentParsed, $pilot );
+		$this->assertStringNotContainsString( 'layers-page-edit-link', $readerOutput->getHTML() );
+		$this->assertSame( $second, $readerOutput->getJsConfigVars()['wgLayersBoundSlides'][$binding]['revisionId'] );
+
 		$out->sendCacheControl();
 		$this->assertStringContainsString( 'no-store',
 			$context->getRequest()->response()->getHeaders()['CACHE-CONTROL'] );

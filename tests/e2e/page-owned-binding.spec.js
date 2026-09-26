@@ -519,7 +519,18 @@ test( 'exact-source bound-editor route admits valid embedding, saves once, and r
 			expected: embedText
 		} );
 
-		const editorResponse = await page.goto( editorUrl );
+		// Enter through the real page control, not a hand-built editor URL.
+		await page.goto( `${ base }/index.php?` + new URLSearchParams( { title: owner } ) );
+		const editLink = page.locator( '.layers-page-edit-link' );
+		await expect( editLink ).toHaveCount( 1 );
+		await expect( editLink ).toBeVisible();
+		await expect( page.locator( '.layers-page-edit-controls' ) ).toContainText( 'page’s history' );
+		const actualParams = new URL( await editLink.getAttribute( 'href' ), base ).searchParams;
+		const expectedParams = new URL( editorUrl ).searchParams;
+		for ( const key of [ 'pageid', 'revid', 'start', 'expected' ] ) {
+			expect( actualParams.get( key ) ).toBe( expectedParams.get( key ) );
+		}
+		const [ editorResponse ] = await Promise.all( [ page.waitForNavigation(), editLink.click() ] );
 		expect( editorResponse.status() ).toBe( 200 );
 		expect( editorResponse.request().redirectedFrom() ).toBeNull();
 
