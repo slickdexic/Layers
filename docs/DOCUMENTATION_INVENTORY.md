@@ -122,6 +122,7 @@ The September 6 reconciliation used source checkpoint a3b20963 (manifest 1.5.95 
 | [docs/PAGE_OWNED_READ_CONTRACT.md](PAGE_OWNED_READ_CONTRACT.md) | Internal exact-revision bundle, geometry units, authorization and remaining delivery gates |
 | [docs/PAGE_OWNED_ADMISSION_DESIGN.md](PAGE_OWNED_ADMISSION_DESIGN.md) | L01 internal admission design, reviewed core evidence and remaining production gates |
 | [docs/PAGE_OWNED_API_CONTRACT.md](PAGE_OWNED_API_CONTRACT.md) | Experimental unregistered API contract, test evidence and admission gates |
+| [docs/PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Maintained charter: Layers 2.0 scope, exit criteria, decisions and owner acceptance scenarios; adopted September 27, 2026 |
 | [docs/IMPLEMENTATION_HANDOFF_PLAN.md](IMPLEMENTATION_HANDOFF_PLAN.md) | Ordered junior task packets, lead design gates, dependencies and acceptance criteria; September 10 baseline e03504ec |
 | [docs/JUNIOR_IMPLEMENTATION_REVIEW.md](JUNIOR_IMPLEMENTATION_REVIEW.md) | J01–J26 review, internal L01 acceptance, lead corrections and qualified verification evidence |
 

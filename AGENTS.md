@@ -8,3 +8,4 @@ Layers is a MediaWiki extension. Docker is only the project's development/test e
 - Do not gate page revision history, search, Cargo integration, image annotations, PDF annotations or general-purpose slides on completion of container work.
 - Docker commands are permitted to operate the existing test environment and run tests. Do not confuse that environment with the extension's supported deployment architecture.
 - Preserve unrelated work. Consult docs/IMPLEMENTATION_HANDOFF_PLAN.md for the current MediaWiki-native implementation queue.
+- docs/PROJECT_CHARTER.md defines the finish line (Layers 2.0). Name the charter criterion each piece of work advances; work that advances none waits until the project owner changes the charter.

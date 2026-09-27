@@ -1,5 +1,7 @@
 # Layers documentation
 
+Destination: the [project charter](PROJECT_CHARTER.md) defines what Layers 2.0 contains and what must be true to declare it finished.
+
 Active next milestone: [explicit page ownership and ordinary edit/history integration](PAGE_OWNED_BINDING_PLAN.md). Junior assignments are in the [handoff plan](IMPLEMENTATION_HANDOFF_PLAN.md).
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
