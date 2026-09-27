@@ -1,10 +1,28 @@
 # Layers implementation handoff plan
 
+## Cleared properties publish as absent; J77 accepted; J78 ready — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `PageOwnedEditorBridge` publishes a layer property the editor holds as `null` or `undefined` as absent, which is what the server stores; everything else must still pass the validator unchanged. `EditorCreatedLayers.test.js` now compares strictly (an `undefined` key fails) and runs the client snapshot check. **J77 is accepted** with lead corrections (packet below; see the review ledger). The drawing tools are now covered; J78 takes the properties panel through the browser. Earlier entries below are historical.
+
+### J78 — Properties panel changes through the page-owned editor (ready)
+
+**Purpose:** J76 and J77 proved what the tools create. Users then change layers in the properties panel, and each control writes its own value, which page history must store exactly or refuse visibly. Prove the panel's controls save as set. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-journey-properties.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes.
+
+1. Record the owner's current revision and `layersread` snapshot. Seed one bound slide by exact-base publication with one layer each of rectangle, star, polygon, arrow, text box, callout, marker and dimension (written directly in the seed; this run is about the panel, not the tools). Open the edit link; wait for `apiManager.pageOwnedDrafts.ready` and check that no recovery dialog is shown.
+2. Through the layer list and properties panel only (no `stateManager` writes), change on each layer every control its panel shows, to a non-default value: position, size, rotation, opacity, stroke and fill colour and width, blend mode, shadow and its values, glow, and each type's own controls (star points and inner radius, polygon sides and corner radius, arrow head type, head scale and tail width, text box and callout padding, corner radius, alignment, vertical alignment, line height, font, size, text stroke and text shadow, callout tail direction, style and size, marker style, size, font size adjustment and arrow, dimension end style, text position, unit, scale, precision and tolerance). On the rectangle, turn on a gradient fill and then switch back to a solid fill. Lock one layer and hide another. Save once: `layerspublish` success and one new tagged revision.
+3. Read that revision with `layersread` and check each changed value was stored as set, including `false` and `0` values, that the rectangle has no `gradient`, and that no layer carries a key the seed and the panel did not write. On the page, in the viewer and on the diff against the seed, nothing may show the "could not be displayed" status.
+4. Reopen the editor (no recovery dialog) and save without changing anything: no new revision may be created, or report what the editor sends instead.
+5. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
+
+If a control's value is refused, record the control, the layer JSON the editor held and the server error, skip that control for the rest of the run, and continue. Then return for lead review.
+
 ## Editor output saves unchanged; J76 accepted; J77 ready — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: page-owned publication stores exactly what the editor sends, so whatever a tool or the properties panel writes must pass `ServerSideLayerValidator` unchanged. `tests/jest/EditorCreatedLayers.test.js` and `DocumentSchemaTest::testEditorCreatedLayersPublishUnchanged` check this for every drawing tool; regenerate their fixture with `LAYERS_UPDATE_FIXTURES=1` after an intended change. Write `blendMode`, never the retired `blend`. **J76 is accepted** with lead corrections (packet below; see the review ledger). J77 takes the rest of the toolbar through the browser. Earlier entries below are historical.
 
-### J77 — Every drawing tool and text formatting through the page-owned editor (ready)
+### J77 — Every drawing tool and text formatting through the page-owned editor (accepted)
 
 **Purpose:** J76 proved markers, library shapes, emoji, images, folders and blend modes. Prove the rest of the toolbar the same way: a drawing made with every other tool, with text formatting applied in the editor, saves and shows everywhere. The unit check covers each tool's defaults; this run covers what users change in the UI. Acceptance testing only; report defects for lead correction.
 
@@ -17,6 +35,8 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: page-owned publicat
 5. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
 
 Record counts, durations and defects with the smallest reproduction (the failing layer's JSON and the server error), then return for lead review.
+
+**Status:** accepted with lead corrections; see the review ledger. The one defect found (the arrow tool leaving three options `undefined`, which the client refuses to send) is fixed in product code, together with the wider case of any property the editor clears to `null` or `undefined`.
 
 ### J76 — Every layer type through the page-owned editor (accepted)
 

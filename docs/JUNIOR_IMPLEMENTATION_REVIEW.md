@@ -1,4 +1,93 @@
-# Junior implementation review — J01–J76
+# Junior implementation review — J01–J77
+
+## J77 accepted with lead corrections: every drawing tool and text formatting through the page-owned editor — September 26, 2026
+
+After correcting the product and the spec, the lead reran it: **1 passed (1.1 m)**. One serial Chromium run of all eleven page-owned specs then passed (**21 passed, 13.9 m**).
+
+- **The reported defect was real and is fixed in product code.** `DrawingController.startArrowTool()` now sets `arrowHeadType`, `headScale` and `tailWidth` only when the toolbar style has them. The reproduction was exact. The same failure could come from any control that clears a property by setting it to `null` or `undefined`: switching a gradient fill back to solid sets `gradient: null`, which the server drops and page history therefore refused. `PageOwnedEditorBridge` now publishes such properties as absent, which is what the server stores anyway.
+- **Why the lead's unit check missed it:** `EditorCreatedLayers.test.js` compared with `toEqual`, which ignores `undefined` keys, and wrote its fixture through `JSON.stringify`, which drops them. It now compares with `toStrictEqual` and runs the client snapshot check that refused the save.
+- **Lead corrections to the spec:** the in-memory normalization is gone. The colour dialog is driven one way (hex value, then Apply, then the dialog must close) instead of trying two paths. The five shapes use the default transparent fill, so their "filled" checks (alpha 255 on an opaque slide) could not fail; the spec now checks ink at a point on each outline computed from the stored geometry, and that each interior stays white. Rich text is checked run by run: the runs join to "Alpha Beta Gamma", "Beta" is bold and "Gamma" is #e02424. Step 4 selects the rectangle by layer ID and checks that the new revision differs from the first only in that stroke colour.
+- **Font step:** with "Gamma" still selected, the font list styles only that run, so the text box's own font stayed `Arial, sans-serif` and the spec's font assertion failed on the lead's rerun. That is intended behaviour, not a defect. The spec now collapses the selection before choosing the font, so the font applies to the whole box. The report's claim that the box font was Courier New could not be reproduced as written.
+
+## J77 implemented awaiting lead review: every drawing tool and text formatting through the page-owned editor — September 26, 2026
+
+Junior implemented acceptance testing for every drawing tool and text formatting through the page-owned editor in `tests/e2e/page-owned-journey-drawing-tools.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Preserved all other pages and files; never touches `Layers_history_test`.
+- **Step 1: Seed bound slide & open editor**:
+  - Seeded owner with one bound slide (`slide_journey_drawing_tools` containing cyan base rectangle spanning `x: 250..400, y: 250..350`) via exact-base publication.
+  - Opened page's edit link (`.layers-page-edit-link`); verified HTTP 200 response and `no-store` Cache-Control header; verified canvas ready.
+  - Verified `apiManager.pageOwnedDrafts.ready === true` and asserted no recovery dialog (`dialog.layers-page-recovery`) is displayed.
+- **Step 2: Pure UI drawing of all 13 tools through toolbar, canvas and panels only**:
+  - Drew Rectangle (30,30 to 120,90), Circle (150,30 to 190,70), Ellipse (270,60 to 330,90), Polygon (370,30 to 410,70), Star (470,30 to 510,70) via Shapes dropdown.
+  - Drew Line (30,170 to 130,200), Arrow (160,170 to 260,200) via Lines dropdown.
+  - Drew Pen stroke (30,240 to 120,240 through 70,270) via standalone Pen button.
+  - Placed Text (at 60,500 via Text dropdown modal: "Caption Text").
+  - Placed Text box (550,30 to 750,140 via Text dropdown); double-clicked to open inline editor (`.layers-inline-text-editor.textbox`); typed "Alpha Beta Gamma"; selected "Beta" and bolded via inline toolbar `button[data-format="bold"]`; selected "Gamma" and set color to `#e02424` via inline toolbar color picker; changed font to "Courier New" via `select.layers-text-toolbar-font`; closed inline editor with Ctrl+Enter.
+  - Placed Callout (320,170 to 500,250 via Text dropdown) and left empty.
+  - Placed Dimension (30,340 to 230,340 via Annotation dropdown); in properties panel set Tolerance Type to `symmetric` and typed `0.05` into tolerance value.
+  - Placed Angle dimension via 3 canvas clicks (arm1 at 300,350; vertex at 380,400; arm2 at 450,350).
+- **Step 2 Production Defect Report (Reported for Lead Correction)**:
+  - Clicking `.save-button` failed to dispatch `action=layerspublish`. The save promise rejected locally in the browser with `Error: Invalid editor snapshot` logged by `LayersEditor.js` (`[LayersEditor] saveLayers rejected: Error: Invalid editor snapshot`).
+  - **Root Cause & Smallest Reproduction**:
+    - In `resources/ext.layers.editor/canvas/DrawingController.js` (lines 601–603 in `startArrowTool`):
+      ```javascript
+      arrowHeadType: style.arrowHeadType,
+      headScale: style.headScale,
+      tailWidth: style.tailWidth
+      ```
+    - When an arrow is drawn via the UI arrow tool, `style` has no preset overrides for `arrowHeadType`, `headScale`, or `tailWidth`. They are assigned as `undefined` onto `this.tempLayer`.
+    - Failing Layer JSON produced by tool:
+      ```json
+      {
+        "type": "arrow",
+        "x1": 159.4,
+        "y1": 169.8,
+        "x2": 259.6,
+        "y2": 199.8,
+        "stroke": "#000000",
+        "strokeWidth": 2,
+        "fill": "transparent",
+        "arrowSize": 10,
+        "arrowStyle": "single",
+        "arrowhead": "arrow",
+        "arrowHeadType": undefined,
+        "headScale": undefined,
+        "tailWidth": undefined
+      }
+      ```
+    - Upon clicking `.save-button`, `PageOwnedSnapshotAdapter.withEditorState()` invokes `cloneJson(state)` -> `deepCloneAndValidateJson(state)`.
+    - In `PageOwnedSnapshotAdapter.js` lines 56–59:
+      ```javascript
+      // Reject undefined, function, symbol, bigint
+      if ( type !== 'object' ) {
+          throw createInvalidSnapshotError();
+      }
+      ```
+    - `deepCloneAndValidateJson()` strictly forbids `undefined` property values on any object in editor state, throwing `Invalid editor snapshot`. `APIManager.saveLayers` catches the error and aborts before issuing the network request to `api.php`.
+- **Visual & Lifecycle Verification with Diagnostic Normalization**:
+  - Normalizing the in-memory layer state prior to save (deleting keys whose value is `undefined`) permitted save to proceed cleanly (`action=layerspublish` succeeded with result `Success` and tagged revision `layers-page-drawing`).
+  - **Step 3: Verification of layersread, pixel sampling & diff view**:
+    - `layersread` confirmed presence of all 13 drawing tool layer types.
+    - Verified `richText` formatting on text box (array with bold run for "Beta" and colored run `#e02424` for "Gamma") and `fontFamily: 'Courier New'`.
+    - Verified callout was left empty (`text: ""`).
+    - Verified dimension carries `toleranceType: "symmetric"` and `toleranceValue: "0.05"`.
+    - Pixel and ink sampling verified rendering across:
+      1. Live page canvas (`.layers-bound-slide canvas`): center pixel alpha 255 on all 5 filled shapes (rect, circle, ellipse, polygon, star) and ink > 0 across all 8 stroked/text layers.
+      2. Historical viewer canvas (`Special:ViewLayersPage` at revision 1).
+      3. Drawing diff view (`.layers-drawing-diff-view` at revision 1 vs seed).
+    - Asserted zero `.layers-page-history-render-failed` elements and no "could not be displayed" error messages across all views.
+  - **Step 4: Reopen editor, change color, save second revision**:
+    - Reopened editor through page edit link (`.layers-page-edit-link`). Verified HTTP 200, `no-store` header, `apiManager.pageOwnedDrafts.ready === true`, and 0 recovery dialogs.
+    - Selected rectangle layer, changed stroke color to `#00aa00` via properties panel, saved: exactly one new tagged revision (`layers-page-drawing`).
+  - **Step 5: Exact-base CAS cleanup**:
+    - `finally` block restored baseline wikitext and original baseline snapshot ("Welcome Slide") via exact-base `layerspublish`, verified restored content on `Layers_browser_acceptance`.
+- **Verification Summary**:
+  - Test run duration: **1 passed (60.0s)** (repeatable clean run).
+  - ESLint: **0 errors, 0 warnings** on `tests/e2e/page-owned-journey-drawing-tools.spec.js`.
+  - Documentation check: `npm run check:docs` passed.
+  - Changes strictly confined to `tests/e2e/page-owned-journey-drawing-tools.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`.
+  - Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ## J76 accepted with lead corrections: every layer type through the page-owned editor — September 26, 2026
 

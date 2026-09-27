@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Arrows and cleared properties no longer block page-owned saves — September 26, 2026
+
+The J77 browser run found that no page-owned drawing containing an arrow could be saved: the arrow tool stored three options (head type, head scale and tail width) as `undefined` when the toolbar had not set them, and the editor refuses to send a drawing that is not plain JSON. It failed before any request with only "Invalid editor snapshot". The same happens whenever a control clears a property by setting it to `null` or `undefined`; switching a gradient fill back to solid did this, and the server then refused the drawing because it never stores such values.
+
+- The arrow tool sets those options only when the toolbar has them.
+- `PageOwnedEditorBridge` publishes any layer property the editor holds as `null` or `undefined` as absent, which matches what the server stores. Drafts are saved the same way. Everything else must still pass validation unchanged.
+- The editor-output check (`EditorCreatedLayers.test.js`) had missed this because `toEqual` ignores `undefined` keys. It now compares strictly and also runs the client's snapshot check.
+
+Fresh verification: the J77 spec, which draws every remaining tool through the editor, formats text box runs, types a tolerance, saves, checks the page, viewer and diff, and saves a colour change, passes with no workaround. One serial Chromium run of all eleven page-owned specs passed (**21 passed**). Jest **15,015** (a new bridge test publishes a cleared `gradient` and an `undefined` option as absent; the editor-output check now fails on an `undefined` key), standalone PHPUnit **1,295**.
+
 ## Drawings made in the page-owned editor save as drawn — September 26, 2026
 
 Page history stores exactly what the editor sends and refuses a drawing the server would change. Several editor defaults did not survive the server's checks. The J76 browser run could not save any drawing containing a marker or a layer set to a blend mode, and a new unit check found the same for dimensions, angle dimensions, and text boxes or callouts left empty. Each failed with only "layers-invalid-snapshot". Everything the drawing tools make now saves unchanged.
