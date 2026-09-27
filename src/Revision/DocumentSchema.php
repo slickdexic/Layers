@@ -182,8 +182,37 @@ class DocumentSchema {
 		$result = $validator->validateLayers( $raw );
 		if ( !$result->isValid() || JsonSnapshotCodec::encode( $surface->layers ) !==
 			JsonSnapshotCodec::encode( $result->getData() ) ) {
-			throw new \InvalidArgumentException( 'invalid-or-lossy-layer-data' );
+			throw $this->lossyLayer( $validator, $raw );
 		}
+	}
+
+	/**
+	 * Name the first layer, and where possible the property, that stopped the drawing being stored as sent.
+	 *
+	 * @param ServerSideLayerValidator $validator
+	 * @param array $raw Decoded layers
+	 * @return LossyLayerException
+	 */
+	private function lossyLayer( ServerSideLayerValidator $validator, array $raw ): LossyLayerException {
+		foreach ( $raw as $layer ) {
+			$label = is_string( $layer['name'] ?? null ) && trim( $layer['name'] ) !== '' ?
+				mb_substr( $layer['name'], 0, 80 ) : $layer['id'];
+			$checked = $validator->validateLayer( $layer );
+			if ( !$checked->isValid() ) {
+				return new LossyLayerException( $label );
+			}
+			$kept = $checked->getData();
+			foreach ( $layer as $key => $value ) {
+				if ( !array_key_exists( $key, $kept ) ||
+					JsonSnapshotCodec::encode( $kept[$key] ) !== JsonSnapshotCodec::encode( $value )
+				) {
+					return new LossyLayerException( $label,
+						preg_match( '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/', (string)$key ) ? (string)$key : null );
+				}
+			}
+		}
+		// Limits over the whole drawing, such as the total number of path points.
+		return new LossyLayerException();
 	}
 
 	/**

@@ -100,6 +100,8 @@ class PagePublicationService {
 		try {
 			$content = new LayersDocumentContent( $json );
 			$content = new LayersDocumentContent( $content->getCanonicalText() );
+		} catch ( LossyLayerException $e ) {
+			throw PublicationException::refusedLayer( $e );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-invalid-snapshot', 0, $e );
 		}

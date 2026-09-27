@@ -993,6 +993,8 @@
 	"layers-invalid-publication-request": "Used by the unregistered experimental page-owned publishing API. The owner page, base revision or page-creation content is invalid.",
 	"layers-main-model-change-denied": "Used by the unregistered experimental page-owned publishing API. Layers publishing cannot change the page content model.",
 	"layers-invalid-snapshot": "Used by the unregistered experimental page-owned publishing API. The Layers document is invalid or unsupported. Your changes were not saved.",
+	"layers-invalid-snapshot-property": "Error from the page-owned publishing API when one layer holds a value the server would drop or change.\n\nParameters:\n* $1 - the layer's name, or its ID if it has none\n* $2 - the internal name of the property, such as fontSizeAdjust",
+	"layers-invalid-snapshot-layer": "Error from the page-owned publishing API when one layer is refused as a whole.\n\nParameters:\n* $1 - the layer's name, or its ID if it has none",
 	"layers-source-unavailable": "Used by the unregistered experimental page-owned publishing API. A required source file version is unavailable or does not match this document.",
 	"layers-edit-conflict": "Used by the unregistered experimental page-owned publishing API. The page changed while you were editing. Reload its latest revision before retrying.",
 	"layers-revision-save-failed": "Used by the unregistered experimental page-owned publishing API. MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",

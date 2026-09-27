@@ -714,6 +714,39 @@ describe( 'PageOwnedPublishClient', () => {
 			} );
 		} );
 
+		it( 'shows the reason for a refused snapshot from a two-argument mw.Api rejection', async () => {
+			const info = 'The layer "Box" has a "strokeWidth" value that cannot be stored. Your changes were not saved.';
+			mockApi.postWithToken.mockReturnValue( {
+				then: ( onResolved, onRejected ) => onRejected( 'layers-invalid-snapshot', {
+					error: { code: 'layers-invalid-snapshot', info: info }
+				} )
+			} );
+			await expect( client.publish( {
+				owner: 'Slide',
+				baseRevisionId: 1,
+				snapshotJson: '{}'
+			} ) ).rejects.toMatchObject( { code: 'layers-invalid-snapshot', message: info } );
+		} );
+
+		it( 'does not show an over-long reason or the reason of any other code', async () => {
+			const cases = [
+				{ code: 'layers-invalid-snapshot', info: 'x'.repeat( 301 ) },
+				{ code: 'layers-edit-conflict', info: 'Server detail' }
+			];
+			for ( const error of cases ) {
+				mockApi.postWithToken.mockReturnValue( {
+					then: ( onResolved, onRejected ) => onRejected( error.code, { error: error } )
+				} );
+				await expect( client.publish( {
+					owner: 'Slide',
+					baseRevisionId: 1,
+					snapshotJson: '{}'
+				} ) ).rejects.toMatchObject( {
+					code: error.code, message: 'Publication failed: ' + error.code
+				} );
+			}
+		} );
+
 		it( 'should handle resolved response with error property', async () => {
 			mockApi.postWithToken.mockResolvedValue( {
 				error: { code: 'layers-edit-conflict' }

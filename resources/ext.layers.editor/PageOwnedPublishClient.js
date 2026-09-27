@@ -27,6 +27,10 @@
 		'layers-edit-filtered'
 	] );
 
+	// Codes whose reason is a Layers message naming the refused layer; no other payload text is shown.
+	const REASON_CODES = new Set( [ 'layers-invalid-snapshot' ] );
+	const MAX_REASON_LENGTH = 300;
+
 	/**
 	 * Create a safe fixed error object without exposing sensitive server payloads or traces.
 	 *
@@ -122,8 +126,14 @@
 			}
 
 			// Invoke immediately, but route synchronous transport failures through safe error mapping too.
-			return new Promise( ( resolve ) => {
-				resolve( this.api.postWithToken( 'csrf', postParams ) );
+			return new Promise( ( resolve, reject ) => {
+				const request = this.api.postWithToken( 'csrf', postParams );
+				// mw.Api rejects with ( code, result ); adopting it as a native promise would keep only the code.
+				if ( request && typeof request.then === 'function' ) {
+					request.then( resolve, ( code, result ) => reject( result && result.error ? result : code ) );
+				} else {
+					resolve( request );
+				}
 			} )
 				.then( ( response ) => {
 					if ( response && response.error ) {
@@ -146,6 +156,7 @@
 				} )
 				.catch( ( err ) => {
 					let rawCode = null;
+					let info = null;
 					if ( typeof err === 'string' ) {
 						rawCode = err;
 					} else if ( Array.isArray( err ) && typeof err[ 0 ] === 'string' ) {
@@ -155,11 +166,15 @@
 							rawCode = err.code;
 						} else if ( err.error && typeof err.error.code === 'string' ) {
 							rawCode = err.error.code;
+							if ( REASON_CODES.has( rawCode ) && typeof err.error.info === 'string' &&
+								err.error.info.length <= MAX_REASON_LENGTH ) {
+								info = err.error.info;
+							}
 						}
 					}
 
 					if ( rawCode && RECOGNIZED_ERROR_CODES.has( rawCode ) ) {
-						throw createError( rawCode, 'Publication failed: ' + rawCode );
+						throw createError( rawCode, info || 'Publication failed: ' + rawCode );
 					}
 
 					throw createError( 'layers-publication-outcome-unknown', 'Publication outcome is unknown' );

@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Revision;
 
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
+use MediaWiki\Extension\Layers\Revision\LossyLayerException;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Revision\DocumentSchema
@@ -309,6 +310,32 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		return [
 			'drawing tools' => [ 'editor-created-document-v1.json' ],
 			'properties panel' => [ 'properties-panel-document-v1.json' ],
+		];
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Revision\LossyLayerException
+	 * @dataProvider provideRefusedLayers
+	 */
+	public function testRefusalNamesTheLayerAndProperty( array $layer, ?string $name, ?string $property ): void {
+		$doc = self::fixture();
+		$doc->surfaces[0]->layers[] = (object)$layer;
+		try {
+			( new DocumentSchema() )->canonicalize( json_encode( $doc ) );
+			$this->fail( 'Expected the layer to be refused' );
+		} catch ( LossyLayerException $e ) {
+			$this->assertSame( 'invalid-or-lossy-layer-data', $e->getMessage() );
+			$this->assertSame( [ $name, $property ], [ $e->getLayer(), $e->getProperty() ] );
+		}
+	}
+
+	public static function provideRefusedLayers(): array {
+		$box = [ 'id' => 'box', 'type' => 'rectangle', 'x' => 1, 'y' => 1, 'width' => 5, 'height' => 5 ];
+		return [
+			'dropped property, named layer' => [ $box + [ 'name' => 'Box', 'retired' => 1 ], 'Box', 'retired' ],
+			'rewritten value, unnamed layer' => [ $box + [ 'fill' => 'rgba(0,0,0,0.5)' ], 'box', 'fill' ],
+			'refused layer' => [ [ 'id' => 'caption', 'type' => 'text', 'x' => 1, 'y' => 1, 'text' => '' ],
+				'caption', null ],
 		];
 	}
 }

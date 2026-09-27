@@ -257,6 +257,26 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$this->getServiceContainer()->getTitleFactory()->newFromText( $params['owner'] ) )->getId() );
 	}
 
+	public function testRefusedLayerIsNamedInTheError(): void {
+		$params = $this->request();
+		$params['data'] = json_encode( [ 'schemaVersion' => 1, 'surfaces' => [ [
+			'id' => 'slide', 'kind' => 'slide', 'label' => 'Slide',
+			'canvas' => [ 'width' => 100, 'height' => 100, 'backgroundColor' => '#ffffff',
+				'backgroundVisible' => true, 'backgroundOpacity' => 1 ],
+			'layers' => [ [ 'id' => 'box', 'type' => 'rectangle', 'name' => 'Warning box', 'x' => 1, 'y' => 1,
+				'width' => 10, 'height' => 10, 'strokeWidth' => 150 ] ]
+		] ] ] );
+		try {
+			$this->doApiRequestWithToken( $params, null, $this->actor() );
+			$this->fail( 'Expected the out-of-range stroke width to be refused' );
+		} catch ( ApiUsageException $e ) {
+			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-invalid-snapshot' ) );
+			$message = $e->getStatusValue()->getMessages()[0];
+			$this->assertSame( 'layers-invalid-snapshot-property', $message->getKey() );
+			$this->assertSame( [ 'Warning box', 'strokeWidth' ], $message->getParams() );
+		}
+	}
+
 	public function testExperimentalApiDefaultsToDisabled(): void {
 		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
 		$this->assertFalse( $manifest['config']['LayersPageOwnedPilotEnabled']['value'] );

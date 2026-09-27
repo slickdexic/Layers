@@ -75,7 +75,7 @@ class ApiLayersPublish extends ApiBase {
 			$reason = $e->getMessage() === 'layers-owner-unavailable' ?
 				'layers-invalid-publication-request' : $e->getMessage();
 			$code = in_array( $reason, self::PUBLIC_ERRORS, true ) ? $reason : 'layers-publication-failed';
-			$this->dieWithError( $code, $code );
+			$this->dieWithError( $e->getUserMessage() ?? $code, $code );
 		} catch ( \Throwable $e ) {
 			LoggerFactory::getInstance( 'Layers' )->error( 'Page-owned publication failed.', [ 'exception' => $e ] );
 			$this->dieWithError( 'layers-publication-failed', 'layers-publication-failed' );

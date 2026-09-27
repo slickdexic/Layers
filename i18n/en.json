@@ -999,6 +999,8 @@
 	"layers-invalid-publication-request": "The owner page, base revision or page-creation content is invalid.",
 	"layers-main-model-change-denied": "Layers publishing cannot change the page content model.",
 	"layers-invalid-snapshot": "The Layers document is invalid or unsupported. Your changes were not saved.",
+	"layers-invalid-snapshot-property": "The layer \"$1\" has a \"$2\" value that cannot be stored. Your changes were not saved.",
+	"layers-invalid-snapshot-layer": "The layer \"$1\" cannot be stored as it is. Your changes were not saved.",
 	"layers-source-unavailable": "A required source file version is unavailable or does not match this document.",
 	"layers-edit-conflict": "The page changed while you were editing. Reload its latest revision before retrying.",
 	"layers-revision-save-failed": "MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",
