@@ -149,11 +149,12 @@ test( 'image, emoji-style SVG, marker, grouped and blended layers all paint', as
 			failed = true;
 		}, window.Layers.LayerRenderer );
 		// The image and the SVG decode asynchronously; each decode repaints the whole snapshot.
+		// White also has full blue, so wait for the shape's red channel to drop as well.
 		const started = Date.now();
 		await new Promise( ( resolve ) => {
 			const probe = () => ( failed || Date.now() - started > 5000 ||
-				( sample( 40, 40 )[ 0 ] === 255 && sample( 130, 40 )[ 2 ] === 255 ) ? resolve() :
-				requestAnimationFrame( probe ) );
+				( sample( 40, 40 )[ 0 ] === 255 && sample( 130, 40 )[ 0 ] === 0 && sample( 130, 40 )[ 2 ] === 255 ) ?
+				resolve() : requestAnimationFrame( probe ) );
 			probe();
 		} );
 		const pixels = ctx.getImageData( 215, 15, 50, 50 ).data;

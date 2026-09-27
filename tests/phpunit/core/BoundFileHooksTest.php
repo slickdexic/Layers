@@ -21,14 +21,18 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
+	/** @var string Per-test upload; the file backend outlives the database rollback */
+	private $file;
+
 	/** @return array [ title, page ID, revision ID, page text, actor ] */
 	private function boundImagePage( string $key ): array {
+		$this->file = str_replace( '_owner', '', $key ) . '.png';
 		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
 			'LayersPageOwnedPilotOwners' => [ $key ] ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$actor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
-		$fileTitle = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:Bound_file_embed.png' );
+		$fileTitle = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $this->file );
 		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $fileTitle );
 		$this->assertStatusGood( $file->upload( __DIR__ . '/../../fixtures/assets/test-image.png', 'Fixture', '',
 			0, false, '20260906120000', $this->getTestSysop()->getUser() ) );
@@ -41,10 +45,10 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 				'backgroundOpacity' => 1 ],
 			'layers' => [ [ 'id' => 'note', 'type' => 'text', 'x' => 0, 'y' => 0, 'text' => 'Bound note' ] ],
 			'readingOrder' => [ 'note' ],
-			'source' => [ 'repository' => 'local', 'fileTitle' => 'File:Bound_file_embed.png',
+			'source' => [ 'repository' => 'local', 'fileTitle' => 'File:' . $this->file,
 				'timestamp' => $file->getTimestamp(), 'sha1' => $file->getSha1(), 'page' => 1 ]
 		] ] ];
-		$text = "Intro\n\n[[File:Bound_file_embed.png|120px|layersbinding=v1:$pageId:photo|A caption]]";
+		$text = "Intro\n\n[[File:{$this->file}|120px|layersbinding=v1:$pageId:photo|A caption]]";
 		$revisionId = $registered['publisher']->publish( $title, $actor, $page->getLatest(), json_encode( $document ),
 			'Bind image', new WikitextContent( $text ), $pageId );
 		return [ $title, $pageId, $revisionId, $text, $actor ];
@@ -72,7 +76,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		$bundle = $pilot->prepareBoundViewers( $title, $revisionId, [ $binding ], $actor )[$binding];
 		$this->assertSame( 'image', $bundle['surface']['kind'] );
 		$this->assertSame( 'Bound note', $bundle['surface']['layers'][0]['text'] );
-		$this->assertStringContainsString( 'Bound_file_embed.png', $bundle['source']['url'] );
+		$this->assertStringContainsString( $this->file, $bundle['source']['url'] );
 	}
 
 	public function testFileEmbedOpensItsImageSurfaceInImageModeOnly(): void {
@@ -80,13 +84,13 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
-		$this->assertSame( 'Bound_file_embed.png', $entries[0]['label'] );
+		$this->assertSame( $this->file, $entries[0]['label'] );
 		$params = $entries[0]['params'];
 		$this->assertSame( strpos( $text, '[[File:' ), $params['start'] );
 		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $params['start'], $params['expected'], $actor );
 		$this->assertFalse( $init['isSlide'] );
 		$this->assertSame( [ 1, 1 ], [ $init['baseWidth'], $init['baseHeight'] ] );
-		$this->assertStringContainsString( 'Bound_file_embed.png', $init['imageUrl'] );
+		$this->assertStringContainsString( $this->file, $init['imageUrl'] );
 		$this->assertSame( 'photo', $init['pageOwned']['surfaceId'] );
 		$this->assertArrayNotHasKey( 'canvasWidth', $init );
 		// A slide embed bound to the same image surface is not an entry to it.
@@ -105,9 +109,9 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		[ $title, $pageId, $revisionId ] = $this->boundImagePage( 'Bound_file_refused_owner' );
 		$other = $pageId + 1000;
 		foreach ( [
-			"[[File:Bound_file_embed.png|120px|layersbinding=v1:$other:photo]]",
-			'[[File:Bound_file_embed.png|120px|layersbinding=not-a-binding]]',
-			'[[File:Bound_file_embed.png|120px|layersbinding=]]'
+			"[[File:{$this->file}|120px|layersbinding=v1:$other:photo]]",
+			"[[File:{$this->file}|120px|layersbinding=not-a-binding]]",
+			"[[File:{$this->file}|120px|layersbinding=]]"
 		] as $text ) {
 			$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse( $text, $title,
 				ParserOptions::newFromAnon(), true, true, $revisionId );
@@ -121,7 +125,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		// Outside the pilot scope the binding is refused the same way.
 		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
 		$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse(
-			"[[File:Bound_file_embed.png|120px|layersbinding=v1:$pageId:photo]]", $title,
+			"[[File:{$this->file}|120px|layersbinding=v1:$pageId:photo]]", $title,
 			ParserOptions::newFromAnon(), true, true, $revisionId );
 		$this->assertStringNotContainsString( 'layers-bound-file', $parsed->getRawText() );
 	}

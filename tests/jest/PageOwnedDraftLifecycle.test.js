@@ -117,6 +117,17 @@ describe( 'PageOwnedDraftLifecycle', () => {
 		expect( controller.persist ).toHaveBeenCalledTimes( 2 );
 	} );
 
+	it( 'does not offer recovery of a draft that differs from the loaded revision only in key order', async () => {
+		bridge.getLiveState = () => ( { canvas: { height: 2, width: 1 }, layers: [ { id: 'a', type: 'marker', x: 1 } ] } );
+		controller.inspectRecovery.mockReturnValue( {
+			editorState: { layers: [ { x: 1, type: 'marker', id: 'a' } ], canvas: { width: 1, height: 2 } },
+			publicationBlocked: false
+		} );
+		await lifecycle.initialize();
+		expect( ui.confirmRecovery ).not.toHaveBeenCalled();
+		expect( lifecycle.ready ).toBe( true );
+	} );
+
 	it.each( [ true, false ] )( 'requires reconciliation of a blocked draft even when recovery choice is %s', async ( recover ) => {
 		const candidate = { editorState: { canvas: {}, layers: [ {} ] }, publicationBlocked: true };
 		controller.inspectRecovery.mockReturnValue( candidate );

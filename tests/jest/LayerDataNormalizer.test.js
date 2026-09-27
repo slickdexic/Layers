@@ -482,26 +482,23 @@ describe( 'LayerDataNormalizer', () => {
 	} );
 
 	describe( 'normalizeAliases', () => {
-		describe( 'blendMode to blend alias', () => {
-			test( 'should copy blendMode to blend when blend is missing', () => {
+		describe( 'retired blend alias', () => {
+			test( 'should keep blendMode without adding blend', () => {
 				const layer = { blendMode: 'multiply' };
 				LayerDataNormalizer.normalizeLayer( layer );
-				expect( layer.blend ).toBe( 'multiply' );
-				expect( layer.blendMode ).toBe( 'multiply' );
+				expect( layer ).toEqual( { blendMode: 'multiply' } );
 			} );
 
-			test( 'should not overwrite existing blend property', () => {
+			test( 'should keep blendMode over a stale blend and drop blend', () => {
 				const layer = { blendMode: 'screen', blend: 'overlay' };
 				LayerDataNormalizer.normalizeLayer( layer );
-				expect( layer.blend ).toBe( 'overlay' );
-				expect( layer.blendMode ).toBe( 'screen' );
+				expect( layer ).toEqual( { blendMode: 'screen' } );
 			} );
 
-			test( 'should copy blend to blendMode when blendMode is missing', () => {
+			test( 'should move a legacy blend to blendMode', () => {
 				const layer = { blend: 'darken' };
 				LayerDataNormalizer.normalizeLayer( layer );
-				expect( layer.blend ).toBe( 'darken' );
-				expect( layer.blendMode ).toBe( 'darken' );
+				expect( layer ).toEqual( { blendMode: 'darken' } );
 			} );
 
 			test( 'should handle all standard blend modes', () => {
@@ -514,7 +511,8 @@ describe( 'LayerDataNormalizer', () => {
 				blendModes.forEach( ( mode ) => {
 					const layer = { blendMode: mode };
 					LayerDataNormalizer.normalizeLayer( layer );
-					expect( layer.blend ).toBe( mode );
+					expect( layer.blendMode ).toBe( mode );
+					expect( layer ).not.toHaveProperty( 'blend' );
 				} );
 			} );
 

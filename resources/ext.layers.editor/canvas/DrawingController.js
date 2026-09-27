@@ -16,6 +16,16 @@
 ( function () {
 	'use strict';
 
+	// Tolerances are stored as the strings the user typed; an unset one is absent, not numeric 0.
+	function withTolerances( layer, style ) {
+		for ( const key of [ 'toleranceValue', 'toleranceUpper', 'toleranceLower' ] ) {
+			if ( style[ key ] ) {
+				layer[ key ] = String( style[ key ] );
+			}
+		}
+		return layer;
+	}
+
 	/**
 	 * DrawingController class
 	 */
@@ -316,7 +326,7 @@ class DrawingController {
 	 * @param {Object} style - Style options
 	 */
 	startDimensionTool( point, style ) {
-		this.tempLayer = {
+		this.tempLayer = withTolerances( {
 			type: 'dimension',
 			x1: point.x,
 			y1: point.y,
@@ -341,15 +351,12 @@ class DrawingController {
 			backgroundColor: style.backgroundColor || '#ffffff',
 			precision: style.precision !== undefined ? style.precision : 0,
 			toleranceType: style.toleranceType || 'none',
-			toleranceValue: style.toleranceValue || 0,
-			toleranceUpper: style.toleranceUpper || 0,
-			toleranceLower: style.toleranceLower || 0,
 			text: '', // Empty = auto-calculate
 			visible: true,
 			locked: false,
 			opacity: 1,
 			name: 'Dimension'
-		};
+		}, style );
 	}
 
 	/**
@@ -364,7 +371,7 @@ class DrawingController {
 	 */
 	startAngleDimensionTool( point, style ) {
 		this._angleDimensionPhase = 1;
-		this.tempLayer = {
+		this.tempLayer = withTolerances( {
 			type: 'angleDimension',
 			// Arm1 endpoint placed at first click
 			ax: point.x,
@@ -392,16 +399,13 @@ class DrawingController {
 			reflexAngle: style.reflexAngle || false,
 			textOffset: style.textOffset || 0,
 			toleranceType: style.toleranceType || 'none',
-			toleranceValue: style.toleranceValue || 0,
-			toleranceUpper: style.toleranceUpper || 0,
-			toleranceLower: style.toleranceLower || 0,
 			textDirection: style.textDirection || 'auto',
 			text: '', // Empty = auto-calculate angle
 			visible: true,
 			locked: false,
 			opacity: 1,
 			name: 'Angle'
-		};
+		}, style );
 	}
 
 	/**

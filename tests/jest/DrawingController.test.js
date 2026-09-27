@@ -968,6 +968,16 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.extensionLength ).toBe( 10 );
 		} );
 
+		it( 'should store set tolerances as strings and omit unset ones', () => {
+			for ( const tool of [ 'dimension', 'angleDimension' ] ) {
+				controller.startDrawing( { x: 10, y: 10 }, tool,
+					{ toleranceType: 'deviation', toleranceValue: 0, toleranceUpper: 0.2, toleranceLower: '-0.1' } );
+				expect( controller.tempLayer ).not.toHaveProperty( 'toleranceValue' );
+				expect( controller.tempLayer.toleranceUpper ).toBe( '0.2' );
+				expect( controller.tempLayer.toleranceLower ).toBe( '-0.1' );
+			}
+		} );
+
 		it( 'should reject dimension with insufficient length', () => {
 			controller.startDrawing( { x: 100, y: 100 }, 'dimension', {} );
 			controller.continueDrawing( { x: 102, y: 102 } );

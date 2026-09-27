@@ -191,6 +191,10 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		$this->assertEquals( 'Arial', $sanitizer->sanitizeFontFamily( 'Arial' ) );
 		$this->assertEquals( 'Roboto', $sanitizer->sanitizeFontFamily( 'Roboto' ) );
 
+		// The editor's default is a fallback list; quotes are still stripped
+		$this->assertEquals( 'Arial, sans-serif', $sanitizer->sanitizeFontFamily( 'Arial, sans-serif' ) );
+		$this->assertEquals( 'Times New Roman, serif', $sanitizer->sanitizeFontFamily( '"Times New Roman", serif' ) );
+
 		// Special characters should be stripped
 		$this->assertEquals( 'Bad Font', $sanitizer->sanitizeFontFamily( 'Bad<script> Font' ) );
 		$this->assertEquals( 'Test Font', $sanitizer->sanitizeFontFamily( 'Test@#$ Font' ) );

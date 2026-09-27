@@ -136,6 +136,7 @@ class ServerSideLayerValidator {
 		'value' => 'numeric',
 		'style' => 'string',
 		'size' => 'numeric',
+		'fontSizeAdjust' => 'numeric',
 		'hasArrow' => 'boolean',
 		'arrowX' => 'numeric',
 		'arrowY' => 'numeric',
@@ -245,6 +246,7 @@ class ServerSideLayerValidator {
 		// Marker constraints
 		'value' => [ 'min' => 1, 'max' => 999 ],
 		'size' => [ 'min' => 10, 'max' => 200 ],
+		'fontSizeAdjust' => [ 'min' => -10, 'max' => 20 ],
 		// Dimension constraints
 		'extensionLength' => [ 'min' => 0, 'max' => 100 ],
 		'extensionGap' => [ 'min' => 0, 'max' => 50 ],
@@ -547,12 +549,8 @@ class ServerSideLayerValidator {
 
 		// Handle different string types
 		if ( in_array( $property, [ 'text', 'name' ], true ) ) {
-			// User text - sanitize
-			$sanitized = $this->textSanitizer->sanitizeText( $value );
-			if ( empty( trim( $sanitized ) ) && $property === 'text' ) {
-				return [ 'valid' => false, 'error' => 'Text cannot be empty' ];
-			}
-			return [ 'valid' => true, 'value' => $sanitized ];
+			// Empty text is a valid state for text boxes, callouts and dimensions; text layers are checked below.
+			return [ 'valid' => true, 'value' => $this->textSanitizer->sanitizeText( $value ) ];
 		}
 
 		if ( in_array( $property, [ 'id', 'type' ], true ) ) {

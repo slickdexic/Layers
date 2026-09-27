@@ -1868,6 +1868,22 @@ describe('CanvasRenderer', () => {
     });
 
     describe('drawLayerWithEffects - blend mode branches', () => {
+        test('stored blendMode is applied without the retired blend alias', () => {
+            const modes = [];
+            Object.defineProperty(renderer.ctx, 'globalCompositeOperation', {
+                get() { return 'source-over'; },
+                set(value) { modes.push(value); },
+                configurable: true
+            });
+            const drawSpy = jest.spyOn(renderer, 'drawLayer').mockImplementation(() => {});
+            renderer.drawLayerWithEffects({
+                type: 'rectangle', blendMode: 'multiply',
+                x: 0, y: 0, width: 50, height: 50
+            });
+            expect(modes).toContain('multiply');
+            drawSpy.mockRestore();
+        });
+
         test('blur blend mode on non-arrow skips to drawLayerWithBlurBlend', () => {
             const blurSpy = jest.spyOn(renderer, 'drawLayerWithBlurBlend').mockImplementation(() => {});
             renderer.drawLayerWithEffects({

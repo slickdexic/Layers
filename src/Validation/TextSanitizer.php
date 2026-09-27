@@ -102,7 +102,7 @@ class TextSanitizer {
 	}
 
 	/**
-	 * Sanitize font family names, preserving spaces.
+	 * Sanitize a font family name or fallback list, preserving spaces.
 	 *
 	 * Unlike sanitizeIdentifier(), this allows spaces in the value
 	 * since CSS font family names commonly contain them
@@ -117,8 +117,8 @@ class TextSanitizer {
 		$fontFamily = html_entity_decode( $fontFamily, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		$fontFamily = strip_tags( $fontFamily );
 
-		// Allow alphanumeric, spaces, underscores, hyphens, and dots
-		$fontFamily = preg_replace( '/[^a-zA-Z0-9 _.-]/', '', $fontFamily );
+		// Allow alphanumeric, spaces, underscores, hyphens, dots and the commas of a fallback list
+		$fontFamily = preg_replace( '/[^a-zA-Z0-9 ,_.-]/', '', $fontFamily );
 
 		// Collapse multiple spaces to single space and trim
 		$fontFamily = trim( preg_replace( '/\s+/', ' ', $fontFamily ) );

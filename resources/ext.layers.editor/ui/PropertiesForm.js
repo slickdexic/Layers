@@ -926,7 +926,7 @@
 		layerOpacityValue = Math.round( layerOpacityValue * 100 );
 		addSliderInput( { label: t( 'layers-prop-opacity', 'Layer Opacity' ), value: layerOpacityValue, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { opacity: v / 100 } ); } } );
 		// Note: 'blur' removed from blend options - use fill='blur' for frosted glass effect instead
-		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blend || layer.blendMode || 'normal', options: [
+		addSelect( { label: t( 'layers-prop-blend', 'Blend' ), value: layer.blendMode || layer.blend || 'normal', options: [
 			{ value: 'normal', text: t( 'layers-blend-normal', 'Normal' ) },
 			{ value: 'multiply', text: t( 'layers-blend-multiply', 'Multiply' ) },
 			{ value: 'screen', text: t( 'layers-blend-screen', 'Screen' ) },
@@ -939,7 +939,7 @@
 			{ value: 'lighten', text: t( 'layers-blend-lighten', 'Lighten' ) },
 			{ value: 'difference', text: t( 'layers-blend-difference', 'Difference' ) },
 			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) }
-		], onChange: function ( v ) { editor.updateLayer( layer.id, { blend: v } ); } } );
+		], onChange: function ( v ) { editor.updateLayer( layer.id, { blendMode: v } ); } } );
 		// Shadow controls - not available for dimension/angleDimension layers (shadows not supported)
 		if ( layer.type !== 'dimension' && layer.type !== 'angleDimension' ) {
 			addCheckbox( { label: t( 'layers-effect-shadow', 'Drop Shadow' ), value: !!layer.shadow, onChange: function ( checked ) {

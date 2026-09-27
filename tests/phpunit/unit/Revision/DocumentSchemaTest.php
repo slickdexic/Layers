@@ -294,4 +294,12 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		$this->expectExceptionMessage( 'invalid-layer-json-number' );
 		( new DocumentSchema() )->canonicalize( $json );
 	}
+
+	/**
+	 * Server half of tests/jest/EditorCreatedLayers.test.js, which draws this fixture with the real tools.
+	 */
+	public function testEditorCreatedLayersPublishUnchanged(): void {
+		$json = file_get_contents( __DIR__ . '/../../../fixtures/revisions/editor-created-document-v1.json' );
+		$this->assertEquals( json_decode( $json ), json_decode( ( new DocumentSchema() )->canonicalize( $json ) ) );
+	}
 }

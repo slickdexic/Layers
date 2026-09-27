@@ -156,6 +156,16 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 
 		$this->assertFalse( $result->isValid() );
 		$this->assertStringContainsString( 'Text layer must have text content', $result->getErrors()[0] );
+
+		// Empty or markup-only text still fails a text layer, but is kept on a text box
+		foreach ( [ '', '<b></b>' ] as $text ) {
+			$this->assertFalse( $validator->validateLayer( $layer + [ 'text' => $text ] )->isValid() );
+		}
+		$textbox = $validator->validateLayer(
+			[ 'type' => 'textbox', 'x' => 1, 'y' => 1, 'width' => 9, 'height' => 9, 'text' => '' ]
+		);
+		$this->assertTrue( $textbox->isValid() );
+		$this->assertSame( '', $textbox->getData()['text'] );
 	}
 
 	/**

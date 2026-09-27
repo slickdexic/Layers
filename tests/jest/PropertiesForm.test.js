@@ -3633,7 +3633,7 @@ describe( 'PropertiesForm', () => {
 		} );
 
 		test( 'should trigger blend mode onChange', () => {
-			const layer = { id: 'test-1', type: 'rectangle', blend: 'normal' };
+			const layer = { id: 'test-1', type: 'rectangle', blendMode: 'normal' };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
 			// Find the blend mode select
@@ -3651,7 +3651,7 @@ describe( 'PropertiesForm', () => {
 				blendSelect.value = 'multiply';
 				blendSelect.dispatchEvent( new Event( 'change' ) );
 
-				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-1', { blend: 'multiply' } );
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-1', { blendMode: 'multiply' } );
 			}
 		} );
 

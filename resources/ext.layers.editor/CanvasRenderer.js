@@ -492,12 +492,12 @@
 			if ( typeof layer.opacity === 'number' ) {
 				this.ctx.globalAlpha = Math.max( 0, Math.min( 1, layer.opacity ) );
 			}
-			if ( layer.blend ) {
+			if ( blendMode ) {
 				try {
-					this.ctx.globalCompositeOperation = String( layer.blend );
+					this.ctx.globalCompositeOperation = String( blendMode );
 				} catch ( blendError ) {
 					// Invalid blend mode - fall back to default 'source-over'
-					mw.log.warn( `[CanvasRenderer] Invalid blend mode "${layer.blend}":`, blendError.message );
+					mw.log.warn( `[CanvasRenderer] Invalid blend mode "${blendMode}":`, blendError.message );
 					this.ctx.globalCompositeOperation = 'source-over';
 				}
 			}
