@@ -120,3 +120,125 @@ test( 'a bound drawing shows the page\'s layers_fields values in place of its {{
 		await restore();
 	}
 } );
+
+test( 'shared file sets and slides show the page\'s layers_fields values in place of their {{name}} tokens', async ( { page, context } ) => {
+	test.setTimeout( 240000 );
+	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
+		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
+	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	const url = new URL( config.base );
+	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );
+	expect( url.port ).toBe( '8080' );
+	const base = url.origin;
+	const owner = 'Layers_browser_acceptance';
+	const api = async ( data, post = false ) => {
+		const params = { ...data, format: 'json', formatversion: '2' };
+		const response = post ? await context.request.post( base + '/api.php', { form: params } ) :
+			await context.request.get( base + '/api.php', { params } );
+		return response.json();
+	};
+	const loginToken = ( await api( { action: 'query', meta: 'tokens', type: 'login' } ) ).query.tokens.logintoken;
+	expect( ( await api( { action: 'login', lgname: config.username, lgpassword: config.password,
+		lgtoken: loginToken }, true ) ).login.result ).toBe( 'Success' );
+	const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+	const serverTime = new Date( ( await api( { action: 'query', meta: 'siteinfo', siprop: 'general' } ) )
+		.query.general.time ).getTime();
+	const record = ( await api( { action: 'query', prop: 'revisions', titles: owner,
+		rvprop: 'ids|timestamp|user|content', rvslots: 'main' } ) ).query.pages[ 0 ];
+	const initial = record.revisions[ 0 ];
+	const initialText = initial.slots.main.content;
+	if ( ( serverTime - new Date( initial.timestamp ).getTime() ) / 60000 < 10 &&
+		!( initial.user === config.username && initialText === 'Dedicated automated Layers history acceptance page.' )
+	) {
+		throw new Error( `Owner ${ owner } changed within the last 10 minutes; stopping per J65 wiki rules` );
+	}
+	const initialSnapshot = ( await api( { action: 'layersread', owner, revid: String( initial.revid ) } ) )
+		.layersread.snapshot;
+	const files = ( await api( { action: 'query', list: 'allimages', aimime: 'image/jpeg|image/png', ailimit: 1,
+		aiprop: 'size' } ) ).query.allimages;
+	test.skip( !files.length, 'Requires at least one JPEG or PNG file on the wiki' );
+	const file = files[ 0 ];
+	const slide = 'FieldsProbeSlide';
+	const setName = 'fields-probe';
+	// A literal row and a token row that must look identical once the page fills the token.
+	const rows = ( width, height ) => [ 0.25, 0.7 ].map( ( at, i ) => ( { id: `row${ i }`, type: 'text',
+		x: Math.round( width * 0.05 ), y: Math.round( height * at ), fontSize: Math.max( 12, Math.round( height / 10 ) ),
+		fontFamily: 'Arial', color: '#000000', text: i ? 'Pressure {{pressure}}' : 'Pressure 12 bar' } ) );
+
+	let fileSaved = false;
+	let slideSaved = false;
+	let lastOwnedRevision = null;
+	let publicationPending = false;
+	try {
+		const savedFile = await api( { action: 'layerssave', filename: file.name, setname: setName, token: csrfToken,
+			data: JSON.stringify( rows( file.width, file.height ) ) }, true );
+		expect( savedFile.layerssave && savedFile.layerssave.success ).toBeTruthy();
+		fileSaved = true;
+		const savedSlide = await api( { action: 'layerssave', slidename: slide, token: csrfToken,
+			data: JSON.stringify( { canvasWidth: 800, canvasHeight: 600, layers: rows( 800, 600 ) } ) }, true );
+		expect( savedSlide.layerssave && savedSlide.layerssave.success ).toBeTruthy();
+		slideSaved = true;
+
+		const mainText = `${ initialText }\n\n[[File:${ file.name }|300px|layerset=${ setName }]]\n\n{{#Slide:${ slide }}}\n` +
+			`{{#layers_fields:File:${ file.name }|pressure = 12 bar}}{{#layers_fields:Slide:${ slide }|pressure = 12 bar}}`;
+		publicationPending = true;
+		const seeded = await api( { action: 'layerspublish', owner, baserevid: String( initial.revid ),
+			data: JSON.stringify( initialSnapshot ), maintext: mainText,
+			summary: 'Fields acceptance: embed a shared file set and slide with tokens', token: csrfToken }, true );
+		expect( seeded.layerspublish && seeded.layerspublish.result ).toBe( 'Success' );
+		lastOwnedRevision = seeded.layerspublish.revid;
+		publicationPending = false;
+
+		// Horizontal extent of dark pixels between two fractions of the canvas height.
+		const inkExtent = ( selector, from, to ) => page.locator( selector ).first().evaluate( ( canvas, band ) => {
+			const top = Math.floor( canvas.height * band[ 0 ] );
+			const data = canvas.getContext( '2d' ).getImageData( 0, top, canvas.width,
+				Math.floor( canvas.height * band[ 1 ] ) - top ).data;
+			let min = Infinity;
+			let max = -1;
+			for ( let i = 0; i < data.length; i += 4 ) {
+				if ( data[ i + 3 ] > 128 && data[ i ] < 100 && data[ i + 1 ] < 100 && data[ i + 2 ] < 100 ) {
+					const x = ( i / 4 ) % canvas.width;
+					min = Math.min( min, x );
+					max = Math.max( max, x );
+				}
+			}
+			return [ min, max ];
+		}, [ from, to ] );
+
+		await page.goto( `${ base }/index.php?title=${ owner }` );
+		for ( const selector of [ '.layers-viewer-canvas', `.layers-slide-container[data-slide-name="${ slide }"] canvas` ] ) {
+			await expect( page.locator( selector ).first() ).toBeVisible();
+			await expect.poll( () => inkExtent( selector, 0.1, 0.45 ) ).not.toEqual( [ Infinity, -1 ] );
+			const literal = await inkExtent( selector, 0.1, 0.45 );
+			await expect.poll( () => inkExtent( selector, 0.5, 0.9 ) ).toEqual( literal );
+		}
+	} finally {
+		const restore = async () => {
+			if ( publicationPending ) {
+				throw new Error( 'Fields cleanup requires review: publication outcome is uncertain; no restore attempted' );
+			}
+			if ( lastOwnedRevision ) {
+				const latest = ( await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } ) )
+					.query.pages[ 0 ].revisions[ 0 ].revid;
+				if ( latest !== lastOwnedRevision ) {
+					throw new Error( 'Fields cleanup requires review: another edit intervened; no restore attempted' );
+				}
+				const restored = await api( { action: 'layerspublish', owner, baserevid: String( lastOwnedRevision ),
+					data: JSON.stringify( initialSnapshot ), maintext: initialText,
+					summary: 'Fields acceptance cleanup: restore automated owner state', token: csrfToken }, true );
+				expect( restored.layerspublish && restored.layerspublish.result ).toBe( 'Success' );
+			}
+			if ( fileSaved ) {
+				await api( { action: 'layersdelete', filename: file.name, setname: setName, token: csrfToken }, true );
+			}
+			if ( slideSaved ) {
+				const saved = ( await api( { action: 'layersinfo', slidename: slide } ) ).layersinfo.layerset;
+				await api( { action: 'layersdelete', slidename: slide, setname: saved ? saved.name : 'default',
+					token: csrfToken }, true );
+			}
+		};
+		await restore();
+	}
+} );

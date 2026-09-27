@@ -257,6 +257,28 @@ describe( 'ViewerManager', () => {
 			expect( img.layersViewer ).toBeDefined();
 		} );
 
+		it( 'fills {{name}} tokens with the page values given for this file', () => {
+			const DrawingFields = require( '../../resources/ext.layers.shared/DrawingFields.js' );
+			const originalGet = mw.config.get;
+			DrawingFields.reset();
+			mw.config.get = ( key ) => key === 'wgLayersDrawingFields' ?
+				{ [ JSON.stringify( [ 'File:Pump_diagram.png', 'pressure', '12 bar' ] ) ]: true } : null;
+			const parent = document.createElement( 'div' );
+			parent.style.position = 'relative';
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Pump diagram.png' );
+			parent.appendChild( img );
+			document.body.appendChild( parent );
+
+			const layerData = { layers: [ { id: 't', type: 'text', text: 'P {{pressure}}' } ] };
+			manager.initializeViewer( img, layerData );
+
+			expect( mockLayersViewer.mock.calls[ 0 ][ 0 ].layerData.layers[ 0 ].text ).toBe( 'P 12 bar' );
+			expect( layerData.layers[ 0 ].text ).toBe( 'P {{pressure}}' );
+			mw.config.get = originalGet;
+			DrawingFields.reset();
+		} );
+
 		it( 'should normalize array data to object format', () => {
 			const parent = document.createElement( 'div' );
 			parent.style.position = 'relative';

@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Page values in shared layer sets and slides (September 26): `{{#layers_fields:}}` also accepts `File:Name` (every shared set of that file the page shows) and `Slide:Name`, so Cargo data can fill `{{name}}` tokens in annotations without the page history pilot. The full-size view, print and download use the same values; server-rendered thumbnails and PDF exports keep the tokens.
+
 - Pages are found by the drawings they show (September 26): a page that shows a shared layer set (`[[File:…|layerset=…]]`, including from templates) or a slide (`{{#Slide:}}`) is indexed with that set's current text, recorded while parsing in the page property `layers-shown-sets`. Pages are reindexed on edit, on links refresh, and when a set they show is saved, deleted or renamed. Run core's `refreshLinks.php` once for existing pages. Gallery embeds and `layerset=id:` references are not covered.
 
 - Drawings show values from the page (pilot, September 26): `{{#layers_fields: drawing ID | name = value }}` on the owner page fills `{{name}}` tokens in a page-owned drawing's text where the page shows the drawing. Values are expanded wikitext turned into plain text, so they can come from `#cargo_query`, templates or other parser functions, and update whenever the page is rendered again. The drawing, its history, search and Cargo rows keep the tokens.

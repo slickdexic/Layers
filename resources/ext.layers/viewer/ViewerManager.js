@@ -173,6 +173,15 @@ class ViewerManager {
 			if ( Array.isArray( data ) ) {
 				data = { layers: data };
 			}
+			// Values the page gives through {{#layers_fields:File:…}} fill {{name}} tokens of this file's drawing.
+			const fields = window.Layers && window.Layers.DrawingFields;
+			const filename = fields && this.extractFilenameFromImg( img );
+			if ( filename && data && Array.isArray( data.layers ) ) {
+				const layers = fields.fillLayers( data.layers, fields.forDrawing( fields.fileKey( filename ) ) );
+				if ( layers !== data.layers ) {
+					data = Object.assign( {}, data, { layers } );
+				}
+			}
 
 			this.debugLog( 'initializeViewer: creating viewer with data:', {
 				layerCount: data.layers ? data.layers.length : 0,

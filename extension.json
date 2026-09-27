@@ -395,7 +395,8 @@
 				"ImageLayerRenderer.js",
 				"LayerRenderer.js",
 				"CustomShapeRenderer.js",
-				"ViewerIcons.js"
+				"ViewerIcons.js",
+				"DrawingFields.js"
 			]
 		},
 		"ext.layers": {

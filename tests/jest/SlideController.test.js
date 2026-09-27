@@ -524,6 +524,38 @@ describe( 'SlideController', () => {
 			delete window.LayerRenderer;
 		} );
 
+		it( 'fills {{name}} tokens with the page values given for this slide', () => {
+			const DrawingFields = require( '../../resources/ext.layers.shared/DrawingFields.js' );
+			const originalGet = mw.config.get;
+			DrawingFields.reset();
+			mw.config.get = ( key ) => key === 'wgLayersDrawingFields' ?
+				{ [ JSON.stringify( [ 'Slide:Line_overview', 'status', 'Running' ] ) ]: true } : null;
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'Line_overview' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( {
+				save: jest.fn(), restore: jest.fn(), clearRect: jest.fn(), fillRect: jest.fn(),
+				fillStyle: '', globalAlpha: 1, translate: jest.fn(), rotate: jest.fn(), scale: jest.fn()
+			} );
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			const payload = { layers: [ { id: 't', type: 'text', text: 'Line {{status}}' } ],
+				baseWidth: 800, baseHeight: 600 };
+			controller.initializeSlideViewer( container, payload );
+			expect( mockRenderer.drawLayer ).toHaveBeenCalledWith( expect.objectContaining( { text: 'Line Running' } ) );
+			controller.reinitializeSlideViewer( container, payload );
+			expect( mockRenderer.drawLayer ).toHaveBeenLastCalledWith( expect.objectContaining( { text: 'Line Running' } ) );
+			expect( payload.layers[ 0 ].text ).toBe( 'Line {{status}}' );
+
+			delete window.LayerRenderer;
+			mw.config.get = originalGet;
+			DrawingFields.reset();
+		} );
+
 		it( 'should handle background with partial opacity', () => {
 			const container = document.createElement( 'div' );
 			container.className = 'layers-slide-container';

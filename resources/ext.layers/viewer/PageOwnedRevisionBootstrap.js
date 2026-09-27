@@ -5,64 +5,23 @@
 	// Diff pages show the same drawing at two revisions; the server emits these hosts per request.
 	const COMPARISON_HOSTS = '.layers-drawing-diff-view';
 	// {{name}} in drawing text shows the value the page gives through {{#layers_fields:}}.
-	const FIELD_TOKEN = /\{\{\s*([A-Za-z0-9_][A-Za-z0-9_ .-]{0,63}?)\s*\}\}/g;
+	const DrawingFields = () => window.Layers.DrawingFields;
 	/**
 	 * @param {Object} bundle Bound drawing
 	 * @param {Object|undefined} fields Plain-text values by name for this drawing
 	 * @return {Object} The bundle, or a copy whose text layers show the values; unknown names stay as written
 	 */
 	function withFields( bundle, fields ) {
-		if ( !fields || typeof fields !== 'object' || !Array.isArray( bundle.surface.layers ) ) {
-			return bundle;
-		}
-		const fill = ( text ) => text.replace( FIELD_TOKEN, ( token, name ) =>
-			Object.prototype.hasOwnProperty.call( fields, name ) && typeof fields[ name ] === 'string' ? fields[ name ] : token );
-		const layers = bundle.surface.layers.map( ( layer ) => {
-			if ( !layer || typeof layer !== 'object' ) {
-				return layer;
-			}
-			const copy = Object.assign( {}, layer );
-			if ( typeof copy.text === 'string' ) {
-				copy.text = fill( copy.text );
-			}
-			if ( Array.isArray( copy.richText ) ) {
-				copy.richText = copy.richText.map( ( run ) => run && typeof run.text === 'string' ?
-					Object.assign( {}, run, { text: fill( run.text ) } ) : run );
-			}
-			return copy;
-		} );
-		return Object.assign( {}, bundle, { surface: Object.assign( {}, bundle.surface, { layers } ) } );
+		const layers = DrawingFields().fillLayers( bundle.surface.layers, fields );
+		return layers === bundle.surface.layers ? bundle :
+			Object.assign( {}, bundle, { surface: Object.assign( {}, bundle.surface, { layers } ) } );
 	}
 	/**
-	 * @param {Object|null} config wgLayersDrawingFields: a set whose keys are JSON [ drawing, name, value ] entries
-	 * @return {Object} Values by drawing ID and name; a name given two different values is left out
+	 * @param {Object|null} config wgLayersDrawingFields
+	 * @return {Object} Values by drawing ID and name
 	 */
 	function fieldsFromConfig( config ) {
-		const fields = {};
-		const conflicts = new Set();
-		Object.keys( config && typeof config === 'object' ? config : {} ).forEach( ( key ) => {
-			let entry;
-			try {
-				entry = JSON.parse( key );
-			} catch ( e ) {
-				return;
-			}
-			if ( !Array.isArray( entry ) || entry.length !== 3 || !entry.every( ( part ) => typeof part === 'string' ) ) {
-				return;
-			}
-			const [ drawing, name, value ] = entry;
-			const values = Object.prototype.hasOwnProperty.call( fields, drawing ) ? fields[ drawing ] :
-				( fields[ drawing ] = {} );
-			if ( Object.prototype.hasOwnProperty.call( values, name ) && values[ name ] !== value ) {
-				conflicts.add( JSON.stringify( [ drawing, name ] ) );
-			}
-			values[ name ] = value;
-		} );
-		conflicts.forEach( ( key ) => {
-			const [ drawing, name ] = JSON.parse( key );
-			delete fields[ drawing ][ name ];
-		} );
-		return fields;
+		return DrawingFields().fromConfig( config );
 	}
 	function mount( container, bundle, options ) {
 		let view;

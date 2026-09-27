@@ -1113,6 +1113,7 @@
 		 * @private
 		 */
 		flattenPage( imageUrl, layerData, type, quality ) {
+			layerData = this.withPageFields( layerData );
 			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' ) ||
 				( window.Layers && window.Layers.Viewer );
 			if ( typeof LayersViewer !== 'function' ) {
@@ -1506,6 +1507,23 @@
 		}
 
 		/**
+		 * Values the page gives through {{#layers_fields:File:…}} fill {{name}} tokens, as on the page itself.
+		 * Slides arrive already filled from the page's slide viewer.
+		 *
+		 * @param {Object} layerData Layer data object
+		 * @return {Object} The data, or a copy with filled layers
+		 * @private
+		 */
+		withPageFields( layerData ) {
+			const fields = window.Layers && window.Layers.DrawingFields;
+			if ( !fields || this.isSlide || !this.filename || !layerData || !Array.isArray( layerData.layers ) ) {
+				return layerData;
+			}
+			const layers = fields.fillLayers( layerData.layers, fields.forDrawing( fields.fileKey( this.filename ) ) );
+			return layers === layerData.layers ? layerData : Object.assign( {}, layerData, { layers } );
+		}
+
+		/**
 		 * Render the viewer with image and layers
 		 *
 		 * @param {string} imageUrl Full-size image URL
@@ -1517,6 +1535,7 @@
 			if ( !this.imageWrapper ) {
 				return;
 			}
+			layerData = this.withPageFields( layerData );
 
 			// A page may be rendered twice - server raster first, pdf.js upgrade
 			// second - so release the previous viewer rather than orphaning it with

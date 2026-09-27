@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Shared layer sets and slides show values from the page too — September 26, 2026
+
+`{{#layers_fields:}}` worked only for page-owned drawings, which need the page history pilot. The first parameter may now also name a file, `{{#layers_fields: File:Pump.png | pressure = … }}`, for every shared layer set of that file the page shows, or a slide, `{{#layers_fields: Slide:Line_overview | … }}`. So Cargo data can appear in annotations on any wiki.
+
+- **Where values show:** in the page's image viewer and slide viewer, and in the full-size view with its print and download, which use the same values. As before, the editor, the history viewer, search, Cargo rows, and now server-rendered thumbnails and PDF exports show the tokens.
+- **Keys:** `File:` names are normalized like titles (`File:pump diagram.png` and `Image:Pump_diagram.png` are the same file); slide names follow the slide name rules. Anything else that is not a drawing ID shows the error, whose text now lists the three forms.
+- Code: the token filling moved to `ext.layers.shared/DrawingFields.js` (`window.Layers.DrawingFields`), used by the page-owned bootstrap, `ViewerManager.initializeViewer()`, `SlideController` and `LayersLightbox`; `Hooks\DrawingFields::drawingKey()` names the drawing on the server.
+
+Fresh verification: native `DrawingFieldsTest` (10 tests) adds file keys from two spellings and a slide key, and errors for a non-file page and an empty slide name. Jest covers the shared helper, a file's values in `initializeViewer()`, a slide's values on first draw and redraw, and the full-size view (not refilled for slides). A second Chromium test in `page-owned-fields.spec.js` saves a shared set on a file and a slide, each with a literal row and a token row, embeds both with `{{#layers_fields:}}` values and checks that each viewer draws the two rows identically; with token filling disabled both browser tests fail. Full native configuration **406 tests passed, 1 skipped**; Jest **15,026**, standalone PHPUnit **1,300**.
+
 ## Pages are found by the drawings they show — September 26, 2026
 
 The previous change made a file's layer sets searchable, but only on the file's own `File:` page. Readers search for the article, and an article that shows an annotated diagram with `[[File:Diagram.png|layerset=labels]]` or a slide with `{{#Slide:Name}}` was still not found by the words drawn on it. It now is.
@@ -893,7 +903,7 @@ The page-owned history pilot is off by default. Rows marked *pilot* describe it 
 | History tracking configuration | `LayersTrackChangesInRecentChanges` attempts unchanged-content saves; it is **not a reliable audit trail** |
 | MediaWiki text search | Shared layer sets and slides: indexed with their file's `File:` page (no result snippet there) and with every page that shows them; `<gallery>` and Cargo gallery embeds are not. *Pilot:* page-owned drawing text is indexed with the page and shown in result snippets |
 | Cargo | Gallery integration can choose a named layer set from query results |
-| Cargo annotation rows / field bindings | *Pilot:* one row per page-owned drawing through `{{#layers_cargo_store:}}`, and `{{#layers_fields:}}` fills `{{name}}` tokens in page-owned drawing text with values the page gives, such as Cargo query results. Rows and fields for shared sets: **planned** |
+| Cargo annotation rows / field bindings | *Pilot:* one row per page-owned drawing through `{{#layers_cargo_store:}}`, and `{{#layers_fields:}}` fills `{{name}}` tokens with values the page gives, such as Cargo query results, in page-owned drawings and (on any wiki) in shared layer sets and slides the page shows. Rows for shared sets: **planned** |
 | Server export fidelity | Some saved properties and failure cases remain unsupported; inspect important exports |
 
 For slide-based SOPs, do not treat shared layer sets as providing controlled-document revision history, searchable slide content, approval/sign-off or immutable records. With the pilot, page-owned drawings on images, PDFs and slides have page revisions, search and Cargo text rows; approval/sign-off and immutable records are still not provided. See the [design proposal](https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md).

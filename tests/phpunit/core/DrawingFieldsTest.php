@@ -39,6 +39,19 @@ class DrawingFieldsTest extends MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( 'BeforeAfter', $output->getRawText() );
 	}
 
+	public function testFilesAndSlidesAreNamedTheWayViewersLookThemUp(): void {
+		$output = $this->parse( '{{#layers_fields:File:pump diagram.png|pressure=12}}' .
+			'{{#layers_fields:Image:Pump_diagram.png|status=OK}}{{#layers_fields: Slide: Line_overview |a=b}}' );
+		$entries = array_map( static fn ( $key ) => json_decode( (string)$key, true ),
+			array_keys( $output->getJsConfigVars()['wgLayersDrawingFields'] ) );
+		sort( $entries );
+		$this->assertSame( [
+			[ 'File:Pump_diagram.png', 'pressure', '12' ],
+			[ 'File:Pump_diagram.png', 'status', 'OK' ],
+			[ 'Slide:Line_overview', 'a', 'b' ],
+		], $entries );
+	}
+
 	/** @dataProvider provideInvalidCalls */
 	public function testInvalidCallsShowAnErrorAndAddNothing( string $call, string $message ): void {
 		$output = $this->parse( $call );
@@ -51,6 +64,8 @@ class DrawingFieldsTest extends MediaWikiIntegrationTestCase {
 		return [
 			'no drawing' => [ '{{#layers_fields:|a=b}}', 'layers-fields-invalid-drawing' ],
 			'binding instead of ID' => [ '{{#layers_fields:v1:1:presentation|a=b}}', 'layers-fields-invalid-drawing' ],
+			'not a file' => [ '{{#layers_fields:Talk:Pump|a=b}}', 'layers-fields-invalid-drawing' ],
+			'invalid slide name' => [ '{{#layers_fields:Slide:|a=b}}', 'layers-fields-invalid-drawing' ],
 			'no value' => [ '{{#layers_fields:presentation|pressure}}', 'layers-fields-invalid-field' ],
 			'bad name' => [ '{{#layers_fields:presentation|<b>=x}}', 'layers-fields-invalid-field' ],
 			'too many fields' => [ '{{#layers_fields:presentation|' . implode( '|',

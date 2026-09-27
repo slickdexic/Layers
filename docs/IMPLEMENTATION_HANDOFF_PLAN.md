@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Shared layer sets and slides show page values — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `ext.layers.shared/DrawingFields.js` is the only client code that fills `{{name}}` tokens, and `Hooks\DrawingFields::drawingKey()` the only server code that names a drawing (`File:<DB key>`, `Slide:<name>`, page-owned ID). A new viewer path must call `fillLayers()` with `forDrawing()` before drawing. Stored data, search and exports keep the tokens. J79 remains queued. Earlier entries below are historical.
+
 ## Pages are found by the drawings they show — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `ShownLayerSets` is the only record of which shared sets and slides a page shows (page property `layers-shown-sets`, written while parsing); `DrawingSearchText` reads it from the database, never through the `PageProps` cache. Any new way of embedding a shared set must call `ShownLayerSets::note()`, and any new write path for sets or slides must reach `updatePagesShowing()` (for files through `CacheInvalidationTrait`). J79 remains queued. Earlier entries below are historical.

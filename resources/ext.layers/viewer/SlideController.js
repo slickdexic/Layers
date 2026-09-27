@@ -260,8 +260,27 @@
 			} );
 		}
 
+		/**
+		 * Values the page gives through {{#layers_fields:Slide:…}} fill {{name}} tokens of this slide.
+		 *
+		 * @private
+		 * @param {HTMLElement} container Slide container element
+		 * @param {Object} payload Layer data payload
+		 * @return {Object} The payload, or a copy with filled layers
+		 */
+		_withFields( container, payload ) {
+			const fields = window.Layers && window.Layers.DrawingFields;
+			const slideName = container.getAttribute( 'data-slide-name' );
+			if ( !fields || !slideName || !payload || !Array.isArray( payload.layers ) ) {
+				return payload;
+			}
+			const layers = fields.fillLayers( payload.layers, fields.forDrawing( fields.slideKey( slideName ) ) );
+			return layers === payload.layers ? payload : Object.assign( {}, payload, { layers } );
+		}
+
 		/** Initialize a slide viewer for a container element */
 		initializeSlideViewer( container, payload ) {
+			payload = this._withFields( container, payload );
 			const canvas = container.querySelector( 'canvas' );
 			if ( !canvas ) {
 				this.debugWarn( 'No canvas found in slide container' );
@@ -370,6 +389,7 @@
 		 * @return {boolean} True if slide viewer was reinitialized
 		 */
 		reinitializeSlideViewer( container, payload ) {
+			payload = this._withFields( container, payload );
 			try {
 				const canvas = container.querySelector( 'canvas' );
 				if ( !canvas ) {

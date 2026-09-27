@@ -1000,7 +1000,7 @@
 	"layers-main-model-change-denied": "Layers publishing cannot change the page content model.",
 	"layers-invalid-snapshot": "The Layers document is invalid or unsupported. Your changes were not saved.",
 	"layers-invalid-snapshot-property": "The layer \"$1\" has a \"$2\" value that cannot be stored. Your changes were not saved.",
-	"layers-fields-invalid-drawing": "layers_fields: the first parameter must be a drawing ID (letters, digits, - and _), the last part of the drawing's layersbinding.",
+	"layers-fields-invalid-drawing": "layers_fields: the first parameter must be a drawing ID (the last part of the drawing's layersbinding), a File: name or a Slide: name.",
 	"layers-fields-invalid-field": "layers_fields: each field must be written as name=value, with a name of letters, digits, spaces, dots, - and _.",
 	"layers-fields-too-many": "layers_fields: too many fields or drawings on this page.",
 	"layers-invalid-snapshot-layer": "The layer \"$1\" cannot be stored as it is. Your changes were not saved.",

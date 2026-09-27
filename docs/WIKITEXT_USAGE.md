@@ -260,11 +260,11 @@ then query it:
 - Only page-owned drawings are stored. Shared layer sets on files are not,
   and a revision whose content is hidden stores no rows.
 
-### Values from the page in drawing text: `{{#layers_fields:}}` (pilot)
+### Values from the page in drawing text: `{{#layers_fields:}}`
 
-A page-owned drawing can show values that the page supplies, such as data
+A drawing can show values that the page showing it supplies, such as data
 from a Cargo query. Type `{{name}}` in a text, text box or callout layer in
-the editor, then give the value on the owner page:
+the editor, then give the value on the page:
 
 ```text
 {{#layers_fields: presentation
@@ -273,8 +273,12 @@ the editor, then give the value on the owner page:
 }}
 ```
 
-- The first parameter is the drawing ID, the last part of the drawing's
-  `layersbinding=` (`v1:228:presentation` → `presentation`).
+- The first parameter names the drawing:
+  - a shared layer set of a file: `File:Pump.png` (any file namespace alias
+    works). The values apply to every layer set of that file the page shows;
+  - a slide: `Slide:Line_overview`;
+  - a page-owned drawing (page history pilot): its ID, the last part of its
+    `layersbinding=` (`v1:228:presentation` → `presentation`).
 - Each `name = value` is expanded like any wikitext and shown as plain text:
   links keep their text, formatting and tags are dropped. Names use letters,
   digits, spaces, dots, `-` and `_`; values are cut at 1,000 characters.
@@ -283,9 +287,10 @@ the editor, then give the value on the owner page:
 - Values are ordinary page output, so they update whenever the page is
   rendered again (an edit, a purge or parser cache expiry), exactly like a
   `#cargo_query` shown in the page text.
-- They are shown only where the page shows the drawing. The editor, the
-  history viewer, diffs, search and `{{#layers_cargo_store:}}` see the
-  `{{name}}` tokens as typed. A token whose name the page does not give stays
+- They are shown where the page shows the drawing, including its full-size
+  view, print and download. The editor, the history viewer, diffs, search,
+  server-rendered thumbnails and PDF exports, and `{{#layers_cargo_store:}}`
+  see the `{{name}}` tokens as typed. A token whose name the page does not give stays
   as typed. Formatting must cover the whole token in rich text, because each
   formatted run is filled on its own.
 - The function shows nothing, or an error in its place when a parameter is

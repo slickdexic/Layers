@@ -135,6 +135,25 @@ afterEach( () => {
 } );
 
 describe( 'LayersLightbox', () => {
+	describe( 'page field values', () => {
+		it( 'fills {{name}} tokens for this file, but not for slides, which arrive filled', () => {
+			const DrawingFields = require( '../../resources/ext.layers.shared/DrawingFields.js' );
+			const originalGet = mw.config.get;
+			DrawingFields.reset();
+			mw.config.get = ( key ) => key === 'wgLayersDrawingFields' ?
+				{ [ JSON.stringify( [ 'File:Pump.png', 'pressure', '12 bar' ] ) ]: true } : null;
+			const lightbox = new LayersLightbox();
+			const data = { layers: [ { id: 't', type: 'text', text: 'P {{pressure}}' } ], backgroundOpacity: 1 };
+			lightbox.filename = 'Pump.png';
+			expect( lightbox.withPageFields( data ) ).toEqual( { layers: [ { id: 't', type: 'text', text: 'P 12 bar' } ],
+				backgroundOpacity: 1 } );
+			lightbox.isSlide = true;
+			expect( lightbox.withPageFields( data ) ).toBe( data );
+			mw.config.get = originalGet;
+			DrawingFields.reset();
+		} );
+	} );
+
 	describe( 'constructor', () => {
 		it( 'should create instance with default options', () => {
 			const lightbox = new LayersLightbox();

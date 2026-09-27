@@ -1,5 +1,6 @@
 'use strict';
 require( '../../resources/ext.layers.editor/PageOwnedSnapshotAdapter.js' );
+require( '../../resources/ext.layers.shared/DrawingFields.js' );
 require( '../../resources/ext.layers/viewer/PageOwnedRevisionView.js' );
 const mount = require( '../../resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js' );
 const fixture = require( '../fixtures/revisions/slide-document-v1.json' );

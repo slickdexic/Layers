@@ -4,12 +4,16 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
+use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\Html\Html;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\Sanitizer;
+use MediaWiki\Title\Title;
 
 /**
- * {{#layers_fields:drawing|name=value|…}} supplies values that a page's own drawing shows in place of
+ * {{#layers_fields:drawing|name=value|…}} supplies values that a drawing the page shows (its own, a file's
+ * shared set or a slide) shows in place of
  * {{name}} tokens in its text. Values are ordinary page output: Cargo queries, templates and other parser
  * functions can compute them, and they update whenever the page is rendered again. The drawing itself,
  * its history and its search text keep the tokens.
@@ -24,13 +28,13 @@ final class DrawingFields {
 
 	/**
 	 * @param Parser $parser
-	 * @param string $drawing Surface ID, the last part of the drawing's layersbinding
+	 * @param string $drawing Page-owned drawing ID (the last part of its layersbinding), File:name or Slide:name
 	 * @param string ...$args name=value pairs, already expanded
 	 * @return string|array Nothing, or an error shown in place
 	 */
 	public static function parserFunction( Parser $parser, string $drawing = '', string ...$args ) {
-		$drawing = trim( $drawing );
-		if ( !preg_match( '/^[A-Za-z0-9_-]{1,64}$/D', $drawing ) ) {
+		$drawing = self::drawingKey( trim( $drawing ) );
+		if ( $drawing === null ) {
 			return self::error( $parser, 'layers-fields-invalid-drawing' );
 		}
 		$output = $parser->getOutput();
@@ -66,6 +70,25 @@ final class DrawingFields {
 			$output->appendJsConfigVar( self::CONFIG_VAR, $entry );
 		}
 		return '';
+	}
+
+	/**
+	 * @param string $drawing A page-owned drawing ID, a File: name for the shared sets shown of that file, or a
+	 *  Slide: name
+	 * @return string|null The key the viewers look up: the ID, File:<DB key> or Slide:<name>
+	 */
+	private static function drawingKey( string $drawing ): ?string {
+		if ( preg_match( '/^[A-Za-z0-9_-]{1,64}$/D', $drawing ) ) {
+			return $drawing;
+		}
+		if ( str_starts_with( $drawing, LayersConstants::SLIDE_PREFIX ) ) {
+			$slide = trim( substr( $drawing, strlen( LayersConstants::SLIDE_PREFIX ) ) );
+			return ( new SlideNameValidator() )->isValid( $slide ) ?
+				LayersConstants::SLIDE_PREFIX . $slide : null;
+		}
+		$title = Title::newFromText( $drawing );
+		return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() ?
+			'File:' . $title->getDBkey() : null;
 	}
 
 	/**
