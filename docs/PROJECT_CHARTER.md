@@ -1,6 +1,6 @@
 # Layers project charter
 
-**Adopted:** September 27, 2026. The project owner settled decisions D1–D5 the same day. Refinement D1(c) awaits the owner's confirmation.
+**Adopted:** September 27, 2026. The project owner settled decisions D1–D5 the same day.
 **Applies to:** all lead and junior work on `main`.
 **Finish line:** Layers 2.0 (the current version is 1.5.95 plus later fixes on `main`).
 
@@ -123,8 +123,8 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | --- | --- | --- |
 | TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Met for page history; TIFF partial |
 | TYPES-2 | PDFs: each page is annotated separately; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial |
-| TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, embeddable on other pages, with a full-size view. | Met |
-| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and embed on another page. | Partial: the journey spec covers most steps; diff and restore are in J81; export is not covered |
+| TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, with a full-size view, and copyable to other pages. | Partial: copying to another page is not built |
+| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey spec covers most steps; diff and restore are in J81; export is not covered |
 
 ### 5.7 Page history (HIST)
 
@@ -133,18 +133,17 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Partial: page-owned drawings only; shared layer sets still save outside history |
 | HIST-2 | History, old revisions, visual diffs, restoring one drawing, rollback and undo all work. Watchlists, recent changes, notifications and contributions show drawing edits. | Partial: history, old revisions, diffs, restore and rollback are built; the rest is unverified |
 | HIST-3 | On by default: no pilot setting or owner list is needed (D2). | Open |
-| HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A bare `layerset=name` means this page's own drawing, so it starts empty on a page that has none. | Partial: page-owned drawings are identified by page ID; names are not yet unique or used in embeds |
-| HIST-5 | Another page's drawing can be used **read-only** or **copied** into a new drawing of this page (D1). A read-only drawing cannot be edited from the page that shows it, which links to where it can be edited. A copy records where it came from and never follows the original. Copying wikitext never gives edit rights over another page's drawing. | Partial: shared sets can be copied into a page; read-only use of another page's drawing is not built |
-| HIST-6 | Read-only use follows the owner's updates, or keeps a chosen version. Changing the kept version is an edit of the showing page, so it appears in that page's history (D1(c)). | Open |
-| HIST-7 | Old revisions of a page show every drawing as it was then, including read-only drawings from other pages as they were at that time. | Partial: a page's own drawings are met |
-| HIST-8 | Renaming a drawing never breaks a page that shows it. | Open |
-| HIST-9 | Existing drawings move into page history (D3). The migration has a dry run, can be resumed and undone, loses nothing, and pages look the same afterwards. | Open |
+| HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A page shows only its own drawings. A bare `layerset=name` means this page's drawing, so it starts empty on a page that has none. | Partial: page-owned drawings are identified by page ID; names are not yet unique or used in embeds |
+| HIST-5 | Another page's drawing can be **copied** into a new drawing of this page, a new branch (D1). The copy's first revision records where it came from, and it never follows the original. Nothing is shared live between pages. Copying wikitext never gives edit rights over another page's drawing. | Partial: shared sets can be copied into a page; copying another page's drawing is not built |
+| HIST-6 | Old revisions of a page show every drawing as it was then. | Met for page-owned drawings |
+| HIST-7 | Renaming a drawing updates this page's embeds in the same revision. | Open |
+| HIST-8 | Existing drawings move into page history (D3). The migration has a dry run, can be resumed and undone, loses nothing, and pages look the same afterwards. | Open |
 
 ### 5.8 Search (SRCH)
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| SRCH-1 | Database search finds a page by text in the drawings it owns or shows, and a `File:` page by the text of its drawings. Results show the drawing text as the snippet. | Met (J80; `File:` results have no snippet, a core limit) |
+| SRCH-1 | Database search finds a page by the text of its drawings, and a `File:` page by the text of its own drawings. Results show the drawing text as the snippet. | Met (J80; `File:` results have no snippet, a core limit) |
 | SRCH-2 | The index follows every change (save, delete, rename, restore, revision deletion, page deletion) without manual steps, and a maintenance script rebuilds everything. | Partial: revision deletion and suppression untested |
 | SRCH-3 | Link text and link targets from layers are searchable. | Open (needs FEAT-8) |
 
@@ -152,7 +151,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| CARGO-1 | `{{#layers_cargo_store:}}` stores one row per text layer for every drawing the page owns or shows: page, revision, drawing, kind, layer, type, text and link target. | Partial: page-owned drawings only; no link column |
+| CARGO-1 | `{{#layers_cargo_store:}}` stores one row per text layer for every drawing the page owns: page, revision, drawing, kind, layer, type, text and link target. | Partial: page-owned drawings are stored; no link column |
 | CARGO-2 | Page values, including Cargo query results, fill drawing text in every viewer. | Met |
 | CARGO-3 | Cargo's own tools rebuild the rows, and an old revision is never filled with today's query results. | Partial |
 | CARGO-4 | Everything else works without Cargo installed. | Met |
@@ -170,20 +169,18 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 ### D1 — Every drawing belongs to a page (decided September 27, 2026)
 
-Proposed by the project owner; refinements (a)–(e) are the lead's.
+Proposed by the project owner; refinements (a)–(d) are the lead's.
 
 - A drawing is created on a page and belongs to it, and its edits are revisions of that page. Its name is unique on that page, and its full identity is the page's ID plus the name. A file's own `File:` page can own drawings like any other page.
-- `layerset=name` means this page's own drawing called *name*. If the page has none, it starts empty, even when another page has a drawing with the same name.
-- To use another page's drawing, the author picks it from the editor's list of drawings, where drawings from other pages are shown with their page. The editor then offers two choices:
-  - **Use read-only.** This page shows that drawing but cannot edit it. Editors see a link to edit it on its own page.
-  - **Copy to this page.** The layers are copied into a new drawing of this page, a new branch. Its first revision says where it was copied from, and it never follows the original again.
-- **(a)** The editor writes the page ID into the embed, even for this page's own drawings (for example `layerset=228:anatomy`), so nobody needs to know or type page IDs. A bare name typed by hand still means this page's drawing. The exact syntax is settled in the design.
-- **(b)** An embed that names another page's ID is always read-only on the page where it appears. Copying wikitext to a new page therefore shows the original drawing read-only and never gives edit rights over it. The new page's editors can copy it.
-- **(c)** *Awaiting the owner's confirmation.* Read-only use follows the owner's updates by default. Because page history matters in production, an author can instead keep a fixed version. Changing the kept version is an edit of the showing page, so it appears in that page's history.
-- **(d)** Old revisions of a page show every drawing as it was at that time, including read-only drawings from other pages.
-- **(e)** Internally each drawing also keeps a permanent ID. Renaming a drawing keeps the old name working, like a page redirect, so pages that show it do not break.
+- A page shows only its own drawings. `layerset=name` means this page's drawing called *name*. If the page has none, it starts empty, even when another page has a drawing with the same name.
+- To reuse another page's drawing, the author picks it from the editor's list of drawings, where drawings from other pages are shown with their page. The editor offers to **copy it to this page**: the layers become a new drawing of this page, a new branch. Its first revision says where it was copied from, and it never follows the original again.
+- **No read-only or live sharing between pages.** A page that showed another page's drawing would change when the other page is edited, with nothing in its own history. Page history must account for every change to what a page shows, so reuse is by copying only.
+- **(a)** The editor writes the page ID into the embed (for example `layerset=228:anatomy`), so nobody needs to know or type page IDs. A bare name typed by hand still means this page's drawing. The exact syntax is settled in the design.
+- **(b)** If wikitext is copied to another page, an embed that names the original page shows nothing there and never gives edit rights over the original drawing. Because the embed says where the drawing came from, the editor offers to copy it.
+- **(c)** Internally each drawing also keeps a permanent ID, so history, search and Cargo do not depend on names.
+- **(d)** Renaming a drawing updates this page's embeds in the same revision.
 
-Why: every edit must be in some page's history, and one storage model means search, Cargo, links and security are built once. It matches the existing page-owned design, where identity is the page ID plus a drawing ID and never a title, so much of it is already built.
+Why: every edit must be in the history of the page it changes, and one storage model means search, Cargo, links and security are built once. It matches the existing page-owned design, where identity is the page ID plus a drawing ID and never a title, so much of it is already built.
 
 ### D2 — Page history is on by default (decided September 27, 2026)
 
@@ -193,12 +190,12 @@ Layers changes must show in page history for revision tracking in production, so
 
 Today's drawings are stored outside page history: *shared sets* attached to a file, and standalone *slides*. Upgrading to 2.0 moves them into page history with a maintenance script:
 
-1. Each file's shared sets become drawings of that file's `File:` page, under the same names. Their current versions become one new revision of the `File:` page. Earlier versions stay viewable, read-only.
-2. Each page that shows one of these sets gets one edit that makes its embed a read-only use of the `File:` page's drawing, so the page looks exactly as before. An embed that asked for "the latest set" (`layerset=on`) gets the set that was latest at the time of migration.
-3. Each standalone slide becomes a drawing of the page that shows it, if exactly one page does. Otherwise the script creates a page for it.
+1. Each file's shared sets become drawings of that file's `File:` page, under the same names, so every set keeps a home. Their current versions become one new revision of the `File:` page. Earlier versions stay viewable, read-only.
+2. Each page that shows one of these sets gets its own copy in one edit, and its embed then names that copy, so the page looks exactly as before. The copy's revision says it came from the `File:` page's drawing. An embed that asked for "the latest set" (`layerset=on`) gets the set that was latest at the time of migration.
+3. Each standalone slide becomes a drawing of the page that shows it. If several pages show it, each gets its own copy. If none does, the script creates a page for it.
 4. The script lists every change in a dry run first, can be resumed after an interruption, marks its edits as bot edits with a clear summary, and leaves the old tables untouched, so the migration can be undone.
 
-Afterwards, editors of a page that showed a shared set edit it on the `File:` page, or copy it to their own page (D1).
+Afterwards the copies change independently: an image annotated once and shown on five pages becomes five drawings, each edited on its own page and recorded in that page's history. This is the intended result of D1.
 
 ### D4 — A modern, native look (lead decision)
 
@@ -206,7 +203,7 @@ Codex is MediaWiki's current design system: the buttons, dialogs, colours and ic
 
 ### D5 — Order of work (lead decision)
 
-- **Lead:** D1, D2 and D3 (history for everything), then links from layers, then images by reference and clipboard, then Cargo rows for drawings a page shows, then the design pass and performance fixes, then documentation and the security review.
+- **Lead:** D1, D2 and D3 (history for everything), then links from layers, then images by reference and clipboard, then the design pass and performance fixes, then documentation and the security review.
 - **Juniors, alongside:** browser acceptance of each lead step, the performance benchmark (PERF-0) early so that later fixes have a baseline, and automated accessibility checks in browser tests (UI-3).
 - The security review is last, on the release candidate, followed by the owner's acceptance.
 
@@ -223,8 +220,8 @@ The owner runs these on their own wiki with a normal login, after all automated 
 | --- | --- |
 | S1 | **Annotated photo.** Upload a photo and annotate it with arrows and a callout that links to another page. Save, look at history and the diff, restore the earlier version, find the callout text with search, and list it with a Cargo query. |
 | S2 | **PDF.** Annotate page 2 of a multi-page PDF. Upload a new version of the PDF and check that the old revision still shows the old page. Export the annotated PDF and compare it with the viewer. |
-| S3 | **Slides.** Create three slides with text, a wiki image and shapes. Embed them on another page, open the full-size view, and find a slide by its text. |
-| S4 | **Shared drawing.** On page A, draw on a file and save. On page B, write the same name: B's drawing is empty. From B's drawing list, choose A's drawing read-only: B shows it and cannot edit it. Edit it on A, and check that B updates and that B's old revision still shows the old drawing. On page C, copy A's drawing and change the copy: A and B are unchanged. |
+| S3 | **Slides.** Create three slides with text, a wiki image and shapes. Open the full-size view, copy one slide to another page and change the copy, and find each slide by its text. |
+| S4 | **Reusing a drawing.** On page A, draw on a file and save. On page B, write the same name: B's drawing is empty. From B's drawing list, copy A's drawing, change the copy and save. Check that A is unchanged, that B's history records the copy and where it came from, and that editing A later does not change B. |
 | S5 | **Interruptions.** Close the tab mid-edit and recover the work. Edit the same drawing in two browsers, and check that neither person's work is lost. |
 | S6 | **Permissions.** A reader cannot edit. A protected page's drawing cannot be edited without the right. A blocked user is refused. A revision-deleted drawing is hidden everywhere, search included. |
 | S7 | **Upgrade.** A copy of the owner's wiki upgrades from 1.5.x and keeps every drawing, and its old versions stay viewable. |
@@ -253,17 +250,16 @@ Worth doing later, but none of these holds up the finish line:
 
 ## 10. Remaining work, in order (September 27, 2026)
 
-1. **Drawings belong to pages:** unique names, page IDs in embeds, read-only use and copies, renames that keep working (HIST-4 to HIST-8, D1).
+1. **Drawings belong to pages:** unique names, page IDs in embeds, copying from another page, and renames that update embeds (HIST-4 to HIST-7, D1).
 2. **On by default** (HIST-3, D2).
-3. **Migration** of shared sets and slides (HIST-9, D3), with the upgrade guide (OPS-1).
+3. **Migration** of shared sets and slides (HIST-8, D3), with the upgrade guide (OPS-1).
 4. **History checks:** watchlist, recent changes and undo; diffs and restore in the browser (J81) (HIST-2).
 5. **Links from layers**, with their security, search and Cargo parts (FEAT-8, SEC-5, SRCH-3, CARGO-1).
 6. **Images and clipboard:** wiki files by reference, drag and drop, pasting, and copying between drawings (FEAT-3a, FEAT-3b, FEAT-3c, FEAT-5, PERF-7).
-7. **Cargo rows for drawings a page shows** (CARGO-1).
-8. **Design pass:** Codex, right-to-left languages, the mobile viewer and the reader text view (UI-1, UI-2, UI-4 to UI-9, D4).
-9. **Performance fixes** against the PERF-0 baseline (PERF-1 to PERF-7).
-10. **Conflict comparison, exports and revision deletion** (DATA-2, DATA-4, DATA-5, FEAT-3d, TYPES-2).
-11. **Documentation refresh** (OPS-2), then the **security review and asset audit** (SEC-6, SEC-7).
-12. **Owner acceptance** (section 7), then release 2.0.
+7. **Design pass:** Codex, right-to-left languages, the mobile viewer and the reader text view (UI-1, UI-2, UI-4 to UI-9, D4).
+8. **Performance fixes** against the PERF-0 baseline (PERF-1 to PERF-7).
+9. **Conflict comparison, exports and revision deletion** (DATA-2, DATA-4, DATA-5, FEAT-3d, TYPES-2).
+10. **Documentation refresh** (OPS-2), then the **security review and asset audit** (SEC-6, SEC-7).
+11. **Owner acceptance** (section 7), then release 2.0.
 
 Alongside, juniors: the performance benchmark (PERF-0), automated accessibility checks (UI-3) and browser acceptance of each step (OPS-4, TYPES-4).
