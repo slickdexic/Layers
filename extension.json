@@ -201,8 +201,8 @@
 	"DomainEventIngresses": [
 		{
 			"events": [ "PageLatestRevisionChanged" ],
-			"class": "MediaWiki\\Extension\\Layers\\Search\\PageOwnedSearchIngress",
-			"services": [ "LayersPageOwnedPilot" ]
+			"class": "MediaWiki\\Extension\\Layers\\Search\\DrawingSearchIngress",
+			"services": [ "LayersDrawingSearchText" ]
 		}
 	],
 	"HookHandlers": {
@@ -223,6 +223,10 @@
 		},
 		"LayersCargoHooks": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks\\CargoHooks"
+		},
+		"LayersSearchHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Search\\DrawingSearchHooks",
+			"services": [ "LayersDrawingSearchText", "RevisionLookup" ]
 		}
 	},
 	"Hooks": {
@@ -243,6 +247,8 @@
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
 		"ParserMakeImageParams": "LayersWikitextHooks",
+		"SearchDataForIndex2": "LayersSearchHooks",
+		"ShowSearchHit": "LayersSearchHooks",
 		"SkinTemplateNavigation::Universal": "LayersUIHooks",
 		"CargoSetFormatClasses": "LayersCargoHooks"
 	},

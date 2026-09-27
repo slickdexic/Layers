@@ -8,23 +8,23 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
-use MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks;
+use MediaWiki\Extension\Layers\Search\DrawingSearchHooks;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
-use MediaWikiIntegrationTestCase;
 use SearchEngine;
 use SearchResult;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
 /**
- * Text inside a page's own drawings is found by the wiki's search.
- * @covers \MediaWiki\Extension\Layers\Search\PageOwnedSearchIngress
- * @covers \MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks
+ * Text inside a page's own drawings, and in a file's layer sets, is found by the wiki's search.
+ * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchIngress
+ * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchHooks
+ * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchText
  * @covers \MediaWiki\Extension\Layers\Revision\PageDrawingSearchText
  * @group Database
  */
-class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
+class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private function document( string $word, array $extra = [] ): string {
 		$document = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
 		$document->surfaces[0]->layers[0]->text = "Checklist $word";
@@ -36,7 +36,9 @@ class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
 
 	/** @return string[] Titles found for $term */
 	private function search( string $term ): array {
-		$matches = $this->getServiceContainer()->getSearchEngineFactory()->create()->searchText( $term );
+		$engine = $this->getServiceContainer()->getSearchEngineFactory()->create();
+		$engine->setNamespaces( [ NS_MAIN, NS_FILE ] );
+		$matches = $engine->searchText( $term );
 		$titles = [];
 		foreach ( $matches ?: [] as $result ) {
 			$titles[] = $result->getTitle()->getPrefixedDBkey();
@@ -116,9 +118,9 @@ class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
 		return $fields;
 	}
 
-	private function hooks(): PageOwnedSearchHooks {
+	private function hooks(): DrawingSearchHooks {
 		$services = $this->getServiceContainer();
-		return new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ),
+		return new DrawingSearchHooks( $services->getService( 'LayersDrawingSearchText' ),
 			$services->getRevisionLookup() );
 	}
 
@@ -161,5 +163,82 @@ class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
 		] ) ) );
 		$this->assertSame( "Welcome Slide\nChecklist visible\nRich words", $text );
 		$this->assertSame( '', PageDrawingSearchText::extract( new LayersDocumentContent( 'not json' ) ) );
+	}
+
+	/** @return string Name of a newly uploaded file whose page text is $pageText */
+	private function uploadFile( string $pageText ): string {
+		$name = 'LayersSearch' . mt_rand() . '.png';
+		$title = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $name );
+		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $title );
+		$this->assertStatusGood( $file->upload( __DIR__ . '/../../fixtures/assets/test-image.png', 'Fixture',
+			$pageText, 0, false, '20260906120000', $this->getTestSysop()->getUser() ) );
+		return $name;
+	}
+
+	private function saveSet( string $file, string $set, array $texts ): void {
+		$layers = [];
+		foreach ( $texts as $i => $text ) {
+			$layers[] = [ 'id' => "t$i", 'type' => 'text', 'x' => 1, 'y' => 1, 'text' => $text ];
+		}
+		$layers[] = [ 'id' => 'hidden', 'type' => 'text', 'x' => 1, 'y' => 1, 'text' => 'zebrahidden',
+			'visible' => false ];
+		$this->doApiRequestWithToken( [ 'action' => 'layerssave', 'filename' => $file, 'setname' => $set,
+			'data' => json_encode( $layers ) ], null, $this->getTestSysop()->getUser() );
+	}
+
+	public function testFileLayerSetTextIsIndexedWithTheFilePage(): void {
+		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
+		$file = $this->uploadFile( 'Plain filedescword' );
+		$key = 'File:' . $file;
+		$this->saveSet( $file, 'labels', [ 'Valve zebralegacy' ] );
+		$this->saveSet( $file, 'second', [ 'Pump zebrasecondset' ] );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebralegacy' ) );
+		$this->assertContains( $key, $this->search( 'zebrasecondset' ) );
+		$this->assertContains( $key, $this->search( 'filedescword' ) );
+		$this->assertNotContains( $key, $this->search( 'zebrahidden' ) );
+
+		// A new revision of a set replaces its words; a later edit of the file page keeps them.
+		$this->saveSet( $file, 'labels', [ 'Valve zebrarevised' ] );
+		$this->runDeferredUpdates();
+		$this->editPage( $key, 'Replaced filedescother' );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebrarevised' ) );
+		$this->assertNotContains( $key, $this->search( 'zebralegacy' ) );
+		$this->assertContains( $key, $this->search( 'filedescother' ) );
+
+		// Renaming keeps the words; deleting a set removes them.
+		$this->doApiRequestWithToken( [ 'action' => 'layersrename', 'filename' => $file, 'oldname' => 'second',
+			'newname' => 'renamed' ], null, $this->getTestSysop()->getUser() );
+		$this->doApiRequestWithToken( [ 'action' => 'layersdelete', 'filename' => $file, 'setname' => 'labels' ],
+			null, $this->getTestSysop()->getUser() );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebrasecondset' ) );
+		$this->assertNotContains( $key, $this->search( 'zebrarevised' ) );
+		$this->assertContains( $key, $this->search( 'filedescother' ) );
+	}
+
+	public function testMaintenanceScriptIndexesExistingFileSets(): void {
+		$this->overrideConfigValues( [ 'DisableSearchUpdate' => true, 'SearchType' => null ] );
+		$file = $this->uploadFile( 'Existing file' );
+		$this->saveSet( $file, 'labels', [ 'Gauge zebrafileexisting' ] );
+		$this->runDeferredUpdates();
+		$this->overrideConfigValue( 'DisableSearchUpdate', false );
+		$this->assertNotContains( 'File:' . $file, $this->search( 'zebrafileexisting' ) );
+		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
+		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		( new \ReindexPageDrawings() )->execute();
+		$this->assertContains( 'File:' . $file, $this->search( 'zebrafileexisting' ) );
+	}
+
+	public function testFileSearchDocumentsCarrySetText(): void {
+		$file = $this->uploadFile( 'Ordinary file words' );
+		$this->saveSet( $file, 'labels', [ 'Valve zebrafiledocument' ] );
+		$title = Title::makeTitle( NS_FILE, $file );
+		$this->assertSame( [ 'Existing', 'Valve zebrafiledocument' ],
+			$this->documentFields( $title )['auxiliary_text'] );
+		// Pages outside the File namespace have no file sets.
+		$this->assertSame( [ 'Existing' ],
+			$this->documentFields( $this->getExistingTestPage()->getTitle() )['auxiliary_text'] );
 	}
 }

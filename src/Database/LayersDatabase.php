@@ -28,6 +28,10 @@ class LayersDatabase {
 	 */
 	private const JSON_DECODE_MAX_DEPTH = 512;
 
+	/** Search reads at most this many sets per file and this many stored bytes in total. */
+	private const MAX_SEARCH_SETS = 200;
+	private const MAX_SEARCH_BYTES = 16777216;
+
 	/** @var IConnectionProvider */
 	private $connectionProvider;
 	/** @var \Wikimedia\Rdbms\IDatabase */
@@ -1461,6 +1465,70 @@ class LayersDatabase {
 		);
 
 		return $row ? $row->ls_img_sha1 : null;
+	}
+
+	/**
+	 * Layer data of the latest revision of each named set of a file, for the file page's search text.
+	 *
+	 * One entry per set name and PDF page, whichever file version it was saved on, because an embed
+	 * that names a set shows it after the file is reuploaded too. Slides are not files and are excluded.
+	 *
+	 * @param string $imgName File name
+	 * @param bool $fromPrimary Read the primary database, to include a change made in this request
+	 * @return array[] Decoded set data, whose `layers` holds the layers; unreadable sets are skipped
+	 */
+	public function getFileSetsForSearch( string $imgName, bool $fromPrimary = false ): array {
+		$db = $fromPrimary ? $this->getWriteDb() : $this->getReadDb();
+		$name = $this->normalizeImageName( $imgName );
+		if ( !$db || $name === '' ) {
+			return [];
+		}
+		$ids = $db->newSelectQueryBuilder()->select( 'MAX(ls_id)' )->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $name, $db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ] )
+			->groupBy( [ 'ls_name', 'ls_page' ] )->limit( self::MAX_SEARCH_SETS )
+			->caller( __METHOD__ )->fetchFieldValues();
+		sort( $ids );
+		$maxBytes = min( (int)$this->config->get( 'LayersMaxBytes' ), self::MAX_SEARCH_BYTES );
+		$budget = self::MAX_SEARCH_BYTES;
+		$sets = [];
+		foreach ( array_chunk( array_map( 'intval', $ids ), 20 ) as $chunk ) {
+			$rows = $db->newSelectQueryBuilder()->select( 'ls_json_blob' )->from( 'layer_sets' )
+				->where( [ 'ls_id' => $chunk ] )->orderBy( 'ls_id' )->caller( __METHOD__ )->fetchFieldValues();
+			foreach ( $rows as $blob ) {
+				$budget -= strlen( $blob );
+				if ( $budget < 0 ) {
+					return $sets;
+				}
+				if ( strlen( $blob ) > $maxBytes ) {
+					continue;
+				}
+				try {
+					$data = json_decode( $blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
+				} catch ( \JsonException $e ) {
+					continue;
+				}
+				if ( is_array( $data ) ) {
+					$sets[] = $data;
+				}
+			}
+		}
+		return $sets;
+	}
+
+	/**
+	 * @param string $after List names sorting after this one
+	 * @param int $limit
+	 * @return string[] Names of files that have layer sets, in order
+	 */
+	public function listFilesWithSets( string $after, int $limit ): array {
+		$db = $this->getReadDb();
+		if ( !$db ) {
+			return [];
+		}
+		return $db->newSelectQueryBuilder()->select( 'ls_img_name' )->distinct()->from( 'layer_sets' )
+			->where( [ $db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ),
+				$db->expr( 'ls_img_name', '>', $after ) ] )
+			->orderBy( 'ls_img_name' )->limit( $limit )->caller( __METHOD__ )->fetchFieldValues();
 	}
 
 	/**

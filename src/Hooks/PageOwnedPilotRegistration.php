@@ -9,7 +9,6 @@ use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
-use MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks;
 use MediaWiki\Hook\MediaWikiServicesHook;
 use MediaWiki\MediaWikiServices;
 
@@ -80,17 +79,6 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 		$hooks->register( 'DifferenceEngineShowDiff', static function ( $differenceEngine ) use ( $services ) {
 			( new PageOwnedDiffHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )
 				->onDifferenceEngineShowDiff( $differenceEngine );
-		} );
-		$search = static fn () => new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ),
-			$services->getRevisionLookup() );
-		$hooks->register( 'SearchDataForIndex2', static function ( array &$fields, ...$args ) use ( $search ) {
-			$search()->onSearchDataForIndex2( $fields, ...$args );
-		} );
-		$hooks->register( 'ShowSearchHit', static function ( $searchPage, $result, $terms, &$link, &$redirect,
-			&$section, &$extract, &$score, &$size, &$date, &$related, &$html
-		) use ( $search ) {
-			$search()->onShowSearchHit( $searchPage, $result, $terms, $link, $redirect, $section, $extract,
-				$score, $size, $date, $related, $html );
 		} );
 		$hooks->register( 'MultiContentSave', static function ( ...$args ) use ( $services ) {
 			return $services->getService( 'LayersPageOwnedPilot' )->newAdmissionHooks()->onMultiContentSave( ...$args );

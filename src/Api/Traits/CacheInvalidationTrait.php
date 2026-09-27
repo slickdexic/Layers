@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api\Traits;
 
+use MediaWiki\Deferred\DeferredUpdates;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
@@ -64,6 +65,11 @@ trait CacheInvalidationTrait {
 			// something unrelated invalidates it. Walking the imagelinks
 			// backlinks is what makes a save visible where the file is used.
 			$this->purgeFileBacklinks( $title );
+
+			// 5. The file page's search entry includes its layer sets' text; this change is not a page edit.
+			DeferredUpdates::addCallableUpdate( static function () use ( $title ) {
+				MediaWikiServices::getInstance()->getService( 'LayersDrawingSearchText' )->updateFilePage( $title );
+			} );
 		} catch ( \Throwable $e ) {
 			// Cache invalidation is best-effort; don't fail the save/delete/rename
 			// if cache purging encounters an error

@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
 use MediaWiki\Extension\Layers\Logging\LayersLogger;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Search\DrawingSearchText;
 use MediaWiki\MediaWikiServices;
 
 return [
@@ -23,6 +24,10 @@ return [
 			$config->has( 'LayersPageOwnedPilotEnabled' ) ? $config->get( 'LayersPageOwnedPilotEnabled' ) : false,
 			$config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [],
 			$config->has( 'LayersPageOwnedPilotNamespaces' ) ? $config->get( 'LayersPageOwnedPilotNamespaces' ) : [] );
+	},
+	'LayersDrawingSearchText' => static function ( MediaWikiServices $services ): DrawingSearchText {
+		return new DrawingSearchText( $services->getService( 'LayersPageOwnedPilot' ),
+			$services->getService( 'LayersDatabase' ), $services->getRevisionLookup(), $services->getPageStore() );
 	},
 	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
 		return new LayersLogger();
