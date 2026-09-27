@@ -69,7 +69,7 @@ Every criterion is required for 2.0. Status values: **Met** (done and verified),
 | DATA-2 | When two people edit at once, the second is told, keeps their work, and can compare before choosing. | Partial: conflicts are detected and work is kept; there is no comparison view |
 | DATA-3 | Unsaved work survives a crash, a closed tab or an expired session, and a lost response never creates a duplicate. | Met for page history |
 | DATA-4 | Deleting, undeleting, moving, protecting and revision-deleting pages and files work as they do for text, and nothing reappears or is lost. | Partial: moves, undelete and rollback done; revision deletion untested end to end |
-| DATA-5 | Drawings are included in ordinary database backups and XML exports. XML import either works or refuses with a clear message. | Partial: import is refused; export is unverified |
+| DATA-5 | Drawings are included in ordinary database backups and XML exports. XML import either works or refuses with a clear message. | Partial: XML export includes drawings; import is refused |
 
 ### 5.3 Fast (PERF)
 
@@ -78,7 +78,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | ID | Criterion | Baseline |
 | --- | --- | --- |
 | PERF-0 | A scripted, repeatable benchmark in the repository measures PERF-1 to PERF-7 and runs before each milestone. | Open |
-| PERF-1 | A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none. Nothing Layers adds blocks rendering. | Partial: raw-size budgets exist; transfer size is not measured |
+| PERF-1 | A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none. Nothing Layers adds blocks rendering. | Partial: the viewer loads only where drawings are shown, but also on every `File:` page; transfer size is not measured |
 | PERF-2 | A drawing appears within 300 ms after its image has loaded. | Not measured |
 | PERF-3 | The editor is usable within 3 s of pressing Edit, with a warm cache. | Not measured |
 | PERF-4 | With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms. | Not measured |
@@ -121,7 +121,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Met for page history; TIFF partial |
+| TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Partial: JPEG and PNG tested; GIF, WebP and SVG untested; TIFF partial |
 | TYPES-2 | PDFs: each page is annotated separately; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial |
 | TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, with a full-size view, and copyable to other pages. | Partial: copying to another page is not built |
 | TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey spec covers most steps; diff and restore are in J81; export is not covered |
@@ -133,8 +133,8 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Partial: page-owned drawings only; shared layer sets still save outside history |
 | HIST-2 | History, old revisions, visual diffs, restoring one drawing, rollback and undo all work. Watchlists, recent changes, notifications and contributions show drawing edits. | Partial: history, old revisions, diffs, restore and rollback are built; the rest is unverified |
 | HIST-3 | On by default: no pilot setting or owner list is needed (D2). | Open |
-| HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A page shows only its own drawings. A bare `layerset=name` means this page's drawing, so it starts empty on a page that has none. | Partial: page-owned drawings are identified by page ID; names are not yet unique or used in embeds |
-| HIST-5 | Another page's drawing can be **copied** into a new drawing of this page, a new branch (D1). The copy's first revision records where it came from, and it never follows the original. Nothing is shared live between pages. Copying wikitext never gives edit rights over another page's drawing. | Partial: shared sets can be copied into a page; copying another page's drawing is not built |
+| HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A page shows only its own drawings. A bare `layerset=name` means this page's drawing, so it starts empty on a page that has none. | Partial: embeds carry the page ID and show only on their own page; new and changed drawings need a unique name (September 27); embeds still name the drawing ID, not the name |
+| HIST-5 | Another page's drawing can be **copied** into a new drawing of this page, a new branch (D1). The copy's first revision records where it came from, and it never follows the original. Nothing is shared live between pages. Copying wikitext never gives edit rights over another page's drawing. | Partial: shared sets can be copied into a page, and a copied embed shows nothing on another page; copying another page's drawing is not built |
 | HIST-6 | Old revisions of a page show every drawing as it was then. | Met for page-owned drawings |
 | HIST-7 | Renaming a drawing updates this page's embeds in the same revision. | Open |
 | HIST-8 | Existing drawings move into page history (D3). The migration has a dry run, can be resumed and undone, loses nothing, and pages look the same afterwards. | Open |
@@ -162,7 +162,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | --- | --- | --- |
 | OPS-1 | Install and upgrade from 1.5.x with `update.php` and documented maintenance scripts. The migration has a dry run and a way back. | Partial |
 | OPS-2 | Every setting and API is documented, examples are checked against real behaviour, and [known issues](KNOWN_ISSUES.md) is current. | Partial: known issues was last updated September 11 |
-| OPS-3 | All automated gates are green: `npm test`, PHP style, standalone and native PHPUnit, and the full browser suite, with statement coverage of at least 90%. | Met (95.87% statements) |
+| OPS-3 | All automated gates are green: `npm test`, PHP style, standalone and native PHPUnit, and the full browser suite, with statement coverage of at least 90%. | Met (95.87% statements, measured September 2) |
 | OPS-4 | Every criterion in this charter has an automated test, and every user-facing one also has a browser acceptance spec. | Partial |
 
 ## 6. Decisions
@@ -250,16 +250,18 @@ Worth doing later, but none of these holds up the finish line:
 
 ## 10. Remaining work, in order (September 27, 2026)
 
-1. **Drawings belong to pages:** unique names, page IDs in embeds, copying from another page, and renames that update embeds (HIST-4 to HIST-7, D1).
-2. **On by default** (HIST-3, D2).
-3. **Migration** of shared sets and slides (HIST-8, D3), with the upgrade guide (OPS-1).
-4. **History checks:** watchlist, recent changes and undo; diffs and restore in the browser (J81) (HIST-2).
-5. **Links from layers**, with their security, search and Cargo parts (FEAT-8, SEC-5, SRCH-3, CARGO-1).
-6. **Images and clipboard:** wiki files by reference, drag and drop, pasting, and copying between drawings (FEAT-3a, FEAT-3b, FEAT-3c, FEAT-5, PERF-7).
-7. **Design pass:** Codex, right-to-left languages, the mobile viewer and the reader text view (UI-1, UI-2, UI-4 to UI-9, D4).
-8. **Performance fixes** against the PERF-0 baseline (PERF-1 to PERF-7).
-9. **Conflict comparison, exports and revision deletion** (DATA-2, DATA-4, DATA-5, FEAT-3d, TYPES-2).
-10. **Documentation refresh** (OPS-2), then the **security review and asset audit** (SEC-6, SEC-7).
-11. **Owner acceptance** (section 7), then release 2.0.
+**Estimate.** About 48 lead deliverables remain, each the size of one reviewed commit such as those of September 26, plus 12–15 junior packets alongside. The count per item is in brackets. Over September 25–27 the lead landed about ten such deliverables per full working day; the remaining items are larger (migration, links, the design pass) and the browser suite is slow, so plan on five to ten a day. That is roughly one to two weeks of full-time work before the owner's acceptance, most likely nearer two. Re-estimate at each milestone.
+
+1. [6] **Drawings belong to pages:** unique names, page IDs in embeds, copying from another page, and renames that update embeds (HIST-4 to HIST-7, D1).
+2. [3] **On by default** (HIST-3, D2).
+3. [5] **Migration** of shared sets and slides (HIST-8, D3), with the upgrade guide (OPS-1).
+4. [2] **History checks:** watchlist, recent changes and undo; diffs and restore in the browser (J81) (HIST-2).
+5. [5] **Links from layers**, with their security, search and Cargo parts (FEAT-8, SEC-5, SRCH-3, CARGO-1).
+6. [5] **Images and clipboard:** wiki files by reference, drag and drop, pasting, and copying between drawings (FEAT-3a, FEAT-3b, FEAT-3c, FEAT-5, PERF-7).
+7. [7] **Design pass:** Codex, right-to-left languages, the mobile viewer and the reader text view (UI-1, UI-2, UI-4 to UI-9, D4).
+8. [4] **Performance fixes** against the PERF-0 baseline (PERF-1 to PERF-7).
+9. [5] **Conflict comparison, exports and revision deletion** (DATA-2, DATA-4, DATA-5, FEAT-3d, TYPES-2).
+10. [4] **Documentation refresh** (OPS-2), then the **security review and asset audit** (SEC-6, SEC-7).
+11. [2] **Owner acceptance** (section 7), then release 2.0.
 
 Alongside, juniors: the performance benchmark (PERF-0), automated accessibility checks (UI-3) and browser acceptance of each step (OPS-4, TYPES-4).

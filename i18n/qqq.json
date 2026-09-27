@@ -999,6 +999,8 @@
 	"layers-fields-invalid-field": "Error shown in the page by the <code>{{#layers_fields:}}</code> parser function when a field is not written as name=value or its name has other characters. Do not translate <code>layers_fields</code>.",
 	"layers-fields-too-many": "Error shown in the page by the <code>{{#layers_fields:}}</code> parser function when a drawing has more than 100 fields or a page gives fields for more than 50 drawings. Do not translate <code>layers_fields</code>.",
 	"layers-invalid-snapshot-layer": "Error from the page-owned publishing API when one layer is refused as a whole.\n\nParameters:\n* $1 - the layer's name, or its ID if it has none",
+	"layers-invalid-snapshot-name": "Error from the page-owned publishing API when a new or changed drawing has a name that cannot be written into an embed.\n\nParameters:\n* $1 - the refused name",
+	"layers-invalid-snapshot-name-taken": "Error from the page-owned publishing API when a new or changed drawing has the same name as another drawing on the page.\n\nParameters:\n* $1 - the name",
 	"layers-source-unavailable": "Used by the unregistered experimental page-owned publishing API. A required source file version is unavailable or does not match this document.",
 	"layers-edit-conflict": "Used by the unregistered experimental page-owned publishing API. The page changed while you were editing. Reload its latest revision before retrying.",
 	"layers-revision-save-failed": "Used by the unregistered experimental page-owned publishing API. MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",

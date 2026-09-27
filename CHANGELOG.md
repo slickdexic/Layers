@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Drawing names are unique on their page (pilot, September 27): a new or changed page-owned drawing needs a name no other drawing on the page has (ignoring case, spacing and underscores) that can be written into an embed; a refused save names it. Adopting a second drawing with a taken name adds a number ("default 2"). First step of the charter's decision that drawings belong to their page.
+
 - Refused saves are explained once (September 27): the page-owned editor no longer refuses a save on its own checks, so page history's refusal, which names the layer and property, reaches the user (J79). The ordinary editor's validation notice was missing its message and its limits ("between $1 and $2"); both are filled in, and a failed ordinary save shows one notice instead of up to three, none of them the English "Check browser console (F12)". The i18n wiring check now sees `window.layersMessages.get()` calls.
 
 - Page values in shared layer sets and slides (September 26): `{{#layers_fields:}}` also accepts `File:Name` (every shared set of that file the page shows) and `Slide:Name`, so Cargo data can fill `{{name}}` tokens in annotations without the page history pilot. The full-size view, print and download use the same values; server-rendered thumbnails and PDF exports keep the tokens.

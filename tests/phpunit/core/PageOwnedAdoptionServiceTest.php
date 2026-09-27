@@ -60,6 +60,8 @@ class PageOwnedAdoptionServiceTest extends \MediaWikiIntegrationTestCase {
 		$this->assertCount( 2, $newDoc['surfaces'] );
 		$this->assertSame( $oldDoc['surfaces'][0], $newDoc['surfaces'][0] );
 		$this->assertSame( [ 'A', 'B' ], array_column( $newDoc['surfaces'], 'id' ) );
+		// The fixture gives both the same name; names are unique on a page.
+		$this->assertSame( [ 'Welcome Slide', 'Welcome Slide 2' ], array_column( $newDoc['surfaces'], 'label' ) );
 		$this->assertSame( $first, $current->getParentId() );
 		$this->assertSame( $id, $current->getPageId() );
 		$this->assertSame( $actor->getUser()->getId(), $current->getUser()->getId() );

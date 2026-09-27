@@ -107,6 +107,7 @@ class PagePublicationService {
 		}
 		$document = json_decode( $content->getText() );
 		$changed = $this->changedSurfaceIds( $owner, $baseRevisionId, $document, $authority );
+		DrawingName::assertPublishable( $document->surfaces, $changed );
 		foreach ( $document->surfaces as $surface ) {
 			if ( in_array( $surface->id, $changed, true ) && !PageOwnedRenderCapability::isRenderable( $surface ) ) {
 				throw new PublicationException( 'layers-content-not-renderable' );

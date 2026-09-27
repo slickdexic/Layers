@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Charter work begins: unique drawing names — September 27, 2026
+
+Work now follows the [project charter](PROJECT_CHARTER.md); name the criterion each packet advances. See the [current status](CURRENT_STATUS.md) entry. Contract: page-owned drawing names are unique on their page and embeddable (`DrawingName`); tests and specs that publish two drawings must give them different names. The D1 design for the next lead steps is at the top of the [binding plan](PAGE_OWNED_BINDING_PLAN.md). J81 remains ready. Earlier entries below are historical.
+
 ## Search verified in a browser; J80 accepted; J81 ready — September 27, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. **J80 is accepted** with lead corrections (packet below; see the review ledger). No product code changed. J81 is ready. Earlier entries below are historical.

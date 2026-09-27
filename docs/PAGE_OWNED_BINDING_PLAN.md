@@ -2,6 +2,20 @@
 
 September 23, 2026. **Approved direction; implementation pending.** *September 26 update: lifecycle guards now follow drawing ownership, so moves are supported and restore, import and merge are keyed to whether drawings are involved; see the [current status](CURRENT_STATUS.md). The move veto and title-keyed guards described below are superseded.* This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
+## Drawings named per page: the D1 contract — September 27, 2026
+
+This is the design for [charter](PROJECT_CHARTER.md) decision D1 (criteria HIST-4 to HIST-7). It replaces the earlier rules that labels need not be unique and that cross-page reuse may be live.
+
+- **Names.** A drawing's `label` is its name. It is unique on its page: names that differ only in case, spacing or underscores are the same name. A name has 1 to 255 characters, no spaces at either end or in a row, and none of `| [ ] { } < > :` or control characters (`DrawingName`). Legacy set names always qualify. **Implemented:** publication refuses a new or changed drawing whose name is invalid or taken, with `layers-invalid-snapshot` and a message naming it; adoption appends the first free number ("default 2"). Unchanged drawings are not rechecked.
+- **Identity.** The permanent key stays the surface ID; the name is what authors see and write. History, diffs, restore, search and Cargo keep using the ID.
+- **Embeds.** `[[File:X|layerset=<pageId>:<name>]]` and `{{#Slide:<pageId>:<name>}}`. Legacy set and slide names cannot contain `:`, so the forms cannot be confused. The parser resolves the name in the parsed revision's own drawings; the drawing must be of the embed's kind, and for files on the embed's file and PDF page. Anything else shows nothing and never falls back to shared data. The page ID must be the parsed page's own; another page's ID shows nothing there (as `layersbinding=` does today), and the editor offers to copy that drawing.
+- **Bare names.** `layerset=<name>` on a page that takes part in page history means the page's own drawing of that name. Until the migration (D3) runs, a page with no such drawing still shows the legacy shared set of that name, so existing pages keep working; after it, a bare name with no drawing shows nothing.
+- **What the editor writes.** New and adopted embeds use the named form with the page ID. `layersbinding=v1:<pageId>:<surfaceId>` stays readable for pilot pages, and the migration rewrites it.
+- **Renames.** Renaming a drawing rewrites this page's embeds naming it in the same revision, through `DirectEmbeddingRewriter`.
+- **Copying from another page.** For a file, the candidates are the drawings on that file of pages that use it (`imagelinks`) and that the author may read. For a slide, the author names the page. The copy gets a new surface ID and a free name, and its revision summary names the source page, drawing and revision.
+
+Order: named embeds in the parser, then the editor writing them and renames, then copying.
+
 ## Source scanning follows preprocessor rules — September 26, 2026
 
 The earlier allowlist refused a whole page for any unknown HTML tag, external link or single bracket, so almost no real page could be edited or adopted. `DirectEmbeddingRewriter` now treats those as the preprocessor does: plain text. Bodies of the wiki's registered extension tags (from `Parser::getTags()`) and of `<includeonly>` are skipped; `<noinclude>` and `<onlyinclude>` markers are transparent. Unterminated comments or extension tags, control bytes and unbalanced `[[`/`{{` still refuse the page. A candidate whose caption contains links, templates or markup is still not selectable. This remains a conservative raw-source subset, not a general parser.

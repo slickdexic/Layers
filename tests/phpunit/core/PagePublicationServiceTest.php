@@ -140,6 +140,35 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 			->getRevisionByTitle( $page->getTitle() )->getId() );
 	}
 
+	public function testDrawingNamesAreUniqueOnThePageAndWritableIntoAnEmbed(): void {
+		$page = $this->getNonexistingTestPage();
+		$actor = $this->actor();
+		$service = $this->service();
+		$id = $service->publish( $page->getTitle(), $actor, 0, $this->snapshot(), 'Create',
+			new WikitextContent( 'Owner page' ) );
+		$twin = json_decode( $this->snapshot() );
+		$twin->surfaces[] = clone $twin->surfaces[0];
+		$twin->surfaces[1]->id = 'second';
+		foreach ( [
+			[ 'ideas', 'layers-invalid-snapshot-name-taken' ],
+			[ 'Ideas_', 'layers-invalid-snapshot-name-taken' ],
+			[ 'Plan | B', 'layers-invalid-snapshot-name' ],
+			[ '228:Ideas', 'layers-invalid-snapshot-name' ]
+		] as [ $name, $message ] ) {
+			$twin->surfaces[1]->label = $name;
+			try {
+				$service->publish( $page->getTitle(), $actor, $id, json_encode( $twin ), 'Must fail' );
+				$this->fail( "\"$name\" must be refused" );
+			} catch ( PublicationException $e ) {
+				$this->assertSame( 'layers-invalid-snapshot', $e->getMessage() );
+				$this->assertSame( [ $message, $name ], $e->getUserMessage() );
+			}
+		}
+		$this->assertSame( $id, $page->getTitle()->getLatestRevID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST ) );
+		$twin->surfaces[1]->label = 'Ideas 2';
+		$this->assertNotSame( $id, $service->publish( $page->getTitle(), $actor, $id, json_encode( $twin ), 'Two' ) );
+	}
+
 	/** @return array */
 	public static function provideFailures(): array {
 		return [

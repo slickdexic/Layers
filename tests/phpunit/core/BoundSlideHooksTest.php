@@ -132,6 +132,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$document = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
 		$appendix = json_decode( json_encode( $document->surfaces[0] ) );
 		$appendix->id = 'appendix';
+		$appendix->label = 'Appendix';
 		$document->surfaces[] = $appendix;
 		$first = 'v1:' . $page->getId() . ':' . $document->surfaces[0]->id;
 		$second = 'v1:' . $page->getId() . ':appendix';

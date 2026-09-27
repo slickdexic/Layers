@@ -79,11 +79,15 @@ class PageOwnedAdoptionService {
 				$snapshot = json_decode( $stored->getCanonicalText() );
 			}
 			$surface = $addition->surfaces[0];
+			$taken = [];
 			foreach ( $snapshot->surfaces as $existing ) {
 				if ( $existing->id === $surface->id ) {
 					throw new PublicationException( 'layers-surface-already-bound' );
 				}
+				$taken[] = (string)$existing->label;
 			}
+			$surface->label = DrawingName::unused(
+				DrawingName::normalize( (string)$surface->label ) ?? $surface->id, $taken );
 			$snapshot->surfaces[] = $surface;
 			$json = $schema->canonicalize( JsonSnapshotCodec::encode( $snapshot ) );
 		} catch ( \InvalidArgumentException $e ) {

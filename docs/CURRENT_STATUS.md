@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## Drawings need a unique name on their page — September 27, 2026
+
+First step of [charter](../docs/PROJECT_CHARTER.md) decision D1, under which a drawing belongs to its page and is identified by the page plus its name. Publishing a new or changed page-owned drawing now requires a name that is unique on the page and can be written into an embed: 1 to 255 characters, no spaces at either end or in a row, and none of `| [ ] { } < > :`. Names that differ only in case, spacing or underscores count as the same. A refused save says which name and why. Drawings that are not changed are not rechecked, and adopting a second drawing with a name already on the page adds the first free number ("default 2").
+
+Code: `Revision\DrawingName`, called from `PagePublicationService::publish()` and `PageOwnedAdoptionService`; messages `layers-invalid-snapshot-name` and `-name-taken`. The contract for the remaining steps (named embeds, renames, copying from another page) is in the [binding plan](../docs/PAGE_OWNED_BINDING_PLAN.md).
+
+Fresh verification: new standalone `DrawingNameTest` (4 tests) and a native publication test refusing a case variant, an underscore variant, `|` and a page-ID prefix, then accepting "Ideas 2"; the adoption test now expects "Welcome Slide 2" for the second of two same-named adoptions. Full native configuration **407 tests passed, 1 skipped**; standalone PHPUnit **1,304**; Jest **15,029**; PHP style clean.
+
 ## Search verified in a browser — September 27, 2026
 
 J80 checked in Chromium, on the test wiki's database search, that `Special:Search` finds a page by words that exist only in a shared layer set or slide it shows, with the drawing text as a highlighted snippet, and that the file's `File:` page is found by its set's text. Saving a new revision of the set, deleting the slide, restoring the page and deleting the set each changed the results by the next page load, without editing the page. No product code changed.

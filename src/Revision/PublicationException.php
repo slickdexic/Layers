@@ -25,6 +25,19 @@ class PublicationException extends \RuntimeException {
 		return $exception;
 	}
 
+	/**
+	 * @param string $name
+	 * @param bool $taken Another drawing on the page already has the name
+	 * @return self
+	 */
+	public static function refusedName( string $name, bool $taken ): self {
+		$exception = new self( 'layers-invalid-snapshot' );
+		$exception->userMessage = [
+			$taken ? 'layers-invalid-snapshot-name-taken' : 'layers-invalid-snapshot-name', $name
+		];
+		return $exception;
+	}
+
 	/** @return array|null Message key followed by its parameters */
 	public function getUserMessage(): ?array {
 		return $this->userMessage;

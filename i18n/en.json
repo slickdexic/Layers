@@ -1005,6 +1005,8 @@
 	"layers-fields-invalid-field": "layers_fields: each field must be written as name=value, with a name of letters, digits, spaces, dots, - and _.",
 	"layers-fields-too-many": "layers_fields: too many fields or drawings on this page.",
 	"layers-invalid-snapshot-layer": "The layer \"$1\" cannot be stored as it is. Your changes were not saved.",
+	"layers-invalid-snapshot-name": "\"$1\" cannot be used as a drawing name. A name needs 1 to 255 characters, no spaces at either end or in a row, and none of these: | [ ] { } < > :. Your changes were not saved.",
+	"layers-invalid-snapshot-name-taken": "This page already has a drawing named \"$1\". Names differ from each other by more than case, spaces or underscores. Choose another name. Your changes were not saved.",
 	"layers-source-unavailable": "A required source file version is unavailable or does not match this document.",
 	"layers-edit-conflict": "The page changed while you were editing. Reload its latest revision before retrying.",
 	"layers-revision-save-failed": "MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",
