@@ -1,4 +1,77 @@
-# Junior implementation review — J01–J77
+# Junior implementation review — J01–J78
+
+## J78 accepted with lead corrections: properties panel changes through the page-owned editor — September 26, 2026
+
+With the lead's fix merged and the marker value control restored, the lead reran the spec: **1 passed (1.5 m)**. One serial Chromium run of all twelve page-owned specs then passed (**22 passed**, 20.1 minutes), and the automation owner kept its baseline text and drawing.
+
+- **The reported defect was real.** Every edit of a marker's value was refused, because the field always sends text and the validator kept only numbers. The lead's properties-panel check, written while J78 ran, had already found it along with four more: stroke width up to 200, a text layer's text stroke width up to 200, the text shadow default colour, and radial gradients carrying an `undefined` angle. Marker values are now numbers or labels of up to 16 characters (see the current status entry). One correction to the report: the validator converted numeric strings to numbers and dropped labels. It did not cast to an integer.
+- **Lead corrections to the spec:** the marker value is now set to the label "1A" and stored as "1A". Font size adjustment is set to 3; 0 was the seeded value, so setting it could not show the control works. The dimension's own value text is set to "25.4 mm". A duplicated step heading is removed. An attempt to set the text box font and size in the panel showed the panel has no such controls; those live in the inline text toolbar, which J77 covers.
+- **Notes, not defects:** the clean save in step 4 does send a request; the server treats it as a successful no-op and returns the same revision, which the spec checks. Some controls named in the packet were not driven in the browser: callout tail direction and size (set on the canvas) and dimension unit, scale and precision. `PropertiesPanelValues.test.js` drives every panel control, at its lowest and highest choice.
+- **Process incident:** during the J78 run, uncommitted lead files in the shared checkout were removed: a new Jest test, its fixture and an edit to `DocumentSchemaTest.php`. Nothing in the git history shows how. The lead rebuilt them in a separate worktree. A rule against git commands that discard work, and against deleting files you did not create, now heads the handoff plan.
+
+## J78 implemented awaiting lead review: properties panel changes through the page-owned editor — September 26, 2026
+
+Junior implemented acceptance testing for properties panel changes through the page-owned editor in `tests/e2e/page-owned-journey-properties.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Preserved all other pages and files; never touches `Layers_history_test`.
+- **Step 1: Seed bound slide & open editor**:
+  - Seeded owner with one bound slide (`slide_journey_properties`) containing 8 layers (rectangle, star, polygon, arrow, textbox, callout, marker, dimension) directly in snapshot via exact-base publication.
+  - Opened page's edit link (`.layers-page-edit-link`); verified HTTP 200 response and `no-store` Cache-Control header; verified canvas ready.
+  - Verified `apiManager.pageOwnedDrafts.ready === true` and asserted no recovery dialog (`dialog.layers-page-recovery`) is displayed.
+- **Step 2: Pure UI manipulation of every control through properties panel and layer list only**:
+  - No `stateManager` writes: all updates driven via properties panel inputs/sliders/selects/color-pickers and layer list action buttons.
+  - Rectangle: position (45, 45), size (110, 70), rotation (15), cornerRadius (12), stroke (#123456, width 4, opacity 0.8), fill (#abcdef, opacity 0.75), layer opacity (0.85), blendMode (multiply), drop shadow (enabled, #222222, blur 10, spread 3, offset 5, 5).
+  - Rectangle gradient cycle: switched fill to linear gradient, then immediately switched back to solid fill.
+  - Star: position (175, 50), rotation (0), points (6), outerRadius (50), innerRadius (25), pointRadius (4), valleyRadius (4), stroke (#654321, width 3, opacity 0.9), fill (#ffd700, opacity 0.85), layer opacity (0.9), blendMode (screen), shadow (enabled, #111111, blur 8, spread 2, offset 4, 4).
+  - Polygon: position (285, 50), rotation (30), sides (8), radius (50), cornerRadius (0), stroke (#335577, width 3, opacity 0.85), fill (#00e5ff, opacity 0.8), layer opacity (0.8), blendMode (overlay), shadow (enabled, #000000, blur 6, spread 1, offset 3, 3).
+  - Polygon visibility: hidden via layer list button (`.layer-item[data-layer-id="layer_poly"] .layer-visibility`); state verified (`visible: false`).
+  - Arrow: start (410, 60), end (530, 60), arrowSize (18), headScale (1.2), tailWidth (0), arrowStyle (single), arrowHeadType (chevron), stroke (#446688, width 3, opacity 0.95), fill (#ffeedd, opacity 0.85), layer opacity (0.95), blendMode (darken), shadow (enabled, #1a1a1a, blur 6, spread 1, offset 3, 3).
+  - Text box: position (575, 45), rotation (5), size (140, 70), cornerRadius (6), textStroke (#112233, width 1), textShadow (enabled, #333333, blur 6, offset 3, 3), textAlign (center), verticalAlign (middle), padding (12), stroke (#224466, width 2, opacity 0.9), fill (#f5f5f5, opacity 0.9), layer opacity (0.9), blendMode (normal).
+  - Callout: position (45, 160), rotation (5), size (150, 80), cornerRadius (12), textStroke (#223344, width 1), textShadow (enabled, #222222, blur 5, offset 2, 2), textAlign (right), verticalAlign (bottom), padding (16), tailStyle (curved), stroke (#335577, width 2, opacity 0.95), fill (#eef2f5, opacity 0.9), layer opacity (0.95), blendMode (normal).
+  - Marker: position (245, 195), rotation (10), style (letter), size (30), fontSizeAdjust (0), color (#112233), fill (#fff3cd), stroke (#856404, width 3), hasArrow (true), layer opacity (0.9), blendMode (multiply), shadow (enabled, #000000, blur 8, spread 2, offset 2, 2). Value skipped per defect protocol (retained seeded value 1).
+  - Dimension: fontSize (14), color (#1a1a1a), stroke (#003366, width 2), orientation (horizontal), endStyle (tick), textPosition (below), textDirection (horizontal), extensionLength (15), dimensionOffset (20), textOffset (0), showBackground (false), toleranceType (symmetric), toleranceValue (0.05).
+  - Dimension lock: locked via layer list button (`.layer-item[data-layer-id="layer_dim"] .layer-lock`); state verified (`locked: true`).
+  - Saved once via `.save-button`: single `layerspublish` POST succeeded; confirmed exactly 1 new tagged revision (`layers-page-drawing`).
+- **Step 3: Verify published snapshot, absent gradient, key whitelist, and render status**:
+  - `layersread` on the new revision confirmed all changed properties were stored as set, including `false` (`visible: false`, `showBackground: false`) and `0` (`star.rotation: 0`, `poly.cornerRadius: 0`, `arrow.tailWidth: 0`, `marker.fontSizeAdjust: 0`, `dim.textOffset: 0`).
+  - Rectangle `gradient` property verified strictly absent (`undefined`), confirming gradient switched back to solid publishes as absent.
+  - Whitelist check: every layer checked against allowed keys; verified no layer carried any key that neither the seed nor the panel wrote.
+  - Render status: verified on page (canvas rendered, 0 `.layers-page-history-render-failed`, 0 "could not be displayed", 0 "This Layers revision is unavailable"), in historical viewer for rev1, and on diff between rev1 and seed (both diff canvases mounted, 0 render errors).
+- **Step 4: Reopen clean without changes**:
+  - Reopened editor through `.layers-page-edit-link`; verified no recovery dialog is displayed.
+  - Clicked `.save-button` without making any changes; verified history revision remained unchanged (no new revision created).
+- **Step 5: Exact-base restoration**:
+  - Restored owner revision text and snapshot to pre-test baseline via CAS exact-base publication.
+- **Defect Report (Returned for Lead Correction)**:
+  - **Control**: Marker Properties -> `Value` (`PropertyBuilders.js:1210-1225`).
+  - **Failing Layer JSON**:
+    ```json
+    {
+      "id": "layer_marker",
+      "type": "marker",
+      "value": "2",
+      "style": "letter",
+      "size": 30,
+      "fontSizeAdjust": 0,
+      "fontFamily": "Arial, sans-serif",
+      "fontWeight": "bold",
+      "fill": "#fff3cd",
+      "stroke": "#856404",
+      "strokeWidth": 3,
+      "color": "#112233",
+      "hasArrow": true,
+      "arrowX": 230,
+      "arrowY": 230
+    }
+    ```
+  - **Server Error**: HTTP 400 Bad Request, API code `"layers-invalid-snapshot"`, from `InvalidArgumentException: invalid-or-lossy-layer-data` in `DocumentSchema::canonicalize()`.
+  - **Root Cause**: `PropertyBuilders.js:1222` writes `{ value: val }` where `val` is a string (e.g. `'2'`). In `ServerSideLayerValidator.php:136`, `value` is numeric, and lines 777–781 cast it to integer: `$layer['value'] = (int)$layer['value'];`. `DocumentSchema::canonicalize()` strictly checks `JsonSnapshotCodec::encode( $surface->layers ) === JsonSnapshotCodec::encode( $result->getData() )`; the type mismatch (`"2"` vs `2`) causes `invalid-or-lossy-layer-data`.
+  - **Protocol Followed**: Skipped setting marker `Value` in step 2 (kept seeded integer `value: 1`), completed the acceptance run successfully, and returned the defect for lead review.
+- **Verification Runs**:
+  - Initial run: **1 passed in 1.5m**.
+  - Repeatability run: **1 passed in 1.7m**.
+  - ESLint: passed (`npx eslint tests/e2e/page-owned-journey-properties.spec.js`).
+  - Documentation check: passed (`npm run check:docs`).
 
 ## J77 accepted with lead corrections: every drawing tool and text formatting through the page-owned editor — September 26, 2026
 

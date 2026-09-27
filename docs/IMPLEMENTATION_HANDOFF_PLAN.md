@@ -1,10 +1,16 @@
 # Layers implementation handoff plan
 
+## Properties panel values save as set; J78 accepted — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `PropertiesPanelValues.test.js` drives every properties-panel control to its lowest and highest choice and `DocumentSchemaTest` publishes the result; a panel limit or default the server would change fails it. **J78 is accepted** with lead corrections (packet below; see the review ledger). No junior packet is queued while juniors are unavailable. Earlier entries below are historical.
+
+**Rule for every packet, added after J78:** the lead may have uncommitted work in the same checkout. Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`, and never delete files you did not create. If `git status` shows changes you did not make, leave them and mention them in your report.
+
 ## Cleared properties publish as absent; J77 accepted; J78 ready — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `PageOwnedEditorBridge` publishes a layer property the editor holds as `null` or `undefined` as absent, which is what the server stores; everything else must still pass the validator unchanged. `EditorCreatedLayers.test.js` now compares strictly (an `undefined` key fails) and runs the client snapshot check. **J77 is accepted** with lead corrections (packet below; see the review ledger). The drawing tools are now covered; J78 takes the properties panel through the browser. Earlier entries below are historical.
 
-### J78 — Properties panel changes through the page-owned editor (ready)
+### J78 — Properties panel changes through the page-owned editor (accepted)
 
 **Purpose:** J76 and J77 proved what the tools create. Users then change layers in the properties panel, and each control writes its own value, which page history must store exactly or refuse visibly. Prove the panel's controls save as set. Acceptance testing only; report defects for lead correction.
 
@@ -17,6 +23,8 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: `PageOwnedEditorBri
 5. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
 
 If a control's value is refused, record the control, the layer JSON the editor held and the server error, skip that control for the rest of the run, and continue. Then return for lead review.
+
+**Status:** accepted with lead corrections; see the review ledger. The one refused control (marker value) was already fixed by the lead's properties-panel check, which found four more; the spec now sets a marker label.
 
 ## Editor output saves unchanged; J76 accepted; J77 ready — September 26, 2026
 

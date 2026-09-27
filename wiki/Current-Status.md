@@ -10,7 +10,7 @@ A new check drives every control of the properties panel, for every layer type, 
 - **Radial gradients:** the gradient editor wrote an `undefined` angle, so no drawing with a radial gradient could be saved in page history. Unset gradient fields are now omitted.
 - **Exports:** server-rendered thumbnails and PDFs drew "letter circled" markers as numbers, because the renderer checked a style name the editor never writes.
 
-Fresh verification: `PropertiesPanelValues.test.js` produces `properties-panel-document-v1.json`, which `DocumentSchemaTest` publishes; new validator tests for marker values and an export test for the letter style. Jest **15,016**, standalone PHPUnit **1,297**.
+Fresh verification: `PropertiesPanelValues.test.js` produces `properties-panel-document-v1.json`, which `DocumentSchemaTest` publishes; new validator tests for marker values and an export test for the letter style. Jest **15,016**, standalone PHPUnit **1,297**, full native configuration **387 tests passed, 1 skipped**. The J78 browser run drives the panel on a seeded drawing (see the review ledger); with it, one serial Chromium run of all twelve page-owned specs passed (**22 passed**).
 
 ## Arrows and cleared properties no longer block page-owned saves — September 26, 2026
 
