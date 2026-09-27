@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Tests\Core;
 
 use MediaWiki\Content\WikitextContent;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
 use MediaWiki\Extension\Layers\Search\PageOwnedSearchHooks;
@@ -12,6 +13,7 @@ use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 use MediaWikiIntegrationTestCase;
 use SearchEngine;
+use SearchResult;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
@@ -108,10 +110,46 @@ class PageOwnedSearchTest extends MediaWikiIntegrationTestCase {
 		$services = $this->getServiceContainer();
 		$page = $services->getWikiPageFactory()->newFromTitle( $title );
 		$fields = [ 'auxiliary_text' => [ 'Existing' ] ];
-		( new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )->onSearchDataForIndex2(
+		$this->hooks()->onSearchDataForIndex2(
 			$fields, $page->getContentHandler(), $page, new ParserOutput(), $this->createMock( SearchEngine::class ),
 			$services->getRevisionLookup()->getRevisionByTitle( $title ) );
 		return $fields;
+	}
+
+	private function hooks(): PageOwnedSearchHooks {
+		$services = $this->getServiceContainer();
+		return new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ),
+			$services->getRevisionLookup() );
+	}
+
+	/** @return string The extract Special:Search would show after the hook */
+	private function extract( Title $title, array $terms, string $extract = '' ): string {
+		$searchPage = $this->getServiceContainer()->getSpecialPageFactory()->getPage( 'Search' );
+		$searchPage->setContext( RequestContext::getMain() );
+		$link = $redirect = $section = $score = $size = $date = $related = $html = '';
+		$this->hooks()->onShowSearchHit( $searchPage, SearchResult::newFromTitle( $title ), $terms, $link, $redirect,
+			$section, $extract, $score, $size, $date, $related, $html );
+		return $extract;
+	}
+
+	public function testResultFoundOnlyInADrawingShowsTheDrawingText(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
+			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$editor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
+			$this->document( 'zebrasnippet & "more"' ), 'Drawing', new WikitextContent( 'Ordinary page words' ) );
+		$this->assertSame( '<div class="searchresult">Checklist <span class="searchmatch">zebrasnippet</span>' .
+			' &amp; &quot;more&quot;' . "\n" . wfMessage( 'ellipsis' )->escaped() . '</div>',
+			$this->extract( $title, [ 'zebrasnippet' ] ) );
+		// A page-text match, no terms or a term found nowhere keep core's extract.
+		$core = '<div class="searchresult"><span class="searchmatch">Ordinary</span> page words</div>';
+		$this->assertSame( $core, $this->extract( $title, [ 'zebrasnippet' ], $core ) );
+		$this->assertSame( 'kept', $this->extract( $title, [], 'kept' ) );
+		$this->assertSame( 'kept', $this->extract( $title, [ 'absentword' ], 'kept' ) );
+		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
+		$this->assertSame( '', $this->extract( $title, [ 'zebrasnippet' ] ) );
 	}
 
 	public function testExtractedTextIsWhatReadersSee(): void {

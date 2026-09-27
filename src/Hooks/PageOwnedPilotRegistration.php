@@ -81,9 +81,16 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 			( new PageOwnedDiffHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )
 				->onDifferenceEngineShowDiff( $differenceEngine );
 		} );
-		$hooks->register( 'SearchDataForIndex2', static function ( array &$fields, ...$args ) use ( $services ) {
-			( new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )
-				->onSearchDataForIndex2( $fields, ...$args );
+		$search = static fn () => new PageOwnedSearchHooks( $services->getService( 'LayersPageOwnedPilot' ),
+			$services->getRevisionLookup() );
+		$hooks->register( 'SearchDataForIndex2', static function ( array &$fields, ...$args ) use ( $search ) {
+			$search()->onSearchDataForIndex2( $fields, ...$args );
+		} );
+		$hooks->register( 'ShowSearchHit', static function ( $searchPage, $result, $terms, &$link, &$redirect,
+			&$section, &$extract, &$score, &$size, &$date, &$related, &$html
+		) use ( $search ) {
+			$search()->onShowSearchHit( $searchPage, $result, $terms, $link, $redirect, $section, $extract,
+				$score, $size, $date, $related, $html );
 		} );
 		$hooks->register( 'MultiContentSave', static function ( ...$args ) use ( $services ) {
 			return $services->getService( 'LayersPageOwnedPilot' )->newAdmissionHooks()->onMultiContentSave( ...$args );

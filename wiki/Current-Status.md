@@ -1,5 +1,14 @@
 # Current status and limitations
 
+## Search results show the matching drawing text — September 26, 2026
+
+When a page was found only through words in its drawings, `Special:Search` showed a snippet of unrelated page text with nothing highlighted, so readers could not tell why the page matched. Such a result now shows the drawing text around the match, highlighted like a page-text match. Results that matched the page text keep core's snippet.
+
+- Code: `PageOwnedSearchHooks::onShowSearchHit()` (`ShowSearchHit`, registered with the pilot hooks). It uses the same visible drawing text as the index, only for the page's current revision, never for hidden revision content or pages outside the pilot. Core's result list has already checked the reader may read the page, and core's highlighter escapes the text.
+- This covers database search, which is what the hook receives search terms from. CirrusSearch builds its own snippets from `auxiliary_text`.
+
+Fresh verification: new `PageOwnedSearchTest` case checks the highlighted, escaped drawing snippet, that a page-text match, missing terms and an absent term leave core's extract alone, and that nothing changes outside the pilot. Search and registration tests pass (**23 tests**). On the local wiki, a search for "Visual ideas", which appears only in the pilot pages' drawings, now lists both pages with those words highlighted.
+
 ## Whole namespaces can take part in page history — September 26, 2026
 
 The pilot could only be switched on for pages listed one by one, by exact title, in `$wgLayersPageOwnedPilotOwners`. That made it impractical beyond a few test pages. `$wgLayersPageOwnedPilotNamespaces` now enrolls every page of the given namespaces as well, for example `[ NS_MAIN ]`.

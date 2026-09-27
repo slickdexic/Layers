@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Search snippets from drawings (pilot, September 26): a page found only through words in its page-owned drawings shows the matching drawing text, highlighted, as its `Special:Search` snippet instead of unrelated page text.
+
 - Namespace enrollment for page history (pilot, September 26): new `$wgLayersPageOwnedPilotNamespaces` (default empty) enrolls every page of the listed namespaces, in addition to the exact titles in `$wgLayersPageOwnedPilotOwners`. Enrollment only lets ownership start; all guards stay keyed to owned drawings.
 
 - Page history draws every layer type (pilot, September 26): page-owned drawings may contain image layers, Shape Library shapes and emoji, markers and layer folders; the page-owned editor offers those tools again, and publication and adoption accept them. The page-history painter now also applies layer blend modes, which it previously ignored.
