@@ -795,18 +795,20 @@ Layers annotates **images**, individual **PDF pages**, and **standalone slides**
 
 ## Implemented versus planned
 
+The page-owned history pilot is off by default. Rows marked *pilot* describe it only when `$wgLayersPageOwnedPilotEnabled` is set and the page is enrolled or already owns drawings; see the dated entries at the top.
+
 | Capability | Current behavior |
 | --- | --- |
 | Editing and viewing | Canvas editor, named sets, inline viewer, lightbox, client-side image export and print/download workflows |
 | Layer revisions | Separate Layers database revisions; default retention is 50 per named set and document page |
-| Owning article history | **Not implemented.** Saving annotations does not reliably create a revision of the embedding article |
+| Owning article history | Ordinary saves: **not implemented**; they do not create a revision of the embedding page. *Pilot:* page-owned drawings are saved as page revisions, with history, diffs, rollback and per-drawing restore |
 | History tracking configuration | `LayersTrackChangesInRecentChanges` attempts unchanged-content saves; it is **not a reliable audit trail** |
-| MediaWiki text search | No dedicated annotation-text indexing. Slide-name and layer-panel filters are not wiki full-text search |
+| MediaWiki text search | Shared layer sets: no annotation-text indexing. *Pilot:* page-owned drawing text is indexed with the page and shown in result snippets |
 | Cargo | Gallery integration can choose a named layer set from query results |
-| Cargo annotation rows / field bindings | **Planned**, not currently implemented |
+| Cargo annotation rows / field bindings | *Pilot:* one row per page-owned drawing through `{{#layers_cargo_store:}}`. Rows for shared sets and field bindings: **planned** |
 | Server export fidelity | Some saved properties and failure cases remain unsupported; inspect important exports |
 
-For slide-based SOPs, do not treat the current extension as providing controlled-document revision history, searchable slide content, approval/sign-off or immutable records. These are the next development priorities: **page revisions → MediaWiki search → queryable Cargo annotation text**, across all three content types. See the [design proposal](https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+For slide-based SOPs, do not treat shared layer sets as providing controlled-document revision history, searchable slide content, approval/sign-off or immutable records. With the pilot, page-owned drawings on images, PDFs and slides have page revisions, search and Cargo text rows; approval/sign-off and immutable records are still not provided. See the [design proposal](https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md).
 
 ## Fixes on main after 1.5.95
 
