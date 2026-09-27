@@ -1,10 +1,33 @@
 # Layers implementation handoff plan
 
+## Search verified in a browser; J80 accepted; J81 ready — September 27, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. **J80 is accepted** with lead corrections (packet below; see the review ledger). No product code changed. J81 is ready. Earlier entries below are historical.
+
+### J81 — Diff pages and the viewer's restore in Chromium (ready)
+
+**Purpose:** prove in real Chromium that a diff between two revisions of a page shows each changed drawing at both revisions and leaves unchanged ones out, that a text-only edit shows no drawing section, and that **Restore this version** on `Special:ViewLayersPage` makes one new revision that changes only that drawing and cannot be submitted twice. Both were checked only read-only in a browser so far. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-diff-restore.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes. Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`.
+
+1. Record the owner's current revision, main text and `layersread` snapshot. By exact-base publication make three revisions:
+   - **A:** the recorded snapshot plus one bound slide labelled "Diff probe" (surface `slide_diff_probe`) whose only layer is a rectangle covering the whole 800×600 canvas, fill `#ff0000`; main text plus its `{{#Slide:…|layersbinding=…}}` embed, as in `page-owned-refusal-message.spec.js`.
+   - **B:** the same, with fill `#0000ff`.
+   - **C:** B's drawings unchanged; main text plus one extra sentence.
+2. Open `index.php?title=Layers_browser_acceptance&diff=<B>&oldid=<A>`. Check: one "Drawing changes" section (`.layers-drawing-diff`) with one pair, for "Diff probe" only (the baseline drawing did not change); the left side reads `layersread` at revision A and the right at B; the centre pixel of the left canvas is red and of the right blue.
+3. Open the diff of C against B: no `.layers-drawing-diff` section.
+4. On the page history (`action=history`), follow revision A's "Diff probe" viewer link (`.layers-history-view-link`). Check the intro names "Diff probe" and the **Restore this version** button is shown. Press it. Check: exactly one new revision D, tagged `layers-page-drawing`, whose summary names "Diff probe" and revision A; D's main text equals C's; in D's snapshot the slide's fill is `#ff0000` and the baseline drawing equals the recorded one. Record where the browser lands.
+5. Go back to the form from step 4 and press the button again: nothing is saved (the latest revision is still D) and the page says the page has changed since this version was opened.
+6. Check the button is not offered for revision D (the current version), nor for revision A in a fresh browser context that is not logged in.
+7. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
 ## Page-owned saves reach the server; J79 accepted; J80 ready — September 27, 2026
 
-See the [current status](CURRENT_STATUS.md) entry. Contract: page history has one set of rules, the server's; the page-owned editor must not refuse a save on its own checks. A save failure `APIManager` has already shown is rejected with `reported: true`, and the editor shows nothing more for it. **J79 is accepted** with lead corrections (packet below; see the review ledger). J80 is ready. Earlier entries below are historical.
+See the [current status](CURRENT_STATUS.md) entry. Contract: page history has one set of rules, the server's; the page-owned editor must not refuse a save on its own checks. A save failure `APIManager` has already shown is rejected with `reported: true`, and the editor shows nothing more for it. **J79 is accepted** with lead corrections (packet below; see the review ledger). J80 is ready.
 
-### J80 — Search finds a page by the shared drawing it shows (ready)
+### J80 — Search finds a page by the shared drawing it shows (accepted)
 
 **Purpose:** prove in real Chromium that `Special:Search` finds a page by words that exist only in a shared layer set or slide the page shows, shows the drawing text as the snippet, and stops finding the page once it no longer shows them. Acceptance testing only; report defects for lead correction.
 
@@ -18,6 +41,10 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: page history has on
 6. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup, then delete the set. Word 3 no longer finds the owner. In cleanup, whatever happened, restore that same snapshot (never an empty one) and delete the set and slide if they exist.
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+**Status:** implemented awaiting lead review; spec `tests/e2e/shown-set-search.spec.js` passed (**1 passed**, 32.4s; repeatability **1 passed**, 31.9s, verification **1 passed**, 32.3s); ESLint clean (**0 errors, 0 warnings**). Clean CAS exact-base restoration confirmed after each run. All six steps verified: word 1 and word 2 found owner with `.searchmatch` highlighting in snippet; search index updated in 1.2s–1.8s; replacing word 1 with word 3 updated owner search without owner edit; deleting slide cleared word 2; cleanup restored baseline wikitext and initial snapshot and cleared word 3. Note recorded: `File:<file>` in results is `false` under default namespace 0 search. Full details in the review ledger.
+
+**Accepted** with lead corrections, September 27: every search also asks for the File namespace, and the file page must follow its set (see the review ledger).
 
 ## Shared layer sets and slides show page values — September 26, 2026
 

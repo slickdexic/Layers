@@ -1,4 +1,58 @@
-# Junior implementation review — J01–J79
+# Junior implementation review — J01–J80
+
+## J80 accepted with lead corrections: search finds a page by the shared drawing it shows — September 27, 2026
+
+The lead reran the corrected spec twice: **1 passed** each (40.4 s, 40.8 s). Both times the owner kept its baseline text and drawing, and no `j80-search-probe` set or `J80_Search_Probe` slide remained.
+
+- **No product defects.** The owner was found by each word 1.3–2.4 s after the save, with the drawing text as a highlighted snippet. It dropped out of the results as soon as the set changed, the slide was deleted and the owner was restored.
+- **The File page note was right about the cause, but its result measured the search settings, not the index.** `Special:Search` looks only in the main namespace unless asked, so the junior's searches could not have found `File:B010.jpg` whatever the index held. The packet's "it should be" assumed the File namespace. **Lead correction:** every search in the spec now asks for namespaces 0 and 6. The spec requires the file page to be found by word 1; after the set changed, by word 3 and no longer by word 1; after the set was deleted, not by word 3. All passed.
+- **Other lead corrections to the spec:** the slide was deleted with a hardcoded set name, `default`. The spec now reads the slide's set name from `layersinfo`, as the journey spec does; no set name is ever assumed. Every search, including step 1's zero-result check, first requires the results area (`.searchresults`), so a "not found" can no longer pass on a page where no search ran. Snippet and highlight texts are read without waiting, because file results have no snippet.
+- **Note on the report:** a "cleared within 1.2 s" time is the first reload. The index had already changed before each check, so it measures a page load, not how long the index took.
+
+## J80 implemented awaiting lead review: search finds a page by the shared drawing it shows — September 27, 2026
+
+Junior implemented acceptance testing for task J80 ("Search finds a page by the shared drawing it shows") in `tests/e2e/shown-set-search.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Used first JPEG or PNG fixture discovered dynamically (`B010.jpg`), created dedicated shared set `j80-search-probe` on that file, and created dedicated slide `J80_Search_Probe`.
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Acceptance runs: **1 passed (32.4s)**; repeatability **1 passed (31.9s)**; verification **1 passed (32.3s)**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication after each run; test set and slide deleted with `layersdelete`.
+
+### Verification of Step-by-Step Contract
+
+- **Step 1: Distinct random words & initial search check**:
+  - Generated three distinct random words: `word1` (e.g. `probefileerhhk`), `word2` (e.g. `probeslidempis`), and `word3` (e.g. `proberevistpmp`).
+  - Verified each word is all-lowercase letters, length >= 10 (`/^[a-z]+$/`).
+  - Verified in Chromium that `Special:Search?search=<word>&fulltext=1` returned 0 results for each word.
+  - Recorded owner `Layers_browser_acceptance` initial revision (revid 1628), main text content, and `layersread` snapshot (`formatversion=2`).
+
+- **Step 2: Save shared set, slide, and publish owner embeds**:
+  - Saved shared set `j80-search-probe` on `B010.jpg` via `action=layerssave` with one text layer containing `word1`.
+  - Saved slide `J80_Search_Probe` via `action=layerssave` with one text layer containing `word2`.
+  - Published owner wikitext containing `[[File:B010.jpg|layerset=j80-search-probe|200px]]` and `{{#Slide:J80_Search_Probe}}` via exact-base publication (`action=layerspublish`), keeping the recorded snapshot unchanged.
+
+- **Step 3: Search finds owner with snippet highlighting**:
+  - Navigated to `Special:Search?search=<word1>&fulltext=1` in Chromium: owner `Layers_browser_acceptance` appeared in results within **1.8s**.
+  - Snippet `.searchresult` contained `word1`, with `.searchmatch` highlighting `word1`.
+  - Recorded contract note on `File:B010.jpg`: `File:B010.jpg` in results is `false`. When querying `Special:Search?search=<word>&fulltext=1` without specifying namespaces, MediaWiki searches namespace 0 (`NS_MAIN`) by default; `File:` pages reside in namespace 6 (`NS_FILE`), so `File:B010.jpg` is not returned in default fulltext searches.
+  - Navigated to `Special:Search?search=<word2>&fulltext=1` in Chromium: owner appeared in results within **1.2s**. Snippet contained `word2` with `.searchmatch` highlighting `word2`.
+
+- **Step 4: Update shared set revision without editing owner**:
+  - Saved a new revision of `j80-search-probe` on `B010.jpg` via `action=layerssave` replacing `word1` with `word3`.
+  - Verified owner page was not edited (revision ID remained unchanged).
+  - Queried `Special:Search` for `word3`: owner found in **1.2s** with snippet highlighting `word3`.
+  - Queried `Special:Search` for `word1`: owner cleared from results within **1.2s**.
+
+- **Step 5: Delete slide with layersdelete**:
+  - Deleted slide `J80_Search_Probe` via `action=layersdelete`.
+  - Queried `Special:Search` for `word2`: owner cleared from results within **1.1s**.
+
+- **Step 6: Exact-base restoration and shared set deletion**:
+  - Restored owner wikitext and initial snapshot via CAS exact-base publication (`action=layerspublish`).
+  - Deleted shared set `j80-search-probe` on `B010.jpg` via `action=layersdelete`.
+  - Queried `Special:Search` for `word3`: owner cleared from results within **1.2s**.
+  - Verified owner wikitext matches baseline content (`Dedicated automated Layers history acceptance page.`).
+  - Cleanup safety net in `finally` guarantees exact-base restoration and deletion of any remaining test set or slide if interrupted.
 
 ## J79 accepted with lead corrections: a refused page-owned save names the layer — September 27, 2026
 

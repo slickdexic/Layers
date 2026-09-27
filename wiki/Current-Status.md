@@ -1,5 +1,11 @@
 # Current status and limitations
 
+## Search verified in a browser — September 27, 2026
+
+J80 checked in Chromium, on the test wiki's database search, that `Special:Search` finds a page by words that exist only in a shared layer set or slide it shows, with the drawing text as a highlighted snippet, and that the file's `File:` page is found by its set's text. Saving a new revision of the set, deleting the slide, restoring the page and deleting the set each changed the results by the next page load, without editing the page. No product code changed.
+
+- **Finding files:** `Special:Search` looks only in the main namespace unless the reader chooses more. A file's page is found by its layer text only when the File namespace is searched (for example the **Multimedia** or **Everything** profile, or `ns6=1`). This is core behaviour.
+
 ## A refused page-owned save reaches the server — September 27, 2026
 
 The page-owned editor ran the editor's own checks before saving, so a value the server would refuse, such as a stroke width of 150, never reached page history. Instead the editor showed "⧼layers-save-validation-error⧽: Layer 1: Stroke width must be between $1 and $2", which names neither the layer nor the property. J79 found this in Chromium.
