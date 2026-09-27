@@ -17,8 +17,9 @@ module.exports = defineConfig( {
 	// Output directory for test results and traces
 	outputDir: 'test-results',
 	
-	// Global timeout for each test
-	timeout: 60000,
+	// Global timeout for each test. Page-owned acceptance specs make dozens of sequential API
+	// calls and must finish their cleanup; on the Windows-mounted test wiki each call takes about a second.
+	timeout: 180000,
 	
 	// Expect timeout
 	expect: {

@@ -60,6 +60,10 @@
 			"description": "Namespace IDs (for example 0 for the main namespace) all of whose pages may start owning drawings, in addition to LayersPageOwnedPilotOwners.",
 			"value": []
 		},
+		"LayersBindingReadMaxAge": {
+			"description": "Seconds for which browsers and the CDN may keep an anonymous reader's copy of the page-owned drawings shown on a page's current revision. Logged-in readers, older revisions and private wikis are never cached publicly. 0 disables.",
+			"value": 300
+		},
 		"LayersEnable": {
 			"description": "Master switch for Layers extension functionality",
 			"value": true

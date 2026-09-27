@@ -12,6 +12,7 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
+use Wikimedia\TestingAccessWrapper;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersRead
@@ -25,6 +26,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private ?\MediaWiki\Api\ApiMain $apiMain = null;
 	/** @var callable|null */
 	private $boundReader = null;
+	private int $bindingMaxAge = 0;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -38,7 +40,8 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$reader = $this->reader ?? new PageReadService( new PageHistoryAccess( $s->getRevisionLookup() ),
 					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ) );
 				return new ApiLayersRead( $main, $name, $reader, $s->getTitleFactory(),
-					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader );
+					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader,
+					$this->bindingMaxAge );
 			} ]
 		] ) );
 	}
@@ -98,6 +101,34 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->expectApiErrorCode( 'layers-revision-unavailable' );
 		$this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
 			'revid' => $id, 'binding' => $binding ], null, false, $user );
+	}
+
+	public function testAnonymousReadOfCurrentDrawingsIsBrieflyCacheable(): void {
+		[ $title, $id, $user ] = $this->publish();
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, $this->ownerKeys );
+		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
+		$this->bindingMaxAge = 300;
+		$binding = 'v1:' . $title->getArticleID() . ':' . json_decode( file_get_contents(
+			__DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) )->surfaces[0]->id;
+		$anon = $this->getServiceContainer()->getUserFactory()->newAnonymous();
+		$read = function ( int $revision, array $extra = [] ) use ( $title, $binding, $anon ): array {
+			$result = $this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+				'revid' => $revision, 'binding' => $binding ] + $extra, null, false, $anon )[0]['layersread'];
+			$control = TestingAccessWrapper::newFromObject( $this->apiMain )->mCacheControl;
+			return [ array_keys( $result['bindings'] ), $this->apiMain->getCacheMode(), $control ];
+		};
+		// A client-chosen age does not apply; the module's does.
+		$this->assertSame( [ [ $binding ], 'anon-public-user-private', [ 'max-age' => 300, 's-maxage' => 300 ] ],
+			$read( $id, [ 'maxage' => 3600, 'smaxage' => 3600 ] ) );
+
+		// Once the revision is no longer current it can be hidden, so reads of it stay private.
+		$newId = TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $user, $id,
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Later snapshot',
+			new WikitextContent( 'Later text' ) );
+		$this->assertSame( [ [ $binding ], 'private', [ 'max-age' => 0, 's-maxage' => 0 ] ], $read( $id ) );
+		$this->assertSame( 'anon-public-user-private', $read( $newId )[1] );
+		$this->bindingMaxAge = 0;
+		$this->assertSame( 'private', $read( $newId )[1] );
 	}
 
 	public function testHiddenHistoricalContentIsUnavailable(): void {

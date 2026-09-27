@@ -70,8 +70,10 @@ class PageOwnedPilot {
 	 * @return ApiLayersRead
 	 */
 	public function newReadApi( ApiMain $main, string $name ): ApiLayersRead {
+		$config = $this->services->getMainConfig();
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
-			$this->enabled, $this->scope, [ $this, 'prepareBoundViewers' ] );
+			$this->enabled, $this->scope, [ $this, 'prepareBoundViewers' ],
+			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0 );
 	}
 
 	/**
