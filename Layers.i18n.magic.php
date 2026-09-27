@@ -13,5 +13,6 @@ $magicWords['en'] = [
 	'setlayers' => [ 0, 'setlayers' ],
 	'layers_hint' => [ 0, 'layers_hint' ],
 	'layers_cargo_store' => [ 0, 'layers_cargo_store' ],
+	'layers_fields' => [ 0, 'layers_fields' ],
 	'Slide' => [ 0, 'slide', 'Slide' ],
 ];

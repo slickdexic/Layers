@@ -260,6 +260,37 @@ then query it:
 - Only page-owned drawings are stored. Shared layer sets on files are not,
   and a revision whose content is hidden stores no rows.
 
+### Values from the page in drawing text: `{{#layers_fields:}}` (pilot)
+
+A page-owned drawing can show values that the page supplies, such as data
+from a Cargo query. Type `{{name}}` in a text, text box or callout layer in
+the editor, then give the value on the owner page:
+
+```text
+{{#layers_fields: presentation
+ | pressure = {{#cargo_query:tables=Pumps|fields=pressure|where=tag='P-101'|no html}}
+ | status = Running
+}}
+```
+
+- The first parameter is the drawing ID, the last part of the drawing's
+  `layersbinding=` (`v1:228:presentation` → `presentation`).
+- Each `name = value` is expanded like any wikitext and shown as plain text:
+  links keep their text, formatting and tags are dropped. Names use letters,
+  digits, spaces, dots, `-` and `_`; values are cut at 1,000 characters.
+  Several calls may give values for the same drawing; if one name gets two
+  different values, its token stays as typed.
+- Values are ordinary page output, so they update whenever the page is
+  rendered again (an edit, a purge or parser cache expiry), exactly like a
+  `#cargo_query` shown in the page text.
+- They are shown only where the page shows the drawing. The editor, the
+  history viewer, diffs, search and `{{#layers_cargo_store:}}` see the
+  `{{name}}` tokens as typed. A token whose name the page does not give stays
+  as typed. Formatting must cover the whole token in rich text, because each
+  formatted run is filled on its own.
+- The function shows nothing, or an error in its place when a parameter is
+  malformed. At most 100 fields per drawing and 50 drawings per page.
+
 ---
 
 ## How It Works

@@ -4,6 +4,66 @@
 	const HOSTS = '.layers-bound-slide, img.layers-bound-file';
 	// Diff pages show the same drawing at two revisions; the server emits these hosts per request.
 	const COMPARISON_HOSTS = '.layers-drawing-diff-view';
+	// {{name}} in drawing text shows the value the page gives through {{#layers_fields:}}.
+	const FIELD_TOKEN = /\{\{\s*([A-Za-z0-9_][A-Za-z0-9_ .-]{0,63}?)\s*\}\}/g;
+	/**
+	 * @param {Object} bundle Bound drawing
+	 * @param {Object|undefined} fields Plain-text values by name for this drawing
+	 * @return {Object} The bundle, or a copy whose text layers show the values; unknown names stay as written
+	 */
+	function withFields( bundle, fields ) {
+		if ( !fields || typeof fields !== 'object' || !Array.isArray( bundle.surface.layers ) ) {
+			return bundle;
+		}
+		const fill = ( text ) => text.replace( FIELD_TOKEN, ( token, name ) =>
+			Object.prototype.hasOwnProperty.call( fields, name ) && typeof fields[ name ] === 'string' ? fields[ name ] : token );
+		const layers = bundle.surface.layers.map( ( layer ) => {
+			if ( !layer || typeof layer !== 'object' ) {
+				return layer;
+			}
+			const copy = Object.assign( {}, layer );
+			if ( typeof copy.text === 'string' ) {
+				copy.text = fill( copy.text );
+			}
+			if ( Array.isArray( copy.richText ) ) {
+				copy.richText = copy.richText.map( ( run ) => run && typeof run.text === 'string' ?
+					Object.assign( {}, run, { text: fill( run.text ) } ) : run );
+			}
+			return copy;
+		} );
+		return Object.assign( {}, bundle, { surface: Object.assign( {}, bundle.surface, { layers } ) } );
+	}
+	/**
+	 * @param {Object|null} config wgLayersDrawingFields: a set whose keys are JSON [ drawing, name, value ] entries
+	 * @return {Object} Values by drawing ID and name; a name given two different values is left out
+	 */
+	function fieldsFromConfig( config ) {
+		const fields = {};
+		const conflicts = new Set();
+		Object.keys( config && typeof config === 'object' ? config : {} ).forEach( ( key ) => {
+			let entry;
+			try {
+				entry = JSON.parse( key );
+			} catch ( e ) {
+				return;
+			}
+			if ( !Array.isArray( entry ) || entry.length !== 3 || !entry.every( ( part ) => typeof part === 'string' ) ) {
+				return;
+			}
+			const [ drawing, name, value ] = entry;
+			const values = Object.prototype.hasOwnProperty.call( fields, drawing ) ? fields[ drawing ] :
+				( fields[ drawing ] = {} );
+			if ( Object.prototype.hasOwnProperty.call( values, name ) && values[ name ] !== value ) {
+				conflicts.add( JSON.stringify( [ drawing, name ] ) );
+			}
+			values[ name ] = value;
+		} );
+		conflicts.forEach( ( key ) => {
+			const [ drawing, name ] = JSON.parse( key );
+			delete fields[ drawing ][ name ];
+		} );
+		return fields;
+	}
 	function mount( container, bundle, options ) {
 		let view;
 		try {
@@ -27,17 +87,21 @@
 			}
 		};
 	}
-	function mountInline( root, bundles ) {
+	function mountInline( root, bundles, fields ) {
 		const disposers = [];
 		root.querySelectorAll( HOSTS ).forEach( ( container ) => {
 			const binding = container.getAttribute( 'data-layers-binding' );
 			if ( !bundles || !Object.prototype.hasOwnProperty.call( bundles, binding ) ) {
 				return;
 			}
-			const bundle = bundles[ binding ];
+			let bundle = bundles[ binding ];
 			if ( !bundle || !bundle.surface ||
 				String( bundle.revisionId ) !== container.getAttribute( 'data-layers-revision' ) ) {
 				return;
+			}
+			if ( fields && typeof fields === 'object' &&
+				Object.prototype.hasOwnProperty.call( fields, bundle.surface.id ) ) {
+				bundle = withFields( bundle, fields[ bundle.surface.id ] );
 			}
 			const isFile = container.tagName === 'IMG';
 			if ( isFile !== ( bundle.surface.kind === 'image' || bundle.surface.kind === 'pdf' ) ) {
@@ -66,9 +130,10 @@
 	 * @param {Object} api mw.Api-compatible client
 	 * @param {string} owner Displayed page name
 	 * @param {number} revisionId Displayed revision; placeholders from other revisions stay unavailable
+	 * @param {Object} [fields] Page-supplied field values by drawing ID
 	 * @return {Promise<Function>} Disposer
 	 */
-	function loadInline( root, api, owner, revisionId ) {
+	function loadInline( root, api, owner, revisionId, fields ) {
 		const bindings = [];
 		root.querySelectorAll( HOSTS ).forEach( ( host ) => {
 			const binding = host.getAttribute( 'data-layers-binding' );
@@ -87,7 +152,7 @@
 				.then( ( response ) => ( response && response.layersread && response.layersread.bindings ) || {} )
 				.catch( () => ( {} ) ) );
 		}
-		return Promise.all( requests ).then( ( parts ) => mountInline( root, Object.assign( {}, ...parts ) ) );
+		return Promise.all( requests ).then( ( parts ) => mountInline( root, Object.assign( {}, ...parts ), fields ) );
 	}
 	/**
 	 * Fetch and mount each comparison host's drawing at its own revision.
@@ -132,6 +197,8 @@
 		module.exports.mountInline = mountInline;
 		module.exports.loadInline = loadInline;
 		module.exports.loadComparison = loadComparison;
+		module.exports.withFields = withFields;
+		module.exports.fieldsFromConfig = fieldsFromConfig;
 	}
 	if ( typeof $ === 'function' && typeof mw !== 'undefined' ) {
 		$( () => {
@@ -146,7 +213,8 @@
 			} else {
 				const api = new mw.Api();
 				Promise.all( [
-					loadInline( document, api, mw.config.get( 'wgPageName' ), mw.config.get( 'wgRevisionId' ) ),
+					loadInline( document, api, mw.config.get( 'wgPageName' ), mw.config.get( 'wgRevisionId' ),
+						fieldsFromConfig( mw.config.get( 'wgLayersDrawingFields' ) ) ),
 					loadComparison( document, api, mw.config.get( 'wgPageName' ) )
 				] ).then( ( disposers ) => {
 					const inlineDispose = () => disposers.forEach( ( part ) => part() );

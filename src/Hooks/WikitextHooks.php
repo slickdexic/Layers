@@ -382,6 +382,9 @@ class WikitextHooks {
 		// is used when ThumbnailBeforeProduceHTML fires for non-wikitext renders.
 		$parser->setFunctionHook( 'layers_hint', [ self::class, 'parserFunctionLayersHint' ] );
 
+		// {{#layers_fields:drawing|name=value}} fills {{name}} tokens in a page-owned drawing's text.
+		$parser->setFunctionHook( 'layers_fields', [ DrawingFields::class, 'parserFunction' ] );
+
 		// {{#layers_cargo_store:}} hands page-owned drawing rows to Cargo's own #cargo_store.
 		if ( class_exists( \CargoStore::class ) ) {
 			$parser->setFunctionHook( 'layers_cargo_store', [ PageOwnedCargoStore::class, 'parserFunction' ],

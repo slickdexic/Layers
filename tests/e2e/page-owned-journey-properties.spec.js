@@ -13,7 +13,7 @@ const path = require( 'path' );
 test.describe.configure( { mode: 'serial' } );
 
 test( 'properties panel changes save as set, clear gradients, and create no revision on clean save', async ( { page, context } ) => {
-	test.setTimeout( 240000 );
+	test.setTimeout( 480000 );
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );

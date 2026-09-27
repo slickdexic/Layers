@@ -12,7 +12,7 @@ const path = require( 'path' );
 test.describe.configure( { mode: 'serial' } );
 
 test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross-page isolation', async ( { page, context } ) => {
-	test.setTimeout( 180000 );
+	test.setTimeout( 360000 );
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );

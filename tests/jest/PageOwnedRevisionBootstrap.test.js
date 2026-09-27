@@ -44,6 +44,42 @@ describe( 'Historical viewer bootstrap', () => {
 		dispose();
 		expect( cleanup ).toHaveBeenCalledTimes( 2 );
 	} );
+	it( 'fills {{name}} tokens from the page fields of that drawing only, leaving the bundle untouched', () => {
+		const surface = Object.assign( {}, fixture.surfaces[ 0 ], { layers: [
+			Object.assign( {}, fixture.surfaces[ 0 ].layers[ 0 ], { text: 'Pressure {{ pressure }}, {{unknown}}' } ),
+			{ id: 'rich', type: 'textbox', x: 1, y: 1, width: 50, height: 20, text: '',
+				richText: [ { text: 'Status: ' }, { text: '{{status}}', style: { fontWeight: 'bold' } } ] }
+		] } );
+		const fielded = { owner: 'Owner', revisionId: 42, surface };
+		const el = document.createElement( 'div' );
+		el.className = 'layers-bound-slide';
+		el.dataset.layersBinding = 'v1:10:a';
+		el.dataset.layersRevision = '42';
+		container.append( el );
+		mount.mountInline( container, { 'v1:10:a': fielded },
+			{ presentation: { pressure: '12 bar', status: 'OK', number: 5 }, other: { unknown: 'no' } } );
+		const drawn = window.Layers.Viewer.renderPageOwnedRevision.mock.calls[ 0 ][ 1 ];
+		expect( drawn.layers[ 0 ].text ).toBe( 'Pressure 12 bar, {{unknown}}' );
+		expect( drawn.layers[ 1 ].richText ).toEqual( [ { text: 'Status: ' },
+			{ text: 'OK', style: { fontWeight: 'bold' } } ] );
+		expect( surface.layers[ 0 ].text ).toBe( 'Pressure {{ pressure }}, {{unknown}}' );
+		// A value that is not text is ignored.
+		expect( mount.withFields( fielded, { pressure: 5 } ).surface.layers[ 0 ].text )
+			.toBe( 'Pressure {{ pressure }}, {{unknown}}' );
+		expect( mount.withFields( fielded, undefined ) ).toBe( fielded );
+	} );
+	it( 'builds field values from the page entries, leaving out conflicting and malformed ones', () => {
+		const entry = ( ...parts ) => JSON.stringify( parts );
+		expect( mount.fieldsFromConfig( {
+			[ entry( 'presentation', 'pressure', '12 bar' ) ]: true,
+			[ entry( 'presentation', 'status', 'OK' ) ]: true,
+			[ entry( 'presentation', 'status', 'Stopped' ) ]: true,
+			[ entry( 'other', 'a', '' ) ]: true,
+			[ entry( 'bad', 5, 'x' ) ]: true,
+			'not json': true
+		} ) ).toEqual( { presentation: { pressure: '12 bar' }, other: { a: '' } } );
+		expect( mount.fieldsFromConfig( null ) ).toEqual( {} );
+	} );
 	it( 'shows a fixed failure without attempting a fallback for invalid bootstrap data', () => {
 		mount( container, null )();
 		expect( container.textContent ).toBe( 'layers-page-history-render-failed' );

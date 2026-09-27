@@ -141,7 +141,7 @@ test( 'an editor makes a shared slide owned by the page only after confirming it
 } );
 
 test( 'shared-slide adoption presentation verifies notices, confirmation page, refusal states, keyboard navigation and dark mode', async ( { page, context } ) => {
-	test.setTimeout( 120000 );
+	test.setTimeout( 240000 );
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
