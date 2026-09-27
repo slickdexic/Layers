@@ -102,6 +102,7 @@
 	"layers-save-success": "Notification message shown after layers are saved successfully",
 	"layers-saving": "Status message shown while layers are being saved",
 	"layers-save-error": "Error message shown when saving layers fails",
+	"layers-save-validation-error": "Start of the error shown when the editor's own checks refuse a save of shared layers; followed by a colon and the problems found, such as \"Layer 1: Stroke width must be between 0 and 100\".",
 	"layers-panel-title": "Heading for the layers panel",
 	"layers-panel-subtitle": "Helper text below the layers panel title",
 	"layers-empty": "Message shown when there are no layers yet",

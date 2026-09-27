@@ -810,7 +810,7 @@
 				return;
 			}
 
-			const message = 'Validation errors:\n' + errors.join( '\n' );
+			const message = this.getMessage( 'layers-save-validation-error' ) + ':\n' + errors.join( '\n' );
 
 			// Use MediaWiki notification if available
 			if ( window.mw && window.mw.notify ) {

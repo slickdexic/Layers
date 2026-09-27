@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## A refused page-owned save reaches the server — September 27, 2026
+
+The page-owned editor ran the editor's own checks before saving, so a value the server would refuse, such as a stroke width of 150, never reached page history. Instead the editor showed "⧼layers-save-validation-error⧽: Layer 1: Stroke width must be between $1 and $2", which names neither the layer nor the property. J79 found this in Chromium.
+
+- **Page-owned saves** now go straight to the server, whose refusal names the layer and property ("The layer "Warning box" has a "strokeWidth" value that cannot be stored. Your changes were not saved."). The server's rules are the only ones for page history.
+- **Ordinary saves** of shared layer sets keep the editor's checks, and the message is now complete: "Layer validation failed: Layer 1: Stroke width must be between 0 and 100". The message key was missing, and the limits in the validator's range, type and count messages were never filled in.
+- **One notice per failure:** a failed ordinary save no longer adds a second notice with the raw server text, "Validation failed" or "Data too large", or the English "Save failed: validation error. Check browser console (F12) for details." Failures `APIManager` has already shown are rejected with `reported: true`, and the editor adds nothing.
+- **Checker:** `verify-i18n-wiring.js` did not see `window.layersMessages.get(` calls, which is how the missing key passed every gate. It sees them now and found no other missing key.
+
+Fresh verification: J79's spec `page-owned-refusal-message.spec.js`, corrected so the first Save must reach the server, **1 passed** (47 s); with client validation put back for page-owned saves it fails waiting for the request. A one-off Chromium check of the ordinary file editor showed exactly one notice, "Layer validation failed: Layer 1: Stroke width must be between 0 and 100", and no save request. Jest **15,029** (a page-owned save skips the client validator, a reported failure is not repeated, a range message names its limits).
+
 ## Shared layer sets and slides show values from the page too — September 26, 2026
 
 `{{#layers_fields:}}` worked only for page-owned drawings, which need the page history pilot. The first parameter may now also name a file, `{{#layers_fields: File:Pump.png | pressure = … }}`, for every shared layer set of that file the page shows, or a slide, `{{#layers_fields: Slide:Line_overview | … }}`. So Cargo data can appear in annotations on any wiki.

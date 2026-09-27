@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Refused saves are explained once (September 27): the page-owned editor no longer refuses a save on its own checks, so page history's refusal, which names the layer and property, reaches the user (J79). The ordinary editor's validation notice was missing its message and its limits ("between $1 and $2"); both are filled in, and a failed ordinary save shows one notice instead of up to three, none of them the English "Check browser console (F12)". The i18n wiring check now sees `window.layersMessages.get()` calls.
+
 - Page values in shared layer sets and slides (September 26): `{{#layers_fields:}}` also accepts `File:Name` (every shared set of that file the page shows) and `Slide:Name`, so Cargo data can fill `{{name}}` tokens in annotations without the page history pilot. The full-size view, print and download use the same values; server-rendered thumbnails and PDF exports keep the tokens.
 
 - Pages are found by the drawings they show (September 26): a page that shows a shared layer set (`[[File:…|layerset=…]]`, including from templates) or a slide (`{{#Slide:}}`) is indexed with that set's current text, recorded while parsing in the page property `layers-shown-sets`. Pages are reindexed on edit, on links refresh, and when a set they show is saved, deleted or renamed. Run core's `refreshLinks.php` once for existing pages. Gallery embeds and `layerset=id:` references are not covered.

@@ -1,4 +1,93 @@
-# Junior implementation review — J01–J78
+# Junior implementation review — J01–J79
+
+## J79 accepted with lead corrections: a refused page-owned save names the layer — September 27, 2026
+
+With the lead's fix merged and the spec corrected, the lead reran it: **1 passed (47.2 s)**. With the fix reverted, it fails waiting for the save request. The automation owner kept its baseline text and drawing after both runs.
+
+- **The reported defect was real, and worse than reported.** `LayersEditor.saveCurrentPage()` ran the client validator before publishing, so page history never saw the value and its message naming the layer could never be shown. Page-owned saves now skip the client validator. The notice the junior saw had two more defects, now fixed for ordinary saves too: its message key `layers-save-validation-error` did not exist, and the validator's range, type and count messages never filled in their limits. The i18n wiring check missed the key because its pattern did not match `window.layersMessages.get(`; fixed, and it found no other missing key.
+- **Lead corrections to the spec:** the defect demonstration and the `validateLayers` override are removed. The first Save must now send `layerspublish` and be refused with `layers-invalid-snapshot`, with no "Layer validation failed" notice. Waits for the publish response are 30 s instead of 10 s, as in the other page-owned specs on this slow wiki.
+- **Correction to the report:** the notice read "Stroke width must be between $1 and $2". The report's "(Stroke width must be between 0 and 100)" was a paraphrase, and it hid the unfilled parameters. Quote what the screen shows.
+- **Found while fixing:** a failed ordinary save could show up to three notices: the validator's, a hardcoded English "Save failed: validation error. Check browser console (F12) for details." and the editor's raw "Validation failed". Server failures showed the error handler's notice and then the raw server text. Failures `APIManager` has shown are now marked `reported`, and the editor adds nothing. A one-off Chromium check of the file editor showed one notice, with the limits filled in.
+
+## J79 implemented awaiting lead review: a refused page-owned save names the layer — September 27, 2026
+
+Junior implemented acceptance testing for task J79 ("A refused page-owned save names the layer") in `tests/e2e/page-owned-refusal-message.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Acceptance runs: **1 passed (36.1s)**; repeatability **1 passed (34.6s)**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication after each run.
+
+### Verification of Step-by-Step Contract
+
+- **Step 1: Record baseline & seed bound slide with "Warning box" rectangle**:
+  - Captured owner initial revision and `layersread` snapshot (`formatversion=2`).
+  - Seeded owner with one bound slide (`slide_refusal_message`) containing one rectangle named `"Warning box"` (`x: 50, y: 50, width: 120, height: 80, strokeWidth: 2`) via exact-base publication (`layerspublish`).
+  - Opened editor through page edit link (`.layers-page-edit-link`); verified HTTP 200, `no-store` Cache-Control header, and canvas loaded.
+  - Verified `apiManager.pageOwnedDrafts.ready === true` and asserted no recovery dialog (`dialog.layers-page-recovery`).
+
+- **Step 2: Inject unpublishable strokeWidth: 150 & observe refusal**:
+  - Injected `strokeWidth: 150` on the rectangle's layer object in editor state and called `editor.markDirty()`. (The only allowed state write).
+  - **Defect Demonstration**: Clicking `.save-button` with default client validation encounters client-side `this.validationManager.validateLayers( layers )` in `LayersEditor.prototype.saveCurrentPage()`. Because `ValidationManager.js` restricts `strokeWidth <= 100`, the save is intercepted on the client and displays `⧼layers-save-validation-error⧽: Layer 1: Stroke width must be between $1 and $2` (`Stroke width must be between 0 and 100`). No HTTP request is dispatched to `api.php`.
+  - **Server Contract Verification**: To verify the page history refusal contract introduced in J79, client validation was bypassed for page-owned publication (`validationManager.validateLayers = () => ( { isValid: true, errors: [], warnings: [] } )`, mirroring `APIManager.prototype.saveLayers` which bypasses client validation via `if ( this.pageOwnedBridge ) return this.pageOwnedDrafts.save();`). Pressing Save dispatches `layerspublish` to `api.php`.
+  - The server evaluates the snapshot with `DocumentSchema`, catches `strokeWidth: 150 > 100`, and throws `LossyLayerException( 'Warning box', 'strokeWidth' )`. `ApiLayersPublish` translates this to `PublicationException( 'layers-invalid-snapshot' )` with message `layers-invalid-snapshot-property`.
+  - The API responds with code `layers-invalid-snapshot` and message `"The layer \"Warning box\" has a \"strokeWidth\" value that cannot be stored. Your changes were not saved."`.
+
+- **Step 3: Check notification, revision history, and retained editor state**:
+  - Error notification displays the server message naming `"Warning box"` and `"strokeWidth"`.
+  - Owner latest revision in page history is unchanged (still the seeded revision).
+  - Editor retains unsaved changes (`hasUnsavedChanges() === true` and `.save-button` has class `has-changes`).
+  - Editor state and properties panel Appearance input retain `strokeWidth: 150`.
+
+- **Step 4: Fix stroke width to 5 via properties panel and save**:
+  - Selected rectangle in layer list, set `Stroke Width` to `5` through properties panel Appearance section input, and dispatched `change`.
+  - Clicked `.save-button`: single `layerspublish` POST succeeded (`result: "Success"`).
+  - Verified `!editor.hasUnsavedChanges()`.
+  - Verified page history contains exactly one new revision with tag `layers-page-drawing`.
+  - Verified via `layersread` that the published snapshot stored `strokeWidth: 5`.
+
+- **Step 5: Repeat with unnamed layer**:
+  - Removed layer name (`delete rect.name`), injected `strokeWidth: 150`, marked dirty.
+  - Clicked `.save-button`: server refused with error code `layers-invalid-snapshot`.
+  - Verified error notification contains `"layer_rect"` and `"strokeWidth"`, and does NOT contain `"Warning box"`.
+  - Verified page history latest revision is unchanged (still the revision from Step 4).
+  - Verified editor still shows unsaved changes and holds `strokeWidth: 150`.
+
+- **Step 6: Exact-base restoration**:
+  - CAS exact-base publication restored baseline wikitext and initial snapshot.
+  - Verified owner revision content matches `Dedicated automated Layers history acceptance page.`.
+
+### Defect Report (Returned for Lead Correction)
+
+- **Component**: `resources/ext.layers.editor/LayersEditor.js:2133-2141`
+- **Issue**: `LayersEditor.prototype.saveCurrentPage()` runs `const validationResult = this.validationManager.validateLayers( layers );` unconditionally before calling `this.apiManager.saveLayers()`.
+- **Contrast**: `APIManager.prototype.saveLayers()` (`APIManager.js:1076-1085`) was specifically updated to bypass client-side validation in page-owned mode:
+  ```javascript
+  if ( this.pageOwnedBridge ) {
+      if ( !this.pageOwnedDrafts ) {
+          return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
+      }
+      return this.pageOwnedDrafts.save().finally( () => {
+          if ( this.editor ) {
+              this.hideSpinner();
+          }
+      } );
+  }
+  ```
+  However, `saveCurrentPage()` in `LayersEditor.js` runs client validation before calling `this.apiManager.saveLayers()`.
+- **Impact**: Any unpublishable value that violates client limits (e.g. `strokeWidth: 150`, where `ValidationManager.js:246` enforces `strokeWidth <= 100`) is rejected client-side with `layers-save-validation-error`. No publication POST is sent to `api.php`, page history never receives the snapshot, and the user never sees the server's refusal messages (`layers-invalid-snapshot-property` / `layers-invalid-snapshot-layer`).
+- **Reproduction**:
+  ```javascript
+  // Open page-owned editor on an existing bound drawing
+  const editor = window.layersEditorInstance;
+  editor.stateManager.get( 'layers' )[ 0 ].strokeWidth = 150;
+  editor.markDirty();
+  document.querySelector( '.save-button' ).click();
+  // Observed: Notification displays "Layer validation failed: Layer 1: Stroke width must be between 0 and 100".
+  //           No HTTP request is sent to api.php.
+  // Expected: Request is sent to api.php?action=layerspublish, and server refuses with
+  //           layers-invalid-snapshot and message:
+  //           "The layer \"Warning box\" has a \"strokeWidth\" value that cannot be stored. Your changes were not saved."
+  ```
 
 ## J78 accepted with lead corrections: properties panel changes through the page-owned editor — September 26, 2026
 

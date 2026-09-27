@@ -216,7 +216,7 @@ class ValidationManager {
 		} else {
 			const validTypes = [ 'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape', 'marker', 'dimension', 'angleDimension' ];
 			if ( !validTypes.includes( layer.type ) ) {
-				errors.push( this.getMessage( 'layers-validation-type-invalid' ) );
+				errors.push( this.formatMessage( 'layers-validation-type-invalid', layer.type ) );
 			}
 		}
 
@@ -224,7 +224,7 @@ class ValidationManager {
 		const coordFields = [ 'x', 'y', 'width', 'height', 'radius', 'radiusX', 'radiusY', 'rotation' ];
 		coordFields.forEach( field => {
 			if ( layer[ field ] !== undefined && ( typeof layer[ field ] !== 'number' || isNaN( layer[ field ] ) ) ) {
-				errors.push( this.getMessage( 'layers-validation-coordinate-invalid' ).replace( '$1', field ) );
+				errors.push( this.formatMessage( 'layers-validation-coordinate-invalid', field ) );
 			}
 		} );
 
@@ -234,31 +234,31 @@ class ValidationManager {
 				errors.push( this.getMessage( 'layers-validation-text-type' ) );
 			}
 			if ( layer.text && layer.text.length > 1000 ) {
-				errors.push( this.getMessage( 'layers-validation-text-too-long' ) );
+				errors.push( this.formatMessage( 'layers-validation-text-too-long', 1000 ) );
 			}
 			// FIX 2025-11-14: Updated max from 200 to 1000; min corrected to 1
 			if ( layer.fontSize != null && ( typeof layer.fontSize !== 'number' || layer.fontSize < 1 || layer.fontSize > 1000 ) ) {
-				errors.push( this.getMessage( 'layers-validation-fontsize-range' ) );
+				errors.push( this.formatMessage( 'layers-validation-fontsize-range', 1, 1000 ) );
 			}
 		}
 
 		// Validate stroke width
 		if ( layer.strokeWidth && ( typeof layer.strokeWidth !== 'number' || layer.strokeWidth < 0 || layer.strokeWidth > 100 ) ) {
-			errors.push( this.getMessage( 'layers-validation-strokewidth-range' ) );
+			errors.push( this.formatMessage( 'layers-validation-strokewidth-range', 0, 100 ) );
 		}
 
 		// Validate opacity
 		const opacityFields = [ 'opacity', 'fillOpacity', 'strokeOpacity' ];
 		opacityFields.forEach( field => {
 			if ( layer[ field ] !== undefined && ( typeof layer[ field ] !== 'number' || layer[ field ] < 0 || layer[ field ] > 1 ) ) {
-				errors.push( this.getMessage( 'layers-validation-opacity-range' ) );
+				errors.push( this.formatMessage( 'layers-validation-opacity-range', 0, 1 ) );
 			}
 		} );
 
 		// Validate sides for polygons/stars
 		if ( ( layer.type === 'polygon' || layer.type === 'star' ) && layer.sides ) {
 			if ( typeof layer.sides !== 'number' || layer.sides < 3 || layer.sides > 20 ) {
-				errors.push( this.getMessage( 'layers-validation-sides-range' ) );
+				errors.push( this.formatMessage( 'layers-validation-sides-range', 3, 20 ) );
 			}
 		}
 
@@ -266,7 +266,7 @@ class ValidationManager {
 		const blurFields = [ 'shadowBlur', 'glowBlur' ];
 		blurFields.forEach( field => {
 			if ( layer[ field ] && ( typeof layer[ field ] !== 'number' || layer[ field ] < 0 || layer[ field ] > 100 ) ) {
-				errors.push( this.getMessage( 'layers-validation-blurradius-range' ) );
+				errors.push( this.formatMessage( 'layers-validation-blurradius-range', 0, 100 ) );
 			}
 		} );
 
@@ -294,7 +294,7 @@ class ValidationManager {
 		}
 
 		if ( layers.length > maxCount ) {
-			errors.push( this.getMessage( 'layers-validation-too-many-layers' ) );
+			errors.push( this.formatMessage( 'layers-validation-too-many-layers', maxCount ) );
 			return { isValid: false, errors, warnings };
 		}
 
@@ -308,7 +308,7 @@ class ValidationManager {
 			// Check for duplicate IDs
 			if ( layer.id ) {
 				if ( ids.has( layer.id ) ) {
-					errors.push( this.getMessage( 'layers-validation-duplicate-id' ).replace( '$1', layer.id ) );
+					errors.push( this.formatMessage( 'layers-validation-duplicate-id', layer.id ) );
 				}
 				ids.add( layer.id );
 			}
@@ -376,6 +376,16 @@ class ValidationManager {
 			return fallback || key;
 		}
 		return window.layersMessages.get( key, fallback );
+	}
+
+	/**
+	 * @param {string} key Message key
+	 * @param {...*} params Values for $1, $2, …
+	 * @return {string}
+	 */
+	formatMessage( key, ...params ) {
+		return params.reduce( ( text, param, i ) => text.split( '$' + ( i + 1 ) ).join( String( param ) ),
+			this.getMessage( key ) );
 	}
 
 	/**

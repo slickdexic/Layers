@@ -2130,7 +2130,9 @@ class LayersEditor {
 			} );
 		}
 
-		const validationResult = this.validationManager.validateLayers( layers );
+		// Page history validates strictly on the server, whose refusal names the layer and property.
+		const validationResult = this.config && this.config.pageOwned ? null :
+			this.validationManager.validateLayers( layers );
 		
 		if ( validationResult && !validationResult.isValid ) {
 			const validationMsg = window.layersMessages ?
@@ -2162,6 +2164,9 @@ class LayersEditor {
 				// handle here as a fallback for unexpected rejections.
 				if ( this.uiManager ) {
 					this.uiManager.hideSpinner();
+				}
+				if ( error && error.reported ) {
+					return false;
 				}
 				let errorMsg = ( error && error.info ) ? error.info :
 					( error && error.message ) ? error.message :

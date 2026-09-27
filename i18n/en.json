@@ -101,6 +101,7 @@
 	"layers-save-success": "Layers saved successfully",
 	"layers-saving": "Saving layers...",
 	"layers-save-error": "Error saving layers",
+	"layers-save-validation-error": "Layer validation failed",
 	"layers-error-init": "Failed to initialize Layers editor",
 	"layers-permission-denied": "You do not have permission to edit layers",
 	"layers-not-file-page": "Layers can only be edited on file pages",

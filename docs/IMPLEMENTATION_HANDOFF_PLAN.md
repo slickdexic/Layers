@@ -1,5 +1,24 @@
 # Layers implementation handoff plan
 
+## Page-owned saves reach the server; J79 accepted; J80 ready — September 27, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: page history has one set of rules, the server's; the page-owned editor must not refuse a save on its own checks. A save failure `APIManager` has already shown is rejected with `reported: true`, and the editor shows nothing more for it. **J79 is accepted** with lead corrections (packet below; see the review ledger). J80 is ready. Earlier entries below are historical.
+
+### J80 — Search finds a page by the shared drawing it shows (ready)
+
+**Purpose:** prove in real Chromium that `Special:Search` finds a page by words that exist only in a shared layer set or slide the page shows, shows the drawing text as the snippet, and stops finding the page once it no longer shows them. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/shown-set-search.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. The spec may create, save and delete (`layersdelete`) only its own shared set `j80-search-probe` on the first JPEG or PNG file and its own slide `J80_Search_Probe`, as `page-owned-journey-acceptance.spec.js` does for its J65 sets. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes. Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`.
+
+1. Make three words for this run: letters only, at least ten long, random (for example "probe" plus random letters). Check that `Special:Search` finds nothing for each. Record the owner's current revision, main text and `layersread` snapshot.
+2. Save the set `j80-search-probe` with one text layer containing word 1, and the slide `J80_Search_Probe` with one text layer containing word 2. Publish the owner's main text plus `[[File:<that file>|layerset=j80-search-probe|200px]]` and `{{#Slide:J80_Search_Probe}}` by exact-base publication, with the recorded snapshot unchanged.
+3. In Chromium, open `Special:Search` with `fulltext=1` for words 1 and 2: the owner is a result, and its snippet contains the word highlighted (`.searchmatch`). The index may update after the request returns; reload for up to 60 s and record how long it took. Record whether the file's `File:` page is also a result for word 1 (it should be; it has no drawing snippet, a known limit).
+4. Save a new revision of the set, replacing word 1 with word 3, without editing the owner. Word 3 finds the owner; word 1 no longer does.
+5. Delete the slide with `layersdelete`. Word 2 no longer finds the owner.
+6. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup, then delete the set. Word 3 no longer finds the owner. In cleanup, whatever happened, restore that same snapshot (never an empty one) and delete the set and slide if they exist.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
 ## Shared layer sets and slides show page values — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `ext.layers.shared/DrawingFields.js` is the only client code that fills `{{name}}` tokens, and `Hooks\DrawingFields::drawingKey()` the only server code that names a drawing (`File:<DB key>`, `Slide:<name>`, page-owned ID). A new viewer path must call `fillLayers()` with `forDrawing()` before drawing. Stored data, search and exports keep the tokens. J79 remains queued. Earlier entries below are historical.
@@ -16,7 +35,7 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_fields:}
 
 See the three [current status](CURRENT_STATUS.md) entries. Contracts: `DrawingSearchText` is the only source of drawing words for search; a new write path for file sets must go through `CacheInvalidationTrait` so the file page is reindexed. A refused page-owned save reports `layers-invalid-snapshot` with a message naming the layer and property; the publish client shows server text for that code only. Only anonymous binding reads of the current revision may be public; keep every other `layersread` response private. J79 below is ready for when juniors return. Earlier entries below are historical.
 
-### J79 — A refused page-owned save names the layer (ready)
+### J79 — A refused page-owned save names the layer (accepted)
 
 **Purpose:** prove in real Chromium that when page history refuses a drawing, the editor names the layer and property, keeps the unsaved work, and saves once the value is fixed. Acceptance testing only; report defects for lead correction.
 
@@ -30,6 +49,10 @@ See the three [current status](CURRENT_STATUS.md) entries. Contracts: `DrawingSe
 6. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+**Status:** implemented awaiting lead review; spec `tests/e2e/page-owned-refusal-message.spec.js` passed (**1 passed**, 36.1s; repeatability **1 passed**, 34.6s); ESLint clean (**0 errors, 0 warnings**). Clean CAS exact-base restoration confirmed after each run. One integration defect reported for lead correction: client-side validation in `LayersEditor.prototype.saveCurrentPage()` intercepts `strokeWidth > 100` before reaching `apiManager.saveLayers()` and page history. Full details in the review ledger.
+
+**Accepted** with lead corrections, September 27: the defect is fixed and the spec no longer overrides the validator (see the review ledger).
 
 ## Properties panel values save as set; J78 accepted — September 26, 2026
 

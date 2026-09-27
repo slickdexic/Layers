@@ -1389,6 +1389,39 @@ describe('LayersEditor save error paths', () => {
         delete window.layersMessages;
     });
 
+    test('leaves page-owned drawings to the server, whose refusal names the layer', async () => {
+        window.mw = { notify: jest.fn() };
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.config = { pageOwned: true };
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue([{ id: 'r', type: 'rectangle', strokeWidth: 150 }]) };
+        editorInstance.validationManager = { validateLayers: jest.fn().mockReturnValue({ isValid: false, errors: [ 'x' ] }) };
+        editorInstance.uiManager = { showSpinner: jest.fn(), hideSpinner: jest.fn() };
+        editorInstance.apiManager = {
+            saveLayers: jest.fn().mockResolvedValue({ dirty: false, editorStateValid: true })
+        };
+        editorInstance.debugLog = jest.fn();
+
+        await expect(editorInstance.saveCurrentPage()).resolves.toBe(true);
+        expect(editorInstance.validationManager.validateLayers).not.toHaveBeenCalled();
+        expect(editorInstance.apiManager.saveLayers).toHaveBeenCalledTimes(1);
+    });
+
+    test('does not repeat a failure the API manager has already shown', async () => {
+        window.mw = { notify: jest.fn(), log: { error: jest.fn() } };
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.config = {};
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue([]) };
+        editorInstance.validationManager = { validateLayers: jest.fn().mockReturnValue({ isValid: true }) };
+        editorInstance.uiManager = { showSpinner: jest.fn(), hideSpinner: jest.fn() };
+        editorInstance.apiManager = {
+            saveLayers: jest.fn().mockRejectedValue({ code: 'layers-rate-limited', info: 'raw server text', reported: true })
+        };
+        editorInstance.debugLog = jest.fn();
+
+        await expect(editorInstance.saveCurrentPage()).resolves.toBe(false);
+        expect(window.mw.notify).not.toHaveBeenCalled();
+    });
+
     test('should show validation error when layers are invalid', () => {
         const mockNotify = jest.fn();
         window.mw = { notify: mockNotify };

@@ -126,7 +126,7 @@ function collectFiles( dir, ext, out ) {
 // Covers mw.message('k'), mw.msg('k'), msg('k'), t('k', 'fallback'),
 // getMessage('k') and window.layersMessages.get('k', 'fallback').
 const STRICT_REFERENCE_RE =
-	/\b(?:mw\.message|mw\.msg|msg|t|getMessage|message|messages\.get|Messages\.get)\s*\(\s*['"]([a-z0-9-]*layers-[a-z0-9-]+)['"]/g;
+	/(?:\b(?:mw\.message|mw\.msg|msg|t|getMessage|message|messages\.get)|Messages\.get)\s*\(\s*['"]([a-z0-9-]*layers-[a-z0-9-]+)['"]/g;
 
 // Loose: any message-key-shaped string literal. Used only to decide whether a
 // declared key is dead, where a false "used" is harmless but a false "dead"

@@ -1093,9 +1093,9 @@
 				return;
 			}
 
+			// Rejections marked `reported` have already been shown to the user
 			if ( !this.validateBeforeSave() ) {
-				mw.notify( 'Save failed: validation error. Check browser console (F12) for details.', { type: 'error' } );
-				reject( new Error( 'Validation failed' ) );
+				reject( Object.assign( new Error( 'Validation failed' ), { reported: true } ) );
 				return;
 			}
 
@@ -1137,7 +1137,7 @@
 				} catch ( e ) {
 					// Ignore notification errors but keep button enabled
 				}
-				reject( new Error( 'Data too large' ) );
+				reject( Object.assign( new Error( 'Data too large' ), { reported: true } ) );
 				return;
 			}
 
@@ -1330,6 +1330,7 @@
 					this.hideSpinner();
 					this.enableSaveButton();
 					this.handleSaveError( error );
+					error.reported = true;
 				}
 				reject( error );
 			}

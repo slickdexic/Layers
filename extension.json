@@ -631,6 +631,7 @@
 				"layers-page-draft-blocked",
 				"layers-save-success",
 				"layers-save-error",
+				"layers-save-validation-error",
 				"layers-session-expired",
 				"layers-undo",
 				"layers-redo",

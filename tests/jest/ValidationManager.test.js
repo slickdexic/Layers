@@ -351,6 +351,14 @@ describe( 'ValidationManager', () => {
 				expect( result.isValid ).toBe( true );
 			} );
 
+			test( 'names the allowed range in the message', () => {
+				window.layersMessages = { get: ( key ) => key === 'layers-validation-strokewidth-range' ?
+					'Stroke width must be between $1 and $2' : key };
+				const result = manager.validateLayer( { ...validLayer, strokeWidth: 150 } );
+				delete window.layersMessages;
+				expect( result.errors ).toEqual( [ 'Stroke width must be between 0 and 100' ] );
+			} );
+
 			test( 'should reject negative strokeWidth', () => {
 				const result = manager.validateLayer( { ...validLayer, strokeWidth: -1 } );
 				expect( result.isValid ).toBe( false );

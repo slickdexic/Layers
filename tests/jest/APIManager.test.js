@@ -3175,12 +3175,10 @@ describe( 'APIManager', function () {
 			testApiManager.saveInProgress = false;
 			testApiManager.validateBeforeSave = jest.fn().mockReturnValue( false );
 
-			await expect( testApiManager.saveLayers() ).rejects.toThrow( 'Validation failed' );
+			await expect( testApiManager.saveLayers() ).rejects.toMatchObject( { message: 'Validation failed', reported: true } );
 
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.stringContaining( 'validation error' ),
-				{ type: 'error' }
-			);
+			// validateBeforeSave() shows the problems; a second, vaguer notice would bury them
+			expect( mw.notify ).not.toHaveBeenCalled();
 		} );
 	} );
 
