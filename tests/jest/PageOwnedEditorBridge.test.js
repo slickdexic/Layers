@@ -48,6 +48,16 @@ describe( 'PageOwnedEditorBridge', () => {
 		expect( editor.stateManager.get( 'isDirty' ) ).toBe( false );
 	} );
 
+	it( 'publishes a property the editor cleared to null or undefined as absent', async () => {
+		await bridge.load();
+		const [ first, ...rest ] = editor.stateManager.get( 'layers' );
+		editor.stateManager.set( 'layers', [ { ...first, gradient: null, headScale: undefined }, ...rest ] );
+		api.postWithToken.mockResolvedValue( { layerspublish: { result: 'Success', revid: 13 } } );
+		await bridge.save( 'Cleared gradient' );
+		const saved = JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data );
+		expect( saved.surfaces[ 0 ].layers ).toStrictEqual( fixture.surfaces[ 0 ].layers );
+	} );
+
 	it.each( [ true, false ] )( 'keeps newer editor edits dirty when an in-flight save succeeds=%s', async ( succeeds ) => {
 		await bridge.load();
 		let complete;

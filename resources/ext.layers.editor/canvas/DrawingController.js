@@ -597,11 +597,13 @@ class DrawingController {
 			fill: fillColor,
 			arrowSize: style.arrowSize !== undefined ? style.arrowSize : 10,
 			arrowStyle: style.arrowStyle || 'single',
-			arrowhead: style.arrowhead || 'arrow',
-			arrowHeadType: style.arrowHeadType,
-			headScale: style.headScale,
-			tailWidth: style.tailWidth
+			arrowhead: style.arrowhead || 'arrow'
 		};
+		for ( const key of [ 'arrowHeadType', 'headScale', 'tailWidth' ] ) {
+			if ( style[ key ] !== undefined ) {
+				this.tempLayer[ key ] = style[ key ];
+			}
+		}
 	}
 
 	// ========== Preview and creation methods ==========

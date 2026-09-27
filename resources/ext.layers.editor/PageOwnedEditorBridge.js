@@ -10,6 +10,14 @@
 	// An image/PDF canvas is the pinned source page; only how its picture shows is editable.
 	const sourceFields = { backgroundVisible: 'backgroundVisible', backgroundOpacity: 'backgroundOpacity' };
 
+	// The editor clears a property by setting it to null or undefined; the server stores neither.
+	function withoutClearedValues( layer ) {
+		if ( !layer || Object.getPrototypeOf( layer ) !== Object.prototype ) {
+			return layer;
+		}
+		return Object.fromEntries( Object.entries( layer ).filter( ( [ , value ] ) => value !== null && value !== undefined ) );
+	}
+
 	class PageOwnedEditorBridge {
 		/**
 		 * @param {Object} editor Existing editor with StateManager and optional rendering components
@@ -103,7 +111,8 @@
 					state.canvas[ field ] = value;
 				}
 			}
-			state.layers = this.editor.stateManager.get( 'layers' );
+			const layers = this.editor.stateManager.get( 'layers' );
+			state.layers = Array.isArray( layers ) ? layers.map( withoutClearedValues ) : layers;
 			return state;
 		}
 

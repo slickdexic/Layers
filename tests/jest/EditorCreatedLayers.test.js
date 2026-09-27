@@ -103,6 +103,11 @@ describe( 'Layers created by the drawing tools', () => {
 			};
 			fs.writeFileSync( FIXTURE, JSON.stringify( document, null, 2 ) + '\n' );
 		}
-		expect( layers ).toEqual( JSON.parse( fs.readFileSync( FIXTURE, 'utf8' ) ).surfaces[ 0 ].layers );
+		expect( layers ).toStrictEqual( JSON.parse( fs.readFileSync( FIXTURE, 'utf8' ) ).surfaces[ 0 ].layers );
+		// The client refuses undefined, NaN and other non-JSON values before any request is sent.
+		const Adapter = require( '../../resources/ext.layers.editor/PageOwnedSnapshotAdapter.js' );
+		const document = JSON.parse( fs.readFileSync( FIXTURE, 'utf8' ) );
+		expect( () => new Adapter().withEditorState( document, 'editor-tools',
+			{ canvas: document.surfaces[ 0 ].canvas, layers } ) ).not.toThrow();
 	} );
 } );
