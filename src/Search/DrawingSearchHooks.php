@@ -5,6 +5,8 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Search;
 
 use MediaWiki\Content\Hook\SearchDataForIndex2Hook;
+use MediaWiki\Deferred\LinksUpdate\LinksUpdate;
+use MediaWiki\Hook\LinksUpdateCompleteHook;
 use MediaWiki\Html\Html;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Search\Hook\ShowSearchHitHook;
@@ -12,9 +14,10 @@ use SearchHighlighter;
 
 /**
  * Search engines that build documents from ContentHandler data, such as CirrusSearch, get drawing text too,
- * and a result found only through a drawing shows the matching drawing text as its snippet.
+ * a page is reindexed when the shared sets it shows change, and a result found only through a drawing
+ * shows the matching drawing text as its snippet.
  */
-class DrawingSearchHooks implements SearchDataForIndex2Hook, ShowSearchHitHook {
+class DrawingSearchHooks implements SearchDataForIndex2Hook, ShowSearchHitHook, LinksUpdateCompleteHook {
 	private DrawingSearchText $text;
 	private RevisionLookup $revisions;
 
@@ -29,10 +32,26 @@ class DrawingSearchHooks implements SearchDataForIndex2Hook, ShowSearchHitHook {
 
 	/** @inheritDoc */
 	public function onSearchDataForIndex2( array &$fields, $handler, $page, $output, $engine, $revision ) {
-		$text = $this->text->get( $page, $revision );
+		$text = $this->text->get( $page, $revision, false,
+			ShownLayerSets::decode( $output ? $output->getPageProperty( ShownLayerSets::PROPERTY ) : null ) );
 		if ( $text !== '' ) {
 			$fields['auxiliary_text'] = array_merge( (array)( $fields['auxiliary_text'] ?? [] ), [ $text ] );
 		}
+	}
+
+	/**
+	 * The page property listing the shared sets a page shows is stored by this update, which may finish
+	 * after the search update of an edit; reindex with the list just parsed.
+	 *
+	 * @param LinksUpdate $linksUpdate
+	 * @param mixed $ticket
+	 */
+	public function onLinksUpdateComplete( $linksUpdate, $ticket ) {
+		$value = $linksUpdate->getParserOutput()->getPageProperty( ShownLayerSets::PROPERTY );
+		if ( $value === null && !array_key_exists( ShownLayerSets::PROPERTY, $linksUpdate->getRemovedProperties() ) ) {
+			return;
+		}
+		$this->text->update( $linksUpdate->getTitle(), ShownLayerSets::decode( $value ) );
 	}
 
 	/** @inheritDoc Core runs this hook for results outside the File namespace only. */

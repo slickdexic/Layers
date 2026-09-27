@@ -27,7 +27,8 @@ return [
 	},
 	'LayersDrawingSearchText' => static function ( MediaWikiServices $services ): DrawingSearchText {
 		return new DrawingSearchText( $services->getService( 'LayersPageOwnedPilot' ),
-			$services->getService( 'LayersDatabase' ), $services->getRevisionLookup(), $services->getPageStore() );
+			$services->getService( 'LayersDatabase' ), $services->getRevisionLookup(), $services->getPageStore(),
+			$services->getConnectionProvider() );
 	},
 	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
 		return new LayersLogger();

@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## Pages are found by the drawings they show — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `ShownLayerSets` is the only record of which shared sets and slides a page shows (page property `layers-shown-sets`, written while parsing); `DrawingSearchText` reads it from the database, never through the `PageProps` cache. Any new way of embedding a shared set must call `ShownLayerSets::note()`, and any new write path for sets or slides must reach `updatePagesShowing()` (for files through `CacheInvalidationTrait`). J79 remains queued. Earlier entries below are historical.
+
 ## Drawings show values from the page — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_fields:}}` values are ordinary parser output (`wgLayersDrawingFields`, plain text, keyed by drawing ID) and are applied only by the page viewer (`PageOwnedRevisionBootstrap.withFields()`); stored drawings, history, search and Cargo rows keep the `{{name}}` tokens. Never put field values into `layersread` responses or stored drawings. `tests/e2e/page-owned-fields.spec.js` checks it in Chromium. J79 remains the queued junior packet. Earlier entries below are historical.

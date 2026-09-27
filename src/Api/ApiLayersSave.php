@@ -540,6 +540,7 @@ class ApiLayersSave extends ApiBase {
 			);
 
 			if ( $layerSetId ) {
+				$this->reindexPagesShowingSlide( $slidename );
 				$resultData = [
 					'success' => 1,
 					'layersetid' => $layerSetId,

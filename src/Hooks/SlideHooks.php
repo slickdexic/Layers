@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
@@ -177,6 +178,7 @@ class SlideHooks {
 		$layerSetName = SetNameResolver::isSpecificName( $params['layerset'] ?? null )
 			? (string)$params['layerset']
 			: '';
+		ShownLayerSets::note( $parser, ShownLayerSets::SLIDE, $slideName, $layerSetName );
 
 		// Parse canvas dimensions
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults

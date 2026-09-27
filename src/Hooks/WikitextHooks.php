@@ -13,6 +13,8 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Title\Title;
@@ -1100,6 +1102,12 @@ class WikitextHooks {
 					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
 					if ( !in_array( $normalized, [ 'off', 'none', 'false' ], true ) && $parser instanceof Parser ) {
 						BoundSlideHooks::noteSharedSlide( $parser );
+						// Search indexes the set's text with this page ('' is the file's latest set).
+						if ( strpos( $layersValue, 'id:' ) !== 0 ) {
+							$shownSet = preg_replace( '/^name:/', '', $layersValue );
+							ShownLayerSets::note( $parser, ShownLayerSets::FILE, $filename,
+								SetNameResolver::isSpecificName( $shownSet ) ? $shownSet : '' );
+						}
 					}
 					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
 					$queueLen = count( self::$fileSetNames[$filename] );

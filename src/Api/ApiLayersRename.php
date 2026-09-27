@@ -363,6 +363,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName,
 				'user' => $user->getName()
 			] );
+			$this->reindexPagesShowingSlide( $slidename );
 
 			// Return success
 			$this->getResult()->addValue( 'layersrename', 'success', 1 );

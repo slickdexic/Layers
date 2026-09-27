@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Pages are found by the drawings they show (September 26): a page that shows a shared layer set (`[[File:…|layerset=…]]`, including from templates) or a slide (`{{#Slide:}}`) is indexed with that set's current text, recorded while parsing in the page property `layers-shown-sets`. Pages are reindexed on edit, on links refresh, and when a set they show is saved, deleted or renamed. Run core's `refreshLinks.php` once for existing pages. Gallery embeds and `layerset=id:` references are not covered.
+
 - Drawings show values from the page (pilot, September 26): `{{#layers_fields: drawing ID | name = value }}` on the owner page fills `{{name}}` tokens in a page-owned drawing's text where the page shows the drawing. Values are expanded wikitext turned into plain text, so they can come from `#cargo_query`, templates or other parser functions, and update whenever the page is rendered again. The drawing, its history, search and Cargo rows keep the tokens.
 
 - Anonymous readers' page-owned drawings are cacheable (pilot, September 26): an anonymous `layersread` binding read of a page's current revision is sent as public for `$wgLayersBindingReadMaxAge` seconds (new setting, default 300; 0 disables), so browsers and a CDN can serve page views' drawings. Logged-in readers, older revisions, snapshot reads, errors and private wikis stay private.

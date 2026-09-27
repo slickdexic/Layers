@@ -253,6 +253,7 @@
 		"ParserMakeImageParams": "LayersWikitextHooks",
 		"SearchDataForIndex2": "LayersSearchHooks",
 		"ShowSearchHit": "LayersSearchHooks",
+		"LinksUpdateComplete": "LayersSearchHooks",
 		"SkinTemplateNavigation::Universal": "LayersUIHooks",
 		"CargoSetFormatClasses": "LayersCargoHooks"
 	},

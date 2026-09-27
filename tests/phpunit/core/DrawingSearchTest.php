@@ -9,6 +9,8 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
 use MediaWiki\Extension\Layers\Search\DrawingSearchHooks;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
+use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 use SearchEngine;
@@ -21,6 +23,7 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchIngress
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchHooks
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchText
+ * @covers \MediaWiki\Extension\Layers\Search\ShownLayerSets
  * @covers \MediaWiki\Extension\Layers\Revision\PageDrawingSearchText
  * @group Database
  */
@@ -240,5 +243,95 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		// Pages outside the File namespace have no file sets.
 		$this->assertSame( [ 'Existing' ],
 			$this->documentFields( $this->getExistingTestPage()->getTitle() )['auxiliary_text'] );
+	}
+
+	public function testPagesAreFoundByTheSharedSetsTheyShow(): void {
+		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
+		$file = $this->uploadFile( 'Plain description' );
+		$this->saveSet( $file, 'labels', [ 'Valve zebraembedded' ] );
+		$this->saveSet( $file, 'other', [ 'Gauge zebralatestset' ] );
+		$article = $this->getNonexistingTestPage()->getTitle();
+		$key = $article->getPrefixedDBkey();
+		$this->editPage( $article, "Article prose [[File:$file|thumb|layerset=labels]]" );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebraembedded' ) );
+		$this->assertContains( $key, $this->search( 'prose' ) );
+		$this->assertNotContains( $key, $this->search( 'zebralatestset' ) );
+		$this->assertNotContains( $key, $this->search( 'zebrahidden' ) );
+
+		// A new revision of the shown set reindexes the page, which was not edited.
+		$this->saveSet( $file, 'labels', [ 'Valve zebraembedrevised' ] );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebraembedrevised' ) );
+		$this->assertNotContains( $key, $this->search( 'zebraembedded' ) );
+
+		// layerset=on shows, and indexes, whichever set was saved most recently.
+		$this->editPage( $article, "Article prose [[File:$file|thumb|layerset=on]]" );
+		$this->saveSet( $file, 'other', [ 'Gauge zebranowlatest' ] );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebranowlatest' ) );
+		$this->assertNotContains( $key, $this->search( 'zebraembedrevised' ) );
+
+		// A template change reaches the page through its links update; the page itself is not edited.
+		$template = 'Template:ShownSetProbe' . mt_rand();
+		$this->editPage( $template, "[[File:$file|thumb|layerset=labels]]" );
+		$this->editPage( $article, "Article prose {{" . $template . "}}" );
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebraembedrevised' ) );
+		$this->editPage( $template, "[[File:$file|thumb|layerset=other]]" );
+		$this->runJobs();
+		$this->runDeferredUpdates();
+		$this->assertContains( $key, $this->search( 'zebranowlatest' ) );
+		$this->assertNotContains( $key, $this->search( 'zebraembedrevised' ) );
+
+		// Removing the embed removes the words.
+		$this->editPage( $article, 'Article prose only' );
+		$this->runDeferredUpdates();
+		$this->assertNotContains( $key, $this->search( 'zebranowlatest' ) );
+		$this->assertContains( $key, $this->search( 'prose' ) );
+	}
+
+	public function testPagesAreFoundByTheSlidesTheyShow(): void {
+		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
+		$slide = 'SearchSlide' . mt_rand();
+		$save = function ( string $text ) use ( $slide ): void {
+			$this->doApiRequestWithToken( [ 'action' => 'layerssave', 'slidename' => $slide, 'data' => json_encode( [
+				'canvasWidth' => 800, 'canvasHeight' => 600,
+				'layers' => [ [ 'id' => 't', 'type' => 'text', 'x' => 10, 'y' => 10, 'text' => $text ] ]
+			] ) ], null, $this->getTestSysop()->getUser() );
+		};
+		$save( 'Slide zebraslideword' );
+		$article = $this->getNonexistingTestPage()->getTitle();
+		$this->editPage( $article, "Intro {{#Slide:$slide}}" );
+		$this->runDeferredUpdates();
+		$this->assertContains( $article->getPrefixedDBkey(), $this->search( 'zebraslideword' ) );
+		$save( 'Slide zebraslidenew' );
+		$this->runDeferredUpdates();
+		$this->assertContains( $article->getPrefixedDBkey(), $this->search( 'zebraslidenew' ) );
+		$this->assertNotContains( $article->getPrefixedDBkey(), $this->search( 'zebraslideword' ) );
+	}
+
+	public function testMaintenanceScriptIndexesPagesShowingSets(): void {
+		$this->overrideConfigValues( [ 'DisableSearchUpdate' => true, 'SearchType' => null ] );
+		$file = $this->uploadFile( 'Existing' );
+		$this->saveSet( $file, 'labels', [ 'Gauge zebrashownexisting' ] );
+		$article = $this->getNonexistingTestPage()->getTitle();
+		$this->editPage( $article, "[[File:$file|layerset=labels]]" );
+		$this->runDeferredUpdates();
+		$this->overrideConfigValue( 'DisableSearchUpdate', false );
+		$this->assertNotContains( $article->getPrefixedDBkey(), $this->search( 'zebrashownexisting' ) );
+		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
+		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		( new \ReindexPageDrawings() )->execute();
+		$this->assertContains( $article->getPrefixedDBkey(), $this->search( 'zebrashownexisting' ) );
+	}
+
+	public function testShownSetsAreRecordedInParseOrderIndependentForm(): void {
+		$first = $this->getServiceContainer()->getParserFactory()->create()->parse(
+			"[[File:B.png|layerset=x]] [[File:A.png|layerset=on]] {{#Slide:S1|layerset=y}} [[File:B.png|layerset=x]]" .
+			" [[File:C.png|layerset=off]]", Title::makeTitle( NS_MAIN, 'ShownProbe' ), ParserOptions::newFromAnon() );
+		$this->assertSame( '[["file","A.png",""],["file","B.png","x"],["slide","S1","y"]]',
+			$first->getPageProperty( ShownLayerSets::PROPERTY ) );
+		$this->assertSame( '["file","B.png",', ShownLayerSets::fragment( ShownLayerSets::FILE, 'B.png' ) );
 	}
 }

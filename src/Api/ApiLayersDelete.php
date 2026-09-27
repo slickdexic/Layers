@@ -280,6 +280,7 @@ class ApiLayersDelete extends ApiBase {
 				'user' => $user->getName(),
 				'rowsDeleted' => $rowsDeleted
 			] );
+			$this->reindexPagesShowingSlide( $slidename );
 
 			// Return success
 			$this->getResult()->addValue( 'layersdelete', 'success', 1 );

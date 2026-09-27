@@ -18,6 +18,8 @@ use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDatabase;
+use Wikimedia\Rdbms\IReadableDatabase;
+use Wikimedia\Rdbms\SelectQueryBuilder;
 
 class LayersDatabase {
 	private const MAX_CACHE_SIZE = 100;
@@ -1487,11 +1489,52 @@ class LayersDatabase {
 			->where( [ 'ls_img_name' => $name, $db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ] )
 			->groupBy( [ 'ls_name', 'ls_page' ] )->limit( self::MAX_SEARCH_SETS )
 			->caller( __METHOD__ )->fetchFieldValues();
+		return $this->decodeSetsForSearch( $db, $ids );
+	}
+
+	/**
+	 * Layer data of the latest revision of one named set of a file or slide, for the search text of a page
+	 * that shows it. Every PDF page of the set is included.
+	 *
+	 * @param string $imgName File name, or the slide name with its Slide: prefix
+	 * @param string $setName Set name; '' for whichever set was saved most recently
+	 * @param bool $slide Whether this is a slide
+	 * @param bool $fromPrimary Read the primary database, to include a change made in this request
+	 * @return array[] Decoded set data, whose `layers` holds the layers
+	 */
+	public function getSetForSearch( string $imgName, string $setName, bool $slide, bool $fromPrimary = false ): array {
+		$db = $fromPrimary ? $this->getWriteDb() : $this->getReadDb();
+		$name = $this->normalizeImageName( $imgName );
+		if ( !$db || $name === '' ) {
+			return [];
+		}
+		$where = [ 'ls_img_name' => $name, $slide ? $db->expr( 'ls_img_sha1', '=', LayersConstants::TYPE_SLIDE ) :
+			$db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ];
+		if ( $setName === '' ) {
+			$setName = $db->newSelectQueryBuilder()->select( 'ls_name' )->from( 'layer_sets' )->where( $where )
+				->orderBy( 'ls_id', SelectQueryBuilder::SORT_DESC )->limit( 1 )->caller( __METHOD__ )->fetchField();
+			if ( !is_string( $setName ) ) {
+				return [];
+			}
+		}
+		$ids = $db->newSelectQueryBuilder()->select( 'MAX(ls_id)' )->from( 'layer_sets' )
+			->where( $where + [ 'ls_name' => $setName ] )->groupBy( 'ls_page' )->limit( self::MAX_SEARCH_SETS )
+			->caller( __METHOD__ )->fetchFieldValues();
+		return $this->decodeSetsForSearch( $db, $ids );
+	}
+
+	/**
+	 * @param IReadableDatabase $db
+	 * @param array $ids Layer set row IDs
+	 * @return array[] Decoded data in ID order, within the search size budget
+	 */
+	private function decodeSetsForSearch( IReadableDatabase $db, array $ids ): array {
+		$ids = array_map( 'intval', $ids );
 		sort( $ids );
 		$maxBytes = min( (int)$this->config->get( 'LayersMaxBytes' ), self::MAX_SEARCH_BYTES );
 		$budget = self::MAX_SEARCH_BYTES;
 		$sets = [];
-		foreach ( array_chunk( array_map( 'intval', $ids ), 20 ) as $chunk ) {
+		foreach ( array_chunk( $ids, 20 ) as $chunk ) {
 			$rows = $db->newSelectQueryBuilder()->select( 'ls_json_blob' )->from( 'layer_sets' )
 				->where( [ 'ls_id' => $chunk ] )->orderBy( 'ls_id' )->caller( __METHOD__ )->fetchFieldValues();
 			foreach ( $rows as $blob ) {

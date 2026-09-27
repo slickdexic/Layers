@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api\Traits;
 
 use MediaWiki\Deferred\DeferredUpdates;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
@@ -68,7 +69,9 @@ trait CacheInvalidationTrait {
 
 			// 5. The file page's search entry includes its layer sets' text; this change is not a page edit.
 			DeferredUpdates::addCallableUpdate( static function () use ( $title ) {
-				MediaWikiServices::getInstance()->getService( 'LayersDrawingSearchText' )->updateFilePage( $title );
+				$search = MediaWikiServices::getInstance()->getService( 'LayersDrawingSearchText' );
+				$search->updateFilePage( $title );
+				$search->updatePagesShowing( ShownLayerSets::FILE, $title->getDBkey() );
 			} );
 		} catch ( \Throwable $e ) {
 			// Cache invalidation is best-effort; don't fail the save/delete/rename
@@ -77,6 +80,24 @@ trait CacheInvalidationTrait {
 				'Cache invalidation failed for {title}',
 				[ 'title' => $title->getPrefixedText(), 'exception' => $e ]
 			);
+		}
+	}
+
+	/**
+	 * Pages showing a slide are indexed with its text; reindex them after its sets change.
+	 *
+	 * @param string $slidename Slide name without its Slide: prefix
+	 */
+	protected function reindexPagesShowingSlide( string $slidename ): void {
+		try {
+			DeferredUpdates::addCallableUpdate( static function () use ( $slidename ) {
+				MediaWikiServices::getInstance()->getService( 'LayersDrawingSearchText' )
+					->updatePagesShowing( ShownLayerSets::SLIDE, $slidename );
+			} );
+		} catch ( \Throwable $e ) {
+			// Best-effort, like cache invalidation: the save itself has succeeded.
+			LoggerFactory::getInstance( 'Layers' )->warning( 'Search reindex for slide {slide} failed',
+				[ 'slide' => $slidename, 'exception' => $e ] );
 		}
 	}
 

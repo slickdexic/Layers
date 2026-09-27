@@ -19,14 +19,16 @@ require_once "$IP/maintenance/Maintenance.php";
 
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Search\DrawingSearchText;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Storage\NameTableAccessException;
 use MediaWiki\Title\Title;
 
 /**
- * Pages that owned drawings, and files that had layer sets, before drawing text was indexed need this once,
- * and so does every such page after core's rebuildtextindex.php, which indexes only the main slot.
+ * Pages that owned drawings, files that had layer sets and pages that showed shared sets or slides before
+ * drawing text was indexed need this once, and so does every such page after core's rebuildtextindex.php,
+ * which indexes only the main slot.
  */
 class ReindexPageDrawings extends Maintenance {
 	private DrawingSearchText $text;
@@ -36,7 +38,8 @@ class ReindexPageDrawings extends Maintenance {
 	public function __construct() {
 		parent::__construct();
 		$this->addDescription( 'Index the text of Layers drawings together with the page text: page-owned ' .
-			'drawings with their page, and a file\'s layer sets with its file page.' );
+			'drawings with their page, a file\'s layer sets with its file page, and shared sets and slides ' .
+			'with the pages that show them.' );
 		$this->setBatchSize( 100 );
 		$this->requireExtension( 'Layers' );
 	}
@@ -46,6 +49,7 @@ class ReindexPageDrawings extends Maintenance {
 		$this->text = $this->getServiceContainer()->getService( 'LayersDrawingSearchText' );
 		$this->indexOwners();
 		$this->indexFilePages();
+		$this->indexPagesShowingSets();
 		$this->output( 'Indexed drawing text for ' . count( $this->indexed ) . " page(s).\n" );
 		return true;
 	}
@@ -89,6 +93,23 @@ class ReindexPageDrawings extends Maintenance {
 				}
 			}
 		} while ( count( $names ) === $this->getBatchSize() );
+	}
+
+	private function indexPagesShowingSets(): void {
+		$db = $this->getReplicaDB();
+		$last = 0;
+		do {
+			$ids = $db->newSelectQueryBuilder()->select( 'pp_page' )->from( 'page_props' )
+				->where( [ 'pp_propname' => ShownLayerSets::PROPERTY, $db->expr( 'pp_page', '>', $last ) ] )
+				->orderBy( 'pp_page' )->limit( $this->getBatchSize() )->caller( __METHOD__ )->fetchFieldValues();
+			foreach ( $ids as $id ) {
+				$last = (int)$id;
+				$page = $this->getServiceContainer()->getPageStore()->getPageById( $last );
+				if ( $page ) {
+					$this->index( $page );
+				}
+			}
+		} while ( count( $ids ) === $this->getBatchSize() );
 	}
 
 	/**
