@@ -142,6 +142,24 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	/**
 	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
+	public function testMarkerValueKeepsNumbersAndShortLabels() {
+		$validator = $this->createValidator();
+		$marker = [ 'type' => 'marker', 'id' => 'm1', 'x' => 1, 'y' => 1 ];
+		$stored = static function ( $value ) use ( $validator, $marker ) {
+			return $validator->validateLayer( $marker + [ 'value' => $value ] )->getData();
+		};
+		foreach ( [ '1A', '2.1', '7', 'B' ] as $label ) {
+			$this->assertSame( $label, $stored( $label )['value'] );
+		}
+		$this->assertSame( 12.0, $stored( 12 )['value'] );
+		foreach ( [ 0, 1000, '', str_repeat( 'x', 17 ) ] as $refused ) {
+			$this->assertArrayNotHasKey( 'value', $stored( $refused ) );
+		}
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
 	public function testValidateLayerTextSpecific() {
 		$validator = $this->createValidator();
 

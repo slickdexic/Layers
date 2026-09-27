@@ -551,7 +551,7 @@ describe( 'PropertyBuilders', () => {
 			// Now passes defaults when enabling text shadow
 			const call = ctx.editor.updateLayer.mock.calls.find( ( c ) => c[ 1 ].textShadow === true );
 			expect( call ).toBeDefined();
-			expect( call[ 1 ].textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+			expect( call[ 1 ].textShadowColor ).toBe( 'rgba(0, 0, 0, 0.5)' );
 			expect( call[ 1 ].textShadowBlur ).toBe( 4 );
 			expect( call[ 1 ].textShadowOffsetX ).toBe( 2 );
 			expect( call[ 1 ].textShadowOffsetY ).toBe( 2 );
@@ -2871,7 +2871,7 @@ describe( 'PropertyBuilders', () => {
 				'test-layer-1',
 				expect.objectContaining( {
 					textShadow: true,
-					textShadowColor: 'rgba(0,0,0,0.5)',
+					textShadowColor: 'rgba(0, 0, 0, 0.5)',
 					textShadowBlur: 4,
 					textShadowOffsetX: 2,
 					textShadowOffsetY: 2
@@ -3759,7 +3759,7 @@ describe( 'PropertyBuilders', () => {
 
 			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', expect.objectContaining( {
 				textShadow: true,
-				textShadowColor: 'rgba(0,0,0,0.5)',
+				textShadowColor: 'rgba(0, 0, 0, 0.5)',
 				textShadowBlur: 4,
 				textShadowOffsetX: 2,
 				textShadowOffsetY: 2

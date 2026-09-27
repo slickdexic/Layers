@@ -133,7 +133,7 @@ class ServerSideLayerValidator {
 		'isMultiPath' => 'boolean',
 		'strokeOnly' => 'boolean',
 		// Marker properties
-		'value' => 'numeric',
+		'value' => 'markerValue',
 		'style' => 'string',
 		'size' => 'numeric',
 		'fontSizeAdjust' => 'numeric',
@@ -266,6 +266,9 @@ class ServerSideLayerValidator {
 
 	/** @var int Maximum points in a path/polygon */
 	private const MAX_POINTS = 1000;
+
+	/** Matches the properties panel's marker value field. */
+	private const MAX_MARKER_LABEL_LENGTH = 16;
 
 	/** Bound applied to every coordinate, matching the generic numeric range. */
 	private const MAX_COORDINATE = 100000;
@@ -490,9 +493,28 @@ class ServerSideLayerValidator {
 				return $this->validateArrayProperty( $property, $value );
 			case 'color':
 				return $this->validateColorProperty( $value );
+			case 'markerValue':
+				return $this->validateMarkerValue( $value );
 			default:
 				return [ 'valid' => false, 'error' => "Unknown property type: $expectedType" ];
 		}
+	}
+
+	/**
+	 * Marker values are sequence numbers or short labels such as "1A" or "2.1".
+	 *
+	 * @param mixed $value Property value
+	 * @return array Validation result
+	 */
+	private function validateMarkerValue( $value ): array {
+		if ( !is_string( $value ) ) {
+			return $this->validateNumericProperty( 'value', $value );
+		}
+		$label = $this->textSanitizer->sanitizeText( $value );
+		if ( $label === '' || mb_strlen( $label ) > self::MAX_MARKER_LABEL_LENGTH ) {
+			return [ 'valid' => false, 'error' => 'Marker value must be a number or a short label' ];
+		}
+		return [ 'valid' => true, 'value' => $label ];
 	}
 
 	/**

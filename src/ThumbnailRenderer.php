@@ -831,7 +831,7 @@ class ThumbnailRenderer {
 		$num = (int)$value ?: 1;
 		switch ( $style ) {
 			case 'letter':
-			case 'letterCircled':
+			case 'letter-circled':
 				if ( $num <= 26 ) {
 					return chr( 64 + $num );
 				}

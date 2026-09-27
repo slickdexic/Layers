@@ -296,10 +296,19 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * Server half of tests/jest/EditorCreatedLayers.test.js, which draws this fixture with the real tools.
+	 * Server half of tests/jest/EditorCreatedLayers.test.js and PropertiesPanelValues.test.js, which
+	 * produce these fixtures with the real drawing tools and properties panel.
+	 * @dataProvider provideEditorFixtures
 	 */
-	public function testEditorCreatedLayersPublishUnchanged(): void {
-		$json = file_get_contents( __DIR__ . '/../../../fixtures/revisions/editor-created-document-v1.json' );
+	public function testEditorCreatedLayersPublishUnchanged( string $fixture ): void {
+		$json = file_get_contents( __DIR__ . '/../../../fixtures/revisions/' . $fixture );
 		$this->assertEquals( json_decode( $json ), json_decode( ( new DocumentSchema() )->canonicalize( $json ) ) );
+	}
+
+	public static function provideEditorFixtures(): array {
+		return [
+			'drawing tools' => [ 'editor-created-document-v1.json' ],
+			'properties panel' => [ 'properties-panel-document-v1.json' ],
+		];
 	}
 }

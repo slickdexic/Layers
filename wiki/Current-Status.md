@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## Properties panel values save as set — September 26, 2026
+
+A new check drives every control of the properties panel, for every layer type, to its lowest and its highest choice, and the server must store the result unchanged. It found five places where the panel offered a value that the server dropped or rewrote. Page history then refused the drawing, and ordinary saves silently lost the value.
+
+- **Marker value:** the field accepts labels such as "1A" or "2.1", and both renderers draw them, but the validator kept only numbers. The field always sends text, so page history refused even "2". A marker value is now a number or a label of up to 16 characters, and the field stops at 16.
+- **Stroke width:** the panel allowed up to 200, while the server, the toolbar and the client validator allow 100. It now stops at 100. A text layer's text stroke width allowed 200 (the server allows 50 and text boxes 20) and now stops at 20.
+- **Text shadow:** turning it on wrote the default colour as `rgba(0,0,0,0.5)`, which the server respaces. It is now written the way the server stores it.
+- **Radial gradients:** the gradient editor wrote an `undefined` angle, so no drawing with a radial gradient could be saved in page history. Unset gradient fields are now omitted.
+- **Exports:** server-rendered thumbnails and PDFs drew "letter circled" markers as numbers, because the renderer checked a style name the editor never writes.
+
+Fresh verification: `PropertiesPanelValues.test.js` produces `properties-panel-document-v1.json`, which `DocumentSchemaTest` publishes; new validator tests for marker values and an export test for the letter style. Jest **15,016**, standalone PHPUnit **1,297**.
+
 ## Arrows and cleared properties no longer block page-owned saves — September 26, 2026
 
 The J77 browser run found that no page-owned drawing containing an arrow could be saved: the arrow tool stored three options (head type, head scale and tail width) as `undefined` when the toolbar had not set them, and the editor refuses to send a drawing that is not plain JSON. It failed before any request with only "Invalid editor snapshot". The same happens whenever a control clears a property by setting it to `null` or `undefined`; switching a gradient fill back to solid did this, and the server then refused the drawing because it never stores such values.

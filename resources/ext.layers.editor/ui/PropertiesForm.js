@@ -830,7 +830,7 @@
 			addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
 			if ( layer.type !== 'text' ) {
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );
-				addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 200, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 200, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
+				addInput( { label: t( 'layers-prop-stroke-width', 'Stroke Width' ), type: 'number', value: layer.strokeWidth || 1, min: 0, max: 100, step: 1, onChange: function ( v ) { const val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) ) ); editor.updateLayer( layer.id, { strokeWidth: val } ); } } );
 			}
 			addSliderInput( { label: t( 'layers-prop-stroke-opacity', 'Stroke Opacity' ), value: ( layer.strokeOpacity != null ) ? Math.round( layer.strokeOpacity * 100 ) : 100, min: 0, max: 100, step: 1, onChange: function ( v ) { editor.updateLayer( layer.id, { strokeOpacity: v / 100 } ); } } );
 			// Fill controls for shapes that use fill (lines are stroke-only, but arrows support fill)

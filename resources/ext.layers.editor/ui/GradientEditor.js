@@ -91,14 +91,17 @@
 			if ( !gradient ) {
 				return null;
 			}
-			return {
+			// Linear gradients have no centre and radial ones no angle; an undefined key is not JSON.
+			const clone = {
 				type: gradient.type,
-				angle: gradient.angle,
-				centerX: gradient.centerX,
-				centerY: gradient.centerY,
-				radius: gradient.radius,
 				colors: gradient.colors ? gradient.colors.map( ( c ) => ( { offset: c.offset, color: c.color } ) ) : []
 			};
+			for ( const key of [ 'angle', 'centerX', 'centerY', 'radius' ] ) {
+				if ( gradient[ key ] !== undefined ) {
+					clone[ key ] = gradient[ key ];
+				}
+			}
+			return clone;
 		}
 
 		/**

@@ -353,6 +353,7 @@ namespace MediaWiki\Extension\Layers\Tests {
 
 			$this->assertSame( '5', $method->invoke( $renderer, 5, 'circled' ) );
 			$this->assertSame( 'E', $method->invoke( $renderer, 5, 'letter' ) );
+			$this->assertSame( 'E', $method->invoke( $renderer, 5, 'letter-circled' ) );
 			$this->assertSame( 'AB', $method->invoke( $renderer, 28, 'letter' ) );
 			$this->assertSame( '(5)', $method->invoke( $renderer, 5, 'parentheses' ) );
 			$this->assertSame( '5.', $method->invoke( $renderer, 5, 'plain' ) );

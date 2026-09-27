@@ -429,7 +429,8 @@
 				// Set default values when enabling
 				if ( checked ) {
 					if ( !layer.textShadowColor ) {
-						updates.textShadowColor = 'rgba(0,0,0,0.5)';
+						// Written the way the server normalizes it, so page history stores it unchanged.
+						updates.textShadowColor = 'rgba(0, 0, 0, 0.5)';
 					}
 					if ( typeof layer.textShadowBlur === 'undefined' ) {
 						updates.textShadowBlur = 4;
@@ -451,7 +452,7 @@
 		if ( layer.textShadow === true ) {
 			ctx.addColorPicker( {
 				label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ),
-				value: layer.textShadowColor || 'rgba(0,0,0,0.5)',
+				value: layer.textShadowColor || 'rgba(0, 0, 0, 0.5)',
 				property: 'textShadowColor',
 				onChange: function ( newColor ) {
 					editor.updateLayer( layer.id, { textShadowColor: newColor } );
@@ -1166,10 +1167,10 @@
 			type: 'number',
 			value: layer.textStrokeWidth || 0,
 			min: 0,
-			max: 200,
+			max: 20,
 			step: 1,
 			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { textStrokeWidth: parseInt( v, 10 ) } );
+				editor.updateLayer( layer.id, { textStrokeWidth: Math.max( 0, Math.min( 20, parseInt( v, 10 ) ) ) } );
 			}
 		} );
 
@@ -1212,6 +1213,7 @@
 			type: 'text',
 			value: String( layer.value || 1 ),
 			prop: 'value',
+			maxLength: 16,
 			placeholder: t( 'layers-prop-marker-value-placeholder', 'e.g., 1, A, 1A, 1.1' ),
 			onChange: function ( v ) {
 				const val = v.trim() || '1';

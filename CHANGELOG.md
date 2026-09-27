@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Properties panel values save as set (September 26): marker values keep labels such as "1A" (up to 16 characters) instead of being dropped; the panel's stroke width stops at the server's 100 and a text layer's text stroke width at 20; enabling text shadow writes its colour in the server's form; radial gradients no longer carry an `undefined` angle, which blocked page-owned saves; server exports draw "letter circled" markers as letters.
+
 - Arrows and cleared properties in page-owned drawings (pilot, September 26): a page-owned drawing containing an arrow could not be saved ("Invalid editor snapshot"), because the arrow tool left three options `undefined`. The tool now sets them only when chosen, and the page-owned editor publishes any property cleared to `null` or `undefined` (for example a gradient switched back to solid) as absent.
 
 - Page-owned editor output saves unchanged (pilot, September 26): drawings with markers, blend modes, dimensions or empty text boxes no longer fail to publish with `layers-invalid-snapshot`. The server keeps the marker font size adjustment and comma-separated font lists and accepts empty text on text boxes, callouts and dimensions; ordinary saves stop dropping these too. The properties panel writes `blendMode` instead of the retired `blend`, the editor canvas draws `blendMode`, and unset dimension tolerances are omitted. Reopening the editor after a save no longer offers that save's own backup for recovery.
