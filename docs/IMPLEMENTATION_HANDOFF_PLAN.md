@@ -1,10 +1,24 @@
 # Layers implementation handoff plan
 
-## J76 ready: every layer type through the page-owned editor — September 26, 2026
+## Editor output saves unchanged; J76 accepted; J77 ready — September 26, 2026
 
-Page history now draws image, Shape Library/emoji, marker and folder layers, and the page-owned editor offers their tools again (see the [current status](CURRENT_STATUS.md)). Native and unit tests cover saving and painting, but no browser run has yet created these layers through the editor UI in page-owned mode. Earlier entries below are historical.
+See the [current status](CURRENT_STATUS.md) entry. Contract: page-owned publication stores exactly what the editor sends, so whatever a tool or the properties panel writes must pass `ServerSideLayerValidator` unchanged. `tests/jest/EditorCreatedLayers.test.js` and `DocumentSchemaTest::testEditorCreatedLayersPublishUnchanged` check this for every drawing tool; regenerate their fixture with `LAYERS_UPDATE_FIXTURES=1` after an intended change. Write `blendMode`, never the retired `blend`. **J76 is accepted** with lead corrections (packet below; see the review ledger). J77 takes the rest of the toolbar through the browser. Earlier entries below are historical.
 
-### J76 — Every layer type through the page-owned editor (ready)
+### J77 — Every drawing tool and text formatting through the page-owned editor (ready)
+
+**Purpose:** J76 proved markers, library shapes, emoji, images, folders and blend modes. Prove the rest of the toolbar the same way: a drawing made with every other tool, with text formatting applied in the editor, saves and shows everywhere. The unit check covers each tool's defaults; this run covers what users change in the UI. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-journey-drawing-tools.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes.
+
+1. Record the owner's current revision and `layersread` snapshot, then seed one bound slide by exact-base publication, as J76 does, and open its edit link. Wait until `apiManager.pageOwnedDrafts.ready` is true and check that no recovery dialog is shown.
+2. Through the toolbar, canvas and panels only (no `stateManager` writes), draw one of each: rectangle, circle, ellipse, polygon, star, line, arrow, pen stroke, text, text box, callout, dimension and angle dimension (three clicks). Type text into the text box, then make one word bold and another a different colour with the inline text toolbar; leave the callout empty. Choose a different font for the text box from the font list, and set the dimension's tolerance to symmetric with a value typed in the properties panel. Save once: `layerspublish` success and one new tagged revision.
+3. Read that revision with `layersread`: every type is present, and the text box has `richText` with the bold and coloured runs. On the page, in the viewer for that revision and on the diff against the seed, sample a pixel inside each filled shape and check for ink near each stroked or text layer. Nothing may show the "could not be displayed" status.
+4. Reopen the editor (again no recovery dialog), change one layer's colour and save: exactly one new tagged revision.
+5. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
+
+Record counts, durations and defects with the smallest reproduction (the failing layer's JSON and the server error), then return for lead review.
+
+### J76 — Every layer type through the page-owned editor (accepted)
 
 **Purpose:** prove in real Chromium on the original test wiki that a page-owned drawing made with every tool saves, shows on the page, in history, in a diff and in the viewer, and can be restored. Acceptance testing only; report defects for lead correction.
 
@@ -18,6 +32,8 @@ Page history now draws image, Shape Library/emoji, marker and folder layers, and
 6. Restore the owner with the usual exact-base cleanup.
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+**Status:** accepted with lead corrections; see the review ledger. The first run found three publication defects (the marker's font size adjustment and font list, and the `blend` alias), all fixed in product code. With those fixed, the lead's rerun found a fourth, a recovery prompt after every save, also fixed.
 
 ## Namespace enrollment — September 26, 2026
 

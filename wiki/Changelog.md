@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Page-owned editor output saves unchanged (pilot, September 26): drawings with markers, blend modes, dimensions or empty text boxes no longer fail to publish with `layers-invalid-snapshot`. The server keeps the marker font size adjustment and comma-separated font lists and accepts empty text on text boxes, callouts and dimensions; ordinary saves stop dropping these too. The properties panel writes `blendMode` instead of the retired `blend`, the editor canvas draws `blendMode`, and unset dimension tolerances are omitted. Reopening the editor after a save no longer offers that save's own backup for recovery.
+
 - Search snippets from drawings (pilot, September 26): a page found only through words in its page-owned drawings shows the matching drawing text, highlighted, as its `Special:Search` snippet instead of unrelated page text.
 
 - Namespace enrollment for page history (pilot, September 26): new `$wgLayersPageOwnedPilotNamespaces` (default empty) enrolls every page of the listed namespaces, in addition to the exact titles in `$wgLayersPageOwnedPilotOwners`. Enrollment only lets ownership start; all guards stay keyed to owned drawings.

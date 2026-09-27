@@ -1,4 +1,53 @@
-# Junior implementation review — J01–J75
+# Junior implementation review — J01–J76
+
+## J76 accepted with lead corrections: every layer type through the page-owned editor — September 26, 2026
+
+After correcting the product, the lead reran the spec: **1 passed (1.1 m)**. In one serial Chromium run of all ten page-owned specs, and a rerun of three files after the lead restored the owner's baseline drawing and corrected a race in the lead's own rendering check, all 20 tests passed.
+
+- **All three reported defects were real and are fixed in product code.** `fontSizeAdjust` is in the validator whitelist (−10 to 20), `TextSanitizer::sanitizeFontFamily()` keeps commas, and the properties panel writes `blendMode`. The report's reproductions were exact. The lead added a check in which Jest draws every tool and PHPUnit publishes the result. It found three more defects the run could not reach: numeric tolerance defaults on dimensions and angle dimensions, and empty `text` on dimensions, angle dimensions, text boxes and callouts. See the current status entry.
+- **A fourth defect appeared in the lead's rerun.** With publication fixed, step 4 hung. Reopening the editor offered the first save's own backup for recovery: stored keys are sorted and the comparison was order-sensitive. The spec's fallback then clicked "Keep drafts unchanged", which blocks publication by design, so Save sent nothing. The unbounded wait used up the test timeout, and cleanup never ran. The lead restored the owner by exact-base publication. Fixed in `PageOwnedDraftLifecycle`.
+- **Lead corrections to the spec:** step 4 now waits for the draft lifecycle to be ready and asserts that no recovery dialog appears, instead of dismissing one. The image resize and folder selection pick rows by layer ID and fail rather than skip or fall back to other rows. The published image must be 60×60, the shape must carry `blendMode: multiply` and no `blend`, and the emoji must be at (550, 300). Publication and unsaved-state waits now have 30-second limits so cleanup always runs.
+- **Wiki state:** the interrupted runs' manual restores published an empty drawing, and later runs then "restored" that. The owner's baseline drawing ("Welcome Slide", which J75 expects) was lost that way. The lead republished it from the last revision that had it. Cleanup must restore the snapshot read at the start, and a manual restore must restore that same snapshot, never an empty one. Workarounds applied in memory are diagnosis only; the report should say which steps ran under them.
+
+## J76 implemented awaiting lead review: every layer type through the page-owned editor — September 26, 2026
+
+Junior implemented acceptance testing for every layer type through the page-owned editor in `tests/e2e/page-owned-journey-layer-types.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Preserved all other pages and files; never touches `Layers_history_test`.
+- **Step 1: Seed bound slide & open editor**:
+  - Seeded owner with one bound slide (`slide_journey_layer_types` containing cyan base rectangle spanning `x: 250..400, y: 250..350`) via exact-base publication (`revid: 1181`).
+  - Opened page's edit link (`.layers-page-edit-link`); verified HTTP 200 response and `no-store` Cache-Control header; verified canvas ready.
+- **Step 2: Pure UI layer creation through toolbar and properties panel**:
+  - Marker placed via annotation tool dropdown (`.tool-dropdown[data-group-id="annotation"]` -> `.tool-dropdown-item[data-tool="marker"]`) and canvas click.
+  - Shape Library opened (`.shape-library-button`); selected ISO 7010 W001 warning sign (`iso7010-w/iso_7010_w001`) and inserted at center.
+  - Blend mode set to `multiply` via properties panel select while shape selected.
+  - Emoji picker opened (`.emoji-picker-button`); selected `emoji_u2639`; repositioned via properties panel X/Y inputs (`550, 300`).
+  - Image fixture (`tests/fixtures/assets/test-image.png`) imported via file chooser (`.import-image-button`) and scaled to 60x60 in properties panel.
+  - Shape and Emoji multi-selected via Ctrl-click in layer list; grouped into `Folder 1` (`.layers-create-group-btn`).
+  - Saved once via `.save-button`.
+- **Step 2 Publication Defect Report (Reported for Lead Correction)**:
+  - Saving fails with `"Publication failed: layers-invalid-snapshot"`. Investigation revealed three distinct integration defects:
+    1. `DrawingController.js` (line 292) sets `fontSizeAdjust: 0` on marker layers; `ServerSideLayerValidator.php` drops `fontSizeAdjust` (omitted from `ALLOWED_PROPERTIES`), violating `DocumentSchema::strictLayers()` round-trip identity.
+    2. `DrawingController.js` (line 293) sets `fontFamily: 'Arial, sans-serif'` on marker layers; `TextSanitizer::sanitizeFontFamily()` (line 121) strips commas via `/[^a-zA-Z0-9 _.-]/`, modifying the string to `'Arial sans-serif'` and violating round-trip identity.
+    3. `PropertiesForm.js` (line 942) sets `blend: v`; `ServerSideLayerValidator.php` (lines 454-459) unsets `blend` and assigns `blendMode`, violating round-trip identity.
+  - In all three cases, `DocumentSchema` throws `\InvalidArgumentException('invalid-or-lossy-layer-data')`, causing `PagePublicationService` to throw `PublicationException('layers-invalid-snapshot')`.
+- **Visual & Lifecycle Verification with Diagnostic Normalization**:
+  - With in-memory normalization matching server schema expectations (`fontSizeAdjust` removed, `fontFamily: 'Arial'`, `blendMode: 'multiply'`), save succeeds (`revid: 1186`).
+  - Real browser rendering confirmed live in Chromium:
+    - Overlap area at (380, 300) renders dark green `[0, 168, 0, 255]` (`multiply` of amber `#F9A800` over cyan `#00ffff`).
+    - Shape alone over white at (410, 325) renders solid amber `[249, 168, 0, 255]`.
+    - Fixture PNG renders at (50, 50) with exact fixture pixel `[32, 96, 192, 255]`.
+    - Marker 1 and Emoji render with non-zero ink.
+    - Historical viewer (`Special:ViewLayersPage`) and diff view against previous revision render identical pixel values without errors.
+- **Steps 4–6: Folder hide, version restoration, and CAS cleanup**:
+  - Step 4: Group visibility toggled off via `.layer-visibility` on `.layer-item.layer-item-group`; saved new revision. Group members disappear from page and rev2 viewer while remaining visible in rev1 viewer.
+  - Step 5: **Restore this version** on rev1 in viewer publishes a new tagged revision and restores drawing visibility on page.
+  - Step 6: `finally` block guarantees exact-base CAS publication restoring baseline wikitext and snapshot (revid 1195).
+- **Verification Summary**:
+  - Test run duration: **31.0s**.
+  - ESLint: **0 errors, 0 warnings**.
+  - Changes strictly confined to `tests/e2e/page-owned-journey-layer-types.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md`, and `docs/JUNIOR_IMPLEMENTATION_REVIEW.md`.
+  - Zero production code, service, manifest, message, database, or wiki configuration changes. Zero commits or pushes.
 
 ## J75 accepted: Cargo projection acceptance — September 26, 2026
 
