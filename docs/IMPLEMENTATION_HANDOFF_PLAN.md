@@ -1,5 +1,28 @@
 # Layers implementation handoff plan
 
+## Drawings show values from the page — September 26, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `{{#layers_fields:}}` values are ordinary parser output (`wgLayersDrawingFields`, plain text, keyed by drawing ID) and are applied only by the page viewer (`PageOwnedRevisionBootstrap.withFields()`); stored drawings, history, search and Cargo rows keep the `{{name}}` tokens. Never put field values into `layersread` responses or stored drawings. `tests/e2e/page-owned-fields.spec.js` checks it in Chromium. J79 remains the queued junior packet. Earlier entries below are historical.
+
+## File layer sets are searchable; refused saves name the layer; anonymous drawing reads cacheable; J79 ready — September 26, 2026
+
+See the three [current status](CURRENT_STATUS.md) entries. Contracts: `DrawingSearchText` is the only source of drawing words for search; a new write path for file sets must go through `CacheInvalidationTrait` so the file page is reindexed. A refused page-owned save reports `layers-invalid-snapshot` with a message naming the layer and property; the publish client shows server text for that code only. Only anonymous binding reads of the current revision may be public; keep every other `layersread` response private. J79 below is ready for when juniors return. Earlier entries below are historical.
+
+### J79 — A refused page-owned save names the layer (ready)
+
+**Purpose:** prove in real Chromium that when page history refuses a drawing, the editor names the layer and property, keeps the unsaved work, and saves once the value is fixed. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-refusal-message.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes. Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`.
+
+1. Record the owner's current revision and `layersread` snapshot. Seed one bound slide with one rectangle named "Warning box" by exact-base publication, open its edit link and wait for `apiManager.pageOwnedDrafts.ready`.
+2. The editor can no longer produce a value the server refuses, so inject one: set the rectangle's `strokeWidth` to 150 on the editor's layer object and mark it changed, then press Save. The only allowed state write is this one.
+3. Check: the error notification contains "Warning box" and "strokeWidth"; the page's latest revision is unchanged; the editor still shows unsaved changes and the value 150.
+4. Set the stroke width to 5 through the properties panel and save: exactly one new tagged revision, whose snapshot has `strokeWidth` 5.
+5. Repeat step 2 with an unnamed layer (remove the name) and check the notification names the layer's ID instead.
+6. Restore the owner to the revision text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
 ## Properties panel values save as set; J78 accepted — September 26, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `PropertiesPanelValues.test.js` drives every properties-panel control to its lowest and highest choice and `DocumentSchemaTest` publishes the result; a panel limit or default the server would change fails it. **J78 is accepted** with lead corrections (packet below; see the review ledger). No junior packet is queued while juniors are unavailable. Earlier entries below are historical.

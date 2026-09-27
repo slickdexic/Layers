@@ -4,6 +4,14 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Drawings show values from the page (pilot, September 26): `{{#layers_fields: drawing ID | name = value }}` on the owner page fills `{{name}}` tokens in a page-owned drawing's text where the page shows the drawing. Values are expanded wikitext turned into plain text, so they can come from `#cargo_query`, templates or other parser functions, and update whenever the page is rendered again. The drawing, its history, search and Cargo rows keep the tokens.
+
+- Anonymous readers' page-owned drawings are cacheable (pilot, September 26): an anonymous `layersread` binding read of a page's current revision is sent as public for `$wgLayersBindingReadMaxAge` seconds (new setting, default 300; 0 disables), so browsers and a CDN can serve page views' drawings. Logged-in readers, older revisions, snapshot reads, errors and private wikis stay private.
+
+- File layer sets are searchable (September 26): a file's `File:` page is indexed with the text of the latest revision of each of its layer sets (visible text, text box and callout layers; all PDF pages; sets from earlier file versions). Saving, deleting or renaming a set reindexes the page; `maintenance/reindexPageDrawings.php` now also covers existing files. File results show no drawing snippet (core does not run `ShowSearchHit` for them), and pages that only embed a file are not found by its layer text. The search ingress and hooks are renamed `DrawingSearchIngress` and `DrawingSearchHooks` and are registered on every wiki.
+
+- Refused page-owned saves name the layer (pilot, September 26): `layerspublish` reports which layer, and where possible which property, the server would drop or change, still under the `layers-invalid-snapshot` code, and the editor shows that message instead of "Publication failed: layers-invalid-snapshot". New messages `layers-invalid-snapshot-property` and `layers-invalid-snapshot-layer`.
+
 - Properties panel values save as set (September 26): marker values keep labels such as "1A" (up to 16 characters) instead of being dropped; the panel's stroke width stops at the server's 100 and a text layer's text stroke width at 20; enabling text shadow writes its colour in the server's form; radial gradients no longer carry an `undefined` angle, which blocked page-owned saves; server exports draw "letter circled" markers as letters.
 
 - Arrows and cleared properties in page-owned drawings (pilot, September 26): a page-owned drawing containing an arrow could not be saved ("Invalid editor snapshot"), because the arrow tool left three options `undefined`. The tool now sets them only when chosen, and the page-owned editor publishes any property cleared to `null` or `undefined` (for example a gradient switched back to solid) as absent.

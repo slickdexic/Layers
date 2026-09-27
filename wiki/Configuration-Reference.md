@@ -12,6 +12,8 @@
 
 `$wgLayersPageOwnedPilotNamespaces` defaults to `[]`. Entries are namespace IDs (for example `[ NS_MAIN ]`); every page in them may start owning drawings, as if its title were listed in `$wgLayersPageOwnedPilotOwners`. Enrollment only decides where ownership may start; the guards apply to pages that own drawings. Either list being non-empty installs the content role and guards, so do not empty both while page-owned drawings exist.
 
+`$wgLayersBindingReadMaxAge` defaults to `300` (seconds). An anonymous reader's `layersread` binding read of a page's current revision, which is how page views fetch page-owned drawings, is sent as publicly cacheable for this long, so browsers and a CDN can serve it. Logged-in readers, older revisions, snapshot reads, errors and private wikis are never cached publicly. After a page is deleted, or a revision that has just stopped being current is hidden, a cached copy can be served for up to this age; `0` turns caching off.
+
 Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
 
 ## Registered settings
