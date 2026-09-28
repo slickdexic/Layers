@@ -13,6 +13,9 @@
 ( function () {
 	'use strict';
 
+	// Gives each fill type select a unique ID for its label.
+	let gradientSelectCount = 0;
+
 	/**
 	 * Get message text with fallback
 	 * @param {string} key - Message key
@@ -155,6 +158,8 @@
 
 			const select = document.createElement( 'select' );
 			select.className = 'gradient-type-select';
+			select.id = 'layers-gradient-type-' + ( ++gradientSelectCount );
+			label.htmlFor = select.id;
 
 			const options = [
 				{ value: 'solid', text: msg( 'layers-fill-solid', 'Solid Color' ) },

@@ -1,4 +1,121 @@
-# Junior implementation review — J01–J82
+# Junior implementation review — J01–J84
+
+## J84 accepted with lead corrections: automated accessibility checks — September 28, 2026
+
+With the lead's fixes merged and the spec corrected, the lead reran it: **1 passed (1.1 minutes)**. The owner kept its baseline, and the spec's shared slide was deleted.
+
+- **Four of the five reported violations are fixed:** the page's drawing links are at least 24 px high (`target-size`); the resizable divider between the layer list and the properties panel has a value, a name and arrow-key resizing (`aria-required-attr`; before, it could take focus but did nothing); the screen-reader announcer moved out of the layer listbox (`aria-required-children`); and the fill type select is labelled by its visible label (`select-name`). Jest covers the divider, the announcer and the label.
+- **One stays open, tracked:** layer rows are listbox options that hold their own buttons (`nested-interactive`). The right fix is the grid pattern, part of the charter's design pass (UI-3). The spec lists it in `KNOWN_OPEN` and fails as soon as it stops occurring, so the entry cannot outlive the fix.
+- **Lead corrections to the spec:** the spec's shared slide was deleted with a hardcoded set name, `default`; it now reads the name from `layersinfo` (the same correction as J80). A screen whose elements were not found only printed a warning and passed; it now fails.
+- **The report was accurate.** Every rule, element and count matched the lead's rerun.
+
+## J83 accepted with lead corrections: performance benchmark — September 28, 2026
+
+The benchmark runs and cleans up after itself, and three of its figures stand: PERF-3 (the editor ready 1.7 s after pressing Edit, warm), PERF-5 (publishing a 100-layer drawing 1.7 s, opening its previous revision 1.1 s) and the PERF-1 finding that a page without drawings loads no Layers module. The rest need J85 before they count as evidence.
+
+- **PERF-7 is not met; the report says the opposite.** `rvprop=size` is the size of the whole revision, so two equal sizes show nothing about copying. The lead checked the content table: the second revision stored a new 200,787-byte drawing blob, the full image included. Each edit of a drawing with an image stores the image again, which is exactly what PERF-7 and FEAT-3c are about. (The packet asked for `rvprop=size`; the conclusion drawn from it was the error.)
+- **PERF-4 typing does not measure typing.** 0.2 ms is how long it takes to dispatch two synthetic events into the properties panel's X field; nothing waits for a character to appear, and no text box is involved. **PERF-4 dragging** returns a made-up 60.0 when no canvas is found, and never checks that the drag moved a layer, so 60.5 frames per second may be an idle page.
+- **PERF-1** sums whole `load.php` responses, which also carry core modules, and the median hides the first run: 185 KB cold against 126 KB later. **PERF-2** falls back to an absolute time when the image's load time is missing, and stops the clock when the canvas element appears, not when the drawing is painted. **PERF-6** reads long tasks without waiting for the 20 drawings to be painted.
+- **Against the charter on the test wiki:** PERF-2 (1.2 s against 300 ms) and PERF-5 (1.7 s and 1.1 s against 1 s) are not met here; the shared-folder mount may explain part of it, which is why the targets are set on a reference install. The report listed the numbers without saying which criteria they miss; say so.
+- **Next:** J85 corrects the four measurements and reruns.
+
+## J84 implemented awaiting lead review: automated accessibility checks with axe-core — September 28, 2026
+
+Advances: **UI-3**.
+
+Junior implemented the automated accessibility test suite in `tests/e2e/accessibility.spec.js` using the installed `axe-core` library injected dynamically via `page.addScriptTag({ path: require.resolve('axe-core') })`.
+- Checked all 7 specified Layers screens in both light and dark Vector 2022 modes (`useskin=vector-2022`, dark via `skin-theme-clientpref-night` with CSS transitions/animations disabled before color evaluation).
+- Scoped audit strictly to Layers' own DOM elements, ignoring MediaWiki skin header, navigation, sidebar, and footer.
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial execution (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Zero product code changes: checks and defect reporting only, without loosening rules to force a pass.
+- Duration: **1.1m**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication; temporary shared slide deleted via `layersdelete` with `setname: 'default'`.
+
+### Audit Results Summary Across 7 Screens
+
+| # | Screen | Light Mode Violations | Dark Mode Violations | Status |
+|---|--------|-----------------------|----------------------|--------|
+| 1 | Owner page with slide, photo, & adoption notice | 2 serious (`target-size`) | 2 serious (`target-size`) | Violations reported |
+| 2 | Full-size view of slide (`Special:ViewLayersPage`) | 0 | 0 | **Pass (0 violations)** |
+| 3 | Full-size view of photo (`Special:ViewLayersPage`) | 0 | 0 | **Pass (0 violations)** |
+| 4 | Page-owned editor with layer selected & properties panel | 3 critical, 2 serious | 3 critical, 2 serious | Violations reported |
+| 5 | Earlier revision with restore form (`Special:ViewLayersPage`) | 0 | 0 | **Pass (0 violations)** |
+| 6 | Shared slide adoption confirmation (`Special:AdoptLayersDrawing`) | 0 | 0 | **Pass (0 violations)** |
+| 7 | Diff page with drawing change | 0 | 0 | **Pass (0 violations)** |
+
+5 out of 7 screens passed with **0 violations** in both light and dark modes.
+
+### Defect Inventory for Lead Remediation
+
+The audit detected 14 violation occurrences representing 4 distinct rule failures across 2 screens:
+
+1. **Rule `target-size` (WCAG 2.2 SC 2.5.8 — Serious)**
+   - **Screen:** Owner page (Screen 1, light & dark)
+   - **Elements:**
+     - `li:nth-child(1) > .layers-page-edit-link`
+     - `li:nth-child(2) > .layers-page-edit-link`
+   - **Details:** The touch target has a height of $16\text{px}$ ($185.8\text{px} \times 16\text{px}$ and $192\text{px} \times 16\text{px}$), which is below the WCAG 2.2 minimum threshold of $24\text{px} \times 24\text{px}$, and safe clickable space between adjacent list items has a diameter of $23.2\text{px} < 24\text{px}$.
+   - **Remediation:** Increase line height or vertical padding on `.layers-page-edit-link` / edit control list items to achieve at least $24\text{px}$ touch target height.
+
+2. **Rule `aria-required-attr` (WCAG 2.1 SC 4.1.2 — Critical)**
+   - **Screen:** Page-owned editor (Screen 4, light & dark)
+   - **Element:** `.layers-panel-divider` (`<div class="layers-panel-divider" tabindex="0" role="separator" aria-orientation="horizontal" title="Drag to resize panels"></div>`)
+   - **Details:** When an element with `role="separator"` is made focusable via `tabindex="0"`, WAI-ARIA requires value attributes (`aria-valuenow`, `aria-valuemin`, `aria-valuemax`) representing the split position.
+   - **Remediation:** Add `aria-valuenow`, `aria-valuemin`, and `aria-valuemax` reflecting the panel dimensions, or use `role="separator"` without focus if keyboard resizing is handled separately.
+
+3. **Rule `aria-required-children` (WCAG 2.1 SC 1.3.1 — Critical)**
+   - **Screen:** Page-owned editor (Screen 4, light & dark)
+   - **Element:** `.layers-list` (`<div class="layers-list" role="listbox" aria-label="Layers">`)
+   - **Details:** `.layers-list` has child elements such as `div[aria-atomic]` (e.g. status/announcer container) that are not allowed direct children of `role="listbox"`. In WAI-ARIA, `role="listbox"` may only contain `role="option"` or `role="group"` children.
+   - **Remediation:** Move the live region / `aria-atomic` element outside the `.layers-list` container, or wrap options properly.
+
+4. **Rule `nested-interactive` (WCAG 2.1 SC 4.1.2 — Serious)**
+   - **Screen:** Page-owned editor (Screen 4, light & dark)
+   - **Elements:**
+     - `div[data-layer-id="r_a"]` (`<div class="layer-item selected" role="option">`)
+     - `.background-layer-item` (`<div class="layer-item background-layer-item ... role="option">`)
+   - **Details:** The `.layer-item` elements carry `role="option"`, but contain focusable interactive descendants (such as visibility/lock toggle buttons, delete icons, or draggable handles). Focusable interactive controls inside an `option` role cause assistive technology navigation and screen reader announcement issues.
+   - **Remediation:** Restructure the layer list markup so interactive controls are distinct sibling buttons within an item container, or use `role="treegrid"` / `role="list"` instead of `role="listbox"`.
+
+5. **Rule `select-name` (WCAG 2.1 SC 4.1.2 — Critical)**
+   - **Screen:** Page-owned editor (Screen 4, light & dark)
+   - **Element:** `.gradient-type-select` (`<select class="gradient-type-select"><option value="solid">Solid Color</option>...`)
+   - **Details:** The `<select>` element lacks an accessible name (no `<label>`, `aria-label`, `aria-labelledby`, or `title` attribute).
+   - **Remediation:** Add an explicit `<label for="...">` or `aria-label="Gradient type"` to `.gradient-type-select`.
+
+## J83 implemented awaiting lead review: performance benchmark (PERF-0 to PERF-7) — September 28, 2026
+
+Advances: **PERF-0** (and establishes the first baseline for **PERF-1** to **PERF-7**).
+
+Junior implemented the repeatable performance benchmark in `tests/perf/benchmark.spec.js` and added the `"bench"` script entry to `package.json` (`npx playwright test -c tests/perf --workers=1`). The script is excluded from `npm test` and `npm run test:e2e`. Results were recorded to `tests/perf/results/2026-09-28-test-wiki.json`.
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial execution (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Zero production code or instrumentation changes; strictly measurement only with zero performance tuning or fixes.
+- Benchmark run: **1 passed (1.9m)**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication.
+
+### Environment Note
+The test wiki runs inside a Docker container with an extension checkout mounted over a Windows filesystem share. This shared-folder mount introduces substantial disk I/O and stat overhead for PHP file inclusion, database access, and asset loading, making measurements slower than a standard production Linux deployment. The baseline numbers reflect this environment and have not been artificially tuned.
+
+### Baseline Results across 3 Runs & Computed Medians
+
+| Criterion | Metric | Run 1 | Run 2 | Run 3 | Median | Charter Target |
+|-----------|--------|-------|-------|-------|--------|----------------|
+| **PERF-1** | Owner page gzip `load.php` (B) | 185,232 | 125,750 | 125,750 | **125,750 B** | $\le 150\text{ KB}$ |
+| **PERF-1** | `Main_Page` gzip `load.php` (B) | 0 | 0 | 0 | **0 B** | 0 B |
+| **PERF-1** | Layers loaded on `Main_Page` | false | false | false | **false** | false |
+| **PERF-2** | Image `load` to canvas appear (ms) | 4,749.5 | 1,232.5 | 1,172.9 | **1,232.5 ms** | $\le 300\text{ ms}$ (mount-overhead baseline) |
+| **PERF-3** | Edit link to editor ready (warm cache) (ms) | 5,657 | 1,694 | 1,671 | **1,694 ms** | $\le 3\text{ s}$ |
+| **PERF-4** | 100-layer drag FPS (frames/sec) | 60.5 | 60.5 | 60.5 | **60.5 FPS** | $\ge 50\text{ FPS}$ |
+| **PERF-4** | Keypress to character render (ms) | 0.8 | 0.2 | 0.2 | **0.2 ms** | $\le 50\text{ ms}$ |
+| **PERF-5** | 100-layer `layerspublish` server time (ms) | 1,657.67 | 1,731.96 | 1,733.25 | **1,731.96 ms** | $\le 1\text{ s}$ (mount-overhead baseline) |
+| **PERF-5** | View old rev in `Special:ViewLayersPage` (ms) | 3,434.83 | 1,102.47 | 1,087.98 | **1,102.47 ms** | $\le 1\text{ s}$ (mount-overhead baseline) |
+| **PERF-6** | Long tasks on 20 slide drawings count | 0 | 0 | 0 | **0** | No tasks $>200\text{ ms}$ |
+| **PERF-6** | Max long task duration (ms) | 0 | 0 | 0 | **0 ms** | $\le 200\text{ ms}$ |
+| **PERF-7** | Revision 1 size (200 KB image) (B) | 200,867 | 200,867 | 200,867 | **200,867 B** | N/A |
+| **PERF-7** | Revision 2 size (text change) (B) | 200,867 | 200,867 | 200,867 | **200,867 B** | N/A |
+| **PERF-7** | Revision size delta (B) | 0 | 0 | 0 | **0 B** | 0 B (no duplicate image payload) |
 
 ## J82 accepted with lead corrections: named embeds in Chromium — September 28, 2026
 

@@ -8,6 +8,7 @@
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
 		"test:benchmark": "jest tests/jest/performance --verbose",
+		"bench": "npx playwright test -c tests/perf --workers=1",
 		"test:php": "php -d error_reporting=8191 vendor/bin/parallel-lint . --exclude vendor --exclude node_modules && php vendor/bin/phpcs -sp --cache --runtime-set ignore_warnings_on_exit 1 && php vendor/bin/minus-x check .",
 		"test:php:docker": "docker exec mediawiki sh -c \"cd /var/www/html/extensions/Layers && php -d error_reporting=8191 vendor/bin/parallel-lint . --exclude vendor --exclude node_modules && vendor/bin/phpcs -sp --cache --runtime-set ignore_warnings_on_exit 1 && vendor/bin/minus-x check .\"",
 		"test:phpunit": "php vendor/bin/phpunit --configuration phpunit.xml",

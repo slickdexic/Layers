@@ -1,5 +1,14 @@
 # Current status and limitations
 
+## Accessibility checks in the browser, four fixes; first benchmark — September 28, 2026
+
+- **Accessibility (UI-3):** `tests/e2e/accessibility.spec.js` runs axe-core (WCAG 2.2 A and AA) on seven Layers screens in Vector 2022 light and dark. Four problems it found are fixed: the page's "Edit page drawing" and adoption links are at least 24 px high; the divider between the layer list and the properties panel has a name and value and can be resized with the arrow keys; the screen-reader announcer no longer sits inside the layer listbox; and the fill type select is named by its label. One remains: layer rows are listbox options that contain buttons, which needs the grid pattern in the design pass. The spec tracks it and fails on anything else.
+- **Benchmark (PERF-0):** `npm run bench` measures PERF-1 to PERF-7 on the test wiki. Its first results show that a page without drawings loads no Layers code and the editor is ready 1.7 s after pressing Edit, and they confirm that **PERF-7 is not met**: every edit of a drawing stores the whole drawing again, a 200 KB image layer included. Four measurements are being corrected before the other figures count (J85).
+
+Code: `LayerPanel.js` (divider, announcer), `ui/GradientEditor.js`, `viewer/PageDrawingControls.less`.
+
+Fresh verification: the accessibility spec passed in Chromium with the one tracked violation; new Jest cases for the divider's value and keyboard resizing, the announcer's place, and the labelled select; Jest **15,031**.
+
 ## Renaming a drawing keeps its embeds working — September 28, 2026
 
 Fourth step of [charter](../docs/PROJECT_CHARTER.md) decision D1 (HIST-7). When a publication changes a drawing's name, the page's direct embeds that name it (`layerset=<pageId>:<old>`, `{{#Slide:<pageId>:<old>}}`) are rewritten to the new name in the same revision, whether or not the save sends page text. Changes of case, spacing or underscores need no rewrite, since names that differ only in those are the same name. Two drawings can swap names in one save. Embeds of other pages, in templates or in `layersbinding=` form are left as they are.

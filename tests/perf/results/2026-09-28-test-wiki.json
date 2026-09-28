@@ -1,0 +1,161 @@
+{
+  "benchmark": "PERF-0 Repeatable Performance Benchmark",
+  "date": "2026-09-28",
+  "environment": {
+    "date": "2026-09-28",
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64",
+    "cpus": 16,
+    "cpuModel": "AMD Ryzen 7 3700X 8-Core Processor             ",
+    "totalMemoryBytes": 34282106880,
+    "nodeVersion": "v24.20.0",
+    "browser": "Chromium 145.0.7632.6",
+    "wiki": {
+      "generator": "MediaWiki 1.45.3",
+      "server": "http://localhost:8080",
+      "sitename": "Test_001",
+      "phpversion": "8.3.31",
+      "note": "The test wiki runs inside a Docker container with an extension checkout mounted over a Windows filesystem share. This shared-folder mount introduces substantial disk I/O and stat overhead for PHP file inclusion and asset loading, making measurements slower than a standard production Linux deployment."
+    }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 185232,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false
+      },
+      "perf2": {
+        "imageLoadToCanvasAppearMs": 4749.5
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 5657
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "keyPressToRenderDelayMs": 0.8
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1657.67,
+        "viewPreviousRevisionInSpecialPageMs": 3434.83
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SizeBytes": 200867,
+        "revision2SizeBytes": 200867,
+        "sizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 2,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 125750,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false
+      },
+      "perf2": {
+        "imageLoadToCanvasAppearMs": 1232.5
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1694
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "keyPressToRenderDelayMs": 0.2
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1731.96,
+        "viewPreviousRevisionInSpecialPageMs": 1102.47
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SizeBytes": 200867,
+        "revision2SizeBytes": 200867,
+        "sizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 3,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 125750,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false
+      },
+      "perf2": {
+        "imageLoadToCanvasAppearMs": 1172.9
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1671
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "keyPressToRenderDelayMs": 0.2
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1733.25,
+        "viewPreviousRevisionInSpecialPageMs": 1087.98
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SizeBytes": 200867,
+        "revision2SizeBytes": 200867,
+        "sizeDeltaBytes": 0
+      }
+    }
+  ],
+  "median": {
+    "PERF-1": {
+      "ownerPageLayersGzipBytesMedian": 125750,
+      "mainPageLayersGzipBytesMedian": 0,
+      "layersModuleLoadedOnMainPage": false
+    },
+    "PERF-2": {
+      "imageLoadToCanvasAppearMsMedian": 1232.5
+    },
+    "PERF-3": {
+      "editLinkToEditorReadyMsMedian": 1694
+    },
+    "PERF-4": {
+      "dragFramesPerSecondMedian": 60.5,
+      "keyPressToRenderDelayMsMedian": 0.2
+    },
+    "PERF-5": {
+      "layersPublishResponseTimeMsMedian": 1731.96,
+      "viewPreviousRevisionInSpecialPageMsMedian": 1102.47
+    },
+    "PERF-6": {
+      "longTaskCountMedian": 0,
+      "totalLongTaskDurationMsMedian": 0,
+      "maxLongTaskDurationMsMedian": 0
+    },
+    "PERF-7": {
+      "revision1SizeBytesMedian": 200867,
+      "revision2SizeBytesMedian": 200867,
+      "sizeDeltaBytesMedian": 0
+    }
+  },
+  "charterCriteria": {
+    "PERF-0": "Benchmark script implemented in tests/perf/benchmark.spec.js with npm run bench entry",
+    "PERF-1": "A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none.",
+    "PERF-2": "A drawing appears within 300 ms after its image has loaded.",
+    "PERF-3": "The editor is usable within 3 s of pressing Edit, with a warm cache.",
+    "PERF-4": "With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms.",
+    "PERF-5": "Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision.",
+    "PERF-6": "On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms.",
+    "PERF-7": "A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c)."
+  }
+}

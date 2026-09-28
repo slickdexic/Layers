@@ -77,14 +77,14 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| PERF-0 | A scripted, repeatable benchmark in the repository measures PERF-1 to PERF-7 and runs before each milestone. | Open |
+| PERF-0 | A scripted, repeatable benchmark in the repository measures PERF-1 to PERF-7 and runs before each milestone. | Partial: `npm run bench` exists (J83, September 28); four of its measurements are being corrected (J85) |
 | PERF-1 | A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none. Nothing Layers adds blocks rendering. | Partial: the viewer loads only where drawings are shown, but also on every `File:` page; transfer size is not measured |
 | PERF-2 | A drawing appears within 300 ms after its image has loaded. | Not measured |
 | PERF-3 | The editor is usable within 3 s of pressing Edit, with a warm cache. | Not measured |
 | PERF-4 | With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms. | Not measured |
 | PERF-5 | Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision. | Not measured |
 | PERF-6 | On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms. | Partial: viewers already start lazily |
-| PERF-7 | A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c). | Open |
+| PERF-7 | A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c). | Not met (measured September 28): each edit stores the whole drawing again, a 200 KB image included |
 
 ### 5.4 Modern, consistent, accessible UI (UI)
 
@@ -92,7 +92,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | --- | --- | --- |
 | UI-1 | One visual language across editor, viewer, overlays, dialogs and special pages, built on MediaWiki's Codex design tokens (colour, spacing, type, corner radius) and icons. OOUI is used only where Codex has no equivalent. | Partial: OOUI with Layers' own styles |
 | UI-2 | Light and dark themes in Vector 2022; works in legacy Vector; the viewer works in the mobile skin (Minerva). | Partial: Vector 2022 dark mode done; Minerva untested |
-| UI-3 | Layers' own UI meets WCAG 2.2 AA: keyboard operable, visible focus, 4.5:1 text contrast, and names for screen readers. Checked by automated accessibility checks in browser tests and one manual screen-reader pass. | Partial: ARIA and shortcuts exist; no automated audit |
+| UI-3 | Layers' own UI meets WCAG 2.2 AA: keyboard operable, visible focus, 4.5:1 text contrast, and names for screen readers. Checked by automated accessibility checks in browser tests and one manual screen-reader pass. | Partial: axe checks run on seven screens in light and dark (J84); four violation kinds fixed; layer rows still nest buttons in listbox options |
 | UI-4 | Readers who cannot see a drawing can get its text in reading order. | Open |
 | UI-5 | Right-to-left interface languages lay out correctly. | Open |
 | UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial: the colour picker is the known gap |

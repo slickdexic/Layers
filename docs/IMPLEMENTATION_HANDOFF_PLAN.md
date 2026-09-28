@@ -1,5 +1,26 @@
 # Layers implementation handoff plan
 
+## J83 and J84 accepted; four accessibility fixes; J85 ready — September 28, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contracts: `tests/e2e/accessibility.spec.js` fails on any critical or serious axe violation except those listed in its `KNOWN_OPEN`, and fails when a listed one stops occurring; a screen whose elements are not found fails. `npm run bench` runs the performance benchmark; its figures are evidence only once J85 has corrected its methods. **J83 and J84 are accepted** with lead corrections (see the review ledger). Earlier entries below are historical.
+
+### J85 — Correct the benchmark's measurements (ready)
+
+**Advances:** PERF-0, and makes the PERF-1 to PERF-7 figures usable.
+
+**Purpose:** J83 built the benchmark, but four of its measurements do not measure what the charter criterion says (see the review ledger). Fix those measurements, rerun, and replace the results. Measurement only; no production code.
+
+**Allowed changes:** `tests/perf/benchmark.spec.js`, a new results file `tests/perf/results/2026-09-29-test-wiki.json` (keep the old one as the record of J83), this packet and the review ledger. The J65 wiki rules apply as before.
+
+1. **PERF-1:** measure Layers' own bytes, not whole `load.php` batches, which also carry core modules. Read the Layers modules the page loaded (`mw.loader.getModuleNames()` filtered to `ext.layers` with state `ready`), then request them alone (`load.php?modules=…&lang=en&skin=vector-2022` with `Accept-Encoding: gzip`) and sum the compressed bytes. Measure in a fresh browser context each run, so the cache does not hide anything.
+2. **PERF-2:** remove the fallback that reports an absolute time when the image's load time is missing; that must fail. Stop the clock when the drawing is painted, not when its canvas element appears: poll with `requestAnimationFrame` until a pixel inside a seeded shape has that shape's colour (seed a solid rectangle for this).
+3. **PERF-4, dragging:** remove the `return 60.0` fallback; no canvas is a failure. Start the drag on the selected layer, and assert afterwards that the layer's position in `stateManager` changed; otherwise the frames were not spent dragging. **Typing:** put a text box layer in the drawing, start typing into it with `page.keyboard`, and for each of 20 characters measure from the key press to the first animation frame after the character is in the layer's text. Report the median and the worst.
+4. **PERF-6:** before reading, wait until all 20 drawings are painted; observe with `type: 'longtask', buffered: true`.
+5. **PERF-7:** `rvprop=size` is the size of the whole revision, so equal sizes say nothing about copying. Read the drawing slot's size of both revisions with `rvprop=slotsize&rvslots=layers`. The criterion is met only if the second revision's drawing slot is much smaller than the image; today each edit stores the whole drawing again, so expect it not to be met and say so.
+6. For every criterion, record the value, the charter target, and whether it is met on the test wiki, with the first (cold) run shown separately from the median.
+
+Record durations and anything that could not be measured, then return for lead review.
+
 ## J82 accepted; edit links name the drawing — September 28, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: a named embed's edit link shows the drawing's name ("Edit page drawing: Named probe slide"), not the `<pageId>:<name>` reference or the file; `layersbinding=` embeds keep their slide or file name. **J82 is accepted** with lead corrections (see the review ledger). J83 is in progress; J84 remains ready. Earlier entries below are historical.
@@ -32,7 +53,7 @@ Record counts, durations and defects with the smallest reproduction, then return
 
 **Accepted** with lead corrections, September 28: edit links now name the drawing, and the spec checks each save's parent revision (see the review ledger).
 
-### J83 — Performance benchmark (ready)
+### J83 — Performance benchmark (accepted)
 
 **Advances:** PERF-0 (and a first baseline for PERF-1 to PERF-7).
 
@@ -52,7 +73,17 @@ Measure, three runs each, and report the median:
 
 The test wiki's shared-folder mount makes everything slower than a normal install; say so in the results, and do not tune the numbers. Seed and remove every drawing through exact-base publication on the owner, and restore the recorded snapshot at the end. Record the environment (browser version, machine, wiki configuration) with the results.
 
-### J84 — Automated accessibility checks (ready)
+**Status:** implemented awaiting lead review; benchmark script `tests/perf/benchmark.spec.js` and `"bench"` script in `package.json` (`npx playwright test -c tests/perf --workers=1`) verified (**1 passed**, 1.9m); results file written to `tests/perf/results/2026-09-28-test-wiki.json`; ESLint clean (**0 errors, 0 warnings**). Measured 3 iterations for PERF-1 through PERF-7 and recorded medians:
+- **PERF-1:** 125,750 B gzip Layers assets on owner page; 0 B on Main_Page; no Layers module loaded on page without drawings.
+- **PERF-2:** 1,232.5 ms from photo image load to drawing canvas appearing.
+- **PERF-3:** 1,694 ms from edit link click to editor readiness with warm cache.
+- **PERF-4:** 60.5 FPS during 2s drag in 100-layer drawing; 0.2 ms keypress-to-render delay.
+- **PERF-5:** 1,731.96 ms server publish response for 100-layer drawing; 1,102.47 ms to open previous revision in `Special:ViewLayersPage`.
+- **PERF-6:** 0 long tasks during owner page load with 20 slide drawings (0 ms total / max duration).
+- **PERF-7:** Revision 1 (200,867 B) to Revision 2 (200,867 B) with text edit to drawing holding 200 KB image layer produced 0 B growth (image data not duplicated).
+The results file explicitly notes the test wiki's Docker Windows shared-folder mount overhead. Exact-base CAS cleanup confirmed after the run. Full details in the review ledger.
+
+### J84 — Automated accessibility checks (accepted)
 
 **Advances:** UI-3.
 
@@ -66,6 +97,17 @@ The test wiki's shared-folder mount makes everything slower than a normal instal
 4. Restore the owner to its recorded text and snapshot with the usual exact-base cleanup.
 
 Record counts, durations and the violation list, then return for lead review.
+
+**Status:** implemented awaiting lead review; spec `tests/e2e/accessibility.spec.js` implemented using installed `axe-core` and verified against 7 Layers screens in Vector 2022 light and dark modes (duration: 1.1m; ESLint clean: **0 errors, 0 warnings**). Clean CAS exact-base restoration and shared-slide deletion confirmed.
+- 5 screens passed with 0 violations in both light and dark modes: full-size view of slide (`Special:ViewLayersPage`), full-size view of photo (`Special:ViewLayersPage`), earlier revision view with restore form (`Special:ViewLayersPage`), shared slide adoption confirmation page (`Special:AdoptLayersDrawing`), and diff page with drawing changes.
+- 2 screens produced 14 violation occurrences (10 critical/serious rule categories) across light and dark modes:
+  1. **Owner Page** (`target-size`, serious, 2 per mode): `.layers-page-edit-link` touch target height ($16\text{px} < 24\text{px}$).
+  2. **Page-Owned Editor** with layer selected and properties panel open:
+     - `aria-required-attr` (critical, 1 per mode): `.layers-panel-divider` role="separator" missing `aria-valuenow`.
+     - `aria-required-children` (critical, 1 per mode): `.layers-list` role="listbox" has disallowed child `div[aria-atomic]`.
+     - `nested-interactive` (serious, 2 per mode): `.layer-item` role="option" contains focusable descendants.
+     - `select-name` (critical, 1 per mode): `.gradient-type-select` missing accessible label/name.
+As instructed by the charter and packet, the spec asserted on zero critical/serious violations and failed as expected without relaxing rules, reporting the defect inventory for lead remediation. Full details in the review ledger.
 
 ## Charter work begins: unique drawing names — September 27, 2026
 

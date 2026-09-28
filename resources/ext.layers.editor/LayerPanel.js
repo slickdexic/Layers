@@ -1030,7 +1030,8 @@
 			this.ariaLiveRegion.className = 'layers-sr-only';
 			// Visually hidden but accessible to screen readers
 			this.ariaLiveRegion.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
-			this.layerList.appendChild( this.ariaLiveRegion );
+			// A listbox may only contain options, so the announcer sits beside the list.
+			sidebarInner.appendChild( this.ariaLiveRegion );
 
 			const emptyState = document.createElement( 'div' );
 			emptyState.className = 'layers-empty';
@@ -1043,6 +1044,10 @@
 			divider.setAttribute( 'tabindex', '0' );
 			divider.setAttribute( 'role', 'separator' );
 			divider.setAttribute( 'aria-orientation', 'horizontal' );
+			divider.setAttribute( 'aria-label', this.msg( 'layers-panel-divider', 'Drag to resize panels' ) );
+			divider.setAttribute( 'aria-valuemin', '0' );
+			divider.setAttribute( 'aria-valuemax', '100' );
+			divider.setAttribute( 'aria-valuenow', '0' );
 			divider.title = this.msg( 'layers-panel-divider', 'Drag to resize panels' );
 
 			// Properties panel
@@ -1074,6 +1079,25 @@
 			const minListHeight = 60;
 			const minPropsHeight = 80;
 
+			// The separator's value is the layer list's share of the space it can take, in percent.
+			const setListHeight = ( height ) => {
+				const maxListHeight = sidebarInner.offsetHeight - divider.offsetHeight - minPropsHeight;
+				const newListHeight = Math.max( minListHeight, Math.min( height, maxListHeight ) );
+				this.layerList.style.height = newListHeight + 'px';
+				const range = maxListHeight - minListHeight;
+				divider.setAttribute( 'aria-valuenow',
+					String( range > 0 ? Math.round( ( newListHeight - minListHeight ) / range * 100 ) : 0 ) );
+			};
+			this.addTargetListener( divider, 'keydown', ( e ) => {
+				if ( e.key !== 'ArrowUp' && e.key !== 'ArrowDown' ) {
+					return;
+				}
+				const current = this.layerList.getBoundingClientRect().height;
+				this.layerList.classList.add( 'layers-fixed-height' );
+				setListHeight( current + ( e.key === 'ArrowUp' ? -16 : 16 ) );
+				e.preventDefault();
+			} );
+
 			this.addTargetListener( divider, 'mousedown', ( e ) => {
 				isDragging = true;
 				startMouseY = e.clientY;
@@ -1091,11 +1115,7 @@
 					return;
 				}
 				const delta = e.clientY - startMouseY;
-				const totalHeight = sidebarInner.offsetHeight;
-				const dividerHeight = divider.offsetHeight;
-				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
-				const newListHeight = Math.max( minListHeight, Math.min( startListHeight + delta, maxListHeight ) );
-				this.layerList.style.height = newListHeight + 'px';
+				setListHeight( startListHeight + delta );
 			};
 			this.addDocumentListener( 'mousemove', handleMouseMove );
 
@@ -1124,11 +1144,7 @@
 					return;
 				}
 				const delta = e.touches[ 0 ].clientY - startMouseY;
-				const totalHeight = sidebarInner.offsetHeight;
-				const dividerHeight = divider.offsetHeight;
-				const maxListHeight = totalHeight - dividerHeight - minPropsHeight;
-				const newListHeight = Math.max( minListHeight, Math.min( startListHeight + delta, maxListHeight ) );
-				this.layerList.style.height = newListHeight + 'px';
+				setListHeight( startListHeight + delta );
 			};
 			this.addDocumentListener( 'touchmove', handleTouchMove, { passive: false } );
 

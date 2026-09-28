@@ -26,6 +26,13 @@
 
 	&__list {
 		margin: @spacing-25 0 0 @spacing-125;
+
+		// WCAG 2.2 target size: each link is at least 24px high.
+		a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 24px;
+		}
 	}
 }
 

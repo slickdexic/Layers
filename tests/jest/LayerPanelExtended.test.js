@@ -483,6 +483,31 @@ describe( 'LayerPanel Extended', () => {
 	} );
 
 	describe( 'divider resize', () => {
+		it( 'is an operable separator with a value, and the announcer is outside the listbox', () => {
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+			const divider = container.querySelector( '.layers-panel-divider' );
+			expect( [ divider.getAttribute( 'aria-valuemin' ), divider.getAttribute( 'aria-valuemax' ) ] )
+				.toEqual( [ '0', '100' ] );
+			expect( divider.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( panel.layerList.contains( panel.ariaLiveRegion ) ).toBe( false );
+			expect( container.contains( panel.ariaLiveRegion ) ).toBe( true );
+
+			// jsdom has no layout, so give the panel a size: 400px, of which the list may take 60px to 316px.
+			const inner = container.querySelector( '.layers-panel-inner' );
+			Object.defineProperty( inner, 'offsetHeight', { configurable: true, value: 400 } );
+			Object.defineProperty( divider, 'offsetHeight', { configurable: true, value: 4 } );
+			panel.layerList.getBoundingClientRect = () => ( { height: 188 } );
+			divider.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'ArrowDown', bubbles: true } ) );
+			expect( panel.layerList.style.height ).toBe( '204px' );
+			expect( divider.getAttribute( 'aria-valuenow' ) ).toBe( '56' );
+			panel.layerList.getBoundingClientRect = () => ( { height: 70 } );
+			divider.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } ) );
+			expect( [ panel.layerList.style.height, divider.getAttribute( 'aria-valuenow' ) ] ).toEqual( [ '60px', '0' ] );
+		} );
+
 		it( 'should setup divider resize handlers', () => {
 			new LayerPanel( {
 				container: container,

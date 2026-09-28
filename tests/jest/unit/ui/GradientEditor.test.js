@@ -94,6 +94,17 @@ describe( 'GradientEditor', () => {
 	} );
 
 	describe( 'fill type selector', () => {
+		it( 'is named by its visible label, with an ID unique to each editor', () => {
+			const first = new GradientEditor( { layer, container, onChange } );
+			const other = document.createElement( 'div' );
+			const second = new GradientEditor( { layer, container: other, onChange } );
+			const select = container.querySelector( '.gradient-type-select' );
+			expect( container.querySelector( `label[for="${ select.id }"]` ) ).not.toBeNull();
+			expect( other.querySelector( '.gradient-type-select' ).id ).not.toBe( select.id );
+			first.destroy();
+			second.destroy();
+		} );
+
 		it( 'should create fill type dropdown', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 			const select = container.querySelector( '.gradient-type-select' );

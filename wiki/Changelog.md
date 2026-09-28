@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Accessibility fixes (September 28): the page's drawing links meet the 24 px target size; the editor's panel divider has a name and value and resizes with the arrow keys; the layer list no longer contains its announcer; the fill type select is labelled (J84).
+
 - Edit links name the drawing (pilot, September 28): a page's "Edit page drawing" link for an embed that names a drawing shows the drawing's name rather than the `<pageId>:<name>` reference or the file name (J82).
 
 - Restoring a drawing from the viewer (pilot, September 28): submitting the restore form after the page has changed now says the page has changed since the version was opened, instead of that the version cannot be restored (J81).
