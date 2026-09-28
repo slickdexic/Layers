@@ -19,9 +19,9 @@ Third step of [charter](../docs/PROJECT_CHARTER.md) decision D1. Making a shared
 - The name is chosen from the page's current drawings when the adoption is prepared, so a second drawing with a taken name becomes "WelcomePresentation 2" in both the embed and the drawing. Existing `layersbinding=` embeds keep working.
 - `{{#layers_fields:}}` accepts the same form for page drawings, `{{#layers_fields: 228:Pump labels | pressure = 12 }}`, next to drawing IDs, `File:` and `Slide:` names.
 
-Code: `DirectEmbeddingRewriter::rewrite()` now takes the page ID and name; `DirectAdoptionPreparationService::nameDrawing()`; `DrawingFields::parserFunction()`; `PageOwnedBinding::resolveNamed()` accepts any kind for fields. The adoption, file-adoption and journey browser specs read the named embed.
+Code: `DirectEmbeddingRewriter::rewrite()` now takes the page ID and name; `DirectAdoptionPreparationService::nameDrawing()`; `DrawingFields::parserFunction()`; `PageOwnedBinding::resolveNamed()` accepts any kind for fields. The adoption, file-adoption and journey browser specs read the named embed; after the change they passed in Chromium (4 specs, including the journey through slide, image and PDF page two adoption).
 
-Fresh verification: rewriter tests (unit and native) cover the slide target, a PDF with its page, set-selector removal, and refused names; adoption-flow tests expect the named forms and "WelcomePresentation 2"; a native fields test names a drawing by page ID and name and refuses an unknown name and another page's ID. Full native configuration **410 tests passed, 1 skipped**; standalone PHPUnit **1,307**; PHP style clean. The three changed browser specs have not been rerun yet.
+Fresh verification: rewriter tests (unit and native) cover the slide target, a PDF with its page, set-selector removal, and refused names; adoption-flow tests expect the named forms and "WelcomePresentation 2"; a native fields test names a drawing by page ID and name and refuses an unknown name and another page's ID. Full native configuration **410 tests passed, 1 skipped**; standalone PHPUnit **1,307**; PHP style clean.
 
 ## Embeds can name a page's drawing — September 28, 2026
 

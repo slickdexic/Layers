@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Restoring a drawing from the viewer (pilot, September 28): submitting the restore form after the page has changed now says the page has changed since the version was opened, instead of that the version cannot be restored (J81).
+
 - Renaming a drawing keeps its embeds working (pilot, September 28): a save that changes a page-owned drawing's name rewrites the page's embeds naming it in the same revision.
 
 - Adoption writes named embeds (pilot, September 28): making a shared slide or file drawing owned by the page rewrites its embed to `{{#Slide:<pageId>:<name>}}` or `layerset=<pageId>:<name>`, naming the drawing after the slide or set (with a number if taken). `{{#layers_fields:}}` accepts `<pageId>:<name>` for page drawings.
