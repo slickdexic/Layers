@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## J81 accepted; adoption writes named embeds; renames keep embeds — September 28, 2026
+
+See the three [current status](CURRENT_STATUS.md) entries of September 28. Contracts: adoption rewrites the embed to `{{#Slide:<pageId>:<name>}}` or `layerset=<pageId>:<name>` (specs must read the drawing's identity from the snapshot by name, as `page-owned-journey-acceptance.spec.js` now does); a publication that renames a drawing rewrites the page's named embeds; bare names keep meaning the shared set until the migration. A stale restore form now says the page has changed. **J81 is accepted** with lead corrections (see the review ledger). J82, J83 and J84 remain ready. Earlier entries below are historical.
+
 ## Named embeds; J82, J83 and J84 ready — September 28, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `layerset=<pageId>:<name>` and `{{#Slide:<pageId>:<name>}}` resolve only to the parsed page's own drawing of that name through `PageOwnedBinding::resolveNamed()`; page output carries identities only. Three packets are ready alongside J81, in this order: J81, J82, then J83 and J84 in either order. Each names the [charter](PROJECT_CHARTER.md) criteria it advances. Earlier entries below are historical.
@@ -63,7 +67,7 @@ Work now follows the [project charter](PROJECT_CHARTER.md); name the criterion e
 
 See the [current status](CURRENT_STATUS.md) entry. **J80 is accepted** with lead corrections (packet below; see the review ledger). No product code changed. J81 is ready. Earlier entries below are historical.
 
-### J81 — Diff pages and the viewer's restore in Chromium (ready)
+### J81 — Diff pages and the viewer's restore in Chromium (accepted)
 
 **Purpose:** prove in real Chromium that a diff between two revisions of a page shows each changed drawing at both revisions and leaves unchanged ones out, that a text-only edit shows no drawing section, and that **Restore this version** on `Special:ViewLayersPage` makes one new revision that changes only that drawing and cannot be submitted twice. Both were checked only read-only in a browser so far. Acceptance testing only; report defects for lead correction.
 
@@ -81,6 +85,11 @@ See the [current status](CURRENT_STATUS.md) entry. **J80 is accepted** with lead
 7. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+**Status:** implemented awaiting lead review; spec `tests/e2e/page-owned-diff-restore.spec.js` passed (**1 passed**, 54.7s; repeatability **1 passed**, 54.2s); ESLint clean (**0 errors, 0 warnings**). Clean CAS exact-base restoration confirmed after each run. All steps 1–7 verified. One integration defect/discrepancy reported for lead correction in Step 5: `SpecialViewLayersPage` rejects resubmission with `layers-page-restore-unavailable` ("This version of the drawing cannot be restored. Nothing was saved.") rather than `layers-page-restore-conflict` ("has changed since this version was opened"), because `showRestore()` checks `$restore->prepare()` against the current revision before the form submit callback can run; on `page.goBack()`, Chromium re-fetches via GET and offers no button at all. Full details in the review ledger.
+
+**Accepted** with lead corrections, September 28: the stale-form message is fixed and the spec requires it (see the review ledger).
+
 
 ## Page-owned saves reach the server; J79 accepted; J80 ready — September 27, 2026
 

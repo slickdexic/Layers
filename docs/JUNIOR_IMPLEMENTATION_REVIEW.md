@@ -1,4 +1,76 @@
-# Junior implementation review — J01–J80
+# Junior implementation review — J01–J81
+
+## J81 accepted with lead corrections: diff pages and the viewer's restore in Chromium — September 28, 2026
+
+With the lead's fix merged and the spec corrected, the lead reran it together with the two adoption specs: **4 passed** (2.5 minutes; J81 48.1 s). The automation owner kept its baseline text and drawing.
+
+- **The reported defect was real.** Submitting a restore form after the page had changed showed "This version of the drawing cannot be restored", which reads as a fault in the drawing. A posted form whose base is not the current revision now shows "…has changed since this version was opened, so nothing was restored", as the submit path already did for other stale saves. A form for the current revision whose version is no longer offered still shows the first message. `PageSurfaceRestoreTest` covers both.
+- **Not a defect:** after going back, the viewer offers no restore button because revision A's drawing is now the current version. The spec now asserts that.
+- **Lead corrections to the spec:** step 5 requires the "has changed" message and not the other; before, either passed. Step 4 compares every drawing recorded in step 1 with revision D; before, it compared only a drawing with ID `presentation`, and silently skipped the check when there was none.
+- **Diff and restore work:** one pair for the changed drawing only, each side read at its own revision, red on the left and blue on the right; no drawing section for a text-only edit; the restore made exactly one tagged revision with the summary naming the drawing and revision, and kept the page text of revision C.
+
+## J81 implemented awaiting lead review: diff pages and the viewer's restore in Chromium — September 28, 2026
+
+Advances: **HIST-2**, **TYPES-4**.
+
+Junior implemented acceptance testing for task J81 ("Diff pages and the viewer's restore in Chromium") in `tests/e2e/page-owned-diff-restore.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Acceptance runs: **1 passed (54.7s)**; repeatability **1 passed (54.2s)**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication after each run.
+- Preserved unrelated lead modifications in working tree.
+
+### Verification of Step-by-Step Contract
+
+- **Step 1: Baseline recording & three exact-base publications**:
+  - Captured initial revision (revid 1649), baseline wikitext, and initial snapshot (`presentation` "Welcome Slide").
+  - Published revision **A** (revid 1660 in Run 1): recorded snapshot + slide `slide_diff_probe` ("Diff probe", 800×600 red `#ff0000` rectangle) + embed `{{#Slide:DiffProbe|layersbinding=v1:228:slide_diff_probe|width=800}}`.
+  - Published revision **B** (revid 1661): updated `slide_diff_probe` fill to blue `#0000ff`.
+  - Published revision **C** (revid 1662): B's drawings unchanged, appended sentence to wikitext (`This is an extra sentence for revision C.`).
+
+- **Step 2: Diff of B against A**:
+  - Opened `index.php?title=Layers_browser_acceptance&diff=<B>&oldid=<A>`.
+  - Exactly one `.layers-drawing-diff` section rendered with exactly one `.layers-drawing-diff__pair` (baseline drawing `presentation` did not change and was omitted).
+  - Left side had `.layers-drawing-diff-view[data-layers-revision="<A>"]` and right side had `.layers-drawing-diff-view[data-layers-revision="<B>"]`.
+  - Canvas pixels verified: centre pixel of left canvas sampled as red `[255, 0, 0, 255]`; centre pixel of right canvas sampled as blue `[0, 0, 255, 255]`.
+
+- **Step 3: Diff of C against B (text-only change)**:
+  - Opened `index.php?title=Layers_browser_acceptance&diff=<C>&oldid=<B>`.
+  - Verified `.layers-drawing-diff` count is 0 (no drawing changes section rendered).
+
+- **Step 4: History navigation & "Restore this version"**:
+  - Navigated to `index.php?title=Layers_browser_acceptance&action=history`.
+  - Found revision A's `a.layers-history-view-link[href*="revid=<A>"][href*="surface=slide_diff_probe"]` naming "Diff probe" and followed it.
+  - On `Special:ViewLayersPage`: intro text contained "Diff probe", and `Restore this version` button was visible.
+  - Pressed `Restore this version`: form submitted and redirected browser to `http://localhost:8080/index.php/Layers_browser_acceptance`.
+  - Exactly one new revision **D** (revid 1663) was created:
+    - Tagged `layers-page-drawing`.
+    - Summary named "Diff probe" and revision A (`Restored the drawing “Diff probe” from revision 1,660`).
+    - Main wikitext matched revision C's wikitext exactly.
+    - Snapshot verified via `layersread`: `slide_diff_probe` fill restored to `#ff0000`; baseline drawing `presentation` unchanged and equal to initial snapshot.
+
+- **Step 5: Repeat submission of form / page.goBack()**:
+  - `page.goBack()` in Chromium re-fetches `GET Special:ViewLayersPage`. Because revision A's drawing is now identical to current revision D, `showRestore()` calls `prepare()`, which returns `null`. On GET, no form or button is rendered (`Button count after page.goBack(): 0`).
+  - When submitting the stale form from step 4 (holding `wpbase = <C>`), nothing was saved (latest revision remained D).
+  - The stale form displays: `This version of the drawing cannot be restored. Nothing was saved.` (`layers-page-restore-unavailable`). (See Defect Report below regarding `layers-page-restore-conflict`).
+
+- **Step 6: Restore button absent for current revision and anonymous users**:
+  - Visited `Special:ViewLayersPage` for revision D (current revision): `Restore this version` button count is 0.
+  - Visited `Special:ViewLayersPage` for revision A in a fresh unauthenticated browser context: `Restore this version` button count is 0.
+
+- **Step 7: Exact-base restoration**:
+  - Clean exact-base CAS publication restored baseline wikitext and initial snapshot.
+  - Verified owner wikitext matches `Dedicated automated Layers history acceptance page.`.
+
+### Defect Report (Returned for Lead Correction)
+
+- **Component**: `src/SpecialPages/SpecialViewLayersPage.php:80-87`
+- **Issue**: Step 5 expects: "Go back to the form from step 4 and press the button again: nothing is saved (the latest revision is still D) and the page says the page has changed since this version was opened."
+- **Observed Behavior**:
+  1. In Chromium, navigating back (`page.goBack()`) issues a `GET` request. Because revision A's drawing was already restored in revision D, `PageSurfaceRestore::prepare()` evaluates `JsonSnapshotCodec::encode( $surface ) !== JsonSnapshotCodec::encode( $restored )` as false and returns `null`. On `GET`, `SpecialViewLayersPage::showRestore()` adds nothing to output, so no button or form is offered at all.
+  2. If the stale form holding `wpbase = <C>` is submitted via `POST`, `showRestore()` calls `$restore->prepare()` before rendering or executing the `HTMLForm`. In `prepare()`, the base revision is hardcoded to `$current->getId()` (revision D), so `prepare()` returns `null`. On `POST` with `$offer === null`, `showRestore()` displays:
+     `This version of the drawing cannot be restored. Nothing was saved.` (`layers-page-restore-unavailable`).
+     The form submit callback (and `PageSurfaceRestore::restore()`, which throws `layers-edit-conflict` mapping to `layers-page-restore-conflict`: `"[[:$1]] has changed since this version was opened, so nothing was restored."`) is never executed.
 
 ## J80 accepted with lead corrections: search finds a page by the shared drawing it shows — September 27, 2026
 

@@ -11,6 +11,8 @@ use MediaWiki\HTMLForm\HTMLForm;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Status\Status;
+use MediaWiki\Title\Title;
+use Wikimedia\Rdbms\IDBAccessObject;
 
 /** Exact-revision read-only viewer entry, with a restore action for editors; the pilot is disabled by default. */
 class SpecialViewLayersPage extends SpecialPage {
@@ -79,9 +81,16 @@ class SpecialViewLayersPage extends SpecialPage {
 		$restore = $this->pilot->newSurfaceRestore();
 		$offer = $restore->prepare( $owner, $revisionId, $surfaceId, $this->getAuthority() );
 		if ( !$offer ) {
-			if ( $this->getRequest()->wasPosted() ) {
+			$request = $this->getRequest();
+			if ( $request->wasPosted() ) {
+				// A form opened against an older current revision: say so, as the submit callback would have.
+				$title = Title::newFromText( $owner );
+				$base = $request->getInt( 'wpbase' );
+				$stale = $title && $base > 0 && $base !== $title->getLatestRevID( IDBAccessObject::READ_LATEST );
 				$out->addModuleStyles( 'mediawiki.codex.messagebox.styles' );
-				$out->addHTML( Html::errorBox( $this->msg( 'layers-page-restore-unavailable' )->parse() ) );
+				$out->addHTML( Html::errorBox( $stale ?
+					$this->msg( 'layers-page-restore-conflict', $title->getPrefixedText() )->parse() :
+					$this->msg( 'layers-page-restore-unavailable' )->parse() ) );
 			}
 			return;
 		}

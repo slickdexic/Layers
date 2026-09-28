@@ -136,9 +136,13 @@ class PageSurfaceRestoreTest extends MediaWikiIntegrationTestCase {
 		$comment = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $latest )->getComment();
 		$this->assertSame( 'Restored the drawing “Welcome Slide” from revision ' . $first, $comment->text );
 
-		// Submitting the same form again is refused and saves nothing.
+		// Submitting the same form again saves nothing and says the page has changed since it was opened.
 		$again = $this->visit( $editor, $title, $first, true, [ 'wpbase' => (string)$second ] )->getOutput();
-		$this->assertStringContainsString( '(layers-page-restore-unavailable)', $again->getHTML() );
+		$this->assertStringContainsString( '(layers-page-restore-conflict: ' . $title->getPrefixedText() . ')',
+			$again->getHTML() );
 		$this->assertSame( $latest, $title->getLatestRevID( IDBAccessObject::READ_LATEST ) );
+		// A form for the current revision whose version is no longer offered cannot be restored.
+		$current = $this->visit( $editor, $title, $first, true, [ 'wpbase' => (string)$latest ] )->getOutput();
+		$this->assertStringContainsString( '(layers-page-restore-unavailable)', $current->getHTML() );
 	}
 }
