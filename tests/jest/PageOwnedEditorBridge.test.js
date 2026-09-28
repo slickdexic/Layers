@@ -24,6 +24,21 @@ describe( 'PageOwnedEditorBridge', () => {
 	} );
 	afterEach( () => editor.stateManager.destroy() );
 
+	it( 'renames the drawing, marks the editor dirty and restores a draft name', async () => {
+		await bridge.load();
+		expect( () => new Bridge( editor, session ).rename( 'Early' ) ).toThrow( 'layers-editor-session-unavailable' );
+		expect( bridge.getName() ).toBe( 'Welcome' );
+		expect( bridge.rename( 'Title slide' ) ).toBe( 'Title slide' );
+		expect( editor.stateManager.get( 'isDirty' ) ).toBe( true );
+		editor.stateManager.set( 'isDirty', false );
+		bridge.rename( 'Welcome' );
+		expect( editor.stateManager.get( 'isDirty' ) ).toBe( false );
+		bridge.restoreDraft( { editorState: bridge.getLiveState(), label: 'From draft', publicationBlocked: false } );
+		expect( bridge.getName() ).toBe( 'From draft' );
+		bridge.restoreDraft( { editorState: bridge.getLiveState(), publicationBlocked: false } );
+		expect( bridge.getName() ).toBe( 'From draft' );
+	} );
+
 	it( 'loads exact layers and canvas into the existing StateManager and initializes rendering/undo', async () => {
 		await bridge.load();
 		expect( editor.stateManager.get( 'layers' ) ).toEqual( fixture.surfaces[ 0 ].layers );

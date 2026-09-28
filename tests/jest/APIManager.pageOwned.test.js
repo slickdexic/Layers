@@ -12,6 +12,7 @@ require( '../../resources/ext.layers.editor/PageOwnedDraftController.js' );
 require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRevisionControl.js' );
+require( '../../resources/ext.layers.editor/PageOwnedNameControl.js' );
 
 describe( 'APIManager page-owned routing', () => {
 	let APIManager, manager, editor, api;
@@ -95,6 +96,30 @@ describe( 'APIManager page-owned routing', () => {
 		expect( editor.uiManager.container.textContent ).toContain( 'layers-page-revision-check-matched' );
 		manager.destroy();
 		expect( editor.uiManager.container.children ).toHaveLength( 0 );
+	} );
+
+	it( 'shows the drawing name in the header, and publishes a rename with the next save', async () => {
+		const header = document.createElement( 'div' );
+		header.className = 'layers-header';
+		const right = document.createElement( 'div' );
+		right.className = 'layers-header-right';
+		header.appendChild( right );
+		editor.uiManager.container.appendChild( header );
+		editor.uiManager.showPromptDialog = jest.fn().mockResolvedValue( 'Title slide' );
+		mw.msg = jest.fn( ( key, ...args ) => [ key, ...args ].join( '|' ) );
+		await manager.loadLayers();
+		const control = header.querySelector( '.layers-page-drawing-name' );
+		expect( control.nextSibling ).toBe( right );
+		expect( control.textContent ).toContain( 'layers-page-drawing-name|Welcome Slide' );
+		control.querySelector( 'button' ).click();
+		await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+		expect( control.textContent ).toContain( 'layers-page-drawing-name|Title slide' );
+		expect( editor.stateManager.get( 'isDirty' ) ).toBe( true );
+		expect( api.postWithToken ).not.toHaveBeenCalled();
+		await manager.saveLayers();
+		expect( JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data ).surfaces[ 0 ].label ).toBe( 'Title slide' );
+		manager.destroy();
+		expect( header.querySelector( '.layers-page-drawing-name' ) ).toBeNull();
 	} );
 
 	it( 'never mounts revision controls for a historical read-only session', async () => {

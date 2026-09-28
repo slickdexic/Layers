@@ -4,7 +4,7 @@ const Store = require( '../../resources/ext.layers.editor/PageOwnedDraftStore.js
 const Adapter = require( '../../resources/ext.layers.editor/PageOwnedSnapshotAdapter.js' );
 
 describe( 'PageOwnedDraftController', () => {
-	let controller, bridge, data, state, identity, status, storage;
+	let controller, bridge, data, state, identity, status, storage, label;
 	beforeEach( () => {
 		data = new Map();
 		storage = { getItem: jest.fn( ( key ) => data.get( key ) ?? null ),
@@ -12,8 +12,9 @@ describe( 'PageOwnedDraftController', () => {
 		state = { canvas: { width: 800, height: 600, backgroundOpacity: 0 }, layers: [] };
 		identity = { owner: 'Owner', baseRevisionId: 12, surfaceId: 'selected' };
 		status = { phase: 'ready', readOnly: false };
+		label = 'Welcome';
 		bridge = { getLiveState: () => state, session: {
-			getStatus: () => status, getDraft: () => identity
+			getStatus: () => status, getDraft: () => identity, getLabel: () => label
 		} };
 		controller = new Controller( bridge, new Store( storage ), new Adapter(), { wiki: 'wiki', user: 'user' } );
 	} );
@@ -22,7 +23,7 @@ describe( 'PageOwnedDraftController', () => {
 		state.layers = [ { id: 'draft-only', invalidDrawingField: false } ];
 		controller.persist();
 		const recovery = controller.inspectRecovery();
-		expect( recovery ).toEqual( { editorState: state, publicationBlocked: false } );
+		expect( recovery ).toEqual( { editorState: state, label: 'Welcome', publicationBlocked: false } );
 		recovery.editorState.layers.length = 0;
 		expect( controller.inspectRecovery().editorState.layers ).toHaveLength( 1 );
 		expect( identity.baseRevisionId ).toBe( 12 );
@@ -34,6 +35,17 @@ describe( 'PageOwnedDraftController', () => {
 		status.phase = 'ready';
 		expect( controller.inspectRecovery().publicationBlocked ).toBe( true );
 		expect( status.phase ).toBe( 'ready' );
+	} );
+
+	it( 'keeps a renamed drawing name, and reads drafts written before renaming existed', () => {
+		label = 'Renamed';
+		controller.persist();
+		expect( controller.inspectRecovery().label ).toBe( 'Renamed' );
+		const [ key, raw ] = [ ...data.entries() ][ 0 ];
+		const envelope = JSON.parse( raw );
+		delete envelope.label;
+		data.set( key, JSON.stringify( envelope ) );
+		expect( controller.inspectRecovery() ).toEqual( { editorState: state, publicationBlocked: false } );
 	} );
 
 	it( 'does not look up drafts from another base revision', () => {

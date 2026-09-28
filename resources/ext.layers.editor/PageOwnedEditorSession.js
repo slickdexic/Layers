@@ -23,6 +23,18 @@
 		return JSON.stringify( value );
 	}
 
+	// Mirrors src/Revision/DrawingName.php; the server makes the final decision.
+	function normalizeName( name ) {
+		name = String( name ).replace( /\s+/gu, ' ' ).trim();
+		const chars = Array.from( name );
+		return chars.length === 0 || chars.length > 255 || chars.some( ( char ) =>
+			char.charCodeAt( 0 ) < 32 || char.charCodeAt( 0 ) === 127 || '|[]{}<>:'.includes( char ) ) ? null : name;
+	}
+
+	function nameKey( name ) {
+		return String( name ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
+	}
+
 	class PageOwnedEditorSession {
 		/**
 		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional pageId/readOnly
@@ -114,6 +126,40 @@
 				throw failure( 'layers-editor-read-only' );
 			}
 			this._snapshot = this._adapter.withEditorState( this._snapshot, this._surfaceId, state );
+		}
+
+		/** @return {string} The drawing's name, including a rename not yet saved */
+		getLabel() {
+			this._requireLoaded();
+			const label = this._selected( this._snapshot ).label;
+			return typeof label === 'string' ? label : '';
+		}
+
+		/**
+		 * Rename the drawing as part of the current edits; the next save publishes it.
+		 * @param {string} name Proposed name
+		 * @return {string} The name as it will be saved, with spacing tidied
+		 */
+		rename( name ) {
+			this._requireLoaded();
+			if ( this._readOnly ) {
+				throw failure( 'layers-editor-read-only' );
+			}
+			const label = typeof name === 'string' ? normalizeName( name ) : null;
+			if ( label === null ) {
+				throw failure( 'layers-page-drawing-rename-invalid' );
+			}
+			if ( this._snapshot.surfaces.some( ( surface ) => surface.id !== this._surfaceId &&
+				nameKey( typeof surface.label === 'string' ? surface.label : '' ) === nameKey( label ) ) ) {
+				throw failure( 'layers-page-drawing-rename-taken' );
+			}
+			this._selected( this._snapshot ).label = label;
+			return label;
+		}
+
+		/** @param {Object} snapshot @return {Object} This session's surface @private */
+		_selected( snapshot ) {
+			return snapshot.surfaces.find( ( surface ) => surface.id === this._surfaceId );
 		}
 
 		/** @return {Object} Draft envelope; returned objects share no mutable references */
@@ -216,14 +262,14 @@
 				}
 				const serverState = this._adapter.toEditorState( bundle.snapshot, this._surfaceId );
 				const server = this._adapter.withEditorState( bundle.snapshot, this._surfaceId, serverState );
-				const selected = ( snapshot ) => snapshot.surfaces.find( ( surface ) => surface.id === this._surfaceId );
-				const remote = comparable( selected( server ) );
-				if ( remote !== comparable( selected( JSON.parse( this._savedJson ) ) ) &&
-					remote !== comparable( selected( this._snapshot ) ) ) {
+				const remote = comparable( this._selected( server ) );
+				if ( remote !== comparable( this._selected( JSON.parse( this._savedJson ) ) ) &&
+					remote !== comparable( this._selected( this._snapshot ) ) ) {
 					throw failure( 'layers-editor-reconciliation-required' );
 				}
-				// Retain every newer server-owned field/surface; carry only this surface's local canvas/layers.
+				// Retain every newer server-owned field/surface; carry only this surface's local name, canvas and layers.
 				const merged = this._adapter.withEditorState( server, this._surfaceId, this.getEditorState() );
+				this._selected( merged ).label = this._selected( this._snapshot ).label;
 				this._snapshot = merged;
 				this._savedJson = JSON.stringify( server );
 				this._revisionId = revisionId;

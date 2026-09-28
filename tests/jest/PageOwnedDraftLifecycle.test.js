@@ -117,6 +117,28 @@ describe( 'PageOwnedDraftLifecycle', () => {
 		expect( controller.persist ).toHaveBeenCalledTimes( 2 );
 	} );
 
+	it( 'offers recovery of a draft that differs from the loaded revision only in its name', async () => {
+		bridge.getName = () => 'Welcome';
+		const candidate = { editorState: { canvas: {}, layers: [] }, label: 'Renamed', publicationBlocked: false };
+		controller.inspectRecovery.mockReturnValue( candidate );
+		await lifecycle.initialize();
+		expect( ui.confirmRecovery ).toHaveBeenCalledWith( candidate );
+		expect( bridge.restoreDraft ).toHaveBeenCalledWith( candidate );
+	} );
+
+	it( 'renames through the bridge and backs the name up at once, only when ready', async () => {
+		bridge.rename = jest.fn( ( name ) => name.trim() );
+		expect( () => lifecycle.rename( 'Early' ) ).toThrow( 'layers-editor-session-unavailable' );
+		await lifecycle.initialize();
+		expect( lifecycle.rename( ' Renamed ' ) ).toBe( 'Renamed' );
+		expect( controller.persist ).toHaveBeenCalledTimes( 1 );
+		bridge.rename.mockImplementation( () => {
+			throw Object.assign( new Error( 'x' ), { code: 'layers-page-drawing-rename-taken' } );
+		} );
+		expect( () => lifecycle.rename( 'Taken' ) ).toThrow( 'x' );
+		expect( controller.persist ).toHaveBeenCalledTimes( 1 );
+	} );
+
 	it( 'does not offer recovery of a draft that differs from the loaded revision only in key order', async () => {
 		bridge.getLiveState = () => ( { canvas: { height: 2, width: 1 }, layers: [ { id: 'a', type: 'marker', x: 1 } ] } );
 		controller.inspectRecovery.mockReturnValue( {

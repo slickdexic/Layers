@@ -50,6 +50,7 @@
 				json = JSON.stringify( {
 					version: 1, scope,
 					phase: this.bridge.session.getStatus().phase,
+					label: this.bridge.session.getLabel(),
 					editorState: this._copyState( this.bridge.getLiveState() )
 				} );
 			} catch ( error ) {
@@ -76,10 +77,15 @@
 					![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) ) {
 					throw this._error();
 				}
-				return {
+				const candidate = {
 					editorState: this._copyState( envelope.editorState ),
 					publicationBlocked: envelope.phase !== 'ready'
 				};
+				// Drafts written before drawings could be renamed have no name.
+				if ( typeof envelope.label === 'string' ) {
+					candidate.label = envelope.label;
+				}
+				return candidate;
 			} catch ( error ) {
 				throw this._error();
 			}

@@ -316,9 +316,10 @@
 				"PageOwnedDraftController.js",
 				"PageOwnedDraftLifecycle.js",
 				"PageOwnedRecoveryDialog.js",
-				"PageOwnedRevisionControl.js"
+				"PageOwnedRevisionControl.js",
+				"PageOwnedNameControl.js"
 			],
-			"styles": [ "PageOwnedRecoveryDialog.css" ],
+			"styles": [ "PageOwnedRecoveryDialog.css", "PageOwnedNameControl.css" ],
 			"messages": [
 				"layers-page-draft-dialog-title",
 				"layers-page-revision-check-button",
@@ -337,7 +338,15 @@
 				"layers-page-draft-dialog-unavailable",
 				"layers-page-draft-dialog-local",
 				"layers-page-draft-blocked",
-				"layers-content-not-renderable"
+				"layers-content-not-renderable",
+				"layers-page-drawing-name",
+				"layers-page-drawing-rename",
+				"layers-page-drawing-rename-title",
+				"layers-page-drawing-rename-prompt",
+				"layers-page-drawing-rename-invalid",
+				"layers-page-drawing-rename-taken",
+				"layers-page-drawing-rename-failed",
+				"layers-page-drawing-renamed"
 			]
 		},
 		"ext.layers.pageControls.styles": {

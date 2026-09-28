@@ -65,6 +65,9 @@
 				throw this._error( 'layers-editor-session-unavailable' );
 			}
 			this._applyState( candidate.editorState );
+			if ( typeof candidate.label === 'string' && candidate.label !== this.session.getLabel() ) {
+				this.session.rename( candidate.label );
+			}
 			if ( candidate.publicationBlocked ) {
 				this.session.blockPublication();
 			}
@@ -91,6 +94,29 @@
 			if ( this.editor.historyManager ) {
 				this.editor.historyManager.saveInitialState();
 			}
+		}
+
+		/** @return {string} The drawing's name, including a rename not yet saved */
+		getName() {
+			this._requireActive();
+			return this.session.getLabel();
+		}
+
+		/**
+		 * Rename the drawing; the next save publishes the name and updates this page's embeds.
+		 * @param {string} name Proposed name
+		 * @return {string} The name as it will be saved
+		 */
+		rename( name ) {
+			this._requireActive();
+			if ( !this.loaded ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
+			const label = this.session.rename( name );
+			if ( this.session.getStatus().dirty ) {
+				this.editor.stateManager.set( 'isDirty', true );
+			}
+			return label;
 		}
 
 		/** Capture current editor values while retaining unexposed canvas fields. */

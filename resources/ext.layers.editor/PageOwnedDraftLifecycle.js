@@ -51,6 +51,7 @@
 			}
 			const candidate = this.controller.inspectRecovery();
 			if ( candidate && ( candidate.publicationBlocked ||
+				( typeof candidate.label === 'string' && candidate.label !== this.bridge.getName() ) ||
 				canonical( candidate.editorState ) !== canonical( this.bridge.getLiveState() ) ) ) {
 				const recover = await this.ui.confirmRecovery( candidate );
 				if ( this.disposed ) {
@@ -95,6 +96,19 @@
 				this.ui.notifyFailure();
 				return false;
 			}
+		}
+
+		/**
+		 * @param {string} name Proposed drawing name
+		 * @return {string} The name as it will be saved; the draft keeps it until then
+		 */
+		rename( name ) {
+			if ( !this.ready || this.disposed ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			const label = this.bridge.rename( name );
+			this.flush();
+			return label;
 		}
 
 		/** @param {string} summary History summary @return {Promise<Object>} */

@@ -86,6 +86,72 @@ describe( 'PageOwnedEditorSession', () => {
 		expect( api.postWithToken.mock.calls[ 0 ][ 1 ].baserevid ).toBe( 15 );
 	} );
 
+	it( 'renames the drawing as an edit that the next save publishes', async () => {
+		await session.load();
+		expect( session.getLabel() ).toBe( 'Welcome' );
+		expect( session.rename( '  Title   slide ' ) ).toBe( 'Title slide' );
+		expect( session.getLabel() ).toBe( 'Title slide' );
+		expect( session.getStatus().dirty ).toBe( true );
+		expect( api.postWithToken ).not.toHaveBeenCalled();
+		await session.save( 'Renamed' );
+		const sent = JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data );
+		expect( sent.surfaces.map( ( surface ) => surface.label ) )
+			.toEqual( [ 'Title slide', 'Annotated diagram', 'Reference sheet' ] );
+		expect( session.getStatus().dirty ).toBe( false );
+	} );
+
+	it.each( [
+		[ '', 'layers-page-drawing-rename-invalid' ],
+		[ '   ', 'layers-page-drawing-rename-invalid' ],
+		[ 'a|b', 'layers-page-drawing-rename-invalid' ],
+		[ 'x:y', 'layers-page-drawing-rename-invalid' ],
+		[ '[[z]]', 'layers-page-drawing-rename-invalid' ],
+		[ 'bell\u0007', 'layers-page-drawing-rename-invalid' ],
+		[ 'x'.repeat( 256 ), 'layers-page-drawing-rename-invalid' ],
+		[ 'annotated_DIAGRAM', 'layers-page-drawing-rename-taken' ],
+		[ ' Reference   sheet', 'layers-page-drawing-rename-taken' ]
+	] )( 'refuses the name %j without changing the drawing', async ( name, code ) => {
+		await session.load();
+		expect( () => session.rename( name ) ).toThrow( expect.objectContaining( { code } ) );
+		expect( session.getLabel() ).toBe( 'Welcome' );
+		expect( session.getStatus().dirty ).toBe( false );
+	} );
+
+	it( 'accepts a 255-character name and a change of case to its own name', async () => {
+		await session.load();
+		expect( session.rename( 'é'.repeat( 255 ) ) ).toBe( 'é'.repeat( 255 ) );
+		expect( session.rename( 'WELCOME' ) ).toBe( 'WELCOME' );
+	} );
+
+	it( 'refuses to rename in a read-only session', async () => {
+		session = new Session( { ...options, readOnly: true }, {
+			reader, publisher: new Publisher( api ), adapter: new Adapter()
+		} );
+		await session.load();
+		expect( () => session.rename( 'Other' ) ).toThrow( 'layers-editor-read-only' );
+	} );
+
+	it( 'keeps a rename not yet saved when reconciling with unrelated server changes', async () => {
+		await session.load();
+		session.rename( 'Title slide' );
+		const server = JSON.parse( JSON.stringify( fixture ) );
+		server.surfaces[ 1 ].label = 'New server label';
+		reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+		expect( await session.reconcile( 15 ) ).toMatchObject( { revisionId: 15, dirty: true } );
+		expect( session.getLabel() ).toBe( 'Title slide' );
+		expect( session.getDraft().snapshot.surfaces[ 1 ].label ).toBe( 'New server label' );
+	} );
+
+	it( 'requires reconciliation when the server renamed the same drawing', async () => {
+		await session.load();
+		session.rename( 'Title slide' );
+		const server = JSON.parse( JSON.stringify( fixture ) );
+		server.surfaces[ 0 ].label = 'Renamed elsewhere';
+		reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+		await expect( session.reconcile( 15 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+		expect( session.getLabel() ).toBe( 'Title slide' );
+	} );
+
 	it( 'recognizes already-saved content despite object key order without posting again', async () => {
 		await session.load();
 		edit( 777 );

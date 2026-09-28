@@ -1,5 +1,28 @@
 # Layers implementation handoff plan
 
+## Drawings can be renamed in the editor; J87 ready — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: the page-owned editor's header shows "Drawing: <name>" and a Rename button (accessible name "Rename drawing"). A rename is an unsaved edit: nothing is published until Save, and the draft keeps it. J86 remains ready and comes first; J87 follows. Earlier entries below are historical.
+
+### J87 — Browser acceptance of renaming a drawing (ready)
+
+**Advances:** HIST-7.
+
+**Purpose:** prove in the browser that renaming a drawing in the editor publishes the name and rewrites the page's embeds in the same revision, and that refused names change nothing. Acceptance only; no production code.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-rename.spec.js`, this packet and the review ledger. The J65 wiki rules apply as before.
+
+1. **Baseline:** on the owner page, publish (exact base) a snapshot with the drawing `presentation` named "Welcome Slide" and a second slide drawing named "Second probe", and page text that embeds both by name (`{{#Slide:<pageId>:Welcome Slide}}`, `{{#Slide:<pageId>:Second probe}}`). Read the page ID from the API; do not hardcode it.
+2. Open the editor from the page's "Edit page drawing: Welcome Slide" link. The header must read "Drawing: Welcome Slide".
+3. **Refused names:** press Rename drawing and enter `a|b`, then `second_PROBE`. Each must show its exact English message (`layers-page-drawing-rename-invalid`, `layers-page-drawing-rename-taken`), the header must still read "Drawing: Welcome Slide", and the page's latest revision ID must not change.
+4. **Rename:** enter "Renamed probe". The notice must say the drawing will be called "Renamed probe" when you save, and the latest revision ID must still not change. Save with a summary.
+5. **Result:** exactly one new revision. In it, the `layers` slot names the drawing "Renamed probe" with the same surface ID and leaves "Second probe" as it was; the main text contains `{{#Slide:<pageId>:Renamed probe}}` and the second embed unchanged, and no longer contains "Welcome Slide". On the page view both drawings are painted and the edit link reads "Edit page drawing: Renamed probe".
+6. **Draft:** open the editor again, rename to "Draft name" without saving, and reload. The recovery dialog must offer the draft; after restoring it, the header must read "Drawing: Draft name". Close without saving; the latest revision ID must not change.
+7. Rerun `tests/e2e/accessibility.spec.js` and report whether the editor screen gained any violation.
+8. Restore the baseline wikitext and initial snapshot by exact-base publication, in the main flow and in `finally`.
+
+Record durations and anything that could not be checked, then return for lead review.
+
 ## J85 accepted; first performance baseline; J86 ready — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. **J85 is accepted** with lead findings (see the review ledger). Its PERF-1, PERF-3, PERF-4 dragging, PERF-5, PERF-6 and PERF-7 figures are the first baseline and are now in the charter. Its PERF-2 and PERF-4 typing figures are not evidence: J86 corrects them. Earlier entries below are historical.
@@ -15,6 +38,7 @@ See the [current status](CURRENT_STATUS.md) entry. **J85 is accepted** with lead
 1. **PERF-2:** the reader first sees core's image, `img.layers-bound-file` in the page HTML. `PageOwnedRevisionBootstrap` then fetches the drawing with `layersread` and replaces that image with a canvas, which loads its own copy of the image before painting. J85 recorded the first image load of any kind and so timed only the last step, the canvas's own image (11 ms). Start the clock when core's `img.layers-bound-file` has loaded: read its load time from its resource timing entry (`performance.getEntriesByName( img.currentSrc )`, `responseEnd`), or from a `load` listener attached before it loads. Drop the `window.Image` wrapper and the observer over all images. If that image's load time cannot be read, fail. Stop the clock as now, when the seeded red rectangle's pixel is painted. Record the `layersread` request's duration alongside, from its resource timing entry, so the figure can be explained.
 2. **PERF-4, typing:** each figure currently runs from the page's `keydown` to a frame seen by a `page.evaluate` that starts only after `page.keyboard.type()` has returned, so every figure includes Playwright's round trip. Measure inside the page instead: before typing, install a capture `keydown` listener that records the time and then polls with `requestAnimationFrame` until the layer's text contains the new character, and pushes the elapsed time to an array. Type all 20 characters, then read the array. It must hold exactly 20 entries; remove the `|| performance.now()` fallback, which would report zero when the listener never fired.
 3. Rerun `npm run bench` and write the new results file with every criterion, as J85 did. Leave the other measurements unchanged.
+4. **Baseline:** the benchmark must restore the owner's known baseline (the text "Dedicated automated Layers history acceptance page." and the one slide drawing `presentation`, "Welcome Slide", as in revision 1803), not the state it found when it started, and must fail if the page does not start in that state. Debug runs follow the same rule.
 
 Record durations and anything that could not be measured, then return for lead review.
 

@@ -345,6 +345,17 @@
 							check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key )
 						} );
 						this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
+						const header = this.editor.uiManager.container.querySelector( '.layers-header' );
+						if ( header && classes.PageOwnedNameControl ) {
+							this.pageOwnedNameControl = new classes.PageOwnedNameControl( {
+								getName: () => this.pageOwnedBridge.getName(),
+								rename: ( name ) => this.pageOwnedDrafts.rename( name ),
+								prompt: ( options ) => this.editor.uiManager.showPromptDialog( options ),
+								message: ( key, ...args ) => mw.msg( key, ...args ),
+								notify: ( text, type ) => mw.notify( text, { type } )
+							} );
+							this.pageOwnedNameControl.mount( header, header.querySelector( '.layers-header-right' ) );
+						}
 					}
 					return state;
 				} );
@@ -1925,6 +1936,9 @@
 		}
 		if ( this.pageOwnedRevisionControl ) {
 			this.pageOwnedRevisionControl.dispose();
+		}
+		if ( this.pageOwnedNameControl ) {
+			this.pageOwnedNameControl.dispose();
 		}
 		if ( this.pageOwnedDrafts ) {
 			this.pageOwnedDrafts.dispose();

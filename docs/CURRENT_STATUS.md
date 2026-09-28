@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## Drawings can be renamed in the editor — September 29, 2026
+
+Fifth step of [charter](../docs/PROJECT_CHARTER.md) decision D1 (HIST-7). The page-owned editor's header shows the drawing's name with a **Rename** button. A new name is checked in the browser by the server's rules (1 to 255 characters, none of `| [ ] { } < > :`, and not the name of another drawing on the page, ignoring case, spacing and underscores) and becomes one of the unsaved edits: the local draft keeps it, a revision check keeps it, and the next save publishes it and rewrites the page's embeds that name the drawing. The server still makes the final check.
+
+Code: `PageOwnedNameControl.js` (new), `rename()` in `PageOwnedEditorSession`, `PageOwnedEditorBridge` and `PageOwnedDraftLifecycle`; drafts now store the name.
+
+Fresh verification: new Jest cases for the name rules, reconciliation with a rename, drafts with and without a name, the control, and an editor save that publishes the new name; Jest **15,061**. On the test wiki the editor shows "Drawing: Welcome Slide" with the button, and a refused name gives its message; that check found that a message with literal brackets and braces is not parsed in the browser, so the list of forbidden characters is now passed as a parameter. Full browser acceptance is J87.
+
 ## First performance baseline — September 29, 2026
 
 The corrected benchmark (J85) gives the first figures for the [charter](../docs/PROJECT_CHARTER.md)'s performance criteria, measured on the test wiki, whose shared-folder mount makes every server call slow:
