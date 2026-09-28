@@ -147,6 +147,55 @@ class DirectEmbeddingRewriter {
 		$this->reject();
 	}
 
+	/**
+	 * Point every direct embed that names a renamed drawing of the page at its new name.
+	 * @param string $text
+	 * @param int $pageId Owner page
+	 * @param string[] $renames New canonical names, keyed by DrawingName::key() of the old ones
+	 * @param callable $resolveFile
+	 * @return string
+	 * @throws \InvalidArgumentException When the scanner refuses the text
+	 */
+	public function renameReferences( string $text, int $pageId, array $renames, callable $resolveFile ): string {
+		$edits = [];
+		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
+			try {
+				$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+					$candidate['target'] );
+			} catch ( \InvalidArgumentException $e ) {
+				continue;
+			}
+			$new = $named && $named['pageId'] === $pageId ? $renames[DrawingName::key( $named['name'] )] ?? null : null;
+			if ( $new === null ) {
+				continue;
+			}
+			$reference = $pageId . ':' . $new;
+			$parts = explode( '|', substr( $candidate['raw'], 2, -2 ) );
+			$head = array_shift( $parts );
+			if ( $candidate['kind'] === 'slide' ) {
+				$head = preg_replace_callback( '/\A(#slide\s*:\s*).*?(\s*)\z/isD',
+					static fn ( $m ) => $m[1] . $reference . $m[2], $head );
+			} else {
+				foreach ( $parts as $i => $part ) {
+					$equalsPos = strpos( $part, '=' );
+					$key = $equalsPos === false ? '' :
+						strtolower( trim( substr( $part, 0, $equalsPos ), " \t\r\n\f" ) );
+					if ( in_array( $key, [ 'layerset', 'layers' ], true ) &&
+						preg_match( '/\A\s*[0-9]+:/', substr( $part, $equalsPos + 1 ) )
+					) {
+						$parts[$i] = substr( $part, 0, $equalsPos + 1 ) . $reference;
+					}
+				}
+			}
+			$edits[] = [ $candidate['start'], $candidate['length'], substr( $candidate['raw'], 0, 2 ) . $head .
+				( $parts ? '|' . implode( '|', $parts ) : '' ) . substr( $candidate['raw'], -2 ) ];
+		}
+		foreach ( array_reverse( $edits ) as [ $start, $length, $replacement ] ) {
+			$text = substr( $text, 0, $start ) . $replacement . substr( $text, $start + $length );
+		}
+		return $text;
+	}
+
 	/** @param string $text @param int $offset @return string|null */
 	private function opener( string $text, int $offset ): ?string {
 		foreach ( [ '{{{', '{{', '[[' ] as $open ) {

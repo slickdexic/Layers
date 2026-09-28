@@ -106,8 +106,10 @@ class PagePublicationService {
 			throw new PublicationException( 'layers-invalid-snapshot', 0, $e );
 		}
 		$document = json_decode( $content->getText() );
-		$changed = $this->changedSurfaceIds( $owner, $baseRevisionId, $document, $authority );
+		$stored = $this->access->getStoredSurfaces( $owner, $baseRevisionId, $authority );
+		$changed = self::changedSurfaceIds( $stored, $document );
 		DrawingName::assertPublishable( $document->surfaces, $changed );
+		$main = $this->withRenamedEmbeds( $owner, $authority, $baseRevisionId, $stored, $document, $main );
 		foreach ( $document->surfaces as $surface ) {
 			if ( in_array( $surface->id, $changed, true ) && !PageOwnedRenderCapability::isRenderable( $surface ) ) {
 				throw new PublicationException( 'layers-content-not-renderable' );
@@ -215,26 +217,65 @@ class PagePublicationService {
 	 * Surfaces absent from, or different to, the base revision's stored snapshot.
 	 * Unchanged surfaces were admitted when first published; rechecking them would lock
 	 * a page whose older source file was later deleted.
-	 * @param Title $owner
-	 * @param int $baseRevisionId
+	 * @param \stdClass[] $stored The base revision's drawings
 	 * @param \stdClass $document Canonical proposed document
-	 * @param Authority $authority
 	 * @return string[]
 	 */
-	private function changedSurfaceIds( Title $owner, int $baseRevisionId, \stdClass $document,
-		Authority $authority
-	): array {
-		$stored = [];
-		foreach ( $this->access->getStoredSurfaces( $owner, $baseRevisionId, $authority ) as $surface ) {
-			$stored[$surface->id] = JsonSnapshotCodec::encode( $surface );
+	private static function changedSurfaceIds( array $stored, \stdClass $document ): array {
+		$encoded = [];
+		foreach ( $stored as $surface ) {
+			$encoded[$surface->id] = JsonSnapshotCodec::encode( $surface );
 		}
 		$changed = [];
 		foreach ( $document->surfaces as $surface ) {
-			if ( ( $stored[$surface->id] ?? null ) !== JsonSnapshotCodec::encode( $surface ) ) {
+			if ( ( $encoded[$surface->id] ?? null ) !== JsonSnapshotCodec::encode( $surface ) ) {
 				$changed[] = $surface->id;
 			}
 		}
 		return $changed;
+	}
+
+	/**
+	 * A renamed drawing keeps its embeds on this page: they are rewritten in the same revision.
+	 * @param Title $owner
+	 * @param Authority $authority
+	 * @param int $baseRevisionId
+	 * @param \stdClass[] $stored The base revision's drawings
+	 * @param \stdClass $document Canonical proposed document
+	 * @param WikitextContent|null $main Main text sent with the drawings, if any
+	 * @return WikitextContent|null Main text to publish
+	 */
+	private function withRenamedEmbeds( Title $owner, Authority $authority, int $baseRevisionId, array $stored,
+		\stdClass $document, ?WikitextContent $main
+	): ?WikitextContent {
+		$old = [];
+		foreach ( $stored as $surface ) {
+			$old[$surface->id] = DrawingName::key( (string)$surface->label );
+		}
+		$renames = [];
+		foreach ( $document->surfaces as $surface ) {
+			if ( isset( $old[$surface->id] ) && $old[$surface->id] !== DrawingName::key( (string)$surface->label ) ) {
+				$renames[$old[$surface->id]] = (string)$surface->label;
+			}
+		}
+		$text = !$renames ? null :
+			( $main ? $main->getText() : $this->access->getStoredMainText( $owner, $baseRevisionId, $authority ) );
+		if ( $text === null ) {
+			return $main;
+		}
+		try {
+			$rewritten = ( new DirectEmbeddingRewriter() )->renameReferences( $text,
+				$owner->getArticleID( IDBAccessObject::READ_LATEST ), $renames,
+				static function ( string $name ): ?string {
+					$title = Title::newFromText( $name );
+					return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() &&
+						!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
+				} );
+		} catch ( \InvalidArgumentException $e ) {
+			// Text the scanner refuses keeps its bytes; its named embeds then show nothing.
+			return $main;
+		}
+		return $rewritten === $text ? $main : new WikitextContent( $rewritten );
 	}
 
 	/**

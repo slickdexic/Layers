@@ -24,6 +24,17 @@ class DirectEmbeddingRewriterTest extends \MediaWikiUnitTestCase {
 			$rewriter->rewrite( $text, strlen( $prefix ), $embed, 123, 'Drawing A', [ $this, 'file' ] ) );
 	}
 
+	public function testRenameRewritesOnlyThisPagesNamedEmbeds(): void {
+		$r = new DirectEmbeddingRewriter();
+		$text = "{{#Slide: 7:Ideas |width=400}} [[File:A.jpg|thumb|layerset = 7:pump_labels|Cap]]\n" .
+			'{{#Slide:8:Ideas}} [[File:A.jpg|layerset=labels]] {{#Slide:7:Other}} [[File:A.jpg|layersbinding=v1:7:x]]';
+		$this->assertSame( "{{#Slide: 7:Plans |width=400}} [[File:A.jpg|thumb|layerset =7:Pump tags|Cap]]\n" .
+			'{{#Slide:8:Ideas}} [[File:A.jpg|layerset=labels]] {{#Slide:7:Other}} [[File:A.jpg|layersbinding=v1:7:x]]',
+			$r->renameReferences( $text, 7, [ 'ideas' => 'Plans', 'pump labels' => 'Pump tags' ], [ $this, 'file' ] ) );
+		$this->assertSame( '{{#Slide:7:B}}{{#Slide:7:A}}',
+			$r->renameReferences( '{{#Slide:7:A}}{{#Slide:7:B}}', 7, [ 'a' => 'B', 'b' => 'A' ], [ $this, 'file' ] ) );
+	}
+
 	public function testSlideAndFileAliasPreservePresentationAndPdfPage(): void {
 		$r = new DirectEmbeddingRewriter();
 		$text = '{{#Slide: Ideas |canvas=800x600| layerset = Named |noedit}}';

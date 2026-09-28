@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Renaming a drawing keeps its embeds working — September 28, 2026
+
+Fourth step of [charter](../docs/PROJECT_CHARTER.md) decision D1 (HIST-7). When a publication changes a drawing's name, the page's direct embeds that name it (`layerset=<pageId>:<old>`, `{{#Slide:<pageId>:<old>}}`) are rewritten to the new name in the same revision, whether or not the save sends page text. Changes of case, spacing or underscores need no rewrite, since names that differ only in those are the same name. Two drawings can swap names in one save. Embeds of other pages, in templates or in `layersbinding=` form are left as they are.
+
+Bare names (`layerset=<name>`) keep meaning the shared set until the migration, which changes their meaning once (see the [binding plan](../docs/PAGE_OWNED_BINDING_PLAN.md)). The editor has no rename control yet.
+
+Code: `DirectEmbeddingRewriter::renameReferences()`, `PagePublicationService::withRenamedEmbeds()`, `PageHistoryAccess::getStoredMainText()`.
+
+Fresh verification: a unit test rewrites only this page's named embeds (slide and file, with spacing kept) and swaps two names; a native publication test renames a drawing without sending text, then changes only its case, then renames it while sending text. Full native configuration **411 tests passed, 1 skipped**; standalone PHPUnit **1,308**; PHP style clean.
+
 ## Adoption writes named embeds; fields name drawings too — September 28, 2026
 
 Third step of [charter](../docs/PROJECT_CHARTER.md) decision D1. Making a shared drawing owned by the page now rewrites the embed to name the new drawing, instead of writing `layersbinding=`:

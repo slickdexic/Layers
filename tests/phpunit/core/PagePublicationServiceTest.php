@@ -169,6 +169,28 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 		$this->assertNotSame( $id, $service->publish( $page->getTitle(), $actor, $id, json_encode( $twin ), 'Two' ) );
 	}
 
+	public function testRenamingADrawingRewritesThisPagesEmbeds(): void {
+		$page = $this->getNonexistingTestPage();
+		$actor = $this->actor();
+		$service = $this->service();
+		$title = $page->getTitle();
+		$id = $service->publish( $title, $actor, 0, $this->snapshot(), 'Create', new WikitextContent( 'Owner page' ) );
+		$pageId = $title->getArticleID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST );
+		$main = fn ( int $revisionId ) => $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionById( $revisionId )->getContent( SlotRecord::MAIN )->getText();
+		$id = $service->publish( $title, $actor, $id, $this->snapshot(), 'Embed',
+			new WikitextContent( "Intro {{#Slide:$pageId:Ideas|width=400}} and {{#Slide:$pageId:Other}}" ) );
+
+		$renamed = $service->publish( $title, $actor, $id, $this->snapshot( 'Plans' ), 'Rename' );
+		$this->assertSame( "Intro {{#Slide:$pageId:Plans|width=400}} and {{#Slide:$pageId:Other}}", $main( $renamed ) );
+		// Names that differ only in case still match, so the text stays as written.
+		$recased = $service->publish( $title, $actor, $renamed, $this->snapshot( 'plans' ), 'Case' );
+		$this->assertSame( $main( $renamed ), $main( $recased ) );
+		$sent = $service->publish( $title, $actor, $recased, $this->snapshot( 'Ideas' ), 'Rename with text',
+			new WikitextContent( "New {{#Slide:$pageId:PLANS}}" ) );
+		$this->assertSame( "New {{#Slide:$pageId:Ideas}}", $main( $sent ) );
+	}
+
 	/** @return array */
 	public static function provideFailures(): array {
 		return [

@@ -4,10 +4,12 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Revision;
 
+use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
@@ -123,6 +125,22 @@ class PageHistoryAccess {
 			return [];
 		}
 		return json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR )->surfaces;
+	}
+
+	/**
+	 * @param Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return string|null The revision's wikitext, if the owner's and visible
+	 */
+	public function getStoredMainText( Title $owner, int $revisionId, Authority $authority ): ?string {
+		$revision = $revisionId > 0 ?
+			$this->revisionLookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST ) : null;
+		if ( !$revision || $revision->getPageId() !== $owner->getArticleID( IDBAccessObject::READ_LATEST ) ) {
+			return null;
+		}
+		$content = $revision->getContent( SlotRecord::MAIN, RevisionRecord::FOR_THIS_USER, $authority );
+		return $content instanceof WikitextContent ? $content->getText() : null;
 	}
 
 	/**

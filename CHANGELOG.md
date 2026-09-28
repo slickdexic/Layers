@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Renaming a drawing keeps its embeds working (pilot, September 28): a save that changes a page-owned drawing's name rewrites the page's embeds naming it in the same revision.
+
 - Adoption writes named embeds (pilot, September 28): making a shared slide or file drawing owned by the page rewrites its embed to `{{#Slide:<pageId>:<name>}}` or `layerset=<pageId>:<name>`, naming the drawing after the slide or set (with a number if taken). `{{#layers_fields:}}` accepts `<pageId>:<name>` for page drawings.
 
 - Embeds can name a page's drawing (pilot, September 28): `[[File:X|layerset=<pageId>:<name>]]` and `{{#Slide:<pageId>:<name>}}` show the page's own drawing of that name, with edit links; anything else shows no drawing and never shared data.
