@@ -4,8 +4,11 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
+use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
+use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Html\Html;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
@@ -13,6 +16,7 @@ use MediaWiki\Output\OutputPage;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Parser\ParserOutputFlags;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\SpecialPage\SpecialPage;
 
 /** Page output carries only binding identities; each reader's browser fetches authorized drawings. */
@@ -60,6 +64,36 @@ class BoundSlideHooks {
 		$data[$value] = [ 'revisionId' => $revision->getId(), 'pageId' => $binding['pageId'] ];
 		$output->setExtensionData( self::DATA_KEY, $data );
 		return [ $value, $revision->getId() ];
+	}
+
+	/**
+	 * Find the one drawing of the page being parsed that an embed names.
+	 * @param Parser $parser
+	 * @param array $named From PageOwnedBinding::parseNamed()
+	 * @param string $kind 'file' or 'slide'
+	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
+	 * @return array Canonical identity for register()
+	 * @throws \DomainException layers-page-binding-unavailable
+	 */
+	public static function named( Parser $parser, array $named, string $kind, ?string $fileTitle ): array {
+		// As in register(): renders without the revision must not be cached as the answer.
+		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
+		$revision = $parser->getRevisionRecordObject();
+		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $named['pageId'] ||
+			!$revision->hasSlot( PageRevisionWriter::SLOT )
+		) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
+		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		$surfaceId = PageOwnedBinding::resolveNamed( $named,
+			json_decode( $content->getText(), true )['surfaces'] ?? [], $kind, $fileTitle );
+		if ( $surfaceId === null ) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		return [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
 	}
 
 	/**

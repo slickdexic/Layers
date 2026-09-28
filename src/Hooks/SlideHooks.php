@@ -155,6 +155,13 @@ class SlideHooks {
 		$orderedOptions = [];
 		$params = self::parseArguments( $frame, $args, $orderedOptions );
 		$binding = \MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions::extract( $orderedOptions );
+		if ( $binding === null ) {
+			$named = \MediaWiki\Extension\Layers\Revision\PageOwnedBinding::parseNamed(
+				(string)( $params['name'] ?? '' ) );
+			if ( $named !== null ) {
+				$binding = BoundSlideHooks::named( $parser, $named, 'slide', null );
+			}
+		}
 		if ( $binding !== null ) {
 			return BoundSlideHooks::placeholder( $parser, $binding );
 		}

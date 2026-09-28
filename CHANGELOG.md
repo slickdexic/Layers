@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Embeds can name a page's drawing (pilot, September 28): `[[File:X|layerset=<pageId>:<name>]]` and `{{#Slide:<pageId>:<name>}}` show the page's own drawing of that name, with edit links; anything else shows no drawing and never shared data.
+
 - Drawing names are unique on their page (pilot, September 27): a new or changed page-owned drawing needs a name no other drawing on the page has (ignoring case, spacing and underscores) that can be written into an embed; a refused save names it. Adopting a second drawing with a taken name adds a number ("default 2"). First step of the charter's decision that drawings belong to their page.
 
 - Refused saves are explained once (September 27): the page-owned editor no longer refuses a save on its own checks, so page history's refusal, which names the layer and property, reaches the user (J79). The ordinary editor's validation notice was missing its message and its limits ("between $1 and $2"); both are filled in, and a failed ordinary save shows one notice instead of up to three, none of them the English "Check browser console (F12)". The i18n wiring check now sees `window.layersMessages.get()` calls.

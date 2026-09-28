@@ -1075,6 +1075,7 @@ class WikitextHooks {
 			}
 
 			// Build queues with correct positions (null for files without layerset/layers= at that position)
+			$namedMap = [];
 			foreach ( $allFileMatches as $fileMatch ) {
 				$filename = $fileMatch['filename'];
 				$offset = $fileMatch['offset'];
@@ -1094,6 +1095,13 @@ class WikitextHooks {
 						// Remove this entry so it's not matched again
 						unset( $layersMap[$filename][$offset] );
 					}
+				}
+
+				if ( $layersValue !== null && preg_match( '/\A\s*[0-9]+:/', $layersValue ) ) {
+					// `<pageId>:<name>` names one of this page's drawings, never a shared set.
+					$namedMap[$filename][$offset] = $layersValue;
+					$layersValue = null;
+					self::$pageHasLayers = true;
 				}
 
 				if ( $layersValue !== null ) {
@@ -1188,8 +1196,16 @@ class WikitextHooks {
 			}
 			foreach ( $allFileMatches as $fileMatch ) {
 				$raw = $bindingMap[$fileMatch['filename']][$fileMatch['offset']] ?? null;
-				self::$fileBindings[$fileMatch['filename']][] = $raw === null ? null :
-					( $parser instanceof Parser ? BoundFileHooks::resolve( $parser, $raw ) : false );
+				$named = $namedMap[$fileMatch['filename']][$fileMatch['offset']] ?? null;
+				if ( $raw === null && $named === null ) {
+					$bound = null;
+				} elseif ( !$parser instanceof Parser || ( $raw !== null && $named !== null ) ) {
+					$bound = false;
+				} else {
+					$bound = $raw !== null ? BoundFileHooks::resolve( $parser, $raw ) :
+						BoundFileHooks::resolveNamed( $parser, $named, $fileMatch['filename'] );
+				}
+				self::$fileBindings[$fileMatch['filename']][] = $bound;
 			}
 
 			// Strip our parameters ONLY from within file links, so that they do not

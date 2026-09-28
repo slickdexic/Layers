@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## Embeds can name a page's drawing — September 28, 2026
+
+Second step of [charter](../docs/PROJECT_CHARTER.md) decision D1. A page can show one of its own drawings by name and page ID: `[[File:Pump.png|layerset=228:Pump labels]]` for an image or PDF drawing, `{{#Slide:228:Overview}}` for a slide. Legacy set and slide names cannot contain `:`, so these never mean a shared set.
+
+- **What shows:** the page's one drawing with that name (ignoring case, spacing and underscores), of the embed's kind and, for files, on the embed's file. An unknown name, another page's ID, or a name two older drawings share shows the plain image (or, for a slide, the slide error) and never shared data. Pages show the drawing exactly as with `layersbinding=`: the page output carries only its identity.
+- **Editing:** the page's edit links and the editor route open named embeds, and a named embed is never offered for adoption.
+- **Not yet:** the editor still writes `layersbinding=` when it adopts; a bare `layerset=name` still means the shared set; renames do not yet rewrite embeds; copying from another page is not built. See the [binding plan](../docs/PAGE_OWNED_BINDING_PLAN.md).
+- Code: `PageOwnedBinding::parseNamed()` and `resolveNamed()`, `PageOwnedBindingOptions::named()`, `BoundSlideHooks::named()`, `BoundFileHooks::resolveNamed()`, the file scan in `WikitextHooks`, `SlideHooks` and `PageOwnedPilot`.
+
+Fresh verification: new standalone `NamedDrawingReferenceTest` (3 tests) and native tests for a named file embed and a named slide (shown, edit link and editor route open the right drawing, refused forms show nothing, output varies by revision). Full native configuration **409 tests passed, 1 skipped**; standalone PHPUnit **1,307**; PHP style clean.
+
 ## Drawings need a unique name on their page — September 27, 2026
 
 First step of [charter](../docs/PROJECT_CHARTER.md) decision D1, under which a drawing belongs to its page and is identified by the page plus its name. Publishing a new or changed page-owned drawing now requires a name that is unique on the page and can be written into an embed: 1 to 255 characters, no spaces at either end or in a row, and none of `| [ ] { } < > :`. Names that differ only in case, spacing or underscores count as the same. A refused save says which name and why. Drawings that are not changed are not rechecked, and adopting a second drawing with a name already on the page adds the first free number ("default 2").

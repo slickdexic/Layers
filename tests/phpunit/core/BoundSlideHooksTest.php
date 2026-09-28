@@ -18,6 +18,52 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
+	public function testNamedSlideShowsThePageDrawingOfThatNameOnly(): void {
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
+			'LayersPageOwnedPilotOwners' => [ 'BoundSlideNamed' ] ] );
+		$registered = TestingAdmissionRegistration::install( $this );
+		$page = $this->getExistingTestPage( 'BoundSlideNamed' );
+		$title = $page->getTitle();
+		$pageId = $page->getId();
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$text = "{{#Slide: $pageId:welcome_slide }}";
+		$revisionId = $registered['publisher']->publish( $title, $actor, $page->getLatest(),
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Name a slide',
+			new WikitextContent( $text ), $pageId );
+		$parse = function ( string $wikitext ) use ( $title, $revisionId ) {
+			return $this->getServiceContainer()->getParserFactory()->create()->parse( $wikitext, $title,
+				ParserOptions::newFromAnon(), true, true, $revisionId );
+		};
+		$binding = "v1:$pageId:presentation";
+		$parsed = $parse( $text );
+		$this->assertStringContainsString( 'data-layers-binding="' . $binding . '"', $parsed->getRawText() );
+		$this->assertSame( $revisionId,
+			$parsed->getExtensionData( BoundSlideHooks::DATA_KEY )[$binding]['revisionId'] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
+		$this->assertCount( 1, $entries );
+		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $entries[0]['params']['start'],
+			$entries[0]['params']['expected'], $actor );
+		$this->assertSame( 'presentation', $init['pageOwned']['surfaceId'] );
+		$other = $pageId + 1000;
+		foreach ( [
+			"{{#Slide:$other:Welcome Slide}}" => true, "{{#Slide:$pageId:Missing}}" => true,
+			// Malformed whatever the revision holds.
+			"{{#Slide:0:Welcome Slide}}" => false
+		] as $wikitext => $varies ) {
+			$parsed = $parse( $wikitext );
+			$this->assertStringNotContainsString( 'layers-bound-slide', $parsed->getRawText(), $wikitext );
+			$this->assertStringNotContainsString( 'layers-slide-container', $parsed->getRawText(), $wikitext );
+			$this->assertSame( $varies, $parsed->getOutputFlag( ParserOutputFlags::VARY_REVISION ), $wikitext );
+		}
+		// Before the revision exists, nothing is resolved and the output must vary by revision.
+		$unsaved = $this->getServiceContainer()->getParserFactory()->create()->parse( $text, $title,
+			ParserOptions::newFromAnon() );
+		$this->assertStringNotContainsString( 'layers-bound-slide', $unsaved->getRawText() );
+		$this->assertTrue( $unsaved->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
+	}
+
 	public function testParserCachesOnlyIdentityAndOutputReadsExactAuthorizedRevision(): void {
 		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
 			'LayersPageOwnedPilotOwners' => [ 'BoundSlideAcceptance' ] ] );

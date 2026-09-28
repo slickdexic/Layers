@@ -105,6 +105,45 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		}
 	}
 
+	public function testNamedEmbedShowsThePageDrawingOfThatNameOnly(): void {
+		[ $title, $pageId, , , $actor ] = $this->boundImagePage( 'Bound_file_named_owner' );
+		$text = "Intro\n\n[[File:{$this->file}|120px|layerset=$pageId:photo|A caption]]";
+		$revisionId = $this->editPage( $title, $text )->getNewRevision()->getId();
+		$parse = function ( string $wikitext ) use ( $title, $revisionId ) {
+			return $this->getServiceContainer()->getParserFactory()->create()->parse( $wikitext, $title,
+				ParserOptions::newFromAnon(), true, true, $revisionId );
+		};
+		$parsed = $parse( $text );
+		$html = $parsed->getRawText();
+		$this->assertStringContainsString( 'data-layers-binding="v1:' . $pageId . ':photo"', $html );
+		$this->assertStringContainsString( 'data-layers-revision="' . $revisionId . '"', $html );
+		$this->assertStringContainsString( 'A caption', $html );
+		$this->assertStringNotContainsString( 'layerset', $html );
+		$this->assertTrue( $parsed->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
+
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
+		$this->assertCount( 1, $entries );
+		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $entries[0]['params']['start'],
+			$entries[0]['params']['expected'], $actor );
+		$this->assertSame( 'photo', $init['pageOwned']['surfaceId'] );
+		$this->assertSame( [], $pilot->listAdoptionCandidates( $pageId, $revisionId, $actor ) );
+
+		$other = $pageId + 1000;
+		foreach ( [
+			"[[File:{$this->file}|120px|layerset=$other:Photo]]",
+			"[[File:{$this->file}|120px|layerset=$pageId:Missing]]",
+			"[[File:{$this->file}|120px|layerset=0:Photo]]",
+			"[[File:{$this->file}|120px|layerset=$pageId:Photo|layersbinding=v1:$pageId:photo]]"
+		] as $wikitext ) {
+			$html = $parse( $wikitext )->getRawText();
+			$this->assertStringContainsString( '<img ', $html, $wikitext );
+			$this->assertStringNotContainsString( 'layers-bound-file', $html, $wikitext );
+			$this->assertStringNotContainsString( 'data-layer', $html, $wikitext );
+			$this->assertStringNotContainsString( 'layerset', $html, $wikitext );
+		}
+	}
+
 	public function testRefusedBindingShowsThePlainImageWithoutAnyDrawing(): void {
 		[ $title, $pageId, $revisionId ] = $this->boundImagePage( 'Bound_file_refused_owner' );
 		$other = $pageId + 1000;

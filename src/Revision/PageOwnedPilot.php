@@ -248,7 +248,10 @@ class PageOwnedPilot {
 			$entries = [];
 			foreach ( $this->newRewriter()->scan( $main->getText(), $this->fileTargets() ) as $candidate ) {
 				try {
-					if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+					$options = $candidate['options'];
+					if ( PageOwnedBindingOptions::extract( $options ) !== null ||
+						PageOwnedBindingOptions::named( $options, $candidate['kind'], $candidate['target'] ) !== null
+					) {
 						continue;
 					}
 					if ( $candidate['kind'] === 'file' ) {
@@ -395,6 +398,25 @@ class PageOwnedPilot {
 		};
 	}
 
+	/**
+	 * The page drawing a scanned embed selects, by binding or by `<pageId>:<name>`.
+	 * @param array $candidate From DirectEmbeddingRewriter::scan()
+	 * @param array[]|callable $surfaces The page's drawings, or a function that reads them
+	 * @return array|null Canonical identity
+	 * @throws \InvalidArgumentException For a malformed selector
+	 */
+	private function embedBinding( array $candidate, $surfaces ): ?array {
+		$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
+		$named = $binding === null ?
+			PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'] ) : null;
+		if ( $named === null ) {
+			return $binding;
+		}
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, is_callable( $surfaces ) ? $surfaces() : $surfaces,
+			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null );
+		return $surfaceId === null ? null : [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
+	}
+
 	/** @return PageOwnedIdentityResolver */
 	private function newIdentityResolver(): PageOwnedIdentityResolver {
 		$lookup = $this->services->getRevisionLookup();
@@ -445,16 +467,15 @@ class PageOwnedPilot {
 			}
 			// One exact read for every entry; the editor route repeats full admission when opened.
 			$kinds = [];
-			foreach ( $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces']
-				as $surface
-			) {
+			$surfaces = $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'];
+			foreach ( $surfaces as $surface ) {
 				$kinds[$surface['id']] = $surface['kind'] === 'slide' ? 'slide' : 'file';
 			}
 			$candidates = $this->newRewriter()->scan( $main->getText(), $this->fileTargets() );
 			$selections = [];
 			foreach ( $candidates as $candidate ) {
 				try {
-					$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
+					$binding = $this->embedBinding( $candidate, $surfaces );
 					// A slide embed edits only slides, a file embed only image/PDF surfaces.
 					if ( !$binding || $binding['pageId'] !== $pageId ||
 						( $kinds[$binding['surfaceId']] ?? null ) !== $candidate['kind'] ||
@@ -512,7 +533,8 @@ class PageOwnedPilot {
 				if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
 					continue;
 				}
-				$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
+				$binding = $this->embedBinding( $candidate, fn () =>
+					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] );
 				if ( !$binding || $binding['pageId'] !== $pageId ) {
 					throw new \DomainException();
 				}

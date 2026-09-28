@@ -30,6 +30,28 @@ class BoundFileHooks {
 	}
 
 	/**
+	 * `[[File:X|layerset=<pageId>:<name>]]`: this page's drawing of that name on file X.
+	 * @param Parser $parser Parse of the page that carries the embed
+	 * @param string $value Raw layerset= value
+	 * @param string $fileKey DB key of the embedded file
+	 * @return array|false As resolve()
+	 */
+	public static function resolveNamed( Parser $parser, string $value, string $fileKey ) {
+		try {
+			$named = PageOwnedBinding::parseNamed( $value );
+			if ( $named === null ) {
+				return false;
+			}
+			[ $binding, $revisionId ] = BoundSlideHooks::register( $parser,
+				BoundSlideHooks::named( $parser, $named, 'file', 'File:' . $fileKey ) );
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			return false;
+		}
+		$parser->getOutput()->addModules( [ 'ext.layers.history' ] );
+		return [ 'binding' => $binding, 'revisionId' => $revisionId ];
+	}
+
+	/**
 	 * @param array &$attribs Core image attributes
 	 * @param array $bound Result of resolve()
 	 */

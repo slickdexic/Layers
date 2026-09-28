@@ -73,4 +73,36 @@ final class PageOwnedBindingOptions {
 
 		return PageOwnedBinding::parse( $bindingValue );
 	}
+
+	/**
+	 * The drawing an embed names as `<pageId>:<name>`: a file embed's layerset= (or layers=)
+	 * value, or a slide embed's target.
+	 *
+	 * @param array $options Ordered option strings, as for extract()
+	 * @param string $kind 'file' or 'slide'
+	 * @param string $target Slide target, or the file title
+	 * @return array{pageId:int,name:string}|null
+	 * @throws \InvalidArgumentException For a malformed or repeated name
+	 */
+	public static function named( array $options, string $kind, string $target ): ?array {
+		if ( $kind === 'slide' ) {
+			return PageOwnedBinding::parseNamed( $target );
+		}
+		$found = null;
+		foreach ( $options as $option ) {
+			$equalsPos = strpos( (string)$option, '=' );
+			$name = $equalsPos === false ? '' : strtolower( trim( substr( $option, 0, $equalsPos ), " \t\r\n\f" ) );
+			if ( $name !== 'layerset' && $name !== 'layers' ) {
+				continue;
+			}
+			$named = PageOwnedBinding::parseNamed( substr( $option, $equalsPos + 1 ) );
+			if ( $named !== null ) {
+				if ( $found !== null ) {
+					throw new \InvalidArgumentException( 'layers-invalid-page-binding' );
+				}
+				$found = $named;
+			}
+		}
+		return $found;
+	}
 }

@@ -1,5 +1,60 @@
 # Layers implementation handoff plan
 
+## Named embeds; J82, J83 and J84 ready — September 28, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: `layerset=<pageId>:<name>` and `{{#Slide:<pageId>:<name>}}` resolve only to the parsed page's own drawing of that name through `PageOwnedBinding::resolveNamed()`; page output carries identities only. Three packets are ready alongside J81, in this order: J81, J82, then J83 and J84 in either order. Each names the [charter](PROJECT_CHARTER.md) criteria it advances. Earlier entries below are historical.
+
+### J82 — Named embeds in Chromium (ready)
+
+**Advances:** HIST-4, TYPES-4.
+
+**Purpose:** prove in real Chromium that a page shows, edits and saves its own drawing through an embed that names it, and that nothing else resolves. Acceptance testing only; report defects for lead correction.
+
+**Allowed changes:** one new spec `tests/e2e/page-owned-named-embeds.spec.js`, this packet and the review ledger. The J65 wiki rules apply: only `Layers_browser_acceptance`, the ten-minute quiet rule, serial runs, exact-base cleanup, never touch `Layers_history_test`, never delete pages or files. No production code, messages, manifest, configuration or `LocalSettings.php`; no commits or pushes. Never run `git checkout`, `git restore`, `git reset`, `git clean` or `git stash`.
+
+1. Record the owner's current revision, main text and `layersread` snapshot. By exact-base publication add one slide drawing named "Named probe slide" (a rectangle) and one image drawing named "Named probe photo" on the first JPEG or PNG file (a text layer), keeping the recorded drawings unchanged. The main text adds `{{#Slide:<pageId>:named_probe_SLIDE}}` and `[[File:<file>|200px|layerset=<pageId>:Named probe photo]]`: the case and underscore differences are deliberate.
+2. View the page: both drawings are drawn (the slide's rectangle and the photo's text), and the page HTML contains no layer data, only `data-layers-binding` identities.
+3. Follow each drawing's edit link from the page. Change one property in the properties panel and save: exactly one new tagged revision each time, and the saved snapshot has the change.
+4. Publish main text (drawings unchanged) with these embeds, each on its own line: another page ID with the same names, an unknown name, `0:` as the page ID, and a file embed naming the slide. None draws anything, none shows shared layers, and the page still renders.
+5. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
+
+Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+### J83 — Performance benchmark (ready)
+
+**Advances:** PERF-0 (and a first baseline for PERF-1 to PERF-7).
+
+**Purpose:** a scripted, repeatable benchmark that later performance work is measured against. Measurement only: no fixes.
+
+**Allowed changes:** a new directory `tests/perf/` with a Playwright script (not run by `npm test` or `test:e2e`), one `"bench"` entry in `package.json` scripts that runs it, a results file `tests/perf/results/2026-09-28-test-wiki.json`, this packet and the review ledger. The J65 wiki rules apply as for J82. No production code or instrumentation.
+
+Measure, three runs each, and report the median:
+
+1. **PERF-1:** gzip transfer bytes of every `load.php` response containing an `ext.layers` module, on the owner page (drawings) and on `Main_Page` (none). Also record whether any Layers module loads on the page without drawings.
+2. **PERF-2:** time from the photo's image `load` event to its drawing appearing, observed with a `MutationObserver` on the drawing's canvas.
+3. **PERF-3:** time from pressing an edit link to `window.layersEditorInstance` existing with its canvas visible and `apiManager.pageOwnedDrafts.ready`.
+4. **PERF-4:** frames per second while dragging one layer for two seconds in a drawing seeded with 100 rectangles (count `requestAnimationFrame` callbacks), and the delay from a key press to the character appearing while typing into a text box.
+5. **PERF-5:** `layerspublish` response time for a one-property change to the 100-layer drawing, and the time to open that drawing's previous revision in `Special:ViewLayersPage`.
+6. **PERF-6:** long tasks (`PerformanceObserver` type `longtask`) during load of the owner page with 20 slide drawings embedded.
+7. **PERF-7:** the size (`rvprop=size`) of two consecutive revisions where the second changes one text layer of a drawing that also holds a 200 KB image layer.
+
+The test wiki's shared-folder mount makes everything slower than a normal install; say so in the results, and do not tune the numbers. Seed and remove every drawing through exact-base publication on the owner, and restore the recorded snapshot at the end. Record the environment (browser version, machine, wiki configuration) with the results.
+
+### J84 — Automated accessibility checks (ready)
+
+**Advances:** UI-3.
+
+**Purpose:** an automated accessibility check of Layers' own screens with axe-core, reporting what fails. Checks only: report defects for lead correction; do not fix them.
+
+**Allowed changes:** one new spec `tests/e2e/accessibility.spec.js`, this packet and the review ledger. Load axe-core from the installed `axe-core` package (a dependency of `jest-axe`) with `page.addScriptTag`; add no dependency. The J65 wiki rules apply as for J82.
+
+1. Run axe (WCAG 2.2 A and AA rules) on: the owner page with a slide and an image drawing; the full-size view of each; the page-owned editor with a layer selected and the properties panel open; `Special:ViewLayersPage` for an earlier revision (with its restore form); the adoption confirmation page for a shared slide; and a diff page with a drawing change. Do each in Vector 2022 light and dark (`useskin=vector-2022`, dark via the `skin-theme-clientpref-night` class, with transitions disabled before reading colours).
+2. Limit each run to Layers' own elements (the drawing controls, editor, viewer, dialogs and special-page content), not the skin.
+3. The spec fails on any critical or serious violation, and prints every violation with its rule, element and count. It is expected to fail at first: report the list; do not relax the rules to make it pass.
+4. Restore the owner to its recorded text and snapshot with the usual exact-base cleanup.
+
+Record counts, durations and the violation list, then return for lead review.
+
 ## Charter work begins: unique drawing names — September 27, 2026
 
 Work now follows the [project charter](PROJECT_CHARTER.md); name the criterion each packet advances. See the [current status](CURRENT_STATUS.md) entry. Contract: page-owned drawing names are unique on their page and embeddable (`DrawingName`); tests and specs that publish two drawings must give them different names. The D1 design for the next lead steps is at the top of the [binding plan](PAGE_OWNED_BINDING_PLAN.md). J81 remains ready. Earlier entries below are historical.
