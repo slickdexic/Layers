@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Edit links name the drawing (pilot, September 28): a page's "Edit page drawing" link for an embed that names a drawing shows the drawing's name rather than the `<pageId>:<name>` reference or the file name (J82).
+
 - Restoring a drawing from the viewer (pilot, September 28): submitting the restore form after the page has changed now says the page has changed since the version was opened, instead of that the version cannot be restored (J81).
 
 - Renaming a drawing keeps its embeds working (pilot, September 28): a save that changes a page-owned drawing's name rewrites the page's embeds naming it in the same revision.

@@ -1,4 +1,57 @@
-# Junior implementation review — J01–J81
+# Junior implementation review — J01–J82
+
+## J82 accepted with lead corrections: named embeds in Chromium — September 28, 2026
+
+With the lead's fix merged and the spec corrected, the lead reran it: **1 passed (46.7 s)**. The automation owner kept its baseline text and drawing.
+
+- **Named embeds work in the browser:** both drawings were drawn from identities only, each edit link opened the right drawing and saved one tagged revision, and every refused form (another page's ID, an unknown name, `0:`, a file embed naming a slide and the reverse) drew nothing and showed no shared layers.
+- **Defect found in review, not reported:** the report quotes the slide's edit link as "Edit page drawing: 228:named_probe_SLIDE", and the photo's as "Edit page drawing: B010.jpg". Readers know a drawing by its name, so a named embed's link now shows the drawing's name ("Named probe slide", "Named probe photo"). `layersbinding=` embeds keep their slide or file name. Native tests assert both labels. Report what the screen shows when it looks wrong, even when the step passes.
+- **Lead corrections to the spec:** edit links are found by the drawing's name. "Exactly one new tagged revision" is now checked: the saved revision is the latest and its parent is the revision before the save; before, the spec only checked that the saved revision was newer and tagged.
+- **Limit, not a defect:** step 2 checks that the photo's canvas is drawn, not the text on it; text pixels over a photograph are not a reliable probe. The slide's pixel check stands.
+
+## J82 implemented awaiting lead review: named embeds in Chromium — September 28, 2026
+
+Advances: **HIST-4**, **TYPES-4**.
+
+Junior implemented acceptance testing for task J82 ("Named embeds in Chromium") in `tests/e2e/page-owned-named-embeds.spec.js` using Playwright on Chromium against the original test wiki at `http://localhost:8080`:
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial run (`--workers=1`).
+- Used first JPEG or PNG fixture discovered dynamically (`B010.jpg`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Acceptance runs: **1 passed (44.4s)**; repeatability **1 passed (44.6s)**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication after each run.
+- Zero product code changes.
+
+### Verification of Step-by-Step Contract
+
+- **Step 1: Baseline recording & exact-base publication of named embeds**:
+  - Captured initial revision (revid 1695), baseline wikitext, and initial snapshot (`presentation` "Welcome Slide").
+  - Published revision with one slide drawing named `"Named probe slide"` (`slide_named_probe`, $800 \times 600$ red `#ff0000` rectangle) and one image drawing named `"Named probe photo"` (`photo_named_probe`, text layer `"Probe Photo Text"`) on first image fixture (`B010.jpg`), keeping baseline drawings unchanged.
+  - Wikitext embedded `{{#Slide:228:named_probe_SLIDE}}` and `[[File:B010.jpg|200px|layerset=228:Named probe photo]]`, testing deliberate case and underscore normalization.
+
+- **Step 2: Browser rendering & identity-only HTML**:
+  - Loaded owner page in Chromium: verified response status 200.
+  - Page HTML verified to contain strictly identity attributes (`data-layers-binding="v1:228:slide_named_probe"` and `data-layers-binding="v1:228:photo_named_probe"`) with no layer data (no `"Probe Photo Text"`, no `"rect_named"`, no `"data-layer-data"`).
+  - Both drawings rendered: slide canvas displayed red rectangle (sampled at $(50, 50)$ as `[255, 0, 0, 255]`); photo canvas rendered inside `.layers-bound-file-view`.
+
+- **Step 3: Edit links and properties panel saves**:
+  - Followed slide edit link `link "Edit page drawing: 228:named_probe_SLIDE"`, waited for editor readiness, selected rectangle, changed `Stroke Width` to `6` in the Appearance section, and saved.
+  - Verified exactly one new tagged revision (`layers-page-drawing`) created; `layersread` confirmed snapshot updated with `strokeWidth: 6`.
+  - Followed photo edit link `link "Edit page drawing: B010.jpg"`, waited for editor readiness, selected text layer, changed `X Position` to `45` in Transform section, and saved.
+  - Verified exactly one new tagged revision (`layers-page-drawing`) created; `layersread` confirmed snapshot updated with `x: 45`.
+
+- **Step 4: Refused embed forms draw nothing and page still renders**:
+  - Published main text with four refused embed forms:
+    1. Another page ID ($pageId + 9999$): `{{#Slide:10227:named_probe_SLIDE}}` and `[[File:B010.jpg|200px|layerset=10227:Named probe photo]]`
+    2. Unknown name: `{{#Slide:228:unknown_probe_slide}}` and `[[File:B010.jpg|200px|layerset=228:unknown_probe_photo]]`
+    3. `0:` as page ID: `{{#Slide:0:named_probe_SLIDE}}` and `[[File:B010.jpg|200px|layerset=0:Named probe photo]]`
+    4. File embed naming slide: `[[File:B010.jpg|200px|layerset=228:Named probe slide]]` (and slide embed naming photo `{{#Slide:228:Named probe photo}}`).
+  - Loaded owner page in Chromium: HTTP 200; content area rendered with standard `<img>` tags.
+  - Verified none drew anything: count of `.layers-bound-slide`, `.layers-bound-file-view`, and `img.layers-bound-file` was 0.
+  - Verified none showed shared layers: count of `.layers-slide-container`, `.layers-container`, and `.layers-overlay` was 0.
+
+- **Step 5: Exact-base cleanup**:
+  - Clean exact-base CAS publication restored baseline wikitext and initial snapshot.
+  - Verified owner wikitext matches `Dedicated automated Layers history acceptance page.`.
 
 ## J81 accepted with lead corrections: diff pages and the viewer's restore in Chromium — September 28, 2026
 

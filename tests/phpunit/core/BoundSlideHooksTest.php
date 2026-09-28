@@ -43,6 +43,8 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
+		// The link names the drawing, not the `<pageId>:<name>` reference written in the page.
+		$this->assertSame( 'Welcome Slide', $entries[0]['label'] );
 		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $entries[0]['params']['start'],
 			$entries[0]['params']['expected'], $actor );
 		$this->assertSame( 'presentation', $init['pageOwned']['surfaceId'] );

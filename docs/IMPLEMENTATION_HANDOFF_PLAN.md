@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## J82 accepted; edit links name the drawing — September 28, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: a named embed's edit link shows the drawing's name ("Edit page drawing: Named probe slide"), not the `<pageId>:<name>` reference or the file; `layersbinding=` embeds keep their slide or file name. **J82 is accepted** with lead corrections (see the review ledger). J83 is in progress; J84 remains ready. Earlier entries below are historical.
+
 ## J81 accepted; adoption writes named embeds; renames keep embeds — September 28, 2026
 
 See the three [current status](CURRENT_STATUS.md) entries of September 28. Contracts: adoption rewrites the embed to `{{#Slide:<pageId>:<name>}}` or `layerset=<pageId>:<name>` (specs must read the drawing's identity from the snapshot by name, as `page-owned-journey-acceptance.spec.js` now does); a publication that renames a drawing rewrites the page's named embeds; bare names keep meaning the shared set until the migration. A stale restore form now says the page has changed. **J81 is accepted** with lead corrections (see the review ledger). J82, J83 and J84 remain ready. Earlier entries below are historical.
@@ -8,7 +12,7 @@ See the three [current status](CURRENT_STATUS.md) entries of September 28. Contr
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: `layerset=<pageId>:<name>` and `{{#Slide:<pageId>:<name>}}` resolve only to the parsed page's own drawing of that name through `PageOwnedBinding::resolveNamed()`; page output carries identities only. Three packets are ready alongside J81, in this order: J81, J82, then J83 and J84 in either order. Each names the [charter](PROJECT_CHARTER.md) criteria it advances. Earlier entries below are historical.
 
-### J82 — Named embeds in Chromium (ready)
+### J82 — Named embeds in Chromium (accepted)
 
 **Advances:** HIST-4, TYPES-4.
 
@@ -23,6 +27,10 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: `layerset=<pageId>:
 5. Restore the owner to the text and snapshot recorded in step 1 with the usual exact-base cleanup. If a run is interrupted, restore that same snapshot, never an empty one.
 
 Record counts, durations and defects with the smallest reproduction, then return for lead review.
+
+**Status:** implemented awaiting lead review; spec `tests/e2e/page-owned-named-embeds.spec.js` passed (**1 passed**, 44.4s; repeatability **1 passed**, 44.6s); ESLint clean (**0 errors, 0 warnings**). Clean CAS exact-base restoration confirmed after each run. All steps 1–5 verified: page showed both named drawings with identity-only HTML; properties panel edits via edit links saved exactly one new tagged revision each; refused embed forms drew nothing, showed no shared layers, and left page rendering intact. Full details in the review ledger.
+
+**Accepted** with lead corrections, September 28: edit links now name the drawing, and the spec checks each save's parent revision (see the review ledger).
 
 ### J83 — Performance benchmark (ready)
 

@@ -124,6 +124,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
+		$this->assertSame( 'Photo', $entries[0]['label'] );
 		$init = $pilot->prepareBoundEditor( $pageId, $revisionId, $entries[0]['params']['start'],
 			$entries[0]['params']['expected'], $actor );
 		$this->assertSame( 'photo', $init['pageOwned']['surfaceId'] );

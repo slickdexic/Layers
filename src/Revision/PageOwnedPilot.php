@@ -467,9 +467,11 @@ class PageOwnedPilot {
 			}
 			// One exact read for every entry; the editor route repeats full admission when opened.
 			$kinds = [];
+			$labels = [];
 			$surfaces = $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'];
 			foreach ( $surfaces as $surface ) {
 				$kinds[$surface['id']] = $surface['kind'] === 'slide' ? 'slide' : 'file';
+				$labels[$surface['id']] = (string)( $surface['label'] ?? $surface['id'] );
 			}
 			$candidates = $this->newRewriter()->scan( $main->getText(), $this->fileTargets() );
 			$selections = [];
@@ -483,6 +485,10 @@ class PageOwnedPilot {
 						continue;
 					}
 					$label = $candidate['kind'] === 'file' ? substr( $candidate['target'], 5 ) : $candidate['target'];
+					if ( PageOwnedBindingOptions::extract( $candidate['options'] ) === null ) {
+						// A named embed's target is `<pageId>:<name>`; readers know the drawing by its name.
+						$label = $labels[$binding['surfaceId']];
+					}
 					$selections[$binding['surfaceId']] = [ 'label' => $label, 'params' => [
 						'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
 						'expected' => $candidate['raw']
