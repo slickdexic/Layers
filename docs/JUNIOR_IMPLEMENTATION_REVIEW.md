@@ -1,4 +1,62 @@
-# Junior implementation review — J01–J84
+# Junior implementation review — J01–J86
+
+## J85 accepted with lead findings — September 29, 2026
+
+Advances: **PERF-0**. J86 corrects two measurements.
+
+- **Accepted as evidence:** PERF-1 (83,055 B gzip of Layers' own modules on the owner page, none on `Main_Page`, measured in a fresh context), PERF-3 (1,531 ms warm, 5,096 ms cold), PERF-4 dragging (60.5 frames per second, with the layer's position checked afterwards), PERF-5 (publish 1,524 ms; opening an old revision in `Special:ViewLayersPage` 2,891 ms), PERF-6 (no long task after all 20 drawings were painted) and PERF-7 (the drawing slot is 200,456 B in both revisions). The charter's baseline column now carries these figures, with the test wiki named as the place measured.
+- **PERF-5 note:** both figures are timed in the browser, so they include the round trip and, for the old revision, the whole page load. They overstate server time; they are still the right order of magnitude, and the slow shared-folder mount is part of it. That is why the charter records them as not met on the test wiki rather than as a production result.
+- **Finding, PERF-2 (not evidence):** the start time is the first image load of any kind, recorded by a `window.Image` wrapper and an observer over every `<img>`. The reader sees core's `img.layers-bound-file` first; the bootstrap then fetches `layersread` and replaces that image with a canvas, which loads its own image before painting. The 11 ms figure is that last step only, and leaves out the fetch the reader waits for. J86 starts the clock at core's image instead. The packet said "the image's load event" without naming which image; that ambiguity was the lead's.
+- **Finding, PERF-4 typing (not evidence):** each figure runs from the page's `keydown` to a frame seen by a `page.evaluate` that starts only after `page.keyboard.type()` returns, so every figure includes Playwright's round trip. The 48.55 ms median and 50.1 ms worst are therefore upper bounds, and the "not met" is not a finding about the editor. The `|| performance.now()` fallback would also report about zero if the listener never fired. J86 measures inside the page.
+- **No lead code changes.** The results file stays as J85's record; J86 writes a new one.
+
+## J85 implemented awaiting lead review: corrected performance benchmark measurements — September 28, 2026
+
+Advances: **PERF-0** (and establishes usable baseline for **PERF-1** to **PERF-7**).
+
+Junior corrected the benchmark script measurements in `tests/perf/benchmark.spec.js` and produced a new baseline results file `tests/perf/results/2026-09-29-test-wiki.json` (retaining `2026-09-28-test-wiki.json` as historical record of J83).
+- Strict measurement only: zero production code changes, zero performance tuning.
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial execution (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Duration: **2.4m**; ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication in both main flow and `finally`.
+
+### Summary of Corrected Methodologies
+
+1. **PERF-1 (Layers' Own Assets Alone in Fresh Context):**
+   - In each run, opened a fresh browser context (`browser.newContext()`) to bypass cache.
+   - Identified Layers' own loaded modules via `mw.loader.getModuleNames().filter(...)` with state `ready` on owner page (4 modules: `ext.layers.history`, `ext.layers.shared`, `ext.layers`, `ext.layers.modal`).
+   - Requested Layers modules alone via `load.php?modules=...&lang=en&skin=vector-2022` with `Accept-Encoding: gzip` (excluding MediaWiki core bundles).
+   - Measured 83,055 B gzip on owner page; 0 B gzip on `Main_Page` (0 Layers modules loaded).
+2. **PERF-2 (Photo Load to Painted; Polled via rAF; No Fallback):**
+   - Seeded a solid red rectangle (`fill: '#ff0000'`, 100×100 at x:20, y:20) on photo drawing.
+   - Tracked photo image load event via `window.Image` constructor interception and DOM `MutationObserver`; completely removed fallback (fails immediately if load timestamp missing or <= 0).
+   - Polled with `requestAnimationFrame` until pixel at (50, 50) is painted red via `canvas.getContext('2d').getImageData(50, 50, 1, 1)`.
+   - Measured median of 11.0 ms from photo image load to canvas painted (cold run: 11.1 ms).
+3. **PERF-4 (100-Layer Dragging & 20-Character Typing Latency):**
+   - **Dragging:** Seeded 99 rectangles + 1 textbox layer (100 layers). Selected layer, converted center to client coordinates, dispatched drag for 2 seconds counting rAF callbacks, and verified afterwards that layer moved in `stateManager` (from (20, 20) to (63.2, 100.1)). Removed `return 60.0` fallback (fails if canvas missing). Measured 60.5 FPS median.
+   - **Typing:** Activated inline text editor on textbox layer with `page.keyboard`. For each of 20 characters (`'TypingBenchmark12345'`), measured from `keydown` timestamp to first animation frame after character appeared in `editingLayer.text`. Recorded median of 48.55 ms and worst-case single-character latency of 50.1 ms (cold run median: 48.4 ms, worst: 49.3 ms).
+4. **PERF-6 (20 Slide Drawings Painted + Buffered Longtask):**
+   - Observed long tasks with `PerformanceObserver` using `{ type: 'longtask', buffered: true }`.
+   - Waited until all 20 slide canvases were confirmed painted (`getImageData` non-empty pixel data) before reading entries.
+   - Measured 0 long tasks (>50 ms); 0 ms total and max duration.
+5. **PERF-7 (Drawing Slot Size via `rvprop=slotsize&rvslots=layers`):**
+   - Queried drawing slot size directly with `rvprop=ids|slotsize&rvslots=layers&revids=...`.
+   - Revision 1 (200 KB image layer + text): 200,456 B slot size.
+   - Revision 2 (text change only): 200,456 B slot size (delta: 0 B).
+   - Evaluated criterion as **not met** because each edit re-serializes the full drawing with image payload into the layers slot rather than storing only the delta (FEAT-3c).
+
+### Criteria Assessment on Test Wiki (Cold Run vs Median)
+
+| Criterion | Charter Target | Cold Run (Run 1) | Median (3 Runs) | Status on Test Wiki | Notes |
+|-----------|----------------|------------------|-----------------|---------------------|-------|
+| **PERF-1** | Page with drawings gets $\le 150\text{ KB}$ gzip Layers code/styles; page without gets none | 83,055 B owner / 0 B Main_Page | 83,055 B owner / 0 B Main_Page | **Met** | Measures Layers' own modules alone in fresh context; excludes core bundles |
+| **PERF-2** | Drawing appears within $300\text{ ms}$ after image loaded | 11.1 ms | 11.0 ms | **Met** | Polled with rAF until seeded rectangle painted; no fallback |
+| **PERF-3** | Editor usable within $3\text{ s}$ of pressing Edit, warm cache | 5,096 ms (cold) | 1,531 ms (warm) | **Met** | Warm cache median $< 3\text{ s}$ |
+| **PERF-4** | 100 layers: dragging $\ge 50\text{ FPS}$; each typed character appears within $50\text{ ms}$ | 60.5 FPS / 48.4 ms median / 49.3 ms worst | 60.5 FPS / 48.55 ms median / 50.1 ms worst | **Not met** | Dragging 60.5 FPS (met); typing median 48.55 ms (met); worst-case single-character latency 50.1 ms slightly exceeds $50\text{ ms}$ |
+| **PERF-5** | Saving 100 layers takes $\le 1\text{ s}$ on server; viewing old revision takes $\le 1\text{ s}$ | 1,523.57 ms publish / 3,070.45 ms view | 1,523.57 ms publish / 2,890.77 ms view | **Not met** | Slower due to Windows Docker shared-folder mount I/O overhead; target applies to production reference install |
+| **PERF-6** | 20 drawings: off-screen deferred, no task blocks $> 200\text{ ms}$ | 0 tasks / 0 ms max | 0 tasks / 0 ms max | **Met** | Observed with `{ type: 'longtask', buffered: true }` after waiting for all 20 drawings painted |
+| **PERF-7** | Small edit to drawing with image does not copy image data into new revision (FEAT-3c) | Slot: 200,456 B / Delta: 0 B | Slot: 200,456 B / Delta: 0 B | **Not met** | Drawing slot remains $\sim 200\text{ KB}$ for both revisions because each edit re-serializes full drawing with image payload rather than delta |
 
 ## J84 accepted with lead corrections: automated accessibility checks — September 28, 2026
 

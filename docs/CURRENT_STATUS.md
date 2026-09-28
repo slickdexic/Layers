@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## First performance baseline — September 29, 2026
+
+The corrected benchmark (J85) gives the first figures for the [charter](../docs/PROJECT_CHARTER.md)'s performance criteria, measured on the test wiki, whose shared-folder mount makes every server call slow:
+
+- **Met:** a page with drawings loads 83 KB (gzip) of Layers code and a page without drawings none (PERF-1); the editor is ready 1.5 s after pressing Edit with a warm cache (PERF-3); dragging in a 100-layer drawing runs at 60 frames per second (PERF-4, dragging); a page with 20 drawings has no long task (PERF-6).
+- **Not met:** saving a 100-layer drawing takes 1.5 s and opening an old revision 2.9 s, both timed in the browser (PERF-5); every edit stores the whole drawing again, a 200 KB image included (PERF-7).
+- **Not yet measured correctly:** how soon a drawing appears after its image (PERF-2), and typing delay (PERF-4). J86 corrects both.
+
+Results: `tests/perf/results/2026-09-29-test-wiki.json`.
+
 ## Accessibility checks in the browser, four fixes; first benchmark — September 28, 2026
 
 - **Accessibility (UI-3):** `tests/e2e/accessibility.spec.js` runs axe-core (WCAG 2.2 A and AA) on seven Layers screens in Vector 2022 light and dark. Four problems it found are fixed: the page's "Edit page drawing" and adoption links are at least 24 px high; the divider between the layer list and the properties panel has a name and value and can be resized with the arrow keys; the screen-reader announcer no longer sits inside the layer listbox; and the fill type select is named by its label. One remains: layer rows are listbox options that contain buttons, which needs the grid pattern in the design pass. The spec tracks it and fails on anything else.

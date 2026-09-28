@@ -77,14 +77,14 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| PERF-0 | A scripted, repeatable benchmark in the repository measures PERF-1 to PERF-7 and runs before each milestone. | Partial: `npm run bench` exists (J83, September 28); four of its measurements are being corrected (J85) |
-| PERF-1 | A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none. Nothing Layers adds blocks rendering. | Partial: the viewer loads only where drawings are shown, but also on every `File:` page; transfer size is not measured |
-| PERF-2 | A drawing appears within 300 ms after its image has loaded. | Not measured |
-| PERF-3 | The editor is usable within 3 s of pressing Edit, with a warm cache. | Not measured |
-| PERF-4 | With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms. | Not measured |
-| PERF-5 | Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision. | Not measured |
-| PERF-6 | On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms. | Partial: viewers already start lazily |
-| PERF-7 | A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c). | Not met (measured September 28): each edit stores the whole drawing again, a 200 KB image included |
+| PERF-0 | A scripted, repeatable benchmark in the repository measures PERF-1 to PERF-7 and runs before each milestone. | Partial: `npm run bench` runs every measurement (J83, corrected by J85); PERF-2 and the typing figure are being corrected (J86) |
+| PERF-1 | A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none. Nothing Layers adds blocks rendering. | Met on the test wiki (September 29): 83 KB gzip of Layers modules on a page with drawings, none on a page without; the viewer also loads on every `File:` page |
+| PERF-2 | A drawing appears within 300 ms after its image has loaded. | Not measured: the J85 figure timed the wrong image (J86) |
+| PERF-3 | The editor is usable within 3 s of pressing Edit, with a warm cache. | Met on the test wiki (September 29): 1.5 s warm, 5.1 s cold |
+| PERF-4 | With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms. | Partial (September 29): dragging 60 frames per second; typing not yet measured correctly (J86) |
+| PERF-5 | Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision. | Not met on the test wiki (September 29): saving 1.5 s, opening an old revision 2.9 s, both timed in the browser |
+| PERF-6 | On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms. | Met on the test wiki (September 29): viewers start lazily, and no long task after 20 drawings were painted |
+| PERF-7 | A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c). | Not met (measured September 28 and 29): each edit stores the whole drawing again; the drawing slot is 200 KB in both revisions |
 
 ### 5.4 Modern, consistent, accessible UI (UI)
 

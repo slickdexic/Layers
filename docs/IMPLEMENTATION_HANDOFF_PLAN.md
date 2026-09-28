@@ -1,10 +1,28 @@
 # Layers implementation handoff plan
 
+## J85 accepted; first performance baseline; J86 ready — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. **J85 is accepted** with lead findings (see the review ledger). Its PERF-1, PERF-3, PERF-4 dragging, PERF-5, PERF-6 and PERF-7 figures are the first baseline and are now in the charter. Its PERF-2 and PERF-4 typing figures are not evidence: J86 corrects them. Earlier entries below are historical.
+
+### J86 — Measure PERF-2 from the reader's image, and typing inside the page (ready)
+
+**Advances:** PERF-0, PERF-2 and PERF-4.
+
+**Purpose:** two J85 measurements time the wrong thing (see the review ledger). Fix only those two, rerun, and write a new results file. Measurement only; no production code.
+
+**Allowed changes:** `tests/perf/benchmark.spec.js`, a new results file `tests/perf/results/2026-09-30-test-wiki.json` (keep the J83 and J85 files as the record), this packet and the review ledger. The J65 wiki rules apply as before.
+
+1. **PERF-2:** the reader first sees core's image, `img.layers-bound-file` in the page HTML. `PageOwnedRevisionBootstrap` then fetches the drawing with `layersread` and replaces that image with a canvas, which loads its own copy of the image before painting. J85 recorded the first image load of any kind and so timed only the last step, the canvas's own image (11 ms). Start the clock when core's `img.layers-bound-file` has loaded: read its load time from its resource timing entry (`performance.getEntriesByName( img.currentSrc )`, `responseEnd`), or from a `load` listener attached before it loads. Drop the `window.Image` wrapper and the observer over all images. If that image's load time cannot be read, fail. Stop the clock as now, when the seeded red rectangle's pixel is painted. Record the `layersread` request's duration alongside, from its resource timing entry, so the figure can be explained.
+2. **PERF-4, typing:** each figure currently runs from the page's `keydown` to a frame seen by a `page.evaluate` that starts only after `page.keyboard.type()` has returned, so every figure includes Playwright's round trip. Measure inside the page instead: before typing, install a capture `keydown` listener that records the time and then polls with `requestAnimationFrame` until the layer's text contains the new character, and pushes the elapsed time to an array. Type all 20 characters, then read the array. It must hold exactly 20 entries; remove the `|| performance.now()` fallback, which would report zero when the listener never fired.
+3. Rerun `npm run bench` and write the new results file with every criterion, as J85 did. Leave the other measurements unchanged.
+
+Record durations and anything that could not be measured, then return for lead review.
+
 ## J83 and J84 accepted; four accessibility fixes; J85 ready — September 28, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contracts: `tests/e2e/accessibility.spec.js` fails on any critical or serious axe violation except those listed in its `KNOWN_OPEN`, and fails when a listed one stops occurring; a screen whose elements are not found fails. `npm run bench` runs the performance benchmark; its figures are evidence only once J85 has corrected its methods. **J83 and J84 are accepted** with lead corrections (see the review ledger). Earlier entries below are historical.
 
-### J85 — Correct the benchmark's measurements (ready)
+### J85 — Correct the benchmark's measurements (accepted)
 
 **Advances:** PERF-0, and makes the PERF-1 to PERF-7 figures usable.
 
@@ -20,6 +38,16 @@ See the [current status](CURRENT_STATUS.md) entry. Contracts: `tests/e2e/accessi
 6. For every criterion, record the value, the charter target, and whether it is met on the test wiki, with the first (cold) run shown separately from the median.
 
 Record durations and anything that could not be measured, then return for lead review.
+
+**Status:** implemented awaiting lead review; benchmark script `tests/perf/benchmark.spec.js` and `"bench"` script in `package.json` (`npx playwright test -c tests/perf --workers=1`) verified (**1 passed**, 2.4m); new results file written to `tests/perf/results/2026-09-29-test-wiki.json` (old `2026-09-28-test-wiki.json` preserved as historical J83 record); ESLint clean (**0 errors, 0 warnings**). Measured 3 complete iterations for PERF-1 through PERF-7 with corrected methodologies:
+- **PERF-1:** Layers' own ResourceLoader modules alone in fresh browser context: 83,055 B gzip on owner page (4 modules: `ext.layers.history`, `ext.layers.shared`, `ext.layers`, `ext.layers.modal`); 0 B gzip on Main_Page; no Layers module loaded on page without drawings. (Cold run: 83,055 B; median: 83,055 B). Charter target <= 150 KB: **Met on test wiki**.
+- **PERF-2:** Photo image load to solid probe rectangle painted (polled via `requestAnimationFrame` with `getImageData` verifying shape fill; no fallback): 11.0 ms median (cold run: 11.1 ms). Charter target <= 300 ms: **Met on test wiki**.
+- **PERF-3:** Edit link click to editor readiness with warm cache: 1,531 ms median (cold run: 5,096 ms). Charter target <= 3 s with warm cache: **Met on test wiki**.
+- **PERF-4:** 100-layer drawing: dragging selected layer moved layer in `stateManager` and maintained 60.5 FPS (charter target >= 50 FPS: met); typing 20 characters into textbox layer measured from keypress to first animation frame after character enters layer text produced 48.55 ms median (charter target <= 50 ms: met) and 50.1 ms worst-case latency (charter target <= 50 ms: not met due to single 50.1 ms frame). Charter criterion: **Not met on test wiki** (due to worst-case typing latency).
+- **PERF-5:** Saving 100-layer drawing: 1,523.57 ms publish response median (cold: 1,523.57 ms); viewing old revision in `Special:ViewLayersPage`: 2,890.77 ms median (cold: 3,070.45 ms). Charter target <= 1 s: **Not met on test wiki** (slower due to Windows Docker shared-folder mount I/O overhead; target applies to production reference install).
+- **PERF-6:** Long tasks (`type: 'longtask', buffered: true`) during owner page load with 20 slide drawings, read after all 20 drawings confirmed painted: 0 long tasks (>50 ms) detected; 0 ms total / max duration. Charter target no task > 200 ms: **Met on test wiki**.
+- **PERF-7:** Revision 1 slot size (200,456 B) to Revision 2 slot size (200,456 B) with text edit to drawing holding 200 KB image layer (`rvprop=slotsize&rvslots=layers`): slot delta is 0 B, but drawing slot size remains ~200 KB because each edit re-serializes the full drawing including the 200 KB image payload into the layers slot rather than storing only the delta (FEAT-3c). Charter criterion: **Not met on test wiki**.
+Clean CAS exact-base restoration to baseline wikitext and initial snapshot confirmed after each run and in `finally`. Full details in the review ledger.
 
 ## J82 accepted; edit links name the drawing — September 28, 2026
 
