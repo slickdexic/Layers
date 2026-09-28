@@ -76,23 +76,36 @@ class DirectEmbeddingRewriter {
 	}
 
 	/**
-	 * Replace selectors in one scanner-verified candidate, retaining all other bytes.
+	 * Make one scanner-verified candidate name a drawing of the page, retaining all other bytes:
+	 * a file embed's set selector becomes `layerset=<pageId>:<name>`, a slide embed's target
+	 * becomes `<pageId>:<name>` and loses its set selector.
 	 * Does not prove selected legacy row/source identity; the adoption caller must do that.
 	 * @param string $text
 	 * @param int $start
 	 * @param string $expected Original complete embedding bytes from the same base
-	 * @param string $binding Canonical server-generated binding
+	 * @param int $pageId Owner page
+	 * @param string $name The drawing's final, canonical name
 	 * @param callable $resolveFile
 	 * @return string
 	 */
-	public function rewrite( string $text, int $start, string $expected, string $binding,
+	public function rewrite( string $text, int $start, string $expected, int $pageId, string $name,
 		callable $resolveFile
 	): string {
-		PageOwnedBinding::parse( $binding );
+		$reference = $pageId . ':' . $name;
+		try {
+			$valid = DrawingName::normalize( $name ) === $name &&
+				PageOwnedBinding::parseNamed( $reference ) === [ 'pageId' => $pageId, 'name' => $name ];
+		} catch ( \InvalidArgumentException $e ) {
+			$valid = false;
+		}
+		if ( !$valid ) {
+			$this->reject();
+		}
 		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
 			if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
 				continue;
 			}
+			$file = $candidate['kind'] === 'file';
 			$parts = explode( '|', substr( $expected, 2, -2 ) );
 			$head = array_shift( $parts );
 			$kept = [];
@@ -106,16 +119,28 @@ class DirectEmbeddingRewriter {
 					if ( ++$selectors > 1 ) {
 						$this->reject();
 					}
-					$kept[] = 'layersbinding=' . $binding;
+					if ( $file ) {
+						$kept[] = 'layerset=' . $reference;
+					}
 				} else {
 					$kept[] = $part;
 				}
 			}
-			if ( !$selectors ) {
-				$kept[] = 'layersbinding=' . $binding;
+			if ( $file && !$selectors ) {
+				$kept[] = 'layerset=' . $reference;
 			}
-			PageOwnedBindingOptions::extract( $kept );
-			$replacement = substr( $expected, 0, 2 ) . $head . '|' . implode( '|', $kept ) .
+			if ( !$file ) {
+				$head = preg_replace_callback( '/\A(#slide\s*:\s*).*?(\s*)\z/isD',
+					static fn ( $m ) => $m[1] . $reference . $m[2], $head );
+			}
+			$target = $file ? $candidate['target'] : trim( substr( $head, strpos( $head, ':' ) + 1 ) );
+			if ( PageOwnedBindingOptions::extract( $kept ) !== null ||
+				PageOwnedBindingOptions::named( $kept, $candidate['kind'], $target ) !==
+					[ 'pageId' => $pageId, 'name' => $name ]
+			) {
+				$this->reject();
+			}
+			$replacement = substr( $expected, 0, 2 ) . $head . ( $kept ? '|' . implode( '|', $kept ) : '' ) .
 				substr( $expected, -2 );
 			return substr( $text, 0, $start ) . $replacement . substr( $text, $start + strlen( $expected ) );
 		}

@@ -76,6 +76,15 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 	};
 
 	const initial = await latest();
+	// Adoption writes `layerset=<pageId>:<name>`; the drawing's identity comes from that revision's snapshot.
+	const bindingOfNamedEmbed = async ( text, escapedFile, revid ) => {
+		const named = text.match( new RegExp( `\\[\\[File:${ escapedFile }\\|[^\\]]*?layerset=${ initial.pageId }:([^|\\]]+)` ) );
+		expect( named ).not.toBeNull();
+		const surfaces = ( await api( { action: 'layersread', owner, revid: String( revid ) } ) ).layersread.snapshot.surfaces;
+		const surface = surfaces.find( ( s ) => s.label === named[ 1 ] );
+		expect( surface ).toBeTruthy();
+		return `v1:${ initial.pageId }:${ surface.id }`;
+	};
 	const diffMinutes = ( serverTime - new Date( initial.timestamp ).getTime() ) / 60000;
 	// A finished cleanup by this account (original text restored) is not someone else's work in progress.
 	// Worker processes do not see the command line, so this cannot depend on how the run was started.
@@ -433,9 +442,7 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 
 		// Rendition URL preservation check across oldid
 		const escapedImg = imageFile.name.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-		const imgBindingMatch = adoptedImgRecord.text.match( new RegExp( `\\[\\[File:${ escapedImg }\\|.*?layersbinding=(v1:\\d+:[A-Za-z0-9_]+)` ) );
-		expect( imgBindingMatch ).not.toBeNull();
-		const imgBinding = imgBindingMatch[ 1 ];
+		const imgBinding = await bindingOfNamedEmbed( adoptedImgRecord.text, escapedImg, imgAdoptionRevId );
 		const oldImgBundle = ( await api( {
 			action: 'layersread',
 			owner,
@@ -519,9 +526,7 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 			expect( aspect ).toBeLessThan( 2.0 );
 
 			const escapedPdf = pdfFile.name.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-			const pdfBindingMatch = adoptedPdfRecord.text.match( new RegExp( `\\[\\[File:${ escapedPdf }\\|.*?layersbinding=(v1:\\d+:[A-Za-z0-9_]+)` ) );
-			expect( pdfBindingMatch ).not.toBeNull();
-			const pdfBinding = pdfBindingMatch[ 1 ];
+			const pdfBinding = await bindingOfNamedEmbed( adoptedPdfRecord.text, escapedPdf, pdfAdoptionRevId );
 			const pdfRead = await api( {
 				action: 'layersread',
 				owner,

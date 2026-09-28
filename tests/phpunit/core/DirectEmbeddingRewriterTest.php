@@ -24,9 +24,9 @@ class DirectEmbeddingRewriterTest extends \MediaWikiIntegrationTestCase {
 		$this->assertCount( 2, $found );
 		$this->assertSame( 'File:Thing_with_spaces.png', $found[0]['target'] );
 		$this->assertSame( $found[0]['target'], $found[1]['target'] );
-		$this->assertSame( '[[Image:Thing with spaces.png|layersbinding=v1:123:Drawing_A|Caption]]' .
+		$this->assertSame( '[[Image:Thing with spaces.png|layerset=123:Drawing A|Caption]]' .
 			"\n" . $second . ' [[:File:Thing_with_spaces.png]]',
-			$r->rewrite( $text, 0, $first, 'v1:123:Drawing_A', $resolve ) );
+			$r->rewrite( $text, 0, $first, 123, 'Drawing A', $resolve ) );
 		$this->assertSame( [], $r->scan( '[[File:Thing.png#Section]]', $resolve ) );
 	}
 }

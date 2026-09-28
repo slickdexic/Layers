@@ -111,8 +111,8 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $before + 1, $count() );
 		$revision = $lookup->getRevisionById( $result['revisionId'] );
 		$this->assertSame( $base, $revision->getParentId() );
-		$this->assertSame( $prefix . '{{#Slide:WelcomePresentation|layersbinding=' . $result['binding'] .
-			'|width=400}}', $revision->getContent( 'main' )->getText() );
+		$this->assertSame( $prefix . '{{#Slide:' . $page->getId() . ':WelcomePresentation|width=400}}',
+			$revision->getContent( 'main' )->getText() );
 		$document = json_decode( $revision->getContent( 'layers' )->getText(), true );
 		$this->assertSame( $result['surfaceId'], $document['surfaces'][0]['id'] );
 		$this->assertFalse( $document['surfaces'][0]['canvas']['backgroundVisible'] );

@@ -9,6 +9,8 @@ use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 use MediaWikiIntegrationTestCase;
 
+require_once __DIR__ . '/TestingAdmissionRegistration.php';
+
 /**
  * {{#layers_fields:}} turns wikitext values into plain-text page output for a drawing's {{name}} tokens.
  * @covers \MediaWiki\Extension\Layers\Hooks\DrawingFields
@@ -50,6 +52,32 @@ class DrawingFieldsTest extends MediaWikiIntegrationTestCase {
 			[ 'File:Pump_diagram.png', 'status', 'OK' ],
 			[ 'Slide:Line_overview', 'a', 'b' ],
 		], $entries );
+	}
+
+	public function testAPageDrawingIsNamedByPageIdAndName(): void {
+		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
+			'LayersPageOwnedPilotOwners' => [ 'DrawingFieldsNamed' ] ] );
+		$registered = TestingAdmissionRegistration::install( $this );
+		$page = $this->getExistingTestPage( 'DrawingFieldsNamed' );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$pageId = $page->getId();
+		$text = "{{#layers_fields: $pageId:welcome_SLIDE | pressure = 12 }}";
+		$revisionId = $registered['publisher']->publish( $page->getTitle(), $actor, $page->getLatest(),
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Fields',
+			new \MediaWiki\Content\WikitextContent( $text ), $pageId );
+		$parse = fn ( string $wikitext ) => $this->getServiceContainer()->getParserFactory()->create()->parse(
+			$wikitext, $page->getTitle(), ParserOptions::newFromAnon(), true, true, $revisionId );
+		$this->assertSame( [ json_encode( [ 'presentation', 'pressure', '12' ] ) ],
+			array_keys( $parse( $text )->getJsConfigVars()['wgLayersDrawingFields'] ) );
+		$other = $pageId + 1000;
+		foreach ( [
+			"{{#layers_fields: $pageId:Missing | a = b }}", "{{#layers_fields: $other:Welcome Slide | a = b }}"
+		] as $wikitext ) {
+			$output = $parse( $wikitext );
+			$this->assertStringContainsString( '<strong class="error">', $output->getRawText(), $wikitext );
+			$this->assertArrayNotHasKey( 'wgLayersDrawingFields', $output->getJsConfigVars(), $wikitext );
+		}
 	}
 
 	/** @dataProvider provideInvalidCalls */

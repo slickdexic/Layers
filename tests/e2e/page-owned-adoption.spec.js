@@ -93,14 +93,14 @@ test( 'an editor makes a shared slide owned by the page only after confirming it
 		lastOwnedRevision = adopted.revision;
 		publicationPending = false;
 		expect( adopted.tags ).toContain( 'layers-page-drawing' );
-		const binding = adopted.text.match( new RegExp( `\\{\\{#Slide:${ slide }\\|width=400\\|layersbinding=` +
-			`(v1:${ initial.pageId }:[A-Za-z0-9_]+)\\}\\}$` ) );
-		expect( binding ).not.toBeNull();
+		// The embed now names the page's drawing, which is named after the slide.
+		expect( adopted.text.endsWith( `{{#Slide:${ initial.pageId }:${ slide }|width=400}}` ) ).toBe( true );
 		expect( adopted.text.slice( 0, withShared.length - embed.length ) ).toBe( initial.text + '\n\n' );
 		const snapshot = ( await api( { action: 'layersread', owner, revid: String( adopted.revision ) } ) )
 			.layersread.snapshot;
 		expect( snapshot.surfaces.length ).toBe( initialSnapshot.surfaces.length + 1 );
-		const surface = snapshot.surfaces.find( ( s ) => binding[ 1 ].endsWith( ':' + s.id ) );
+		const surface = snapshot.surfaces.find( ( s ) => s.label === slide );
+		const binding = [ null, `v1:${ initial.pageId }:${ surface.id }` ];
 		expect( surface.layers.map( ( l ) => l.id ) ).toEqual( [ 'adopt_rect', 'adopt_text' ] );
 
 		// The page now draws its own copy and no longer offers adoption; the shared original is unchanged.

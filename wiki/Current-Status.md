@@ -1,5 +1,18 @@
 # Current status and limitations
 
+## Adoption writes named embeds; fields name drawings too — September 28, 2026
+
+Third step of [charter](../docs/PROJECT_CHARTER.md) decision D1. Making a shared drawing owned by the page now rewrites the embed to name the new drawing, instead of writing `layersbinding=`:
+
+- `{{#Slide:WelcomePresentation|layerset=default|width=400}}` becomes `{{#Slide:228:WelcomePresentation|width=400}}`: a slide drawing is named after the slide, and the set selector goes.
+- `[[File:Pump.png|120px|layerset=labels|Caption]]` becomes `[[File:Pump.png|120px|layerset=228:labels|Caption]]`: an image or PDF drawing is named after its set.
+- The name is chosen from the page's current drawings when the adoption is prepared, so a second drawing with a taken name becomes "WelcomePresentation 2" in both the embed and the drawing. Existing `layersbinding=` embeds keep working.
+- `{{#layers_fields:}}` accepts the same form for page drawings, `{{#layers_fields: 228:Pump labels | pressure = 12 }}`, next to drawing IDs, `File:` and `Slide:` names.
+
+Code: `DirectEmbeddingRewriter::rewrite()` now takes the page ID and name; `DirectAdoptionPreparationService::nameDrawing()`; `DrawingFields::parserFunction()`; `PageOwnedBinding::resolveNamed()` accepts any kind for fields. The adoption, file-adoption and journey browser specs read the named embed.
+
+Fresh verification: rewriter tests (unit and native) cover the slide target, a PDF with its page, set-selector removal, and refused names; adoption-flow tests expect the named forms and "WelcomePresentation 2"; a native fields test names a drawing by page ID and name and refuses an unknown name and another page's ID. Full native configuration **410 tests passed, 1 skipped**; standalone PHPUnit **1,307**; PHP style clean. The three changed browser specs have not been rerun yet.
+
 ## Embeds can name a page's drawing — September 28, 2026
 
 Second step of [charter](../docs/PROJECT_CHARTER.md) decision D1. A page can show one of its own drawings by name and page ID: `[[File:Pump.png|layerset=228:Pump labels]]` for an image or PDF drawing, `{{#Slide:228:Overview}}` for a slide. Legacy set and slide names cannot contain `:`, so these never mean a shared set.

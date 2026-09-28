@@ -70,12 +70,12 @@ class BoundSlideHooks {
 	 * Find the one drawing of the page being parsed that an embed names.
 	 * @param Parser $parser
 	 * @param array $named From PageOwnedBinding::parseNamed()
-	 * @param string $kind 'file' or 'slide'
+	 * @param string|null $kind 'file' or 'slide'; null for any drawing
 	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
 	 * @return array Canonical identity for register()
 	 * @throws \DomainException layers-page-binding-unavailable
 	 */
-	public static function named( Parser $parser, array $named, string $kind, ?string $fileTitle ): array {
+	public static function named( Parser $parser, array $named, ?string $kind, ?string $fileTitle ): array {
 		// As in register(): renders without the revision must not be cached as the answer.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$revision = $parser->getRevisionRecordObject();

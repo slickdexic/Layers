@@ -20,20 +20,30 @@ class DirectEmbeddingRewriterTest extends \MediaWikiUnitTestCase {
 		$this->assertCount( 2, $found );
 		$this->assertSame( strlen( $prefix ), $found[1]['start'] );
 		$this->assertSame( [ ' thumb ', 'layers=one', 'caption 🐈' ], $found[1]['options'] );
-		$this->assertSame( $prefix . '[[File:A.jpg| thumb |layersbinding=v1:123:Drawing_A|caption 🐈]] trailing',
-			$rewriter->rewrite( $text, strlen( $prefix ), $embed, 'v1:123:Drawing_A', [ $this, 'file' ] ) );
+		$this->assertSame( $prefix . '[[File:A.jpg| thumb |layerset=123:Drawing A|caption 🐈]] trailing',
+			$rewriter->rewrite( $text, strlen( $prefix ), $embed, 123, 'Drawing A', [ $this, 'file' ] ) );
 	}
 
 	public function testSlideAndFileAliasPreservePresentationAndPdfPage(): void {
 		$r = new DirectEmbeddingRewriter();
 		$text = '{{#Slide: Ideas |canvas=800x600| layerset = Named |noedit}}';
 		$this->assertSame( 'slide', $r->scan( $text, [ $this, 'file' ] )[0]['kind'] );
-		$this->assertSame( '{{#Slide: Ideas |canvas=800x600|layersbinding=v1:2:Slide_A|noedit}}',
-			$r->rewrite( $text, 0, $text, 'v1:2:Slide_A', [ $this, 'file' ] ) );
+		$this->assertSame( '{{#Slide: 2:Ideas |canvas=800x600|noedit}}',
+			$r->rewrite( $text, 0, $text, 2, 'Ideas', [ $this, 'file' ] ) );
+		$this->assertSame( '{{#Slide:2:Ideas 2}}', $r->rewrite( '{{#Slide:Ideas}}', 0, '{{#Slide:Ideas}}', 2, 'Ideas 2',
+			[ $this, 'file' ] ) );
 		$text = '[[Image:A.pdf|page=2|caption]]';
 		$this->assertSame( 'File:A.pdf', $r->scan( $text, [ $this, 'file' ] )[0]['target'] );
-		$this->assertSame( '[[Image:A.pdf|page=2|caption|layersbinding=v1:2:Pdf_A]]',
-			$r->rewrite( $text, 0, $text, 'v1:2:Pdf_A', [ $this, 'file' ] ) );
+		$this->assertSame( '[[Image:A.pdf|page=2|caption|layerset=2:Pdf A]]',
+			$r->rewrite( $text, 0, $text, 2, 'Pdf A', [ $this, 'file' ] ) );
+		foreach ( [ [ 2, 'a|b' ], [ 2, ' Pdf A' ], [ 0, 'Pdf A' ], [ 2, '' ] ] as [ $pageId, $name ] ) {
+			try {
+				$r->rewrite( $text, 0, $text, $pageId, $name, [ $this, 'file' ] );
+				$this->fail( "\"$name\" must not be written into an embed" );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertSame( 'layers-embedding-source-unavailable', $e->getMessage() );
+			}
+		}
 	}
 
 	/**
@@ -138,7 +148,7 @@ class DirectEmbeddingRewriterTest extends \MediaWikiUnitTestCase {
 		];
 		foreach ( $cases as [ $source, $start, $expected ] ) {
 			try {
-				$r->rewrite( $source, $start, $expected, 'v1:2:a', [ $this, 'file' ] );
+				$r->rewrite( $source, $start, $expected, 2, 'a', [ $this, 'file' ] );
 				$this->fail( 'Unsafe selection must reject' );
 			} catch ( \InvalidArgumentException $e ) {
 				$this->assertSame( 'layers-embedding-source-unavailable', $e->getMessage() );

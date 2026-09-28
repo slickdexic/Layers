@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\Html\Html;
 use MediaWiki\Parser\Parser;
@@ -33,7 +34,13 @@ final class DrawingFields {
 	 * @return string|array Nothing, or an error shown in place
 	 */
 	public static function parserFunction( Parser $parser, string $drawing = '', string ...$args ) {
-		$drawing = self::drawingKey( trim( $drawing ) );
+		try {
+			$named = PageOwnedBinding::parseNamed( trim( $drawing ) );
+			$drawing = $named === null ? self::drawingKey( trim( $drawing ) ) :
+				BoundSlideHooks::named( $parser, $named, null, null )['surfaceId'];
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			$drawing = null;
+		}
 		if ( $drawing === null ) {
 			return self::error( $parser, 'layers-fields-invalid-drawing' );
 		}

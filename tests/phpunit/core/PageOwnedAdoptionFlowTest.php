@@ -245,7 +245,7 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( 'Owned now', $revision->getComment()->text );
 		$this->assertTrue( $revision->hasSlot( 'layers' ) );
 		$this->assertMatchesRegularExpression( '/^' . preg_quote( self::PREFIX, '/' ) .
-			'\{\{#Slide:WelcomePresentation\|width=400\|layersbinding=v1:' . $page->getId() . ':[^|}]+\}\}$/D',
+			'\{\{#Slide:' . $page->getId() . ':WelcomePresentation\|width=400\}\}$/D',
 			$revision->getContent( 'main' )->getText() );
 
 		$repeat = $this->visit( $actor, $params + [ 'wpsummary' => 'Again' ], true, true, 'qqx' )->getOutput();
@@ -354,10 +354,11 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $page->getTitle()->getFullURL(), $done->getRedirect() );
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page->getTitle() );
 		$this->assertSame( $before + 1, $this->revisionCount( $page->getId() ) );
-		$this->assertMatchesRegularExpression( '/^' . preg_quote( $prefix, '/' ) .
-			'\\[\\[File:Shared_adoption\\.png\\|120px\\|layersbinding=v1:' . $page->getId() .
-			':[A-Za-z0-9_-]+\\|Shared photo\\]\\]$/D', $revision->getContent( 'main' )->getText() );
+		$this->assertSame( 1, preg_match( '/^' . preg_quote( $prefix, '/' ) .
+			'\\[\\[File:Shared_adoption\\.png\\|120px\\|layerset=' . $page->getId() .
+			':([^|\\]]+)\\|Shared photo\\]\\]$/D', $revision->getContent( 'main' )->getText(), $named ) );
 		$surface = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'][0];
+		$this->assertSame( $surface['label'], $named[1] );
 		$this->assertSame( 'image', $surface['kind'] );
 		$this->assertSame( [ 'File:Shared_adoption.png', $file->getTimestamp(), $file->getSha1(), 1 ], [
 			$surface['source']['fileTitle'], $surface['source']['timestamp'], $surface['source']['sha1'],
@@ -417,9 +418,9 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$adopted = $this->pilot->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed, 301,
 			$file->getTimestamp(), $actor, 'Own page two' );
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $adopted['revisionId'] );
-		$this->assertSame( $prefix . '[[File:Shared_adoption.pdf|page=2|120px|layersbinding=' . $adopted['binding'] .
-			'|Shared photo]]', $revision->getContent( 'main' )->getText() );
 		$surface = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'][0];
+		$this->assertSame( $prefix . '[[File:Shared_adoption.pdf|page=2|120px|layerset=' . $page->getId() . ':' .
+			$surface['label'] . '|Shared photo]]', $revision->getContent( 'main' )->getText() );
 		$this->assertSame( [ 'pdf', 2, $file->getTimestamp() ], [ $surface['kind'], $surface['source']['page'],
 			$surface['source']['timestamp'] ] );
 		// The canvas is that page's geometry, not page one's: page two of the fixture is portrait.

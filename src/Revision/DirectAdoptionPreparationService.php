@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Content\WikitextContent;
+use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
@@ -104,13 +105,44 @@ class DirectAdoptionPreparationService {
 				$displayed = ( $this->displayedSet )( $selected['target'] );
 			}
 			DirectEmbeddingSelection::assertMatches( $selected, $proposal['legacySelection'], $displayed );
-			$boundMain = $rewriter->rewrite( $main->getText(), $start, $expected, $proposal['binding'], $resolveFile );
+			$proposal['document'] = $this->nameDrawing( $proposal['document'], $selected, $revision, $authority );
+			$name = json_decode( $proposal['document'] )->surfaces[0]->label;
+			$boundMain = $rewriter->rewrite( $main->getText(), $start, $expected, $pageId, $name, $resolveFile );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-embedding-selection-unavailable' );
 		}
 		$this->assertViewerCapabilities( $proposal['document'] );
 		$proposal['main'] = new WikitextContent( $boundMain );
 		return $proposal;
+	}
+
+	/**
+	 * Name the adopted drawing so the rewritten embed can refer to it: a slide after the slide, an image
+	 * or PDF drawing after its set, with a number if the base revision already has that name.
+	 * @param string $document Single-surface document
+	 * @param array $selected Scanned embed
+	 * @param RevisionRecord $base
+	 * @param Authority $authority
+	 * @return string The document with its final name
+	 */
+	private function nameDrawing( string $document, array $selected, RevisionRecord $base,
+		Authority $authority
+	): string {
+		$taken = [];
+		if ( $base->hasSlot( PageRevisionWriter::SLOT ) ) {
+			$stored = $base->getContent( PageRevisionWriter::SLOT, RevisionRecord::FOR_THIS_USER, $authority );
+			if ( !$stored instanceof LayersDocumentContent ) {
+				throw new \InvalidArgumentException();
+			}
+			foreach ( json_decode( $stored->getText() )->surfaces as $surface ) {
+				$taken[] = (string)$surface->label;
+			}
+		}
+		$doc = json_decode( $document );
+		$surface = $doc->surfaces[0];
+		$wanted = $selected['kind'] === 'slide' ? $selected['target'] : (string)$surface->label;
+		$surface->label = DrawingName::unused( DrawingName::normalize( $wanted ) ?? $surface->id, $taken );
+		return JsonSnapshotCodec::encode( $doc );
 	}
 
 	/**

@@ -105,13 +105,13 @@ test( 'an editor makes a shared file drawing owned by the page, pinned to the fi
 		expect( adopted.text.slice( 0, initial.text.length + 2 ) ).toBe( initial.text + '\n\n' );
 		const rewritten = adopted.text.slice( initial.text.length + 2 );
 		const escaped = file.name.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
-		const binding = rewritten.match( new RegExp( `^\\[\\[File:${ escaped }\\|300px\\|layersbinding=` +
-			`(v1:${ initial.pageId }:[A-Za-z0-9_]+)\\|Shared photo\\]\\]$` ) );
-		expect( binding ).not.toBeNull();
+		const named = rewritten.match( new RegExp( `^\\[\\[File:${ escaped }\\|300px\\|layerset=` +
+			`${ initial.pageId }:([^|\\]]+)\\|Shared photo\\]\\]$` ) );
+		expect( named ).not.toBeNull();
 		const snapshot = ( await api( { action: 'layersread', owner, revid: String( adopted.revision ) } ) )
 			.layersread.snapshot;
 		expect( snapshot.surfaces.length ).toBe( initialSnapshot.surfaces.length + 1 );
-		const surface = snapshot.surfaces.find( ( s ) => binding[ 1 ].endsWith( ':' + s.id ) );
+		const surface = snapshot.surfaces.find( ( s ) => s.label === named[ 1 ] );
 		expect( [ surface.kind, surface.source.fileTitle, surface.source.timestamp, surface.source.page ] )
 			.toEqual( [ 'image', 'File:' + file.name, file.timestamp.replace( /\D/g, '' ), 1 ] );
 		expect( [ surface.canvas.width, surface.canvas.height ] ).toEqual( [ file.width, file.height ] );

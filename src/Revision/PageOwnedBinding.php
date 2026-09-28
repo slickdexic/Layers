@@ -49,11 +49,11 @@ final class PageOwnedBinding {
 	/**
 	 * @param array{pageId:int,name:string} $named
 	 * @param array[] $surfaces The page's drawings, decoded as arrays
-	 * @param string $kind 'file' or 'slide', the kind of embed
+	 * @param string|null $kind 'file' or 'slide', the kind of embed; null accepts any drawing
 	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
 	 * @return string|null ID of the one drawing with that name that fits the embed
 	 */
-	public static function resolveNamed( array $named, array $surfaces, string $kind, ?string $fileTitle ): ?string {
+	public static function resolveNamed( array $named, array $surfaces, ?string $kind, ?string $fileTitle ): ?string {
 		$key = DrawingName::key( $named['name'] );
 		$found = array_values( array_filter( $surfaces, static function ( $surface ) use ( $key ) {
 			return is_string( $surface['label'] ?? null ) && DrawingName::key( $surface['label'] ) === $key;
@@ -62,6 +62,9 @@ final class PageOwnedBinding {
 			return null;
 		}
 		$surface = $found[0];
+		if ( $kind === null ) {
+			return (string)$surface['id'];
+		}
 		$fits = $kind === 'slide' ? $surface['kind'] === 'slide' :
 			in_array( $surface['kind'], [ 'image', 'pdf' ], true ) &&
 			( $surface['source']['fileTitle'] ?? null ) === $fileTitle;

@@ -45,8 +45,9 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 		$legacy->expects( $this->once() )->method( 'getLayerSetForAdoption' )->with( 202 )->willReturn( $this->row() );
 		$result = $this->directService( $legacy )->prepare(
 			$page->getId(), $base, strlen( $prefix ), $embed, 202, null, $actor );
-		$this->assertSame( $prefix . '{{#Slide:WelcomePresentation|layersbinding=' .
-			$result['binding'] . '|width=400}}' . "\nUntouched suffix", $result['main']->getText() );
+		$this->assertSame( $prefix . '{{#Slide:' . $page->getId() . ':WelcomePresentation|width=400}}' .
+			"\nUntouched suffix", $result['main']->getText() );
+		$this->assertSame( 'WelcomePresentation', json_decode( $result['document'] )->surfaces[0]->label );
 		$this->assertSame( $base, $lookup->getRevisionByTitle( $page->getTitle() )->getId() );
 		$this->assertSame( $text, $lookup->getRevisionById( $base )->getContent( 'main' )->getText() );
 		$this->assertFalse( json_decode( $result['document'] )->surfaces[0]->canvas->backgroundVisible );
@@ -130,8 +131,8 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 		$this->assertSame( $page->getId(), $rev1->getPageId() );
 		$this->assertSame( $actor->getId(), $rev1->getUser()->getId() );
 
-		$expectedRev1Main = $prefix . '{{#Slide:WelcomePresentation|layersbinding=' .
-			$proposal1['binding'] . '|width=400}}' . $separator . $embed . $suffix;
+		$expectedRev1Main = $prefix . '{{#Slide:' . $page->getId() . ':WelcomePresentation|width=400}}' .
+			$separator . $embed . $suffix;
 		$this->assertSame( $expectedRev1Main, $rev1->getContent( 'main' )->getText() );
 
 		$doc1 = json_decode( $rev1->getContent( PageRevisionWriter::SLOT )->getText(), true );
@@ -185,19 +186,11 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 		$this->assertSame( $page->getId(), $rev2->getPageId() );
 		$this->assertSame( $actor->getId(), $rev2->getUser()->getId() );
 
-		// Assert both bindings survive
-		$expectedRev2Main = $prefix . '{{#Slide:WelcomePresentation|layersbinding=' .
-			$proposal1['binding'] . '|width=400}}' . $separator . '{{#Slide:WelcomePresentation|layersbinding=' .
-			$proposal3['binding'] . '|width=400}}' . $suffix;
+		// Both embeds name their own drawing; the second adoption of the slide takes the next free name
+		$pageId = $page->getId();
+		$expectedRev2Main = $prefix . "{{#Slide:$pageId:WelcomePresentation|width=400}}" . $separator .
+			"{{#Slide:$pageId:WelcomePresentation 2|width=400}}" . $suffix;
 		$this->assertSame( $expectedRev2Main, $rev2->getContent( 'main' )->getText() );
-		$this->assertStringContainsString(
-			'layersbinding=' . $proposal1['binding'],
-			$rev2->getContent( 'main' )->getText()
-		);
-		$this->assertStringContainsString(
-			'layersbinding=' . $proposal3['binding'],
-			$rev2->getContent( 'main' )->getText()
-		);
 		$this->assertStringNotContainsString( 'layerset=default', $rev2->getContent( 'main' )->getText() );
 
 		// Assert the first surface remains canonical-byte equivalent, second has distinct identity, drawing intact
@@ -205,6 +198,8 @@ class LegacyAdoptionPreparationServiceTest extends \MediaWikiIntegrationTestCase
 		$this->assertCount( 2, $doc2['surfaces'] );
 		$this->assertSame( $doc1['surfaces'][0], $doc2['surfaces'][0] );
 		$this->assertSame( $proposal3['surfaceId'], $doc2['surfaces'][1]['id'] );
+		$this->assertSame( [ 'WelcomePresentation', 'WelcomePresentation 2' ],
+			array_column( $doc2['surfaces'], 'label' ) );
 		$this->assertNotSame( $doc2['surfaces'][0]['id'], $doc2['surfaces'][1]['id'] );
 
 		$legacyLayers = json_decode( $this->row()['json'], true )['layers'];

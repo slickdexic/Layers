@@ -130,12 +130,12 @@ class DirectSlideSelectionTest extends \MediaWikiIntegrationTestCase {
 		$this->assertNotSame( $candidates[0]['start'], $candidates[1]['start'] );
 
 		// Rewrite ONLY the second complete source span
-		$binding = 'v1:456:Surface_B';
 		$rewritten = $rewriter->rewrite(
 			$wikitext,
 			$candidates[1]['start'],
 			$candidates[1]['raw'],
-			$binding,
+			456,
+			'Surface B',
 			$this->getFileResolver()
 		);
 
@@ -152,8 +152,8 @@ class DirectSlideSelectionTest extends \MediaWikiIntegrationTestCase {
 			substr( $rewritten, 0, $expectedSecondStart )
 		);
 
-		// Second slide was rewritten with layersbinding
-		$expectedSecondSlide = '{{#Slide:WelcomePresentation|layersbinding=' . $binding . '}}';
+		// The second slide now names the page's drawing, and its set selector is gone
+		$expectedSecondSlide = '{{#Slide:456:Surface B}}';
 		$this->assertSame(
 			$expectedSecondSlide,
 			substr( $rewritten, $expectedSecondStart )
