@@ -1,6 +1,5 @@
 # Junior implementation review — J01–J89
 
-
 ## J89 accepted — September 29, 2026
 
 Advances: **HIST-1**. No lead corrections.

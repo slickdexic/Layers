@@ -276,6 +276,10 @@
 			"class": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialAdoptLayersDrawing",
 			"services": [ "LayersPageOwnedPilot", "TitleFactory" ]
 		},
+		"CopyLayersDrawing": {
+			"class": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialCopyLayersDrawing",
+			"services": [ "LayersPageOwnedPilot", "TitleFactory" ]
+		},
 		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
 		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide",
 		"LayersExport": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport"

@@ -460,6 +460,79 @@ class PageOwnedPilot {
 			PageOwnedBinding::resolveNamed( $named, $surfaces, null, null ) !== null ? null : $named['name'];
 	}
 
+	/**
+	 * Embeds on the current revision that name another page's drawing, which this editor may copy here.
+	 * Decided per request from the reader's own rights; never stored in parser output.
+	 * @param int $pageId
+	 * @param int $revisionId Displayed revision; must still be current
+	 * @param Authority $authority
+	 * @return array[] label, source Title and confirmation route parameters
+	 */
+	public function listCopyCandidates( int $pageId, int $revisionId, Authority $authority ): array {
+		try {
+			$this->assertCopyScope( $pageId, $authority );
+		} catch ( PublicationException $e ) {
+			return [];
+		}
+		return $this->newDrawingCopy()->listCandidates( $pageId, $revisionId, $authority );
+	}
+
+	/**
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @return array owner and source Titles, label and source revision
+	 * @throws PublicationException
+	 */
+	public function previewCopy( int $pageId, int $revisionId, int $start, string $expected, int $sourceRevisionId,
+		Authority $authority
+	): array {
+		$this->assertCopyScope( $pageId, $authority );
+		return $this->newDrawingCopy()->preview( $pageId, $revisionId, $start, $expected, $sourceRevisionId,
+			$authority );
+	}
+
+	/**
+	 * Internal composition: HTTP callers must enforce POST, CSRF, rate limits and confirmation.
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @param string $note
+	 * @return int New revision of this page
+	 * @throws PublicationException
+	 */
+	public function copyDrawing( int $pageId, int $revisionId, int $start, string $expected, int $sourceRevisionId,
+		Authority $authority, string $note
+	): int {
+		$this->assertCopyScope( $pageId, $authority );
+		return $this->newDrawingCopy()->copy( $pageId, $revisionId, $start, $expected, $sourceRevisionId,
+			$authority, $note );
+	}
+
+	/**
+	 * @param int $pageId
+	 * @param Authority $authority
+	 * @throws PublicationException
+	 */
+	private function assertCopyScope( int $pageId, Authority $authority ): void {
+		$owner = $pageId > 0 ? $this->services->getTitleFactory()->newFromID( $pageId ) : null;
+		if ( !$this->enabled || $authority->getUser()->getId() <= 0 || !$owner || !$this->scope->includes( $owner ) ) {
+			throw new PublicationException( 'layers-publication-disabled' );
+		}
+	}
+
+	/** @return PageDrawingCopy */
+	private function newDrawingCopy(): PageDrawingCopy {
+		return new PageDrawingCopy( $this->newIdentityResolver(), $this->services->getRevisionLookup(),
+			$this->services->getTitleFactory(), $this->publisher, $this->newRewriter(), $this->fileTargets() );
+	}
+
 	/** @return PageOwnedIdentityResolver */
 	private function newIdentityResolver(): PageOwnedIdentityResolver {
 		$lookup = $this->services->getRevisionLookup();

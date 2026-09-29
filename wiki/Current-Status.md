@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## Another page's drawing can be copied into a page — September 29, 2026
+
+Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-5 (decision D1 (b)). When wikitext copied from page A to page B keeps an embed naming A's drawing (`{{#Slide:<A's ID>:Plan}}`, `[[File:X|layerset=<A's ID>:Plan]]`), B still shows nothing for it and gives no edit rights over it. Editors of B who can read A now get a **Copy “Plan” from A to this page** link. It opens `Special:CopyLayersDrawing`, which shows the source page and revision; confirming (POST with the edit token) adds a copy to B as a new drawing with its own ID and the same name, and rewrites the embed to name B's copy, in one revision whose summary records the source: "Copied drawing “Plan” from [[:A]] (revision 574)", followed by an optional note. A is not changed, and later edits to either page do not affect the other. A page that already has a drawing of that name is not offered the copy. Copying from the editor's drawing list (D1) is not built.
+
+Code: `Revision/PageDrawingCopy.php` and `SpecialPages/SpecialCopyLayersDrawing.php` (new), `PageOwnedPilot::listCopyCandidates()`, `previewCopy()` and `copyDrawing()`, `BoundSlideHooks` (records an embed of another page in parser output and shows the link).
+
+Fresh verification: a native test copies a slide between pages and checks the rewritten embed, the new ID, the summary, that the source is unchanged, that a stale confirmation and a taken name are refused, and that a reader who cannot read the source is offered nothing. On the test wiki the link and confirmation page copied a drawing from another page. Full native configuration **414 tests passed, 1 skipped**; standalone PHPUnit **1,312**; Jest **15,071**; PHP style clean.
+
 ## An embed can start a new drawing — September 29, 2026
 
 Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-4 ("it starts empty"). Until now a page-owned drawing could only come from adopting a shared set. An embed on its own page that names a drawing the page does not have yet, such as `{{#Slide:<pageId>:Overview}}` or `[[File:Pump.png|layerset=<pageId>:Labels]]`, now gives editors a **Create page drawing** link. It opens the editor on an empty drawing: a slide at the wiki's default size, or the embedded file's current version (PDF page from `page=`). Nothing is written until the first save, which adds the drawing in one revision with the automatic summary "Added drawing “Overview”". Leaving without saving creates nothing; a local draft survives reopening the editor. A new drawing cannot be renamed before its first save, since the embed finds it by name.

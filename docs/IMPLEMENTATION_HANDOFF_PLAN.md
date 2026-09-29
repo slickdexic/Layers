@@ -1,5 +1,28 @@
 # Layers implementation handoff plan
 
+## J89 accepted; another page's drawing can be copied; J91 ready after J90 — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. **J89 is accepted** (see the review ledger). Contract: an embed naming another page's drawing shows nothing and gives editors who can read that page a "Copy “<name>” from <page> to this page" link to `Special:CopyLayersDrawing`; confirming adds a new drawing and rewrites the embed in one revision. J90 is still ready and comes first; J91 follows. Earlier entries below are historical.
+
+### J91 — Browser acceptance of copying another page's drawing (ready after J90)
+
+**Advances:** HIST-5 and TYPES-3.
+
+**Purpose:** prove in the browser the charter's scenario S4 as far as it is built: a page that carries an embed of another page's drawing can copy it, the copy records its source, and afterwards neither page follows the other. Acceptance only; no production code.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-copy.spec.js`, this packet and the review ledger. The J65 wiki rules and the known-baseline rule apply. The owner page is the only page you write. The source is `Layers_history_test` (page 227, drawing "Welcome Slide"): read it through the API only and never write to it.
+
+1. From the baseline, publish (exact base) the baseline drawing renamed to "Copy probe baseline", and page text with `{{#Slide:227:Welcome Slide}}` appended. Read 227's page ID and its current revision from the API; do not hardcode them.
+2. On the page view: the embed shows no drawing, there is no "Edit page drawing: Welcome Slide" link, and the controls list exactly one "Copy “Welcome Slide” from Layers history test to this page" link.
+3. Follow it. `Special:CopyLayersDrawing` must name the source page and its current revision and write nothing (the owner's latest revision ID is unchanged). Press Cancel: you are back on the page and nothing was written.
+4. Follow the link again, type the note "J91 copy" and confirm. Exactly one new revision must appear. Its comment must be exactly `Copied drawing “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy` with 227's revision; its main text must name the owner's own page ID in the embed; its `layers` slot must hold the baseline drawing unchanged plus "Welcome Slide" with a new ID (not `presentation`) and the same layers as the source.
+5. `Layers_history_test` must still be at the same revision.
+6. On the page view the copy is painted, the controls read "Edit page drawing: Welcome Slide" and offer no copy link. Open the editor from that link, move a layer and save: the owner changes, and 227 is still at the same revision with its layer where it was.
+7. While step 3's confirmation page is open, run axe-core on it as `tests/e2e/accessibility.spec.js` does (WCAG 2.2 A and AA) and fail on any critical or serious violation; report the result.
+8. Restore the baseline by exact-base publication, in the main flow and in `finally`.
+
+Record durations and anything that could not be checked, then return for lead review.
+
 ## An embed can start a new drawing; J90 ready after J89 — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: an embed on its own page naming a drawing the page lacks gets a "Create page drawing: <name>" link in the page's drawing controls; it opens the editor on an empty drawing and only the first save writes. J89 comes first; J90 follows. Earlier entries below are historical.

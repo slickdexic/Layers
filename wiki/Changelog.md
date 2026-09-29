@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Copying another page's drawing (pilot, September 29): an embed naming another page's drawing offers editors "Copy … to this page"; the copy becomes a new drawing of this page and its revision summary names the source page and revision.
+
 - New drawings from embeds (pilot, September 29): an embed naming a drawing its page does not have yet offers editors "Create page drawing"; the first save adds it.
 
 - Edit summaries for drawing saves (pilot, September 29): the page-owned editor has a Summary field; an empty one gets an automatic summary naming each drawing added, edited, renamed or removed.

@@ -24,6 +24,7 @@ class BoundSlideHooks {
 	public const DATA_KEY = 'layers-bound-slides-v1';
 	public const ADOPTABLE_KEY = 'layers-shared-slides-v1';
 	public const CREATABLE_KEY = 'layers-missing-drawings-v1';
+	public const COPYABLE_KEY = 'layers-foreign-drawings-v1';
 
 	/**
 	 * @param Parser $parser
@@ -80,7 +81,12 @@ class BoundSlideHooks {
 		// As in register(): renders without the revision must not be cached as the answer.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$revision = $parser->getRevisionRecordObject();
-		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $named['pageId'] ) {
+		if ( !$revision || $revision->getId() <= 0 ) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		if ( $revision->getPageId() !== $named['pageId'] ) {
+			// Another page's drawing never shows here; output() offers editors to copy it.
+			$parser->getOutput()->setExtensionData( self::COPYABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		$surfaces = [];
@@ -140,11 +146,13 @@ class BoundSlideHooks {
 		}
 		$adoptable = $parsed->getExtensionData( self::ADOPTABLE_KEY ) === true;
 		$creatable = $parsed->getExtensionData( self::CREATABLE_KEY ) === true;
+		$copyable = $parsed->getExtensionData( self::COPYABLE_KEY ) === true;
 		if ( $displayed ) {
 			$out->addModules( 'ext.layers.history' );
 		}
 		$request = $out->getRequest();
-		if ( ( !$displayed && !$adoptable && !$creatable ) || $request->getVal( 'action', 'view' ) !== 'view' ||
+		if ( ( !$displayed && !$adoptable && !$creatable && !$copyable ) ||
+			$request->getVal( 'action', 'view' ) !== 'view' ||
 			$request->getCheck( 'oldid' ) || $request->getCheck( 'diff' ) || !$out->getUser()->isRegistered()
 		) {
 			return;
@@ -166,12 +174,23 @@ class BoundSlideHooks {
 				$adoptItems .= self::controlItem( 'layers-page-adopt-link', 'AdoptLayersDrawing', $entry['params'],
 					$out->msg( 'layers-page-adopt-drawing', $entry['label'] )->text() );
 			}
+			$copyItems = '';
+			foreach ( $copyable ? $pilot->listCopyCandidates( $pageId, $out->getRevisionId(),
+				$out->getAuthority() ) : [] as $entry
+			) {
+				$copyItems .= self::controlItem( 'layers-page-copy-link', 'CopyLayersDrawing', $entry['params'],
+					$out->msg( 'layers-page-copy-drawing', $entry['label'], $entry['source']->getPrefixedText() )
+						->text() );
+			}
 			$html = '';
 			if ( $items !== '' ) {
 				$html .= self::controlGroup( $out, 'layers-page-edit-history-notice', $items );
 			}
 			if ( $adoptItems !== '' ) {
 				$html .= self::controlGroup( $out, 'layers-page-adopt-notice', $adoptItems );
+			}
+			if ( $copyItems !== '' ) {
+				$html .= self::controlGroup( $out, 'layers-page-copy-notice', $copyItems );
 			}
 			if ( $html !== '' ) {
 				$out->addModuleStyles( 'ext.layers.pageControls.styles' );

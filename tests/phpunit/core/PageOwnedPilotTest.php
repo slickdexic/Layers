@@ -664,6 +664,85 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertArrayNotHasKey( 'newSurface', $edit['pageOwned'] );
 	}
 
+	public function testAnotherPagesDrawingIsCopiedAsANewDrawingThatRecordsItsSource(): void {
+		$this->setContentLang( 'en' );
+		$source = $this->getNonexistingTestPage()->getTitle();
+		$target = $this->getNonexistingTestPage()->getTitle();
+		$denied = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $source->getPrefixedDBkey(), $target->getPrefixedDBkey(),
+			$denied->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$fixture = file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' );
+		$sourceRev = $this->doApiRequestWithToken( [ 'action' => 'layerspublish', 'owner' => $source->getPrefixedText(),
+			'baserevid' => 0, 'data' => $fixture, 'maintext' => 'Source' ], null, $actor )[0]['layerspublish']['revid'];
+		$sourceId = $source->getArticleID();
+		$prefix = "Copied text\n";
+		$embed = "{{#Slide:$sourceId:Welcome Slide}}";
+		$this->editPage( $target, $prefix . $embed );
+		$targetId = $target->getArticleID();
+		$latest = static fn ( $title ) => $title->getLatestRevID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST );
+		$base = $latest( $target );
+
+		// The copied embed gives no edit rights over the source; the only offer is a copy.
+		$this->assertSame( [], $pilot->listBoundEditorSelections( $targetId, $base, $actor ) );
+		$offers = $pilot->listCopyCandidates( $targetId, $base, $actor );
+		$this->assertCount( 1, $offers );
+		$this->assertSame( [ 'Welcome Slide', $source->getPrefixedDBkey() ],
+			[ $offers[0]['label'], $offers[0]['source']->getPrefixedDBkey() ] );
+		$this->assertSame( [ 'pageid' => $targetId, 'revid' => $base, 'start' => strlen( $prefix ),
+			'expected' => $embed, 'sourcerev' => $sourceRev ], $offers[0]['params'] );
+		$preview = $pilot->previewCopy( $targetId, $base, strlen( $prefix ), $embed, $sourceRev, $actor );
+		$this->assertSame( [ 'Welcome Slide', $sourceRev ], [ $preview['label'], $preview['sourceRevision'] ] );
+		$this->assertSame( $base, $latest( $target ) );
+
+		$copied = $pilot->copyDrawing( $targetId, $base, strlen( $prefix ), $embed, $sourceRev, $actor, 'handout' );
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $copied );
+		$this->assertSame( $prefix . "{{#Slide:$targetId:Welcome Slide}}",
+			$revision->getContent( 'main' )->getText() );
+		$this->assertSame( 'Copied drawing “Welcome Slide” from [[:' . $source->getPrefixedText() .
+			"]] (revision $sourceRev): handout", $revision->getComment()->text );
+		$copy = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'];
+		$original = json_decode( ( new LayersDocumentContent( $fixture ) )->getCanonicalText(), true )['surfaces'][0];
+		$this->assertCount( 1, $copy );
+		$this->assertSame( NewPageDrawing::surfaceId( $targetId, $base, 'Welcome Slide' ), $copy[0]['id'] );
+		$this->assertSame( [ 'Welcome Slide', $original['layers'] ], [ $copy[0]['label'], $copy[0]['layers'] ] );
+		$this->assertSame( $sourceRev, $latest( $source ) );
+		$this->assertSame( [], $pilot->listCopyCandidates( $targetId, $copied, $actor ) );
+		$this->assertSame( [ [ 'Welcome Slide', false ] ], array_map( static fn ( $e ) =>
+			[ $e['label'], $e['create'] ?? false ], $pilot->listBoundEditorSelections( $targetId, $copied, $actor ) ) );
+
+		// A stale confirmation writes nothing.
+		try {
+			$pilot->copyDrawing( $targetId, $base, strlen( $prefix ), $embed, $sourceRev, $actor, '' );
+			$this->fail( 'A stale copy must be refused' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( 'layers-edit-conflict', $e->getMessage() );
+		}
+		// A second embed of the same name is not offered: the page already has that name.
+		$this->editPage( $target, $prefix . "{{#Slide:$targetId:Welcome Slide}}\n" . $embed );
+		$this->assertSame( [], $pilot->listCopyCandidates( $targetId, $latest( $target ), $actor ) );
+		try {
+			$pilot->previewCopy( $targetId, $latest( $target ),
+				strlen( $prefix . "{{#Slide:$targetId:Welcome Slide}}\n" ), $embed, $sourceRev, $actor );
+			$this->fail( 'A taken name must be refused' );
+		} catch ( PublicationException $e ) {
+			$this->assertSame( [ 'layers-invalid-snapshot-name-taken', 'Welcome Slide' ], $e->getUserMessage() );
+		}
+
+		// A reader who cannot read the source page is offered nothing.
+		$this->editPage( $denied, $embed );
+		$this->setTemporaryHook( 'getUserPermissionsErrors',
+			static function ( $title, $user, $action, &$result ) use ( $source ) {
+				if ( $action === 'read' && $title->equals( $source ) ) {
+					$result = false;
+					return false;
+				}
+				return true;
+			} );
+		$this->assertSame( [], $pilot->listCopyCandidates( $denied->getArticleID(), $latest( $denied ), $actor ) );
+	}
+
 	public function testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
