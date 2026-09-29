@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
+use MediaWiki\Extension\Layers\Migration\MigrationUndo;
 use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
 use MediaWiki\Extension\Layers\Migration\SlidePageMigration;
 use MediaWiki\FileRepo\File\File;
@@ -556,6 +557,13 @@ class PageOwnedPilot {
 		return new SlidePageMigration( $this->services->getService( 'LayersDatabase' ), $this->scope,
 			$this->services->getTitleFactory(), $this->services->getRevisionLookup(),
 			$this->services->getConnectionProvider(), $this->services->getSlotRoleStore(), $this->publisher );
+	}
+
+	/** @return MigrationUndo Undoes the D3 migration, for the maintenance script */
+	public function newMigrationUndo(): MigrationUndo {
+		return new MigrationUndo( $this->services->getConnectionProvider(), $this->services->getRevisionLookup(),
+			$this->services->getTitleFactory(), $this->services->getChangeTagsStore(),
+			$this->services->getDeletePageFactory(), $this->publisher );
 	}
 
 	/** @return PageOwnedIdentityResolver */

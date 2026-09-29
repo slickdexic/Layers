@@ -18,6 +18,8 @@ require_once "$IP/maintenance/Maintenance.php";
 // @codeCoverageIgnoreEnd
 
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
+use MediaWiki\Extension\Layers\Migration\MigrationUndo;
 use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
 use MediaWiki\Extension\Layers\Migration\SlidePageMigration;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
@@ -52,6 +54,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$this->addOption( 'file', 'Only move this file\'s sets to its File: page (name without "File:")', false, true );
 		$this->addOption( 'page', 'Only give this page copies of the sets and slides it shows', false, true );
 		$this->addOption( 'slide', 'Only give this shared slide a page, if no page shows it', false, true );
+		$this->addOption( 'undo', 'Undo the migration\'s edits on pages nobody has edited since; with --file, ' .
+			'--page or --slide, on that page only' );
 		$this->setBatchSize( 100 );
 		$this->requireExtension( 'Layers' );
 	}
@@ -63,6 +67,10 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$this->output( $commit ? "Migrating.\n" : "Dry run: nothing is written. Add --commit to make these edits.\n" );
 		$pilot = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' );
 		$scoped = $this->hasOption( 'file' ) || $this->hasOption( 'page' ) || $this->hasOption( 'slide' );
+		if ( $this->hasOption( 'undo' ) ) {
+			$this->undo( $pilot->newMigrationUndo(), $user, $commit, $scoped );
+			return true;
+		}
 		if ( !$scoped || $this->hasOption( 'file' ) ) {
 			$this->output( "Step 1: shared sets onto their File: pages.\n" );
 			$migration = $pilot->newFilePageMigration();
@@ -85,7 +93,59 @@ class MigrateLayersToPageHistory extends Maintenance {
 		if ( $this->failures > 0 ) {
 			$this->fatalError( $this->failures . " edit(s) failed; run the script again to retry them." );
 		}
+		if ( $commit && !$scoped ) {
+			MigrationState::markComplete( $this->getPrimaryDB() );
+			$this->output( "Migration recorded as complete.\n" );
+		}
 		return true;
+	}
+
+	/**
+	 * @param MigrationUndo $undo
+	 * @param Authority $user
+	 * @param bool $commit
+	 * @param bool $scoped
+	 */
+	private function undo( MigrationUndo $undo, Authority $user, bool $commit, bool $scoped ): void {
+		$titles = $this->getServiceContainer()->getTitleFactory();
+		if ( $scoped ) {
+			$title = $this->hasOption( 'file' ) ?
+				$titles->makeTitleSafe( NS_FILE, (string)$this->getOption( 'file' ) ) :
+				$titles->newFromText( $this->hasOption( 'page' ) ? (string)$this->getOption( 'page' ) :
+					'Slide:' . $this->getOption( 'slide' ) );
+			$pageIds = $title && $title->exists() ? [ $title->getArticleID() ] : [];
+		} else {
+			$pageIds = $undo->pages();
+		}
+		foreach ( $pageIds as $pageId ) {
+			$plan = $undo->plan( $pageId );
+			$page = $plan['title'] ? $plan['title']->getPrefixedText() : "page $pageId";
+			if ( $plan['problem'] !== null ) {
+				$this->output( "$page: not undone ({$plan['problem']})\n" );
+				continue;
+			}
+			$revisions = implode( ', ', array_reverse( $plan['revisions'] ) );
+			$this->output( $plan['baseRevisionId'] === 0 ?
+				"$page: delete; the migration created it (revisions $revisions)\n" :
+				"$page: undo revisions $revisions, back to revision {$plan['baseRevisionId']}\n" );
+			if ( !$commit ) {
+				continue;
+			}
+			try {
+				$revision = $undo->commit( $plan, $user );
+				$this->output( $revision ? "$page: saved revision $revision\n" : "$page: deleted\n" );
+			} catch ( PublicationException $e ) {
+				$this->failures++;
+				$this->error( "$page: not undone (" . $e->getMessage() . ")" );
+			}
+		}
+		if ( $this->failures > 0 ) {
+			$this->fatalError( $this->failures . " page(s) could not be undone; run the script again to retry them." );
+		}
+		if ( $commit && !$scoped ) {
+			MigrationState::clear( $this->getPrimaryDB() );
+			$this->output( "Migration record removed.\n" );
+		}
 	}
 
 	/**

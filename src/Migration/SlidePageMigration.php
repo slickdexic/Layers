@@ -186,7 +186,7 @@ class SlidePageMigration {
 			->inContentLanguage()->text();
 		$this->publisher->publish( $plan['title'], $authority, 0,
 			json_encode( [ 'schemaVersion' => DocumentSchema::VERSION, 'surfaces' => [] ] ), $summary,
-			new WikitextContent( $plan['main'] ), null, true );
+			new WikitextContent( $plan['main'] ), null, PagePublicationService::MIGRATION_TAG );
 		return $plan['title']->getArticleID( IDBAccessObject::READ_LATEST );
 	}
 }

@@ -1,5 +1,19 @@
 # Current status and limitations
 
+## The migration can be undone, and records when it has finished — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8 (partial). `migrateLayersToPageHistory.php --undo` lists, and with `--commit` makes, one bot edit per page that puts the page back as it was before the migration's edits (`MigrationUndo`).
+
+- **What it undoes.** Only the page's latest consecutive revisions tagged `layers-migration`, going back to its text and drawings before them. A page that had no drawings keeps an empty drawing slot, because publication never removes the slot. The edit is tagged `layers-migration-undo`, so a rerun reports "already undone".
+- **Pages the migration created.** `Slide:` pages are deleted.
+- **Pages left alone.** A page edited since the migration is listed as `edited-since-migration`; a page it never touched is listed as `not-migrated`.
+- **Scope.** With `--file`, `--page` or `--slide`, undo works on that one page.
+- **Migrating again.** After an undo the page can be migrated again, and that run can be undone too.
+- **Completion record.** An unscoped `--commit` run with no failed edit records `layers-page-history-migration` in `updatelog` (`MigrationState`), and an unscoped undo removes it. Nothing reads the record yet: it is what the change of bare names will check.
+- **Test wiki.** The dry run lists the J94 fixtures as expected: seven pages to put back, `Slide:Layers migration fixture slide two` to delete, and Uses C as not migrated.
+
+Fresh verification: native `MigrationUndoTest` covers undo of step 1, 2 and 3 pages, the undo tag and summary, a rerun, migrating again and undoing again, a page edited since, a page never migrated, and the completion record. Full native configuration **426 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,072**; `npm test` passed; PHP style clean.
+
 ## Migration fixes after the first fixture run; drawings replacing images keep the image's box — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8 (partial). J94 ran migration steps 1 to 3 on J93's fixtures, and the review found and fixed the following:

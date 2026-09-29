@@ -1,10 +1,10 @@
 # Layers implementation handoff plan
 
-## J93 and J94 accepted with findings; J95 after undo — September 29, 2026
+## J93 and J94 accepted with findings; undo built; J95 ready — September 29, 2026
 
-**J93 and J94 are accepted** with lead findings (see the review ledger); the migration fixes are in the [current status](CURRENT_STATUS.md). The visual acceptance is redone in J95 once the lead has built `--undo`. Earlier entries below are historical.
+**J93 and J94 are accepted** with lead findings (see the review ledger); the migration fixes and `--undo` are in the [current status](CURRENT_STATUS.md). The visual acceptance is redone in J95. Earlier entries below are historical.
 
-### J95 — Migration acceptance on corrected fixtures (ready after the lead's undo)
+### J95 — Migration acceptance on corrected fixtures (ready)
 
 **Advances:** HIST-8.
 

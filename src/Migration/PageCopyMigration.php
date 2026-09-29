@@ -284,7 +284,8 @@ class PageCopyMigration {
 			->inContentLanguage()->text() :
 			wfMessage( 'layers-migration-embeds-summary' )->inContentLanguage()->text();
 		return $this->publisher->publish( $plan['title'], $authority, $plan['baseRevisionId'], $plan['document'],
-			$summary, $plan['main'] === null ? null : new WikitextContent( $plan['main'] ), $plan['pageId'], true );
+			$summary, $plan['main'] === null ? null : new WikitextContent( $plan['main'] ), $plan['pageId'],
+			PagePublicationService::MIGRATION_TAG );
 	}
 
 	/**

@@ -40,6 +40,7 @@ class Hooks {
 		$tags[] = 'layers-data-change';
 		$tags[] = PagePublicationService::CHANGE_TAG;
 		$tags[] = PagePublicationService::MIGRATION_TAG;
+		$tags[] = PagePublicationService::MIGRATION_UNDO_TAG;
 	}
 
 	/**

@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- The migration can be undone (September 29): `--undo` puts pages back as they were before its edits, where nobody has edited them since, and deletes the pages it created; a finished unscoped run is recorded in `updatelog`.
 - Page-owned file embeds keep the replaced image's border, margin and alignment, so the page does not move; the migration lists slide embeds the legacy parser refused, sets missing from the current file version and unmoved template sets, and a scoped dry run plans step 1 as needed (September 29).
 - Migration step 3 (September 29): a shared slide that no page shows gets a new page `Slide:<name>` showing its sets, which step 2 then copies into it. `--file`, `--page` and `--slide` limit a run to one file, page or slide.
 - Migration step 2 (September 29): pages that show shared sets and slides get their own copies in one bot edit, and their direct embeds are rewritten to name them; sets shown through templates are copied under their own name.

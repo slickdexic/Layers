@@ -180,7 +180,7 @@ class FilePageMigration {
 			->plaintextParams( implode( wfMessage( 'comma-separator' )->inContentLanguage()->text(), $names ) )
 			->inContentLanguage()->text();
 		return $this->publisher->publish( $plan['title'], $authority, $plan['baseRevisionId'], $plan['document'],
-			$summary, null, $plan['pageId'], true );
+			$summary, null, $plan['pageId'], PagePublicationService::MIGRATION_TAG );
 	}
 
 	/**

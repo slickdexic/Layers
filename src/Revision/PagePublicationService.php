@@ -26,6 +26,8 @@ class PagePublicationService {
 	public const CHANGE_TAG = 'layers-page-drawing';
 	/** Added to the bot edits of the D3 migration, which `--undo` looks for. */
 	public const MIGRATION_TAG = 'layers-migration';
+	/** Added to the bot edits that undo the migration. */
+	public const MIGRATION_UNDO_TAG = 'layers-migration-undo';
 
 	private WikiPageFactory $pages;
 	private PageHistoryAccess $access;
@@ -76,13 +78,13 @@ class PagePublicationService {
 	 * @param string $summary
 	 * @param WikitextContent|null $main Optional simultaneous main-slot edit
 	 * @param int|null $expectedPageId Bound existing owner; required for future binding-based callers
-	 * @param bool $migration A bot edit of the migration script, tagged MIGRATION_TAG
+	 * @param string|null $botTag Makes this a bot edit of the migration script, with this tag as well
 	 * @return int Committed revision ID, or unchanged ID for a successful no-op
 	 * @throws PublicationException With a stable internal error code
 	 */
 	public function publish( Title $owner, Authority $authority, int $baseRevisionId,
 		string $json, string $summary, ?WikitextContent $main = null, ?int $expectedPageId = null,
-		bool $migration = false
+		?string $botTag = null
 	): int {
 		try {
 			$this->access->assertCanPrepareEdit( $owner, $authority );
@@ -142,8 +144,8 @@ class PagePublicationService {
 		}
 		$updater = $page->newPageUpdater( $authority );
 		$updater->addTag( self::CHANGE_TAG );
-		if ( $migration ) {
-			$updater->addTag( self::MIGRATION_TAG );
+		if ( $botTag !== null ) {
+			$updater->addTag( $botTag );
 			$updater->setFlags( EDIT_FORCE_BOT );
 		}
 		try {
