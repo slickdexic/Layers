@@ -347,6 +347,7 @@
 				"layers-page-drawing-rename-invalid",
 				"layers-page-drawing-rename-taken",
 				"layers-page-drawing-rename-failed",
+				"layers-page-drawing-rename-new",
 				"layers-page-drawing-renamed",
 				"layers-page-summary-label",
 				"layers-page-summary-placeholder"

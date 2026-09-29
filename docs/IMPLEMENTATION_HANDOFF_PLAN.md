@@ -1,5 +1,28 @@
 # Layers implementation handoff plan
 
+## An embed can start a new drawing; J90 ready after J89 — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: an embed on its own page naming a drawing the page lacks gets a "Create page drawing: <name>" link in the page's drawing controls; it opens the editor on an empty drawing and only the first save writes. J89 comes first; J90 follows. Earlier entries below are historical.
+
+### J90 — Browser acceptance of creating a drawing from an embed (ready after J89)
+
+**Advances:** HIST-4.
+
+**Purpose:** prove in the browser that a page can start its own drawing from an embed, that nothing is written until the first save, and that another page's embed is never offered. Acceptance only; no production code.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-create.spec.js`, this packet and the review ledger. The J65 wiki rules and the known-baseline rule apply. You may upload one small test image for step 4 (never delete files); reuse it if it already exists.
+
+1. From the baseline, publish page text (exact base, drawings unchanged) with three embeds: `{{#Slide:<pageId>:Created slide}}`, `[[File:<test image>|layerset=<pageId>:Created notes]]` and `{{#Slide:<pageId + 1>:Other page}}`. Read the page ID from the API.
+2. On the page view, the drawing controls must list "Create page drawing: Created slide" and "Create page drawing: Created notes", and nothing for "Other page". The first two embeds show no drawing yet.
+3. **Slide:** open "Create page drawing: Created slide". The header reads "Drawing: Created slide". Press Rename drawing: the message must be the exact English text of `layers-page-drawing-rename-new`. Leave the editor without saving: the latest revision ID must not change.
+4. **Draft:** open it again, draw one rectangle, reload the editor page, restore the draft from the recovery dialog, and check the rectangle is there. Save with an empty summary. Exactly one new revision must appear, with the comment `Added drawing “Created slide”` and the `layers-page-drawing` tag; its `layers` slot must hold the baseline drawing unchanged plus a slide named "Created slide" with one rectangle.
+5. **Image:** open "Create page drawing: Created notes". The editor must show the uploaded image; draw one shape and save. The new drawing must be of kind `image` with its `source` naming the uploaded file's current version.
+6. On the page view both drawings are painted, the controls now read "Edit page drawing: …" for both, and "Other page" still shows nothing.
+7. Rerun `tests/e2e/accessibility.spec.js` and report any change.
+8. Restore the baseline by exact-base publication, in the main flow and in `finally`.
+
+Record durations and anything that could not be checked, then return for lead review.
+
 ## J88 accepted; PERF-4 met; J89 ready — September 29, 2026
 
 **J88 is accepted** with lead findings (see the review ledger); the benchmark now covers every PERF criterion. Earlier entries below are historical.

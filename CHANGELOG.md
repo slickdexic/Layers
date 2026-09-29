@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- New drawings from embeds (pilot, September 29): an embed naming a drawing its page does not have yet offers editors "Create page drawing"; the first save adds it.
+
 - Edit summaries for drawing saves (pilot, September 29): the page-owned editor has a Summary field; an empty one gets an automatic summary naming each drawing added, edited, renamed or removed.
 
 - Renaming drawings in the editor (pilot, September 29): the page-owned editor shows the drawing's name with a Rename button; the new name is saved with the next save, which also updates the page's embeds that name the drawing.

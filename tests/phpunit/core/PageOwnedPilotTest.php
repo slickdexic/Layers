@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\NewPageDrawing;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Extension\Layers\SpecialPages\SpecialEditLayersPage;
@@ -605,6 +606,62 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$lookup = $this->getServiceContainer()->getRevisionLookup();
 		$this->assertSame( $current, $lookup->getRevisionByTitle( $title )->getId() );
 		$this->assertSame( $prefix . $embed, $lookup->getRevisionById( $current )->getContent( 'main' )->getText() );
+	}
+
+	public function testAnEmbedNamingAMissingDrawingOpensANewOneThatTheFirstSaveAdds(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$pilot = $this->configure( true, [ $title->getPrefixedDBkey() ] );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage', 'upload' ] );
+		$png = $this->uploadFixtureFile( __DIR__ . '/../../fixtures/assets/test-image.png',
+			'File:J90_New_drawing.png' );
+		$this->editPage( $title, 'Intro' );
+		$pageId = $title->getArticleID();
+		$slide = "{{#Slide:$pageId:New slide}}";
+		$file = "[[File:J90_New_drawing.png|layerset=$pageId:Photo notes]]";
+		$prefix = "Intro\n";
+		$text = $prefix . $slide . "\n" . $file . "\n{{#Slide:" . ( $pageId + 1000 ) . ':Elsewhere}}';
+		$this->editPage( $title, $text );
+		$base = $title->getLatestRevID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST );
+
+		// Only this page's own names are offered; another page's embed is not.
+		$entries = $pilot->listBoundEditorSelections( $pageId, $base, $actor );
+		$this->assertSame( [ [ 'New slide', true ], [ 'Photo notes', true ] ],
+			array_map( static fn ( $e ) => [ $e['label'], $e['create'] ?? false ], $entries ) );
+
+		$init = $pilot->prepareBoundEditor( $pageId, $base, strlen( $prefix ), $slide, $actor );
+		$new = $init['pageOwned']['newSurface'];
+		$this->assertSame( NewPageDrawing::surfaceId( $pageId, $base, 'New slide' ),
+			$init['pageOwned']['surfaceId'] );
+		$this->assertSame( [ $init['pageOwned']['surfaceId'], 'slide', 'New slide', [] ],
+			[ $new['id'], $new['kind'], $new['label'], $new['layers'] ] );
+		$this->assertTrue( $init['pageOwned']['emptyBase'] );
+		$this->assertTrue( $init['isSlide'] );
+		$this->assertSame( $new['canvas']['width'], $init['canvasWidth'] );
+		// Opening the editor writes nothing.
+		$this->assertSame( $base, $title->getLatestRevID( \Wikimedia\Rdbms\IDBAccessObject::READ_LATEST ) );
+
+		$image = $pilot->prepareBoundEditor( $pageId, $base, strlen( $prefix . $slide . "\n" ), $file, $actor );
+		$photo = $image['pageOwned']['newSurface'];
+		$this->assertSame( [ 'image', 'File:J90_New_drawing.png', $png->getSha1(), $png->getTimestamp() ], [
+			$photo['kind'], $photo['source']['fileTitle'], $photo['source']['sha1'], $photo['source']['timestamp']
+		] );
+		$this->assertSame( [ $png->getWidth(), $png->getHeight() ], [ $image['baseWidth'], $image['baseHeight'] ] );
+		$this->assertStringContainsString( 'J90_New_drawing.png', rawurldecode( $image['imageUrl'] ) );
+
+		$result = $this->doApiRequestWithToken( [ 'action' => 'layerspublish', 'owner' => $title->getPrefixedText(),
+			'baserevid' => $base, 'data' => json_encode( [ 'schemaVersion' => 1, 'surfaces' => [ $new ] ] ) ],
+			null, $actor )[0]['layerspublish'];
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $result['revid'] );
+		$this->assertSame( 'Added drawing “New slide”', $revision->getComment()->text );
+
+		// Saved, the drawing is edited like any other; the photo is still offered for creation.
+		$entries = $pilot->listBoundEditorSelections( $pageId, $result['revid'], $actor );
+		$this->assertSame( [ [ 'New slide', false ], [ 'Photo notes', true ] ],
+			array_map( static fn ( $e ) => [ $e['label'], $e['create'] ?? false ], $entries ) );
+		$edit = $pilot->prepareBoundEditor( $pageId, $result['revid'], strlen( $prefix ), $slide, $actor );
+		$this->assertSame( $new['id'], $edit['pageOwned']['surfaceId'] );
+		$this->assertArrayNotHasKey( 'newSurface', $edit['pageOwned'] );
 	}
 
 	public function testBoundEditorRejectsInvalidConfigAuthorityAndNumericBounds(): void {

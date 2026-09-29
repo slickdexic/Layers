@@ -28,6 +28,7 @@ class PageOwnedPilot {
 	private PageOwnedScope $scope;
 	private PagePublicationService $publisher;
 	private PageReadService $reader;
+	private NewPageDrawing $newDrawings;
 
 	/**
 	 * @param MediaWikiServices $services Fully initialized native service container
@@ -47,6 +48,13 @@ class PageOwnedPilot {
 			new PageRevisionWriter(), new PublicationAdmissionContext(), $services->getHookContainer(),
 			$services->getUserFactory() );
 		$this->reader = new PageReadService( $access, $sources, new SourceRenditions( $services->getUrlUtils() ) );
+		$config = $services->getMainConfig();
+		$this->newDrawings = new NewPageDrawing( $sources, new SourceRenditions( $services->getUrlUtils() ),
+			$services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory(), [
+				'width' => $config->get( 'LayersSlideDefaultWidth' ),
+				'height' => $config->get( 'LayersSlideDefaultHeight' ),
+				'backgroundColor' => $config->get( 'LayersSlideDefaultBackground' )
+			] );
 	}
 
 	/** @return PageOwnedScope Pages taking part in the pilot */
@@ -116,33 +124,50 @@ class PageOwnedPilot {
 			if ( $surface['id'] !== $surfaceId ) {
 				continue;
 			}
-			if ( $surface['kind'] === 'slide' ) {
-				$mode = [ 'imageUrl' => null, 'isSlide' => true, 'autoCreate' => false,
-					'canvasWidth' => $surface['canvas']['width'], 'canvasHeight' => $surface['canvas']['height'],
-					'backgroundColor' => $surface['canvas']['backgroundColor'] ?? null ];
-			} elseif ( isset( $bundle['sourceRenditions'][$surfaceId] ) ) {
-				// Layer coordinates stay in the surface canvas even when the rendition is narrower.
-				$mode = [ 'imageUrl' => $bundle['sourceRenditions'][$surfaceId]['url'], 'isSlide' => false,
-					'autoCreate' => false, 'baseWidth' => $surface['canvas']['width'],
-					'baseHeight' => $surface['canvas']['height'] ];
-			} else {
+			if ( $surface['kind'] !== 'slide' && !isset( $bundle['sourceRenditions'][$surfaceId] ) ) {
 				break;
 			}
-			$config = $this->services->getMainConfig();
-			return [ 'filename' => $owner->getPrefixedText() ] + $mode + [
-				'pageOwned' => [
-					'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId,
-					'pageId' => $current->getPageId(),
-					'surfaceId' => $surfaceId, 'readOnly' => false,
-					'draftScope' => [
-						'wiki' => json_encode(
-							[ $config->get( 'DBname' ), $config->get( 'DBprefix' ) ], JSON_THROW_ON_ERROR ),
-						'user' => (string)$authority->getUser()->getId()
-					]
-				]
-			];
+			return $this->editorInit( $owner, $revisionId, $current->getPageId(), $surface,
+				$bundle['sourceRenditions'][$surfaceId] ?? null, $authority );
 		}
 		throw new \DomainException( 'layers-editor-unavailable' );
+	}
+
+	/**
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param int $pageId
+	 * @param array $surface The drawing to edit
+	 * @param array|null $rendition Pinned file rendition of an image or PDF drawing
+	 * @param Authority $authority
+	 * @return array Editor bootstrap
+	 */
+	private function editorInit( \MediaWiki\Title\Title $owner, int $revisionId, int $pageId, array $surface,
+		?array $rendition, Authority $authority
+	): array {
+		if ( $surface['kind'] === 'slide' ) {
+			$mode = [ 'imageUrl' => null, 'isSlide' => true, 'autoCreate' => false,
+				'canvasWidth' => $surface['canvas']['width'], 'canvasHeight' => $surface['canvas']['height'],
+				'backgroundColor' => $surface['canvas']['backgroundColor'] ?? null ];
+		} else {
+			// Layer coordinates stay in the surface canvas even when the rendition is narrower.
+			$mode = [ 'imageUrl' => $rendition['url'], 'isSlide' => false,
+				'autoCreate' => false, 'baseWidth' => $surface['canvas']['width'],
+				'baseHeight' => $surface['canvas']['height'] ];
+		}
+		$config = $this->services->getMainConfig();
+		return [ 'filename' => $owner->getPrefixedText() ] + $mode + [
+			'pageOwned' => [
+				'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId,
+				'pageId' => $pageId,
+				'surfaceId' => $surface['id'], 'readOnly' => false,
+				'draftScope' => [
+					'wiki' => json_encode(
+						[ $config->get( 'DBname' ), $config->get( 'DBprefix' ) ], JSON_THROW_ON_ERROR ),
+					'user' => (string)$authority->getUser()->getId()
+				]
+			]
+		];
 	}
 
 	/**
@@ -417,6 +442,24 @@ class PageOwnedPilot {
 		return $surfaceId === null ? null : [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
 	}
 
+	/**
+	 * A name this page's own embed gives a drawing the page does not have yet, so an editor may create it.
+	 * @param array $candidate From DirectEmbeddingRewriter::scan()
+	 * @param int $pageId The page carrying the embed
+	 * @param array[] $surfaces The page's drawings
+	 * @return string|null
+	 * @throws \InvalidArgumentException For a malformed selector
+	 */
+	private static function missingName( array $candidate, int $pageId, array $surfaces ): ?string {
+		if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+			return null;
+		}
+		$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'] );
+		// A drawing of that name of another kind or on another file still takes the name.
+		return $named === null || $named['pageId'] !== $pageId ||
+			PageOwnedBinding::resolveNamed( $named, $surfaces, null, null ) !== null ? null : $named['name'];
+	}
+
 	/** @return PageOwnedIdentityResolver */
 	private function newIdentityResolver(): PageOwnedIdentityResolver {
 		$lookup = $this->services->getRevisionLookup();
@@ -468,7 +511,8 @@ class PageOwnedPilot {
 			// One exact read for every entry; the editor route repeats full admission when opened.
 			$kinds = [];
 			$labels = [];
-			$surfaces = $this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'];
+			$surfaces = $revision->hasSlot( PageRevisionWriter::SLOT ) ?
+				$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
 			foreach ( $surfaces as $surface ) {
 				$kinds[$surface['id']] = $surface['kind'] === 'slide' ? 'slide' : 'file';
 				$labels[$surface['id']] = (string)( $surface['label'] ?? $surface['id'] );
@@ -478,6 +522,13 @@ class PageOwnedPilot {
 			foreach ( $candidates as $candidate ) {
 				try {
 					$binding = $this->embedBinding( $candidate, $surfaces );
+					$missing = $binding ? null : self::missingName( $candidate, $pageId, $surfaces );
+					if ( $missing !== null && !isset( $selections['new:' . DrawingName::key( $missing )] ) ) {
+						$selections['new:' . DrawingName::key( $missing )] = [ 'label' => $missing, 'create' => true,
+							'params' => [ 'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
+								'expected' => $candidate['raw'] ] ];
+						continue;
+					}
 					// A slide embed edits only slides, a file embed only image/PDF surfaces.
 					if ( !$binding || $binding['pageId'] !== $pageId ||
 						( $kinds[$binding['surfaceId']] ?? null ) !== $candidate['kind'] ||
@@ -539,9 +590,23 @@ class PageOwnedPilot {
 				if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
 					continue;
 				}
-				$binding = $this->embedBinding( $candidate, fn () =>
-					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] );
-				if ( !$binding || $binding['pageId'] !== $pageId ) {
+				$surfaces = $revision->hasSlot( PageRevisionWriter::SLOT ) ?
+					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
+				$binding = $this->embedBinding( $candidate, $surfaces );
+				if ( !$binding ) {
+					$missing = self::missingName( $candidate, $pageId, $surfaces );
+					if ( $missing === null ) {
+						throw new \DomainException();
+					}
+					// The drawing exists only in the editor until its first save adds it to the page.
+					$new = $this->newDrawings->prepare( $pageId, $revisionId, $candidate, $missing, $authority );
+					$init = $this->editorInit( $owner, $revisionId, $pageId, $new['surface'], $new['rendition'],
+						$authority );
+					$init['pageOwned'] += [ 'newSurface' => $new['surface'],
+						'emptyBase' => !$revision->hasSlot( PageRevisionWriter::SLOT ) ];
+					return $init;
+				}
+				if ( $binding['pageId'] !== $pageId ) {
 					throw new \DomainException();
 				}
 				$init = $this->prepareEditor( $owner->getPrefixedText(), $revisionId,

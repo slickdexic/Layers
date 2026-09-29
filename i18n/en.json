@@ -1,6 +1,8 @@
 {
 	"layers-page-edit-drawing": "Edit page drawing: $1",
 	"layers-page-edit-history-notice": "Changes to these drawings are saved in this page’s history.",
+	"layers-page-create-drawing": "Create page drawing: $1",
+	"layers-page-drawing-rename-new": "Save this new drawing before renaming it: the page's embed names it, and would no longer find it.",
 	"layers-page-drawings-heading": "Drawings on this page",
 	"layers-page-adopt-drawing": "Make “$1” owned by this page",
 	"layers-page-adopt-notice": "Some drawings on this page are shared, so their changes are not recorded in this page’s history. Making one owned by this page copies it into the page; the shared original is not changed.",

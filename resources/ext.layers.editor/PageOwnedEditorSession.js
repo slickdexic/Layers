@@ -35,9 +35,21 @@
 		return String( name ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 	}
 
+	function labelOf( surface ) {
+		return typeof surface.label === 'string' ? surface.label : '';
+	}
+
+	function isNewSurface( surface, surfaceId ) {
+		return Boolean( surface ) && Object.getPrototypeOf( surface ) === Object.prototype &&
+			surface.id === surfaceId && [ 'slide', 'image', 'pdf' ].includes( surface.kind ) &&
+			typeof surface.label === 'string' && Boolean( surface.canvas ) && typeof surface.canvas === 'object' &&
+			Array.isArray( surface.layers ) && surface.layers.length === 0;
+	}
+
 	class PageOwnedEditorSession {
 		/**
-		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional pageId/readOnly
+		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional pageId/readOnly; newSurface
+		 *  starts a drawing the page does not have yet, and emptyBase says the base revision has no drawings
 		 * @param {Object} dependencies Accepted reader, publisher and snapshot adapter
 		 */
 		constructor( options, dependencies ) {
@@ -48,6 +60,9 @@
 				( options.pageId !== undefined && ( !Number.isInteger( options.pageId ) ||
 					options.pageId < 1 || options.pageId > 2147483647 ) ) ||
 				( options.readOnly !== undefined && typeof options.readOnly !== 'boolean' ) ||
+				( options.newSurface !== undefined && !isNewSurface( options.newSurface, options.surfaceId ) ) ||
+				( options.emptyBase !== undefined &&
+					( typeof options.emptyBase !== 'boolean' || options.newSurface === undefined ) ) ||
 				!dependencies || !dependencies.reader || typeof dependencies.reader.read !== 'function' ||
 				!dependencies.publisher || typeof dependencies.publisher.publish !== 'function' ||
 				!dependencies.adapter || typeof dependencies.adapter.toEditorState !== 'function' ||
@@ -59,6 +74,8 @@
 			this._surfaceId = options.surfaceId;
 			this._revisionId = options.revisionId;
 			this._readOnly = options.readOnly === true;
+			this._newSurface = options.newSurface ? JSON.parse( JSON.stringify( options.newSurface ) ) : null;
+			this._baseHasDrawings = options.emptyBase !== true;
 			this._reader = dependencies.reader;
 			this._publisher = dependencies.publisher;
 			this._adapter = dependencies.adapter;
@@ -75,18 +92,31 @@
 			}
 			this._phase = 'loading';
 			try {
-				const bundle = await this._reader.read( {
+				// A revision without drawings has no document to read; the new drawing is its first.
+				const bundle = this._baseHasDrawings ? await this._reader.read( {
 					owner: this._owner, revisionId: this._revisionId
-				} );
+				} ) : { revisionId: this._revisionId, snapshot: { schemaVersion: 1, surfaces: [] } };
 				if ( this._phase === 'disposed' ) {
 					throw failure( 'layers-editor-session-unavailable' );
 				}
 				if ( bundle.revisionId !== this._revisionId ) {
 					throw failure( 'layers-invalid-read-response' );
 				}
-				const state = this._adapter.toEditorState( bundle.snapshot, this._surfaceId );
-				this._snapshot = this._adapter.withEditorState( bundle.snapshot, this._surfaceId, state );
-				this._savedJson = JSON.stringify( this._snapshot );
+				let snapshot = bundle.snapshot;
+				let saved = null;
+				if ( this._newSurface ) {
+					const name = nameKey( this._newSurface.label );
+					if ( !snapshot || !Array.isArray( snapshot.surfaces ) || snapshot.surfaces.some( ( surface ) =>
+						surface.id === this._surfaceId || nameKey( labelOf( surface ) ) === name ) ) {
+						throw failure( 'layers-editor-session-unavailable' );
+					}
+					// The page does not have this drawing until a save adds it, so it starts out unsaved.
+					saved = snapshot;
+					snapshot = Object.assign( {}, snapshot, { surfaces: snapshot.surfaces.concat( [ this._newSurface ] ) } );
+				}
+				const state = this._adapter.toEditorState( snapshot, this._surfaceId );
+				this._snapshot = this._adapter.withEditorState( snapshot, this._surfaceId, state );
+				this._savedJson = JSON.stringify( saved || this._snapshot );
 				this._phase = 'ready';
 				return state;
 			} catch ( error ) {
@@ -102,6 +132,9 @@
 			this._requireLoaded();
 			if ( this._phase !== 'ready' || this._reconciling ) {
 				throw failure( 'layers-editor-session-unavailable' );
+			}
+			if ( !this._baseHasDrawings ) {
+				return;
 			}
 			const bundle = await this._reader.read( { owner: this._owner, revisionId: this._revisionId } );
 			this._requireLoaded();
@@ -149,12 +182,22 @@
 			if ( label === null ) {
 				throw failure( 'layers-page-drawing-rename-invalid' );
 			}
+			// The page's embed names the new drawing; renaming it before its first save would lose that link.
+			if ( this.isUnsavedNew() ) {
+				throw failure( 'layers-page-drawing-rename-new' );
+			}
 			if ( this._snapshot.surfaces.some( ( surface ) => surface.id !== this._surfaceId &&
 				nameKey( typeof surface.label === 'string' ? surface.label : '' ) === nameKey( label ) ) ) {
 				throw failure( 'layers-page-drawing-rename-taken' );
 			}
 			this._selected( this._snapshot ).label = label;
 			return label;
+		}
+
+		/** @return {boolean} The drawing exists only in this editor; no save has added it to the page yet */
+		isUnsavedNew() {
+			this._requireLoaded();
+			return !this._selected( JSON.parse( this._savedJson ) );
 		}
 
 		/** @param {Object} snapshot @return {Object} This session's surface @private */
@@ -228,6 +271,7 @@
 				}
 				this._revisionId = result.revisionId;
 				this._savedJson = snapshotJson;
+				this._baseHasDrawings = true;
 				this._phase = 'ready';
 				return this.getStatus();
 			} catch ( error ) {
@@ -260,6 +304,9 @@
 				if ( bundle.revisionId !== revisionId ) {
 					throw failure( 'layers-invalid-read-response' );
 				}
+				if ( !bundle.snapshot.surfaces.some( ( surface ) => surface.id === this._surfaceId ) ) {
+					return this._reconcileUnsavedNew( bundle.snapshot, revisionId );
+				}
 				const serverState = this._adapter.toEditorState( bundle.snapshot, this._surfaceId );
 				const server = this._adapter.withEditorState( bundle.snapshot, this._surfaceId, serverState );
 				const remote = comparable( this._selected( server ) );
@@ -278,6 +325,28 @@
 			} finally {
 				this._reconciling = false;
 			}
+		}
+
+		/**
+		 * The server revision lacks this drawing: fine only if it was never saved and its name is still free.
+		 * @param {Object} server Newer revision's document
+		 * @param {number} revisionId
+		 * @return {Object} Status
+		 * @private
+		 */
+		_reconcileUnsavedNew( server, revisionId ) {
+			const local = this._selected( this._snapshot );
+			if ( !this.isUnsavedNew() ||
+				server.surfaces.some( ( surface ) => nameKey( labelOf( surface ) ) === nameKey( labelOf( local ) ) ) ) {
+				throw failure( 'layers-editor-reconciliation-required' );
+			}
+			const merged = Object.assign( {}, server, { surfaces: server.surfaces.concat( [ local ] ) } );
+			this._snapshot = this._adapter.withEditorState( merged, this._surfaceId, this.getEditorState() );
+			this._savedJson = JSON.stringify( server );
+			this._revisionId = revisionId;
+			this._baseHasDrawings = true;
+			this._phase = 'ready';
+			return this.getStatus();
 		}
 
 		/** Preserve a recovery hold until the UI explicitly reconciles with server history. */

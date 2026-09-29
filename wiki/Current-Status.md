@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## An embed can start a new drawing — September 29, 2026
+
+Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-4 ("it starts empty"). Until now a page-owned drawing could only come from adopting a shared set. An embed on its own page that names a drawing the page does not have yet, such as `{{#Slide:<pageId>:Overview}}` or `[[File:Pump.png|layerset=<pageId>:Labels]]`, now gives editors a **Create page drawing** link. It opens the editor on an empty drawing: a slide at the wiki's default size, or the embedded file's current version (PDF page from `page=`). Nothing is written until the first save, which adds the drawing in one revision with the automatic summary "Added drawing “Overview”". Leaving without saving creates nothing; a local draft survives reopening the editor. A new drawing cannot be renamed before its first save, since the embed finds it by name.
+
+Code: `Revision/NewPageDrawing.php` (new), `PageOwnedPilot::listBoundEditorSelections()` and `prepareBoundEditor()`, `BoundSlideHooks` (records a missing name in parser output and shows the link), `PageOwnedEditorSession` (`newSurface`, `emptyBase`, `isUnsavedNew()`).
+
+Fresh verification: a native test creates a slide and an image drawing from embeds, checks that another page's embed is not offered and that opening the editor writes nothing, then saves and edits the slide; Jest for the session (no read of an empty base, first save, rename refused until then, reconciliation with a newer revision). On the test wiki a Create link opened the editor and its save added the drawing, which the page then showed. Full native configuration **413 tests passed, 1 skipped**; standalone PHPUnit **1,312**; Jest **15,071**; PHP style clean.
+
 ## Benchmark covers every performance criterion — September 29, 2026
 
 J88 added resizing and panning to `npm run bench` and reports cold and warm separately. On the test wiki, dragging, resizing and panning a 100-layer drawing all run at 60 frames per second and a typed character is painted within 6 ms, so **PERF-4 is met**. PERF-2 (0.6 s to 3.1 s warm) and PERF-5 (saving 1.6 s) are not met, and PERF-7 (every edit stores the whole drawing again) remains open. Results: `tests/perf/results/2026-09-29-0405-test-wiki.json`.

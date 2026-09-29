@@ -593,4 +593,71 @@ describe( 'PageOwnedEditorSession', () => {
 			} );
 		} );
 	} );
+
+	describe( 'a drawing the page does not have yet', () => {
+		const newSurface = { id: 'dnew', kind: 'slide', label: 'New slide', canvas: { width: 800, height: 600,
+			backgroundColor: '#ffffff', backgroundVisible: true, backgroundOpacity: 1 }, layers: [] };
+		function newSession( extra ) {
+			return new Session( Object.assign( {}, options, { surfaceId: 'dnew', newSurface }, extra ),
+				{ reader, publisher: new Publisher( api ), adapter: new Adapter() } );
+		}
+
+		it( 'starts unsaved without reading an empty base, and its first save adds it to the page', async () => {
+			session = newSession( { emptyBase: true } );
+			await session.load();
+			expect( reader.read ).not.toHaveBeenCalled();
+			expect( session.getStatus().dirty ).toBe( true );
+			expect( session.isUnsavedNew() ).toBe( true );
+			expect( () => session.rename( 'Other' ) ).toThrow( 'layers-page-drawing-rename-new' );
+			await session.revalidate();
+			expect( reader.read ).not.toHaveBeenCalled();
+			await session.save();
+			expect( JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data ).surfaces ).toEqual( [ newSurface ] );
+			expect( session.isUnsavedNew() ).toBe( false );
+			expect( session.getStatus().dirty ).toBe( false );
+			expect( session.rename( 'Other' ) ).toBe( 'Other' );
+			reader.read.mockResolvedValueOnce( { revisionId: 13, snapshot: fixture } );
+			await session.revalidate();
+			expect( reader.read ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'follows the page\'s existing drawings, which are kept', async () => {
+			session = newSession();
+			await session.load();
+			expect( session.getDraft().snapshot.surfaces.map( ( surface ) => surface.id ) )
+				.toEqual( [ 'presentation', 'diagram', 'reference', 'dnew' ] );
+		} );
+
+		it.each( [
+			[ 'ID', { surfaceId: 'presentation', newSurface: Object.assign( {}, newSurface, { id: 'presentation' } ) } ],
+			[ 'name', { newSurface: Object.assign( {}, newSurface, { label: 'welcome' } ) } ]
+		] )( 'refuses to start when the page already has a drawing with that %s', async ( what, extra ) => {
+			session = newSession( extra );
+			await expect( session.load() ).rejects.toThrow( 'layers-editor-session-unavailable' );
+		} );
+
+		it( 'rejects a malformed new drawing, and an empty base without one', () => {
+			expect( () => newSession( { newSurface: Object.assign( {}, newSurface, { id: 'other' } ) } ) )
+				.toThrow( 'layers-invalid-editor-session' );
+			expect( () => newSession( { newSurface: Object.assign( {}, newSurface, { layers: [ {} ] } ) } ) )
+				.toThrow( 'layers-invalid-editor-session' );
+			expect( () => new Session( Object.assign( {}, options, { emptyBase: true } ),
+				{ reader, publisher: new Publisher( api ), adapter: new Adapter() } ) ).toThrow( 'layers-invalid-editor-session' );
+		} );
+
+		it( 'carries an unsaved drawing onto a newer revision, unless that revision took its name', async () => {
+			session = newSession();
+			await session.load();
+			const newer = JSON.parse( JSON.stringify( fixture ) );
+			newer.surfaces[ 1 ].label = 'Changed';
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: newer } );
+			expect( await session.reconcile( 15 ) ).toMatchObject( { revisionId: 15, dirty: true } );
+			expect( session.getDraft().snapshot.surfaces.map( ( surface ) => surface.label ) )
+				.toEqual( [ 'Welcome', 'Changed', 'Reference sheet', 'New slide' ] );
+			const taken = JSON.parse( JSON.stringify( newer ) );
+			taken.surfaces[ 0 ].label = 'New_Slide';
+			reader.read.mockResolvedValueOnce( { revisionId: 16, snapshot: taken } );
+			await expect( session.reconcile( 16 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+		} );
+	} );
 } );

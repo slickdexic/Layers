@@ -1,6 +1,8 @@
 {
 	"layers-page-edit-drawing": "Label for a page-owned drawing edit link. $1 is the direct slide embedding name, rendered as plain text.",
 	"layers-page-edit-history-notice": "Notice above authorized edit links for drawings owned by the displayed page.",
+	"layers-page-create-drawing": "Label for a link that opens the editor on a new, empty drawing that the page's embed names but the page does not have yet. The first save adds it to the page. $1 is the drawing name, rendered as plain text.",
+	"layers-page-drawing-rename-new": "Page-owned editor: shown when renaming a new drawing that has not been saved yet. The page's wikitext refers to the drawing by its name.",
 	"layers-page-drawings-heading": "Heading of the box that lists edit and adoption links for drawings on the displayed page. Shown only to editors.",
 	"layers-page-adopt-drawing": "Link text offered to editors for copying a shared slide or file drawing into the page's own revision history. $1 is the slide name or file name, rendered as plain text.",
 	"layers-page-adopt-notice": "Notice above the links that make shared slide and file drawings owned by the displayed page. Explains that changes to shared drawings are not in page history and that adopting copies the drawing.",

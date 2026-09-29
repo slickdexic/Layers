@@ -89,7 +89,8 @@
 					label = this.options.rename( entered );
 				} catch ( error ) {
 					const code = error && error.code;
-					if ( code === 'layers-page-drawing-rename-invalid' || code === 'layers-page-drawing-rename-taken' ) {
+					if ( code === 'layers-page-drawing-rename-invalid' || code === 'layers-page-drawing-rename-taken' ||
+						code === 'layers-page-drawing-rename-new' ) {
 						// Literal brackets and braces in the message itself would break the browser's message parser.
 						this.options.notify( this.options.message( code, entered.trim(), FORBIDDEN ), 'error' );
 					} else {

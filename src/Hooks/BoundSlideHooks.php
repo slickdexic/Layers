@@ -23,6 +23,7 @@ use MediaWiki\SpecialPage\SpecialPage;
 class BoundSlideHooks {
 	public const DATA_KEY = 'layers-bound-slides-v1';
 	public const ADOPTABLE_KEY = 'layers-shared-slides-v1';
+	public const CREATABLE_KEY = 'layers-missing-drawings-v1';
 
 	/**
 	 * @param Parser $parser
@@ -79,18 +80,21 @@ class BoundSlideHooks {
 		// As in register(): renders without the revision must not be cached as the answer.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$revision = $parser->getRevisionRecordObject();
-		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $named['pageId'] ||
-			!$revision->hasSlot( PageRevisionWriter::SLOT )
-		) {
+		if ( !$revision || $revision->getId() <= 0 || $revision->getPageId() !== $named['pageId'] ) {
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
-		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
-		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
-			throw new \DomainException( 'layers-page-binding-unavailable' );
+		$surfaces = [];
+		if ( $revision->hasSlot( PageRevisionWriter::SLOT ) ) {
+			$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
+			if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
+				throw new \DomainException( 'layers-page-binding-unavailable' );
+			}
+			$surfaces = json_decode( $content->getText(), true )['surfaces'] ?? [];
 		}
-		$surfaceId = PageOwnedBinding::resolveNamed( $named,
-			json_decode( $content->getText(), true )['surfaces'] ?? [], $kind, $fileTitle );
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, $surfaces, $kind, $fileTitle );
 		if ( $surfaceId === null ) {
+			// The page names a drawing it does not have yet; output() offers editors to create it.
+			$parser->getOutput()->setExtensionData( self::CREATABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		return [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
@@ -135,11 +139,12 @@ class BoundSlideHooks {
 				( is_array( $context ) && ( $context['revisionId'] ?? null ) === $out->getRevisionId() );
 		}
 		$adoptable = $parsed->getExtensionData( self::ADOPTABLE_KEY ) === true;
+		$creatable = $parsed->getExtensionData( self::CREATABLE_KEY ) === true;
 		if ( $displayed ) {
 			$out->addModules( 'ext.layers.history' );
 		}
 		$request = $out->getRequest();
-		if ( ( !$displayed && !$adoptable ) || $request->getVal( 'action', 'view' ) !== 'view' ||
+		if ( ( !$displayed && !$adoptable && !$creatable ) || $request->getVal( 'action', 'view' ) !== 'view' ||
 			$request->getCheck( 'oldid' ) || $request->getCheck( 'diff' ) || !$out->getUser()->isRegistered()
 		) {
 			return;
@@ -147,11 +152,12 @@ class BoundSlideHooks {
 		try {
 			$pageId = $out->getTitle()->getArticleID();
 			$items = '';
-			foreach ( $displayed ? $pilot->listBoundEditorSelections( $pageId, $out->getRevisionId(),
+			foreach ( $displayed || $creatable ? $pilot->listBoundEditorSelections( $pageId, $out->getRevisionId(),
 				$out->getAuthority() ) : [] as $entry
 			) {
 				$items .= self::controlItem( 'layers-page-edit-link', 'EditLayersPage', $entry['params'],
-					$out->msg( 'layers-page-edit-drawing', $entry['label'] )->text() );
+					$out->msg( empty( $entry['create'] ) ? 'layers-page-edit-drawing' : 'layers-page-create-drawing',
+						$entry['label'] )->text() );
 			}
 			$adoptItems = '';
 			foreach ( $adoptable ? $pilot->listAdoptionCandidates( $pageId, $out->getRevisionId(),
