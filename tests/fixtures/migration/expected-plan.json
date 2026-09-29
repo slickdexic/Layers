@@ -149,10 +149,10 @@
       "notMoved": [],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Direct: copy \"anatomy\" from File:Layers migration fixture A.png (revision <rev>), named by 2 embed(s)",
-        "Layers migration fixture/Direct: copy \"labels\" from File:Layers migration fixture A.png (revision <rev>), named by 1 embed(s)",
-        "Layers migration fixture/Direct: copy \"notes\" from File:Layers migration fixture B.pdf (revision <rev>), named by 1 embed(s)",
-        "Layers migration fixture/Direct: copy \"notes (page 3)\" from File:Layers migration fixture B.pdf (revision <rev>), named by 1 embed(s)"
+        "Layers migration fixture/Direct: copy \"anatomy\" from File:Layers migration fixture A.png (after step 1), named by 2 embed(s)",
+        "Layers migration fixture/Direct: copy \"labels\" from File:Layers migration fixture A.png (after step 1), named by 1 embed(s)",
+        "Layers migration fixture/Direct: copy \"notes\" from File:Layers migration fixture B.pdf (after step 1), named by 1 embed(s)",
+        "Layers migration fixture/Direct: copy \"notes (page 3)\" from File:Layers migration fixture B.pdf (after step 1), named by 1 embed(s)"
       ]
     },
     "Layers migration fixture/Slides 1": {
@@ -162,23 +162,23 @@
       "templateCopy": false,
       "copies": [
         {
-          "name": "Layers migration fixture slide one",
+          "name": "Layers_migration_fixture_slide_one",
           "kind": "slide",
-          "source": "Layers migration fixture slide one",
+          "source": "Layers_migration_fixture_slide_one",
           "embeds": 1,
           "template": false
         }
       ],
       "embedRewrites": [
         {
-          "from": "{{#Slide:Layers migration fixture slide one}}",
-          "to": "{{#Slide:<pageId>:Layers migration fixture slide one}}"
+          "from": "{{#Slide:Layers_migration_fixture_slide_one}}",
+          "to": "{{#Slide:<pageId>:Layers_migration_fixture_slide_one}}"
         }
       ],
       "notMoved": [],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Slides 1: copy \"Layers migration fixture slide one\" from slide \"Layers migration fixture slide one\", named by 1 embed(s)"
+        "Layers migration fixture/Slides 1: copy \"Layers_migration_fixture_slide_one\" from slide \"Layers_migration_fixture_slide_one\", named by 1 embed(s)"
       ]
     },
     "Layers migration fixture/Slides 2": {
@@ -188,23 +188,30 @@
       "templateCopy": false,
       "copies": [
         {
-          "name": "Layers migration fixture slide one",
+          "name": "Layers_migration_fixture_slide_one",
           "kind": "slide",
-          "source": "Layers migration fixture slide one",
+          "source": "Layers_migration_fixture_slide_one",
           "embeds": 1,
           "template": false
         }
       ],
       "embedRewrites": [
         {
-          "from": "{{#Slide:Layers migration fixture slide one}}",
-          "to": "{{#Slide:<pageId>:Layers migration fixture slide one}}"
+          "from": "{{#Slide:Layers_migration_fixture_slide_one}}",
+          "to": "{{#Slide:<pageId>:Layers_migration_fixture_slide_one}}"
         }
       ],
-      "notMoved": [],
+      "notMoved": [
+        {
+          "what": "{{#Slide:Layers migration fixture invalid spaced slide}}",
+          "reason": "invalid-slide-name",
+          "notes": "Slide names with spaces are rejected by SlideNameValidator and left alone."
+        }
+      ],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Slides 2: copy \"Layers migration fixture slide one\" from slide \"Layers migration fixture slide one\", named by 1 embed(s)"
+        "Layers migration fixture/Slides 2: {{#Slide:Layers migration fixture invalid spaced slide}} not copied (invalid-slide-name)",
+        "Layers migration fixture/Slides 2: copy \"Layers_migration_fixture_slide_one\" from slide \"Layers_migration_fixture_slide_one\", named by 1 embed(s)"
       ]
     },
     "Template:Layers migration fixture frame": {
@@ -237,7 +244,7 @@
       "notMoved": [],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Template: copy \"anatomy\" from File:Layers migration fixture A.png (revision <rev>), shown through a template"
+        "Layers migration fixture/Template: copy \"anatomy\" from File:Layers migration fixture A.png (after step 1), shown through a template"
       ]
     },
     "Layers migration fixture/Taken": {
@@ -264,7 +271,7 @@
       "notMoved": [],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Taken: copy \"anatomy 2\" from File:Layers migration fixture A.png (revision <rev>), named by 1 embed(s)"
+        "Layers migration fixture/Taken: copy \"anatomy 2\" from File:Layers migration fixture A.png (after step 1), named by 1 embed(s)"
       ]
     },
     "Layers migration fixture/Uses C": {
@@ -277,13 +284,13 @@
       "notMoved": [
         {
           "what": "[[File:Layers migration fixture C.png|thumb|layerset=old]]",
-          "reason": "file-not-migrated",
-          "notes": "Source File:Layers migration fixture C.png set 'old' was not migrated because it belonged to an earlier file version"
+          "reason": "no-current-set",
+          "notes": "Source File:Layers migration fixture C.png set 'old' was not migrated because it belonged to an earlier file version, so current file version has no set by that name"
         }
       ],
       "problem": null,
       "expectedScriptOutput": [
-        "Layers migration fixture/Uses C: [[File:Layers migration fixture C.png|thumb|layerset=old]] not copied (file-not-migrated)"
+        "Layers migration fixture/Uses C: [[File:Layers migration fixture C.png|thumb|layerset=old]] not copied (no-current-set)"
       ]
     },
     "Project:Layers migration fixture": {
@@ -302,29 +309,29 @@
     }
   },
   "slides": {
-    "Layers migration fixture slide one": {
-      "name": "Layers migration fixture slide one",
+    "Layers_migration_fixture_slide_one": {
+      "name": "Layers_migration_fixture_slide_one",
       "step": 3,
       "action": "none",
       "pageCreated": null,
       "notes": "Shown by Layers migration fixture/Slides 1 and /Slides 2; step 2 handles copies, so step 3 creates nothing",
       "problem": null
     },
-    "Layers migration fixture slide two": {
-      "name": "Layers migration fixture slide two",
+    "Layers_migration_fixture_slide_two": {
+      "name": "Layers_migration_fixture_slide_two",
       "step": 3,
       "action": "create-slide-page-and-copy",
       "pageCreated": "Slide:Layers migration fixture slide two",
-      "initialMain": "{{#Slide:Layers migration fixture slide two|layerset=default}}",
+      "initialMain": "{{#Slide:Layers_migration_fixture_slide_two|layerset=default}}",
       "drawingsAdded": [
         {
-          "name": "Layers migration fixture slide two",
+          "name": "Layers_migration_fixture_slide_two",
           "kind": "slide",
-          "source": "Layers migration fixture slide two",
+          "source": "Layers_migration_fixture_slide_two",
           "embeds": 1
         }
       ],
-      "rewrittenMain": "{{#Slide:<pageId>:Layers migration fixture slide two}}",
+      "rewrittenMain": "{{#Slide:<pageId>:Layers_migration_fixture_slide_two}}",
       "problem": null,
       "expectedScriptOutput": [
         "Slide:Layers migration fixture slide two: create, showing slide \"Layers_migration_fixture_slide_two\" set(s) default"

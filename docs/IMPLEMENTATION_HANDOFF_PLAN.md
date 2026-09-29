@@ -1,5 +1,9 @@
 # Layers implementation handoff plan
 
+## J95 accepted — September 29, 2026
+
+**J95 is accepted** (see the review ledger): migration steps 1 to 3 and undo pass on the corrected fixtures. The lead's next work is the change of bare names, which needs the owner's approval before the completion record is set on the test wiki. Earlier entries below are historical.
+
 ## J93 and J94 accepted with findings; undo built; J95 ready — September 29, 2026
 
 **J93 and J94 are accepted** with lead findings (see the review ledger); the migration fixes and `--undo` are in the [current status](CURRENT_STATUS.md). The visual acceptance is redone in J95. Earlier entries below are historical.
@@ -18,6 +22,37 @@
 4. Rerun the commands; nothing may change.
 
 Record durations and findings, then return for lead review.
+
+**Result:** Implemented in `tests/e2e/migration-fixtures.spec.js` (175.7s / 3.0m, 1 passed; serial `--workers=1`). ESLint clean (0 errors, 0 warnings).
+- **Undo & Baseline:** Ran `php extensions/Layers/maintenance/migrateLayersToPageHistory.php --undo --commit` across all 12 fixture scopes. Verified every fixture page and file returned to clean baseline and `Slide:Layers migration fixture slide two` was unlinked.
+- **Fixture Corrections:**
+  - `File:Layers migration fixture A.png` and `File:Layers migration fixture C.png` upgraded to truecolor 400×300 PNGs with all annotation layers positioned strictly inside image bounds.
+  - `File:Layers migration fixture B.pdf` upgraded to 600×400 3-page PDF with annotations on page 1 and page 3 strictly inside bounds.
+  - Slide names updated to valid identifiers `Layers_migration_fixture_slide_one` and `Layers_migration_fixture_slide_two`. Added deliberately invalid spaced slide embed `{{#Slide:Layers migration fixture invalid spaced slide}}` on `Slides 2`.
+  - Updated `tests/fixtures/migration/expected-plan.json` matching lead's `pendingFor` fix `(after step 1)` in dry-run, recording `invalid-slide-name` on `Slides 2` and `no-current-set` on `Uses C`.
+- **Dry-Run Comparisons:** Automated dry run across all 12 fixtures matched `expected-plan.json` with 0 differences.
+- **Committed Revisions:**
+  - `File:Layers migration fixture A.png`: Revision 2086 (`Moved 2 shared layer sets into page history: "anatomy", "labels"`)
+  - `File:Layers migration fixture B.pdf`: Revision 2087 (`Moved 2 shared layer sets into page history: "notes", "notes (page 3)"`)
+  - `File:Layers migration fixture C.png`: 0 revisions (`set "old" page 1 not moved (earlier-file-version)`)
+  - `Layers migration fixture/Direct`: Revision 2088 (copied 4 drawings from File A and File B, rewrote direct embeds to `<pageId>:<name>`)
+  - `Layers migration fixture/Slides 1`: Revision 2089 (copied slide one, rewrote embed to `<pageId>:Layers_migration_fixture_slide_one`)
+  - `Layers migration fixture/Slides 2`: Revision 2090 (copied slide one, rewrote embed to `<pageId>:Layers_migration_fixture_slide_one`; kept spaced invalid slide unchanged)
+  - `Template:Layers migration fixture frame`: 0 revisions (`not changed (namespace-not-enabled)`)
+  - `Layers migration fixture/Template`: Revision 2091 (copied "anatomy" from File A; wikitext unchanged)
+  - `Layers migration fixture/Taken`: Revision 2092 (copied "anatomy 2" from File A; rewrote embed to `<pageId>:anatomy 2`)
+  - `Layers migration fixture/Uses C`: 0 revisions (`not moved (earlier-file-version)`)
+  - `Project:Layers migration fixture`: 0 revisions (`not changed (namespace-not-enabled)`, unchanged at rev 1999)
+  - `Slide:Layers migration fixture slide two`: Revision 2093 (created page) and Revision 2094 (copied slide two and rewrote embed to `{{#Slide:245:Layers_migration_fixture_slide_two}}`)
+- **API & Data Comparison Verification:**
+  - Bot flag, `layers-migration` and `layers-page-drawing` tags, revision comments, and wikitext rewrites validated for all committed revisions.
+  - Every embed's drawing data before and after migration compared via API `action=layersinfo` vs PagePublicationService snapshot. After normalizing layer object keys, every copied surface's layers strictly matched legacy data.
+  - **Drawing Data Finding:** On `Layers migration fixture/Direct` Embed 6 (`File B page 3`), legacy view displayed page 1 notes (`note_p1`) before migration because `ImageLinkProcessor::resolveLayerSetFromParam()` ignored `page=`. Post-migration correctly copies and displays page 3 notes (`note_p3`).
+- **Visual Diff Results (single threshold $\le 10\%$):**
+  - All 15 embeds tested passed within the single 10% threshold (`tolerance = 0.10`); largest difference across all embeds was **2.19%** (Direct: 0.00%–2.19%; Slides 1: 0.80%; Slides 2: 0.80% and 0.00%; Template frame: 0.00%; Template: 0.00%; Taken: 1.07%; Uses C: 0.00%; Project: 0.00%).
+  - `Slide:Layers migration fixture slide two` canvas verified painted with non-white pixels.
+- **Rerun Idempotency:** Rerun of all 12 committed commands verified zero remaining actions, zero errors, and zero new revisions created.
+Ready for lead review.
 
 **J90, J91 and J92 are accepted** with lead tightening (see the review ledger). The design of the migration (charter D3, HIST-8) is in the [binding plan](PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026). Steps 1 to 3 are implemented (see the [current status](CURRENT_STATUS.md)); undo, the completion record and the change of bare names are next for the lead. J93 builds the test wiki fixtures; J94 then runs the migration on them only. Earlier entries below are historical.
 

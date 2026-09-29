@@ -112,6 +112,25 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 		}, [ buf1.toString( 'base64' ), buf2.toString( 'base64' ) ] );
 	};
 
+	// Helper to normalize layer arrays for reliable drawing data comparison
+	const normalizeLayers = ( layers ) => {
+		if ( !Array.isArray( layers ) ) {
+			return layers;
+		}
+		return layers.map( ( l ) => {
+			const keys = Object.keys( l ).sort();
+			const sorted = {};
+			for ( const k of keys ) {
+				let val = l[ k ];
+				if ( [ 'x', 'y', 'width', 'height', 'fontSize' ].includes( k ) && val !== undefined ) {
+					val = Number( val );
+				}
+				sorted[ k ] = val;
+			}
+			return sorted;
+		} );
+	};
+
 	// Fixture definitions
 	const fixturePages = [
 		'Layers migration fixture/Direct',
@@ -145,6 +164,21 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	console.log( '\n=== Step 1: Pre-migration recording ===' );
 	const preMigrationData = {};
 
+	// Authoritative legacy drawing data fetched via API
+	const legacyLayersData = {};
+	const fAAnat = await api( { action: 'layersinfo', filename: 'Layers_migration_fixture_A.png', setname: 'anatomy' } );
+	legacyLayersData.fileA_anatomy = fAAnat.layersinfo?.layerset?.data?.layers || [];
+	const fALab = await api( { action: 'layersinfo', filename: 'Layers_migration_fixture_A.png', setname: 'labels' } );
+	legacyLayersData.fileA_labels = fALab.layersinfo?.layerset?.data?.layers || [];
+	const fBP1 = await api( { action: 'layersinfo', filename: 'Layers_migration_fixture_B.pdf', page: 1, setname: 'notes' } );
+	legacyLayersData.fileB_notes_p1 = fBP1.layersinfo?.layerset?.data?.layers || [];
+	const fBP3 = await api( { action: 'layersinfo', filename: 'Layers_migration_fixture_B.pdf', page: 3, setname: 'notes' } );
+	legacyLayersData.fileB_notes_p3 = fBP3.layersinfo?.layerset?.data?.layers || [];
+	const s1 = await api( { action: 'layersinfo', slidename: 'Layers_migration_fixture_slide_one' } );
+	legacyLayersData.slideOne = s1.layersinfo?.layerset?.data?.layers || [];
+	const s2 = await api( { action: 'layersinfo', slidename: 'Layers_migration_fixture_slide_two' } );
+	legacyLayersData.slideTwo = s2.layersinfo?.layerset?.data?.layers || [];
+
 	for ( const title of fixturePages ) {
 		// Read revision metadata and wikitext from API (fetch up to 10 revisions to locate pre-migration state)
 		const revQuery = await api( {
@@ -152,13 +186,14 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 			prop: 'info|revisions',
 			titles: title,
 			rvlimit: '10',
-			rvprop: 'ids|timestamp|user|comment|content',
+			rvprop: 'ids|timestamp|user|comment|content|tags',
 			rvslots: 'main'
 		} );
 		const pageData = revQuery.query.pages[ 0 ];
 		const revs = pageData.revisions;
-		// If page was already migrated by Layers migration, pre-migration revision is revs[1]
-		const isAlreadyMigrated = revs[ 0 ]?.user === 'Layers migration';
+		// If page was already migrated by Layers migration (without undo), pre-migration revision is revs[1]
+		const isAlreadyMigrated = revs[ 0 ]?.tags?.includes( 'layers-migration' ) &&
+			!revs[ 0 ]?.tags?.includes( 'layers-migration-undo' );
 		const preRev = isAlreadyMigrated ? revs[ 1 ] : revs[ 0 ];
 		const preRevId = preRev.revid;
 		const preText = preRev.slots.main.content;
@@ -169,6 +204,9 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 			`${ base }/index.php?title=${ encodeURIComponent( title ) }`;
 		await page.goto( visitUrl );
 		await page.waitForLoadState( 'networkidle' );
+		if ( title.includes( 'Slides' ) ) {
+			await page.evaluate( () => mw.loader.using( 'ext.layers' ) );
+		}
 		// Allow viewer scripts to settle
 		await page.waitForTimeout( 1500 );
 
@@ -176,7 +214,7 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 
 		// Record all embeds on this page
 		const embedLocators = [];
-		const figures = page.locator( '#mw-content-text figure' );
+		const figures = page.locator( '#mw-content-text figure:not(.ext-layers-historical-view)' );
 		const figureCount = await figures.count();
 		for ( let i = 0; i < figureCount; i++ ) {
 			embedLocators.push( { type: 'figure', locator: figures.nth( i ) } );
@@ -192,11 +230,45 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 			const item = embedLocators[ i ];
 			const shot = await item.locator.screenshot();
 			const hasCanvas = ( await item.locator.locator( 'canvas' ).count() ) > 0;
+
+			// Extract drawing data as presented on this embed pre-migration
+			let drawingData = null;
+			let embedInfo = {};
+			if ( item.type === 'figure' ) {
+				embedInfo = await item.locator.evaluate( ( el ) => {
+					const img = el.querySelector( 'img' );
+					const raw = img?.getAttribute( 'data-layer-data' );
+					const intent = img?.getAttribute( 'data-layers-intent' );
+					return { rawData: raw, intent };
+				} );
+				if ( embedInfo.rawData ) {
+					try {
+						drawingData = JSON.parse( embedInfo.rawData ).layers || null;
+					} catch ( e ) {
+						drawingData = null;
+					}
+				}
+			} else if ( item.type === 'slide' ) {
+				embedInfo = await item.locator.evaluate( ( el ) => {
+					return {
+						slideName: el.getAttribute( 'data-slide-name' ),
+						isError: el.classList.contains( 'layers-slide-error' )
+					};
+				} );
+				if ( embedInfo.slideName && !embedInfo.isError ) {
+					drawingData = embedInfo.slideName === 'Layers_migration_fixture_slide_one' ?
+						legacyLayersData.slideOne :
+						( embedInfo.slideName === 'Layers_migration_fixture_slide_two' ? legacyLayersData.slideTwo : null );
+				}
+			}
+
 			embedScreenshots.push( {
 				index: i,
 				type: item.type,
 				screenshot: shot,
-				hasCanvas
+				hasCanvas,
+				drawingData,
+				embedInfo
 			} );
 		}
 
@@ -229,9 +301,9 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 			const pattern = new RegExp(
 				exp
 					.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' )
-					.replace( /\\<legacyId\\>/g, '\\d+' )
-					.replace( /\\<rev\\>/g, '\\d+' )
-					.replace( /\\<pageId\\>/g, '\\d+' )
+					.replace( /<legacyId>/g, '\\d+' )
+					.replace( /<rev>/g, '\\d+' )
+					.replace( /<pageId>/g, '\\d+' )
 			);
 			if ( !pattern.test( out ) ) {
 				dryRunDifferences.push( {
@@ -266,8 +338,7 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	compareDryRun(
 		'Layers migration fixture/Direct',
 		'--page=Layers migration fixture/Direct',
-		expectedPlan.pages[ 'Layers migration fixture/Direct' ].expectedScriptOutput,
-		'In isolated --page dry-run before Step 1 commits, uncommitted files output (file-not-migrated)'
+		expectedPlan.pages[ 'Layers migration fixture/Direct' ].expectedScriptOutput
 	);
 	compareDryRun(
 		'Layers migration fixture/Slides 1',
@@ -287,20 +358,17 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	compareDryRun(
 		'Layers migration fixture/Template',
 		'--page=Layers migration fixture/Template',
-		expectedPlan.pages[ 'Layers migration fixture/Template' ].expectedScriptOutput,
-		'In isolated --page dry-run before Step 1 commits, uncommitted File A causes template embed to be skipped'
+		expectedPlan.pages[ 'Layers migration fixture/Template' ].expectedScriptOutput
 	);
 	compareDryRun(
 		'Layers migration fixture/Taken',
 		'--page=Layers migration fixture/Taken',
-		expectedPlan.pages[ 'Layers migration fixture/Taken' ].expectedScriptOutput,
-		'In isolated --page dry-run before Step 1 commits, uncommitted File A outputs (file-not-migrated)'
+		expectedPlan.pages[ 'Layers migration fixture/Taken' ].expectedScriptOutput
 	);
 	compareDryRun(
 		'Layers migration fixture/Uses C',
 		'--page=Layers migration fixture/Uses C',
-		expectedPlan.pages[ 'Layers migration fixture/Uses C' ].expectedScriptOutput,
-		'Lead finding: fileSource() returns null on sha1 mismatch without setting $reason, omitting from notMoved'
+		expectedPlan.pages[ 'Layers migration fixture/Uses C' ].expectedScriptOutput
 	);
 	compareDryRun(
 		'Project:Layers migration fixture',
@@ -312,13 +380,14 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	compareDryRun(
 		'Layers migration fixture slide two',
 		'--slide=Layers_migration_fixture_slide_two',
-		expectedPlan.slides[ 'Layers migration fixture slide two' ].expectedScriptOutput
+		expectedPlan.slides.Layers_migration_fixture_slide_two.expectedScriptOutput
 	);
 
 	console.log( `Dry run differences found: ${ dryRunDifferences.length }` );
 	for ( const diff of dryRunDifferences ) {
 		console.log( ` - [${ diff.fixture }]: ${ diff.notes || diff.expectedLine }` );
 	}
+	expect( dryRunDifferences ).toHaveLength( 0 );
 
 	// =========================================================================
 	// Step 3: Run with --commit in exact order
@@ -448,6 +517,10 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	expect( fileARev.comment ).toBe( 'Moved 2 shared layer sets into page history: "anatomy", "labels"' );
 	const fileASnapshot = JSON.parse( fileARev.slots.layers.content );
 	expect( fileASnapshot.surfaces.map( ( s ) => s.label ).sort() ).toEqual( [ 'anatomy', 'labels' ] );
+	expect( normalizeLayers( fileASnapshot.surfaces.find( ( s ) => s.label === 'anatomy' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_anatomy ) );
+	expect( normalizeLayers( fileASnapshot.surfaces.find( ( s ) => s.label === 'labels' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_labels ) );
 
 	// 2. File B
 	const fileBRev = ( await api( {
@@ -460,6 +533,10 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	expect( fileBRev.comment ).toBe( 'Moved 2 shared layer sets into page history: "notes", "notes (page 3)"' );
 	const fileBSnapshot = JSON.parse( fileBRev.slots.layers.content );
 	expect( fileBSnapshot.surfaces.map( ( s ) => s.label ).sort() ).toEqual( [ 'notes', 'notes (page 3)' ] );
+	expect( normalizeLayers( fileBSnapshot.surfaces.find( ( s ) => s.label === 'notes' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileB_notes_p1 ) );
+	expect( normalizeLayers( fileBSnapshot.surfaces.find( ( s ) => s.label === 'notes (page 3)' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileB_notes_p3 ) );
 
 	// 3. Direct
 	const directRev = ( await api( {
@@ -472,6 +549,14 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	const directSnapshot = JSON.parse( directRev.slots.layers.content );
 	expect( directSnapshot.surfaces.map( ( s ) => s.label ).sort() )
 		.toEqual( [ 'anatomy', 'labels', 'notes', 'notes (page 3)' ] );
+	expect( normalizeLayers( directSnapshot.surfaces.find( ( s ) => s.label === 'anatomy' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_anatomy ) );
+	expect( normalizeLayers( directSnapshot.surfaces.find( ( s ) => s.label === 'labels' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_labels ) );
+	expect( normalizeLayers( directSnapshot.surfaces.find( ( s ) => s.label === 'notes' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileB_notes_p1 ) );
+	expect( normalizeLayers( directSnapshot.surfaces.find( ( s ) => s.label === 'notes (page 3)' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileB_notes_p3 ) );
 	// Embeds rewritten
 	const directPageId = preMigrationData[ 'Layers migration fixture/Direct' ].pageId;
 	expect( directRev.slots.main.content ).toContain( `layerset=${ directPageId }:anatomy` );
@@ -489,7 +574,11 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 		rvslots: '*'
 	} ) ).query.pages[ 0 ].revisions[ 0 ];
 	const slides1PageId = preMigrationData[ 'Layers migration fixture/Slides 1' ].pageId;
-	expect( slides1Rev.slots.main.content ).toBe( `{{#Slide:${ slides1PageId }:Layers migration fixture slide one}}` );
+	expect( slides1Rev.slots.main.content ).toBe( `{{#Slide:${ slides1PageId }:Layers_migration_fixture_slide_one}}` );
+	const slides1Snapshot = JSON.parse( slides1Rev.slots.layers.content );
+	expect( slides1Snapshot.surfaces.map( ( s ) => s.label ) ).toEqual( [ 'Layers_migration_fixture_slide_one' ] );
+	expect( normalizeLayers( slides1Snapshot.surfaces[ 0 ].layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.slideOne ) );
 
 	// 5. Slides 2
 	const slides2Rev = ( await api( {
@@ -500,7 +589,13 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 		rvslots: '*'
 	} ) ).query.pages[ 0 ].revisions[ 0 ];
 	const slides2PageId = preMigrationData[ 'Layers migration fixture/Slides 2' ].pageId;
-	expect( slides2Rev.slots.main.content ).toBe( `{{#Slide:${ slides2PageId }:Layers migration fixture slide one}}` );
+	expect( slides2Rev.slots.main.content ).toBe(
+		`{{#Slide:${ slides2PageId }:Layers_migration_fixture_slide_one}}\n{{#Slide:Layers migration fixture invalid spaced slide}}`
+	);
+	const slides2Snapshot = JSON.parse( slides2Rev.slots.layers.content );
+	expect( slides2Snapshot.surfaces.map( ( s ) => s.label ) ).toEqual( [ 'Layers_migration_fixture_slide_one' ] );
+	expect( normalizeLayers( slides2Snapshot.surfaces[ 0 ].layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.slideOne ) );
 
 	// 6. Template consumer
 	const templateRev = ( await api( {
@@ -512,6 +607,8 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	} ) ).query.pages[ 0 ].revisions[ 0 ];
 	const templateSnapshot = JSON.parse( templateRev.slots.layers.content );
 	expect( templateSnapshot.surfaces.map( ( s ) => s.label ) ).toEqual( [ 'anatomy' ] );
+	expect( normalizeLayers( templateSnapshot.surfaces[ 0 ].layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_anatomy ) );
 	expect( templateRev.slots.main.content ).toBe( '{{Layers migration fixture frame}}' ); // wikitext untouched
 
 	// 7. Taken
@@ -524,6 +621,8 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	} ) ).query.pages[ 0 ].revisions[ 0 ];
 	const takenSnapshot = JSON.parse( takenRev.slots.layers.content );
 	expect( takenSnapshot.surfaces.map( ( s ) => s.label ).sort() ).toEqual( [ 'anatomy', 'anatomy 2' ] );
+	expect( normalizeLayers( takenSnapshot.surfaces.find( ( s ) => s.label === 'anatomy 2' ).layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.fileA_anatomy ) );
 	const takenPageId = preMigrationData[ 'Layers migration fixture/Taken' ].pageId;
 	expect( takenRev.slots.main.content ).toContain( `layerset=${ takenPageId }:anatomy 2` );
 
@@ -539,17 +638,32 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 	expect( slideTwoRev.slots.main.content ).toBe( `{{#Slide:${ slideTwoPageId }:Layers_migration_fixture_slide_two}}` );
 	const slideTwoSnapshot = JSON.parse( slideTwoRev.slots.layers.content );
 	expect( slideTwoSnapshot.surfaces.map( ( s ) => s.label ) ).toEqual( [ 'Layers_migration_fixture_slide_two' ] );
+	expect( normalizeLayers( slideTwoSnapshot.surfaces[ 0 ].layers ) )
+		.toEqual( normalizeLayers( legacyLayersData.slideTwo ) );
 
 	// =========================================================================
-	// Step 5: Post-migration visual verification
+	// Step 5: Post-migration visual verification & embed drawing data comparison
 	// =========================================================================
-	console.log( '\n=== Step 5: Post-migration visual verification ===' );
+	console.log( '\n=== Step 5: Post-migration visual & drawing data verification ===' );
 	let maxDiffRatio = 0.0;
 	let comparedEmbedCount = 0;
+	const drawingDataFindings = [];
+
+	// Map of page titles to their committed revision slot layers surfaces
+	const postMigrationSurfaces = {
+		'Layers migration fixture/Direct': directSnapshot.surfaces,
+		'Layers migration fixture/Slides 1': slides1Snapshot.surfaces,
+		'Layers migration fixture/Slides 2': slides2Snapshot.surfaces,
+		'Layers migration fixture/Template': templateSnapshot.surfaces,
+		'Layers migration fixture/Taken': takenSnapshot.surfaces
+	};
 
 	for ( const title of fixturePages ) {
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( title ) }` );
 		await page.waitForLoadState( 'networkidle' );
+		if ( title.includes( 'Slides' ) ) {
+			await page.evaluate( () => mw.loader.using( 'ext.layers' ) );
+		}
 		await page.waitForTimeout( 1500 );
 
 		const pre = preMigrationData[ title ];
@@ -562,7 +676,7 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 
 		// Re-fetch embed locators
 		const embedLocators = [];
-		const figures = page.locator( '#mw-content-text figure' );
+		const figures = page.locator( '#mw-content-text figure:not(.ext-layers-historical-view)' );
 		const figureCount = await figures.count();
 		for ( let i = 0; i < figureCount; i++ ) {
 			embedLocators.push( { type: 'figure', locator: figures.nth( i ) } );
@@ -573,23 +687,15 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 			embedLocators.push( { type: 'slide', locator: slideElements.nth( i ) } );
 		}
 
+		const surfacesForPage = postMigrationSurfaces[ title ] || [];
+
 		for ( let i = 0; i < embedLocators.length; i++ ) {
 			const item = embedLocators[ i ];
 			const postShot = await item.locator.screenshot();
 			const preEmbed = pre.embeds[ i ];
 
-			// Compare screenshot with pre-migration screenshot
+			// 1. Screenshot comparison (single threshold: <= 10%)
 			if ( preEmbed ) {
-				if ( item.type === 'slide' && title.includes( 'Slides' ) ) {
-					// Slides 1 and 2 had an error banner pre-migration due to legacy SlideNameValidator rejecting spaces;
-					// post-migration they render .layers-bound-slide with a painted canvas.
-					const slideBound = item.locator;
-					await expect( slideBound ).toBeVisible();
-					const slideCanvas = slideBound.locator( 'canvas' );
-					await expect( slideCanvas ).toBeVisible();
-					console.log( `Embed ${ title } [${ i }]: slide error transitioned to painted page-owned drawing as expected` );
-					continue;
-				}
 				const diff = await comparePngBuffers( preEmbed.screenshot, postShot );
 				comparedEmbedCount++;
 				if ( diff.diffRatio > maxDiffRatio ) {
@@ -598,8 +704,79 @@ test( 'migration steps 1 to 3 acceptance on seeded fixtures (HIST-8)', async ( {
 				console.log( `Embed ${ title } [${ i }]: diff ${( diff.diffRatio * 100 ).toFixed( 2 ) }% (${ diff.diffPixels } / ${ diff.totalPixels } px)` );
 				expect( diff.match ).toBe( true );
 			}
+
+			// 2. Drawing data comparison
+			let postDrawingData = null;
+			if ( item.type === 'figure' ) {
+				const postInfo = await item.locator.evaluate( ( el ) => {
+					const canvas = el.querySelector( 'canvas.ext-layers-historical-canvas' );
+					const ariaLabel = canvas?.getAttribute( 'aria-label' );
+					const label = ariaLabel?.includes( '—' ) ? ariaLabel.split( '—' )[ 1 ].trim() : null;
+					const rawData = el.querySelector( 'img' )?.getAttribute( 'data-layer-data' );
+					return { label, rawData };
+				} );
+
+				if ( postInfo.label ) {
+					const matchedSurface = surfacesForPage.find( ( s ) => s.label === postInfo.label );
+					postDrawingData = matchedSurface?.layers || null;
+				} else if ( postInfo.rawData ) {
+					try {
+						postDrawingData = JSON.parse( postInfo.rawData ).layers || null;
+					} catch ( e ) {
+						postDrawingData = null;
+					}
+				}
+			} else if ( item.type === 'slide' ) {
+				const postSlideInfo = await item.locator.evaluate( ( el ) => {
+					const canvas = el.querySelector( 'canvas.ext-layers-historical-canvas' );
+					const ariaLabel = canvas?.getAttribute( 'aria-label' );
+					const label = ariaLabel?.includes( '—' ) ? ariaLabel.split( '—' )[ 1 ].trim() : null;
+					const binding = el.getAttribute( 'data-layers-binding' );
+					const isError = el.classList.contains( 'layers-slide-error' );
+					return { label, binding, isError };
+				} );
+				if ( postSlideInfo.label || postSlideInfo.binding ) {
+					const surfaceId = postSlideInfo.binding ? postSlideInfo.binding.split( ':' ).pop() : null;
+					const matchedSurface = surfacesForPage.find( ( s ) =>
+						( postSlideInfo.label && s.label === postSlideInfo.label ) ||
+						( surfaceId && s.id === surfaceId )
+					);
+					postDrawingData = matchedSurface?.layers || null;
+				}
+			}
+
+			// Compare pre-migration embed drawing data vs post-migration embed drawing data
+			const preLayersNorm = normalizeLayers( preEmbed?.drawingData );
+			const postLayersNorm = normalizeLayers( postDrawingData );
+
+			const isSameData = JSON.stringify( preLayersNorm ) === JSON.stringify( postLayersNorm );
+			if ( !isSameData ) {
+				const finding = {
+					page: title,
+					embedIndex: i,
+					preLayers: preLayersNorm,
+					postLayers: postLayersNorm,
+					reason: ''
+				};
+				if ( title === 'Layers migration fixture/Direct' && i === 6 ) {
+					finding.reason = 'File B page 3 PDF embed: pre-migration legacy view incorrectly displayed page 1 notes (note_p1) due to ImageLinkProcessor::resolveLayerSetFromParam() ignoring page=; post-migration correctly displays page 3 notes (note_p3).';
+					expect( postLayersNorm ).toEqual( normalizeLayers( legacyLayersData.fileB_notes_p3 ) );
+				} else {
+					finding.reason = 'Unexpected drawing data mismatch';
+				}
+				drawingDataFindings.push( finding );
+				console.log( `Embed ${ title } [${ i }] DRAWING DATA FINDING: ${ finding.reason }` );
+			} else {
+				console.log( `Embed ${ title } [${ i }]: drawing data matches (${ postLayersNorm ? postLayersNorm.length + ' layer(s)' : 'no drawing' })` );
+			}
 		}
 	}
+
+	// Verify that the only drawing data difference across all embeds is the known PDF page= finding
+	expect( drawingDataFindings ).toHaveLength( 1 );
+	expect( drawingDataFindings[ 0 ].page ).toBe( 'Layers migration fixture/Direct' );
+	expect( drawingDataFindings[ 0 ].embedIndex ).toBe( 6 );
+	expect( drawingDataFindings[ 0 ].reason ).toContain( 'File B page 3 PDF embed' );
 
 	// Verify Slide:Layers migration fixture slide two in browser
 	await page.goto( `${ base }/index.php?title=${ encodeURIComponent( 'Slide:Layers migration fixture slide two' ) }` );

@@ -23,6 +23,56 @@
 /* eslint-env node */
 const fs = require( 'fs' );
 const path = require( 'path' );
+const zlib = require( 'zlib' );
+
+/**
+ * Generate a valid, uncompressed truecolor PNG buffer without external dependencies.
+ *
+ * @param {number} width
+ * @param {number} height
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @return {Buffer}
+ */
+function makePng( width, height, r, g, b ) {
+	const chunk = ( type, data ) => {
+		const typeBuf = Buffer.from( type, 'ascii' );
+		const lenBuf = Buffer.alloc( 4 );
+		lenBuf.writeUInt32BE( data.length, 0 );
+		const crcVal = zlib.crc32( Buffer.concat( [ typeBuf, data ] ) );
+		const crcBuf = Buffer.alloc( 4 );
+		crcBuf.writeUInt32BE( crcVal, 0 );
+		return Buffer.concat( [ lenBuf, typeBuf, data, crcBuf ] );
+	};
+	const scanlineLen = 1 + width * 3;
+	const rawData = Buffer.alloc( height * scanlineLen );
+	for ( let y = 0; y < height; y++ ) {
+		const rowOffset = y * scanlineLen;
+		rawData[ rowOffset ] = 0;
+		for ( let x = 0; x < width; x++ ) {
+			const pxOffset = rowOffset + 1 + x * 3;
+			rawData[ pxOffset ] = r;
+			rawData[ pxOffset + 1 ] = g;
+			rawData[ pxOffset + 2 ] = b;
+		}
+	}
+	const ihdr = Buffer.alloc( 13 );
+	ihdr.writeUInt32BE( width, 0 );
+	ihdr.writeUInt32BE( height, 4 );
+	ihdr[ 8 ] = 8;
+	ihdr[ 9 ] = 2; // RGB
+	ihdr[ 10 ] = 0;
+	ihdr[ 11 ] = 0;
+	ihdr[ 12 ] = 0;
+	const idat = zlib.deflateSync( rawData );
+	return Buffer.concat( [
+		Buffer.from( [ 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a ] ),
+		chunk( 'IHDR', ihdr ),
+		chunk( 'IDAT', idat ),
+		chunk( 'IEND', Buffer.alloc( 0 ) )
+	] );
+}
 
 /**
  * Generate a valid, uncompressed multipage PDF buffer without external dependencies.
@@ -155,7 +205,7 @@ class MigrationFixtureSeeder {
 			action: 'query',
 			titles: `File:${ filename }`,
 			prop: 'imageinfo',
-			iiprop: 'timestamp|sha1|size',
+			iiprop: 'timestamp|sha1|size|dimensions',
 			iilimit: '5'
 		} );
 		const page = Object.values( res.query.pages )[ 0 ];
@@ -291,25 +341,27 @@ class MigrationFixtureSeeder {
 	}
 
 	async seed() {
-		console.log( 'Starting J93 migration fixture seeding on test wiki...' );
+		console.log( 'Starting J95 migration fixture seeding on test wiki...' );
 		await this.login();
 		console.log( `Authenticated as ${ this.username } (CSRF token acquired).` );
 
-		const repoRoot = path.resolve( __dirname, '../../..' );
-		const bluePngBytes = fs.readFileSync( path.join( repoRoot, 'tests/fixtures/assets/test-image.png' ) );
-		const orangePngBytes = fs.readFileSync( path.join( repoRoot, 'tests/fixtures/assets/test-image-replacement.png' ) );
+		const png400x300A = makePng( 400, 300, 32, 96, 192 );
+		const png400x300Cv1 = makePng( 400, 300, 32, 192, 96 );
+		const png400x300Cv2 = makePng( 400, 300, 220, 100, 30 );
 
 		// ---------------------------------------------------------------------
-		// 1. File A: Layers migration fixture A.png
+		// 1. File A: Layers migration fixture A.png (>= 400x300)
 		// Sets: anatomy (page 1), labels (page 1, 3 revisions, saved last)
 		// ---------------------------------------------------------------------
 		console.log( '\n--- Fixture A: Layers migration fixture A.png ---' );
 		const fileAInfo = await this.checkFile( 'Layers migration fixture A.png' );
-		if ( !fileAInfo ) {
-			console.log( 'Uploading Layers migration fixture A.png...' );
-			await this.uploadFile( 'Layers migration fixture A.png', bluePngBytes, 'image/png', 'J93: upload fixture A' );
+		const needUploadA = !fileAInfo || fileAInfo.length === 0 ||
+			fileAInfo[ 0 ].width < 400 || fileAInfo[ 0 ].height < 300;
+		if ( needUploadA ) {
+			console.log( 'Uploading 400x300 Layers migration fixture A.png...' );
+			await this.uploadFile( 'Layers migration fixture A.png', png400x300A, 'image/png', 'J95: upload 400x300 fixture A' );
 		} else {
-			console.log( 'Layers migration fixture A.png already uploaded.' );
+			console.log( 'Layers migration fixture A.png already 400x300.' );
 		}
 
 		const infoA = await this.getLayersInfo( { filename: 'Layers_migration_fixture_A.png' } );
@@ -317,22 +369,22 @@ class MigrationFixtureSeeder {
 		const anatomyA = namedA.find( ( s ) => s.name === 'anatomy' );
 		const labelsA = namedA.find( ( s ) => s.name === 'labels' );
 
-		if ( !anatomyA ) {
+		if ( !anatomyA || needUploadA ) {
 			console.log( 'Saving set "anatomy" on Layers migration fixture A.png...' );
 			const id = await this.saveLayerSet( 'Layers migration fixture A.png', 'anatomy', 1, [
-				{ id: 'layer_anatomy', type: 'text', x: 10, y: 20, text: 'Fixture A anatomy', fontSize: 14, color: '#000000' }
+				{ id: 'layer_anatomy', type: 'text', x: 50, y: 50, text: 'Fixture A anatomy', fontSize: 16, color: '#000000' }
 			] );
 			console.log( `Saved anatomy: row ${ id }` );
 		} else {
 			console.log( 'Set "anatomy" already present on fixture A.' );
 		}
 
-		const currentLabelsRevCount = labelsA?.revision_count || 0;
+		const currentLabelsRevCount = needUploadA ? 0 : ( labelsA?.revision_count || 0 );
 		if ( currentLabelsRevCount < 3 ) {
 			for ( let r = currentLabelsRevCount + 1; r <= 3; r++ ) {
 				console.log( `Saving set "labels" revision ${ r } on Layers migration fixture A.png...` );
 				const id = await this.saveLayerSet( 'Layers migration fixture A.png', 'labels', 1, [
-					{ id: 'layer_labels', type: 'text', x: 10 * r, y: 20 * r, text: `Fixture A labels v${ r }`, fontSize: 14, color: '#000000' }
+					{ id: 'layer_labels', type: 'text', x: 50, y: 120, text: `Fixture A labels v${ r }`, fontSize: 16, color: '#000000' }
 				] );
 				console.log( `Saved labels v${ r }: row ${ id }` );
 			}
@@ -347,33 +399,35 @@ class MigrationFixtureSeeder {
 		if ( finalLabels && finalAnatomy && finalLabels.latest_timestamp < finalAnatomy.latest_timestamp ) {
 			console.log( 'Re-saving labels to ensure it was saved last...' );
 			await this.saveLayerSet( 'Layers migration fixture A.png', 'labels', 1, [
-				{ id: 'layer_labels', type: 'text', x: 40, y: 80, text: 'Fixture A labels v3', fontSize: 14, color: '#000000' }
+				{ id: 'layer_labels', type: 'text', x: 50, y: 120, text: 'Fixture A labels v3', fontSize: 16, color: '#000000' }
 			] );
 		}
 
 		// ---------------------------------------------------------------------
-		// 2. File B: Layers migration fixture B.pdf
+		// 2. File B: Layers migration fixture B.pdf (>= 400x300)
 		// 3-page PDF with set notes on pages 1 and 3 only
 		// ---------------------------------------------------------------------
 		console.log( '\n--- Fixture B: Layers migration fixture B.pdf ---' );
 		const fileBInfo = await this.checkFile( 'Layers migration fixture B.pdf' );
-		if ( !fileBInfo ) {
-			console.log( 'Generating and uploading 3-page PDF Layers migration fixture B.pdf...' );
+		const needUploadB = !fileBInfo || fileBInfo.length === 0 ||
+			fileBInfo[ 0 ].width < 400 || fileBInfo[ 0 ].height < 300;
+		if ( needUploadB ) {
+			console.log( 'Generating and uploading 600x400 3-page PDF Layers migration fixture B.pdf...' );
 			const pdf3PageBytes = generateMultipagePdf( [
-				{ width: 200, height: 100, label: 'Page 1' },
-				{ width: 200, height: 100, label: 'Page 2' },
-				{ width: 200, height: 100, label: 'Page 3' }
+				{ width: 600, height: 400, label: 'Page 1' },
+				{ width: 600, height: 400, label: 'Page 2' },
+				{ width: 600, height: 400, label: 'Page 3' }
 			] );
-			await this.uploadFile( 'Layers migration fixture B.pdf', pdf3PageBytes, 'application/pdf', 'J93: upload fixture B 3-page PDF' );
+			await this.uploadFile( 'Layers migration fixture B.pdf', pdf3PageBytes, 'application/pdf', 'J95: upload 600x400 fixture B 3-page PDF' );
 		} else {
-			console.log( 'Layers migration fixture B.pdf already uploaded.' );
+			console.log( 'Layers migration fixture B.pdf already uploaded and >= 400x300.' );
 		}
 
 		const infoBp1 = await this.getLayersInfo( { filename: 'Layers_migration_fixture_B.pdf', page: '1' } );
-		if ( !infoBp1?.layerset || infoBp1.layerset.name !== 'notes' ) {
+		if ( !infoBp1?.layerset || infoBp1.layerset.name !== 'notes' || needUploadB ) {
 			console.log( 'Saving set "notes" on page 1 of Layers migration fixture B.pdf...' );
 			const id = await this.saveLayerSet( 'Layers migration fixture B.pdf', 'notes', 1, [
-				{ id: 'note_p1', type: 'text', x: 20, y: 30, text: 'Fixture B page 1 notes', fontSize: 14, color: '#000000' }
+				{ id: 'note_p1', type: 'text', x: 50, y: 60, text: 'Fixture B page 1 notes', fontSize: 16, color: '#000000' }
 			] );
 			console.log( `Saved page 1 notes: row ${ id }` );
 		} else {
@@ -381,10 +435,10 @@ class MigrationFixtureSeeder {
 		}
 
 		const infoBp3 = await this.getLayersInfo( { filename: 'Layers_migration_fixture_B.pdf', page: '3' } );
-		if ( !infoBp3?.layerset || infoBp3.layerset.name !== 'notes' ) {
+		if ( !infoBp3?.layerset || infoBp3.layerset.name !== 'notes' || needUploadB ) {
 			console.log( 'Saving set "notes" on page 3 of Layers migration fixture B.pdf...' );
 			const id = await this.saveLayerSet( 'Layers migration fixture B.pdf', 'notes', 3, [
-				{ id: 'note_p3', type: 'text', x: 20, y: 30, text: 'Fixture B page 3 notes', fontSize: 14, color: '#000000' }
+				{ id: 'note_p3', type: 'text', x: 50, y: 120, text: 'Fixture B page 3 notes', fontSize: 16, color: '#000000' }
 			] );
 			console.log( `Saved page 3 notes: row ${ id }` );
 		} else {
@@ -398,28 +452,24 @@ class MigrationFixtureSeeder {
 		}
 
 		// ---------------------------------------------------------------------
-		// 3. File C: Layers migration fixture C.png
+		// 3. File C: Layers migration fixture C.png (>= 400x300)
 		// Version 1 has set old; version 2 (different image) has no sets
 		// ---------------------------------------------------------------------
 		console.log( '\n--- Fixture C: Layers migration fixture C.png ---' );
 		const fileCInfo = await this.checkFile( 'Layers migration fixture C.png' );
-		if ( !fileCInfo || fileCInfo.length === 0 ) {
-			console.log( 'Uploading version 1 of Layers migration fixture C.png...' );
-			await this.uploadFile( 'Layers migration fixture C.png', bluePngBytes, 'image/png', 'J93: seed fixture C v1' );
+		const needUploadC = !fileCInfo || fileCInfo.length < 2 ||
+			fileCInfo[ 0 ].width < 400 || fileCInfo[ 0 ].height < 300;
+		if ( needUploadC ) {
+			console.log( 'Uploading 400x300 version 1 of Layers migration fixture C.png...' );
+			await this.uploadFile( 'Layers migration fixture C.png', png400x300Cv1, 'image/png', 'J95: seed fixture C v1 400x300' );
 			console.log( 'Saving set "old" on version 1 of Layers migration fixture C.png...' );
 			await this.saveLayerSet( 'Layers migration fixture C.png', 'old', 1, [
-				{ id: 'note_old', type: 'text', x: 15, y: 25, text: 'Fixture C old', fontSize: 14, color: '#000000' }
+				{ id: 'note_old', type: 'text', x: 50, y: 50, text: 'Fixture C old', fontSize: 16, color: '#000000' }
 			] );
-			console.log( 'Uploading version 2 (replacement image) of Layers migration fixture C.png...' );
-			await this.uploadFile( 'Layers migration fixture C.png', orangePngBytes, 'image/png', 'J93: seed fixture C v2' );
-		} else if ( fileCInfo.length === 1 ) {
-			console.log( 'File C has only 1 revision. Saving set "old" and uploading replacement...' );
-			await this.saveLayerSet( 'Layers migration fixture C.png', 'old', 1, [
-				{ id: 'note_old', type: 'text', x: 15, y: 25, text: 'Fixture C old', fontSize: 14, color: '#000000' }
-			] );
-			await this.uploadFile( 'Layers migration fixture C.png', orangePngBytes, 'image/png', 'J93: seed fixture C v2' );
+			console.log( 'Uploading 400x300 version 2 (replacement image) of Layers migration fixture C.png...' );
+			await this.uploadFile( 'Layers migration fixture C.png', png400x300Cv2, 'image/png', 'J95: seed fixture C v2 400x300' );
 		} else {
-			console.log( 'Layers migration fixture C.png already has multiple revisions.' );
+			console.log( 'Layers migration fixture C.png already has multiple revisions and >= 400x300.' );
 		}
 
 		// ---------------------------------------------------------------------
@@ -431,7 +481,7 @@ class MigrationFixtureSeeder {
 		if ( !slideOneInfo?.layerset ) {
 			console.log( 'Saving shared slide Layers_migration_fixture_slide_one...' );
 			const id = await this.saveSlide( 'Layers_migration_fixture_slide_one', 'default', {
-				layers: [ { id: 'slide_1_text', type: 'text', x: 40, y: 60, text: 'Fixture slide one text', fontSize: 20, color: '#000000' } ],
+				layers: [ { id: 'slide_1_text', type: 'text', x: 100, y: 100, text: 'Fixture slide one text', fontSize: 24, color: '#000088' } ],
 				canvasWidth: 800,
 				canvasHeight: 600,
 				backgroundColor: '#ffffff'
@@ -445,7 +495,7 @@ class MigrationFixtureSeeder {
 		if ( !slideTwoInfo?.layerset ) {
 			console.log( 'Saving shared slide Layers_migration_fixture_slide_two...' );
 			const id = await this.saveSlide( 'Layers_migration_fixture_slide_two', 'default', {
-				layers: [ { id: 'slide_2_text', type: 'text', x: 50, y: 70, text: 'Fixture slide two text', fontSize: 22, color: '#000000' } ],
+				layers: [ { id: 'slide_2_text', type: 'text', x: 100, y: 100, text: 'Fixture slide two text', fontSize: 24, color: '#880000' } ],
 				canvasWidth: 800,
 				canvasHeight: 600,
 				backgroundColor: '#ffffff'
@@ -465,7 +515,7 @@ class MigrationFixtureSeeder {
 		const templatePage = await this.getPage( 'Template:Layers migration fixture frame' );
 		if ( !templatePage || templatePage.main.trim() !== templateText.trim() ) {
 			console.log( 'Creating/updating Template:Layers migration fixture frame...' );
-			await this.editPage( 'Template:Layers migration fixture frame', templateText, 'J93 seed template' );
+			await this.editPage( 'Template:Layers migration fixture frame', templateText, 'J95 seed template' );
 		} else {
 			console.log( 'Template:Layers migration fixture frame already expected.' );
 		}
@@ -475,7 +525,7 @@ class MigrationFixtureSeeder {
 		const templateConsumerPage = await this.getPage( 'Layers migration fixture/Template' );
 		if ( !templateConsumerPage || templateConsumerPage.main.trim() !== templateConsumerText.trim() ) {
 			console.log( 'Creating/updating Layers migration fixture/Template...' );
-			await this.editPage( 'Layers migration fixture/Template', templateConsumerText, 'J93 seed template consumer' );
+			await this.editPage( 'Layers migration fixture/Template', templateConsumerText, 'J95 seed template consumer' );
 		} else {
 			console.log( 'Layers migration fixture/Template already expected.' );
 		}
@@ -494,29 +544,32 @@ class MigrationFixtureSeeder {
 		const directPage = await this.getPage( 'Layers migration fixture/Direct' );
 		if ( !directPage || directPage.main.trim() !== directText.trim() ) {
 			console.log( 'Creating/updating Layers migration fixture/Direct...' );
-			await this.editPage( 'Layers migration fixture/Direct', directText, 'J93 seed direct page' );
+			await this.editPage( 'Layers migration fixture/Direct', directText, 'J95 seed direct page' );
 		} else {
 			console.log( 'Layers migration fixture/Direct already expected.' );
 		}
 		await this.purgePage( 'Layers migration fixture/Direct' );
 
 		// Layers migration fixture/Slides 1
-		const slides1Text = '{{#Slide:Layers migration fixture slide one}}';
+		const slides1Text = '{{#Slide:Layers_migration_fixture_slide_one}}';
 		const slides1Page = await this.getPage( 'Layers migration fixture/Slides 1' );
 		if ( !slides1Page || slides1Page.main.trim() !== slides1Text.trim() ) {
 			console.log( 'Creating/updating Layers migration fixture/Slides 1...' );
-			await this.editPage( 'Layers migration fixture/Slides 1', slides1Text, 'J93 seed Slides 1' );
+			await this.editPage( 'Layers migration fixture/Slides 1', slides1Text, 'J95 seed Slides 1' );
 		} else {
 			console.log( 'Layers migration fixture/Slides 1 already expected.' );
 		}
 		await this.purgePage( 'Layers migration fixture/Slides 1' );
 
-		// Layers migration fixture/Slides 2
-		const slides2Text = '{{#Slide:Layers migration fixture slide one}}';
+		// Layers migration fixture/Slides 2 (includes valid slide one and deliberately invalid spaced slide)
+		const slides2Text = [
+			'{{#Slide:Layers_migration_fixture_slide_one}}',
+			'{{#Slide:Layers migration fixture invalid spaced slide}}'
+		].join( '\n' );
 		const slides2Page = await this.getPage( 'Layers migration fixture/Slides 2' );
 		if ( !slides2Page || slides2Page.main.trim() !== slides2Text.trim() ) {
 			console.log( 'Creating/updating Layers migration fixture/Slides 2...' );
-			await this.editPage( 'Layers migration fixture/Slides 2', slides2Text, 'J93 seed Slides 2' );
+			await this.editPage( 'Layers migration fixture/Slides 2', slides2Text, 'J95 seed Slides 2' );
 		} else {
 			console.log( 'Layers migration fixture/Slides 2 already expected.' );
 		}
