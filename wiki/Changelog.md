@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Drawings in page history are on by default (September 29): `$wgLayersPageDrawingNamespaces` (default: content namespaces and `File:`) replaces the retired `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces`; pages that own drawings always keep them.
+
 - Copying another page's drawing (pilot, September 29): an embed naming another page's drawing offers editors "Copy … to this page"; the copy becomes a new drawing of this page and its revision summary names the source page and revision.
 
 - New drawings from embeds (pilot, September 29): an embed naming a drawing its page does not have yet offers editors "Create page drawing"; the first save adds it.

@@ -19,8 +19,7 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  */
 class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 	public function testNamedSlideShowsThePageDrawingOfThatNameOnly(): void {
-		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ 'BoundSlideNamed' ] ] );
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$page = $this->getExistingTestPage( 'BoundSlideNamed' );
 		$title = $page->getTitle();
@@ -40,7 +39,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( 'data-layers-binding="' . $binding . '"', $parsed->getRawText() );
 		$this->assertSame( $revisionId,
 			$parsed->getExtensionData( BoundSlideHooks::DATA_KEY )[$binding]['revisionId'] );
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
 		// The link names the drawing, not the `<pageId>:<name>` reference written in the page.
@@ -67,8 +66,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 	}
 
 	public function testParserCachesOnlyIdentityAndOutputReadsExactAuthorizedRevision(): void {
-		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ 'BoundSlideAcceptance' ] ] );
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$s = $this->getServiceContainer();
 		$page = $this->getExistingTestPage( 'BoundSlideAcceptance' );
@@ -95,7 +93,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$unsaved = $s->getParserFactory()->create()->parse( $text, $title, ParserOptions::newFromAnon() );
 		$this->assertStringNotContainsString( 'layers-bound-slide', $unsaved->getRawText() );
 		$this->assertTrue( $unsaved->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
-		$pilot = new PageOwnedPilot( $s, true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $s, [ $title->getPrefixedDBkey() ] );
 		$context = new RequestContext();
 		$context->setTitle( $title );
 		$context->setUser( $actor );
@@ -156,8 +154,6 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$mismatch->setRevisionId( $second );
 		BoundSlideHooks::output( $mismatch, $parsed, $pilot );
 		$this->assertNotContains( 'ext.layers.history', $mismatch->getModules() );
-		$this->assertSame( [], ( new PageOwnedPilot( $s, false, [ $title->getPrefixedDBkey() ] ) )
-			->prepareBoundViewers( $title, $first, [ $binding ], $actor ) );
 		$this->assertSame( $before, json_encode( $parsed->toJsonArray() ) );
 		$deniedAuthority = $this->createMock( \MediaWiki\Permissions\Authority::class );
 		$deniedAuthority->method( 'authorizeRead' )->willReturn( false );
@@ -169,8 +165,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 	 * and a save cannot introduce content the historical viewer would refuse to draw.
 	 */
 	public function testRealisticPageKeepsEditEntriesAndSavesEveryLayerType(): void {
-		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ 'BoundSlideRealistic' ] ] );
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$s = $this->getServiceContainer();
 		$page = $this->getExistingTestPage( 'BoundSlideRealistic' );
@@ -188,7 +183,7 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 			"<div class=\"box\">{{#Slide:Appendix|layersbinding=$second}}</div>\n== Notes ==\n<references />";
 		$revision = $registered['publisher']->publish( $title, $actor, $page->getLatest(), json_encode( $document ),
 			'Bind two slides', new WikitextContent( $text ), $page->getId() );
-		$pilot = new PageOwnedPilot( $s, true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $s, [ $title->getPrefixedDBkey() ] );
 
 		$entries = $pilot->listBoundEditorSelections( $page->getId(), $revision, $actor );
 		$this->assertSame( [ 'Demo', 'Appendix' ], array_column( $entries, 'label' ) );

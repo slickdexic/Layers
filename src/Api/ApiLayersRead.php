@@ -17,7 +17,6 @@ use Wikimedia\Rdbms\IDBAccessObject;
 class ApiLayersRead extends ApiBase {
 	private PageReadService $reader;
 	private TitleFactory $titles;
-	private bool $enabled;
 	private ?PageOwnedScope $scope;
 	/** @var callable|null (Title, int, string[], Authority): array Authorized bound surfaces keyed by binding */
 	private $boundReader;
@@ -28,19 +27,17 @@ class ApiLayersRead extends ApiBase {
 	 * @param string $name
 	 * @param PageReadService $reader
 	 * @param TitleFactory $titles
-	 * @param bool $enabled Default-off experimental gate
 	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
 	 * @param int $bindingMaxAge Seconds anonymous binding reads of a current revision may be cached; 0 never
 	 */
 	public function __construct( ApiMain $main, string $name, PageReadService $reader,
-		TitleFactory $titles, bool $enabled = false, ?PageOwnedScope $scope = null, ?callable $boundReader = null,
+		TitleFactory $titles, ?PageOwnedScope $scope = null, ?callable $boundReader = null,
 		int $bindingMaxAge = 0
 	) {
 		parent::__construct( $main, $name );
 		$this->reader = $reader;
 		$this->titles = $titles;
-		$this->enabled = $enabled;
 		$this->scope = $scope;
 		$this->boundReader = $boundReader;
 		$this->bindingMaxAge = max( 0, $bindingMaxAge );
@@ -50,9 +47,6 @@ class ApiLayersRead extends ApiBase {
 		// Apply to failures too; request-selected maxage must never make this user-dependent read public.
 		$this->getMain()->setCacheMode( 'private' );
 		$this->getMain()->setCacheMaxAge( 0 );
-		if ( !$this->enabled ) {
-			$this->dieWithError( 'layers-reading-disabled', 'layers-reading-disabled' );
-		}
 		$params = $this->extractRequestParams();
 		$owner = $this->titles->newFromText( $params['owner'] );
 		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||

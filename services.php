@@ -13,17 +13,14 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
 use MediaWiki\Extension\Layers\Logging\LayersLogger;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Search\DrawingSearchText;
 use MediaWiki\MediaWikiServices;
 
 return [
-	// Shared composition; native registration keeps the pilot disabled by default.
+	// Drawings are kept in page history on every page of the configured namespaces (D2).
 	'LayersPageOwnedPilot' => static function ( MediaWikiServices $services ): PageOwnedPilot {
-		$config = $services->getMainConfig();
-		return new PageOwnedPilot( $services,
-			$config->has( 'LayersPageOwnedPilotEnabled' ) ? $config->get( 'LayersPageOwnedPilotEnabled' ) : false,
-			$config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [],
-			$config->has( 'LayersPageOwnedPilotNamespaces' ) ? $config->get( 'LayersPageOwnedPilotNamespaces' ) : [] );
+		return new PageOwnedPilot( $services, [], PageOwnedScope::configuredNamespaces( $services->getMainConfig() ) );
 	},
 	'LayersDrawingSearchText' => static function ( MediaWikiServices $services ): DrawingSearchText {
 		return new DrawingSearchText( $services->getService( 'LayersPageOwnedPilot' ),

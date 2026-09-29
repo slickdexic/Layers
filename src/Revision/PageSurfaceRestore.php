@@ -12,23 +12,20 @@ use Wikimedia\Rdbms\IDBAccessObject;
 
 /** Makes an earlier version of one drawing current again; the page text and other drawings are kept. */
 final class PageSurfaceRestore {
-	private bool $enabled;
 	private PageOwnedScope $scope;
 	private TitleFactory $titles;
 	private RevisionLookup $revisions;
 	private PagePublicationService $publisher;
 
 	/**
-	 * @param bool $enabled
 	 * @param PageOwnedScope $scope
 	 * @param TitleFactory $titles
 	 * @param RevisionLookup $revisions
 	 * @param PagePublicationService $publisher
 	 */
-	public function __construct( bool $enabled, PageOwnedScope $scope, TitleFactory $titles,
+	public function __construct( PageOwnedScope $scope, TitleFactory $titles,
 		RevisionLookup $revisions, PagePublicationService $publisher
 	) {
-		$this->enabled = $enabled;
 		$this->scope = $scope;
 		$this->titles = $titles;
 		$this->revisions = $revisions;
@@ -89,7 +86,7 @@ final class PageSurfaceRestore {
 	 */
 	private function owner( string $ownerText ): Title {
 		$owner = $this->titles->newFromText( $ownerText );
-		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
+		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
 			!$this->scope->includes( $owner )
 		) {
 			throw new \DomainException( 'layers-restore-unavailable' );

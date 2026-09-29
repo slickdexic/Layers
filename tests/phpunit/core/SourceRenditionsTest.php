@@ -106,7 +106,7 @@ class SourceRenditionsTest extends RealAssetTestCase {
 		$repos = $this->createMock( RepoGroup::class );
 		$repos->method( 'getLocalRepo' )->willReturn( $this->repo );
 		$this->setService( 'RepoGroup', $repos );
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $page->getTitle()->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $page->getTitle()->getPrefixedDBkey() ] );
 		$expected = $this->reader()->read( $page->getTitle(), $revisionId, $actor )['sourceRenditions'];
 		foreach ( [ 'image', 'pdf' ] as $surfaceId ) {
 			$view = $pilot->prepareViewer( $page->getTitle()->getPrefixedText(), $revisionId, $surfaceId, $actor );

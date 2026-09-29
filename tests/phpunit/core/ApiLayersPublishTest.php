@@ -19,7 +19,6 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group API
  */
 class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
-	private bool $enabled = true;
 	private bool $posted = true;
 	private array $ownerKeys = [];
 	private ?PagePublicationService $publisher = null;
@@ -35,7 +34,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$registered = TestingAdmissionRegistration::install( $this, $this->context );
 				$publisher = $this->publisher ?? $registered['publisher'];
 				return new ApiLayersPublish( $main, $name, $publisher, $s->getTitleFactory(),
-					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ) );
+					PageOwnedScope::newFromServices( $s, $this->ownerKeys ) );
 			} ]
 		] ) );
 	}
@@ -118,9 +117,6 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->publisher->expects( $this->never() )->method( 'publish' );
 		$token = 'csrf';
 		switch ( $reason ) {
-			case 'disabled':
-				$this->enabled = false;
-				break;
 			case 'empty-scope':
 				$this->ownerKeys = [];
 				break;
@@ -181,7 +177,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	/** @return array */
 	public static function provideBoundaryFailures(): array {
 		return [
-			[ 'disabled', 'layers-publication-disabled' ], [ 'get', 'mustbeposted' ],
+			[ 'get', 'mustbeposted' ],
 			[ 'empty-scope', 'layers-publication-disabled' ],
 			[ 'other-owner', 'layers-publication-disabled' ],
 			[ 'prefix-only', 'layers-publication-disabled' ],
@@ -277,10 +273,15 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
-	public function testExperimentalApiDefaultsToDisabled(): void {
+	public function testDrawingsAreKeptInPageHistoryByDefault(): void {
 		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
-		$this->assertFalse( $manifest['config']['LayersPageOwnedPilotEnabled']['value'] );
-		$this->assertSame( [], $manifest['config']['LayersPageOwnedPilotOwners']['value'] );
+		// null: the content namespaces and File:, with no pilot switch or owner list (D2).
+		$this->assertNull( $manifest['config']['LayersPageDrawingNamespaces']['value'] );
+		foreach ( [ 'LayersPageOwnedPilotEnabled', 'LayersPageOwnedPilotOwners',
+			'LayersPageOwnedPilotNamespaces' ] as $old
+		) {
+			$this->assertArrayNotHasKey( $old, $manifest['config'] );
+		}
 		// Registered so stored revisions always load; it grants no write path by itself.
 		$this->assertArrayHasKey( LayersDocumentContent::MODEL, $manifest['ContentHandlers'] ?? [] );
 		$this->assertFalse( $this->getServiceContainer()->getContentHandlerFactory()

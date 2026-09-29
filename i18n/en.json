@@ -1023,7 +1023,7 @@
 	"layers-validation-fillopacity-range": "Fill opacity must be between $1 and $2",
 	"layers-validation-strokeopacity-invalid": "Invalid stroke opacity value",
 	"layers-validation-strokeopacity-range": "Stroke opacity must be between $1 and $2",
-	"layers-publication-disabled": "Page-owned Layers publishing is not enabled.",
+	"layers-publication-disabled": "Drawings cannot be saved in this page’s history, because its namespace is not set up for drawings.",
 	"layers-publication-failed": "Layers could not confirm that the page was saved. Check its latest revision before retrying.",
 	"layers-owner-edit-denied": "You do not have permission to publish Layers on this page.",
 	"layers-invalid-publication-request": "The owner page, base revision or page-creation content is invalid.",

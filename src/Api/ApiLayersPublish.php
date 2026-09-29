@@ -18,7 +18,6 @@ use MediaWiki\Title\TitleFactory;
 class ApiLayersPublish extends ApiBase {
 	private PagePublicationService $publisher;
 	private TitleFactory $titles;
-	private bool $enabled;
 	private ?PageOwnedScope $scope;
 
 	private const PUBLIC_ERRORS = [
@@ -34,23 +33,18 @@ class ApiLayersPublish extends ApiBase {
 	 * @param string $name
 	 * @param PagePublicationService $publisher
 	 * @param TitleFactory $titles
-	 * @param bool $enabled Explicit experimental gate; defaults to disabled
 	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 */
 	public function __construct( ApiMain $main, string $name, PagePublicationService $publisher,
-		TitleFactory $titles, bool $enabled = false, ?PageOwnedScope $scope = null
+		TitleFactory $titles, ?PageOwnedScope $scope = null
 	) {
 		parent::__construct( $main, $name );
 		$this->publisher = $publisher;
 		$this->titles = $titles;
-		$this->enabled = $enabled;
 		$this->scope = $scope;
 	}
 
 	public function execute() {
-		if ( !$this->enabled ) {
-			$this->dieWithError( 'layers-publication-disabled', 'layers-publication-disabled' );
-		}
 		if ( !$this->getRequest()->wasPosted() ) {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}

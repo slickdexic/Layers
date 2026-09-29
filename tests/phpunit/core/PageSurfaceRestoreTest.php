@@ -41,8 +41,7 @@ class PageSurfaceRestoreTest extends MediaWikiIntegrationTestCase {
 	 */
 	private function owner(): array {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );

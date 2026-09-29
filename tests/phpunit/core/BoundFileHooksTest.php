@@ -27,8 +27,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 	/** @return array [ title, page ID, revision ID, page text, actor ] */
 	private function boundImagePage( string $key ): array {
 		$this->file = str_replace( '_owner', '', $key ) . '.png';
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $key ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$actor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
@@ -72,7 +71,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 			$parsed->getExtensionData( BoundSlideHooks::DATA_KEY )[$binding]['revisionId'] );
 		$this->assertContains( 'ext.layers.history', $parsed->getModules() );
 
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $title->getPrefixedDBkey() ] );
 		$bundle = $pilot->prepareBoundViewers( $title, $revisionId, [ $binding ], $actor )[$binding];
 		$this->assertSame( 'image', $bundle['surface']['kind'] );
 		$this->assertSame( 'Bound note', $bundle['surface']['layers'][0]['text'] );
@@ -81,7 +80,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 
 	public function testFileEmbedOpensItsImageSurfaceInImageModeOnly(): void {
 		[ $title, $pageId, $revisionId, $text, $actor ] = $this->boundImagePage( 'Bound_file_editor_owner' );
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
 		$this->assertSame( $this->file, $entries[0]['label'] );
@@ -121,7 +120,7 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertStringNotContainsString( 'layerset', $html );
 		$this->assertTrue( $parsed->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
 
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, [ $title->getPrefixedDBkey() ] );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $title->getPrefixedDBkey() ] );
 		$entries = $pilot->listBoundEditorSelections( $pageId, $revisionId, $actor );
 		$this->assertCount( 1, $entries );
 		$this->assertSame( 'Photo', $entries[0]['label'] );
@@ -162,11 +161,5 @@ class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
 			$this->assertStringNotContainsString( 'data-layer', $html, $text );
 			$this->assertStringNotContainsString( 'layersbinding', $html, $text );
 		}
-		// Outside the pilot scope the binding is refused the same way.
-		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
-		$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse(
-			"[[File:{$this->file}|120px|layersbinding=v1:$pageId:photo]]", $title,
-			ParserOptions::newFromAnon(), true, true, $revisionId );
-		$this->assertStringNotContainsString( 'layers-bound-file', $parsed->getRawText() );
 	}
 }

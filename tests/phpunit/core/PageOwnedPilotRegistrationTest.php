@@ -41,10 +41,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		// Disable only automatic Layers installation in this bootstrap fixture. Each test
 		// explicitly invokes the real registration method once with its own scope.
 		$this->bootstrapHookOverride = $registry->setAttributeForTest( 'Hooks', $hooks );
-		$this->overrideMwServices( new \MediaWiki\Config\HashConfig( [
-			'LayersPageOwnedPilotEnabled' => false,
-			'LayersPageOwnedPilotOwners' => []
-		] ) );
+		$this->overrideMwServices( new \MediaWiki\Config\HashConfig( [ 'LayersPageDrawingNamespaces' => null ] ) );
 	}
 
 	protected function tearDown(): void {
@@ -55,27 +52,19 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
-	/**
-	 * @dataProvider provideDisabledScopes
-	 * @param bool $retained
-	 */
-	public function testExtensionCallbackInstallsPairedModules( bool $retained ): void {
-		$this->setMwGlobals( [
-			'wgAPIModules' => [ 'unrelated' => 'UnrelatedModule' ],
-			'wgLayersPageOwnedPilotOwners' => $retained ? [ 'Layers_bootstrap_test' ] : []
-		] );
+	public function testExtensionCallbackInstallsPairedModules(): void {
+		$this->setMwGlobals( [ 'wgAPIModules' => [ 'unrelated' => 'UnrelatedModule' ] ] );
 		PageOwnedPilotRegistration::onRegistration( [] );
 		$modules = $GLOBALS['wgAPIModules'];
 		$this->assertArrayHasKey( 'layersread', $modules );
 		$this->assertArrayHasKey( 'layerspublish', $modules );
-		$this->assertSame( $retained, isset( $modules['mergehistory'] ) );
+		$this->assertArrayHasKey( 'mergehistory', $modules );
 		$this->assertSame( 'UnrelatedModule', $modules['unrelated'] );
 	}
 
 	public function testExtensionCallbackRejectsConflictWithoutPartialInstallation(): void {
 		$modules = [ 'mergehistory' => 'AnotherMergeModule' ];
-		$this->setMwGlobals( [ 'wgAPIModules' => $modules,
-			'wgLayersPageOwnedPilotOwners' => [ 'Layers_bootstrap_test' ] ] );
+		$this->setMwGlobals( [ 'wgAPIModules' => $modules ] );
 		try {
 			PageOwnedPilotRegistration::onRegistration( [] );
 			$this->fail( 'Expected conflicting registration to reject' );
@@ -85,11 +74,14 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $modules, $GLOBALS['wgAPIModules'] );
 	}
 
-	private function bootstrap( bool $enabled, array $owners ): MediaWikiServices {
+	/**
+	 * @param int[]|null $namespaces $wgLayersPageDrawingNamespaces
+	 * @return MediaWikiServices
+	 */
+	private function bootstrap( ?array $namespaces ): MediaWikiServices {
 		$modules = $this->getServiceContainer()->getMainConfig()->get( 'APIModules' );
 		$this->overrideConfigValues( [
-			'LayersPageOwnedPilotEnabled' => $enabled,
-			'LayersPageOwnedPilotOwners' => $owners,
+			'LayersPageDrawingNamespaces' => $namespaces,
 			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() ),
 		] );
 		$s = $this->getServiceContainer();
@@ -105,22 +97,12 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		return $actor;
 	}
 
-	/**
-	 * @dataProvider provideDisabledScopes
-	 * @param bool $retained
-	 */
-	public function testDisabledBootstrapRetainsOnlyConfiguredProtection( bool $retained ): void {
-		$modules = $this->getServiceContainer()->getMainConfig()->get( 'APIModules' );
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => false,
-			'LayersPageOwnedPilotOwners' => $retained ? [ 'Layers_bootstrap_test' ] : [],
-			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() ) ] );
-		$s = $this->getServiceContainer();
-		( new PageOwnedPilotRegistration() )->onMediaWikiServices( $s );
-		// The model is always registered so stored revisions load; only the writable role is scoped.
+	public function testProtectionIsInstalledEvenWhereNoPageMayStartDrawings(): void {
+		$s = $this->bootstrap( [] );
 		$this->assertTrue( $s->getContentHandlerFactory()->isDefinedModel( LayersDocumentContent::MODEL ) );
-		$this->assertSame( $retained, $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
-		$this->assertSame( $retained, $s->getMergeHistoryFactory() instanceof PageOwnedPilotMergeFactory );
-		$this->assertSame( $retained, $s->getWikiRevisionOldRevisionImporter() instanceof PageOwnedPilotImporter );
+		$this->assertTrue( $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
+		$this->assertInstanceOf( PageOwnedPilotMergeFactory::class, $s->getMergeHistoryFactory() );
+		$this->assertInstanceOf( PageOwnedPilotImporter::class, $s->getWikiRevisionOldRevisionImporter() );
 		// Drawings belong to the PageID, so moves need no guard.
 		$status = Status::newGood();
 		$s->getHookContainer()->run( 'MovePageIsValidMove', [
@@ -128,24 +110,18 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$s->getTitleFactory()->newFromText( 'Layers other title' ), $status
 		] );
 		$this->assertTrue( $status->isOK() );
-		$this->expectApiErrorCode( 'layers-reading-disabled' );
+		$this->expectApiErrorCode( 'layers-revision-unavailable' );
 		$this->doApiRequest( [ 'action' => 'layersread', 'owner' => 'Layers bootstrap test', 'revid' => 1 ] );
 	}
 
-	/** @return array */
-	public static function provideDisabledScopes(): array {
-		return [ [ false ], [ true ] ];
-	}
-
-	public function testBootstrapPublishesAndReadsWithoutManualComponentInstallation(): void {
-		$modules = $this->getServiceContainer()->getMainConfig()->get( 'APIModules' );
-		$this->overrideConfigValues( [
-			'LayersPageOwnedPilotOwners' => [ 'Layers_bootstrap_test' ],
-			'LayersPageOwnedPilotEnabled' => true,
-			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() )
-		] );
-		$s = $this->getServiceContainer();
-		( new PageOwnedPilotRegistration() )->onMediaWikiServices( $s );
+	public function testDefaultBootstrapPublishesAndReadsOnContentPagesWithoutConfiguration(): void {
+		$s = $this->bootstrap( null );
+		$scope = $s->getService( 'LayersPageOwnedPilot' )->getScope();
+		$titles = $s->getTitleFactory();
+		// The default is the content namespaces and File:, with no owner list or switch (D2).
+		$this->assertTrue( $scope->isEnrolled( $titles->newFromText( 'Any page' ) ) );
+		$this->assertTrue( $scope->isEnrolled( $titles->newFromText( 'File:Any.png' ) ) );
+		$this->assertFalse( $scope->isEnrolled( $titles->newFromText( 'Project:Any page' ) ) );
 		$this->assertInstanceOf( PageOwnedPilotImporter::class, $s->getWikiRevisionOldRevisionImporter() );
 		$this->assertInstanceOf( PageOwnedPilotImporter::class, $s->getWikiRevisionOldRevisionImporterNoUpdates() );
 		$this->assertInstanceOf( PageOwnedPilotMergeFactory::class, $s->getMergeHistoryFactory() );
@@ -161,17 +137,8 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( [], $read['snapshot']['surfaces'] );
 	}
 
-	public function testEnrolledNamespaceLetsItsPagesStartOwningDrawings(): void {
-		$modules = $this->getServiceContainer()->getMainConfig()->get( 'APIModules' );
-		$this->overrideConfigValues( [
-			'LayersPageOwnedPilotOwners' => [],
-			'LayersPageOwnedPilotNamespaces' => [ NS_MAIN ],
-			'LayersPageOwnedPilotEnabled' => true,
-			'APIModules' => array_replace( $modules, PageOwnedPilotRegistration::apiModules() )
-		] );
-		$s = $this->getServiceContainer();
-		( new PageOwnedPilotRegistration() )->onMediaWikiServices( $s );
-		// Namespace enrollment alone installs the slot role and its guards.
+	public function testConfiguredNamespacesLimitWherePagesStartOwningDrawings(): void {
+		$s = $this->bootstrap( [ NS_MAIN ] );
 		$this->assertTrue( $s->getSlotRoleRegistry()->isDefinedRole( PageRevisionWriter::SLOT ) );
 		$this->assertInstanceOf( PageOwnedPilotImporter::class, $s->getWikiRevisionOldRevisionImporter() );
 		$actor = $this->getAuthorizedActor();
@@ -189,6 +156,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$titles = $s->getTitleFactory();
 		$this->assertTrue( $scope->isEnrolled( $titles->newFromText( 'Any main namespace page' ) ) );
 		$this->assertFalse( $scope->isEnrolled( $titles->newFromText( 'Talk:Any main namespace page' ) ) );
+		$this->assertFalse( $scope->isEnrolled( $titles->newFromText( 'File:Not configured.png' ) ) );
 		foreach ( [ [ -1 ], [ '0' ], [ 1.5 ] ] as $invalid ) {
 			try {
 				PageOwnedScope::newFromServices( $s, [], $invalid );
@@ -199,50 +167,11 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
-	public function testPublicationGateDisabledWithRetainedOwnersRejects(): void {
+	public function testNoConfiguredNamespaceLetsNoPageStartDrawings(): void {
 		$actor = $this->getAuthorizedActor();
 		$page = $this->getNonexistingTestPage();
 		$title = $page->getTitle();
-		$this->bootstrap( false, [ $title->getPrefixedDBkey() ] );
-
-		$revisionCount = $this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'revision' )
-			->caller( __METHOD__ )->fetchField();
-
-		try {
-			$this->doApiRequestWithToken( [
-				'action' => 'layerspublish',
-				'owner' => $title->getPrefixedText(),
-				'baserevid' => 0,
-				'data' => '{"schemaVersion":1,"surfaces":[]}',
-			], null, $actor );
-			$this->fail( 'Expected publication rejection for disabled switch' );
-		} catch ( ApiUsageException $e ) {
-			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-publication-disabled' ) );
-		}
-
-		$this->assertSame( $revisionCount, $this->getDb()->newSelectQueryBuilder()
-			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField() );
-		$row = $this->getDb()->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
-			->where( [ 'page_namespace' => $title->getNamespace(), 'page_title' => $title->getDBkey() ] )
-			->caller( __METHOD__ )->fetchField();
-		$this->assertFalse( $row, 'Disabled publication must not insert a page record' );
-
-		try {
-			$this->doApiRequest(
-				[ 'action' => 'layersread', 'owner' => $title->getPrefixedText(), 'revid' => 1 ],
-				null, false, $actor
-			);
-			$this->fail( 'Expected read rejection for disabled switch' );
-		} catch ( ApiUsageException $e ) {
-			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-reading-disabled' ) );
-		}
-	}
-
-	public function testPublicationGateEnabledWithEmptyOwnersRejects(): void {
-		$actor = $this->getAuthorizedActor();
-		$page = $this->getNonexistingTestPage();
-		$title = $page->getTitle();
-		$this->bootstrap( true, [] );
+		$this->bootstrap( [] );
 
 		$revisionCount = $this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'revision' )
 			->caller( __METHOD__ )->fetchField();
@@ -267,11 +196,11 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertFalse( $row, 'Empty-owner publication must not insert a page record' );
 	}
 
-	public function testPublicationGateEnabledWithUnrelatedOwnerRejects(): void {
+	public function testPageOutsideTheConfiguredNamespacesCannotStartDrawings(): void {
 		$actor = $this->getAuthorizedActor();
 		$page = $this->getNonexistingTestPage();
 		$title = $page->getTitle();
-		$this->bootstrap( true, [ 'Layers_configured_unrelated_owner' ] );
+		$this->bootstrap( [ NS_PROJECT ] );
 
 		$revisionCount = $this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'revision' )
 			->caller( __METHOD__ )->fetchField();
@@ -309,8 +238,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	public function testInstalledSaveAdmissionProtectsAndPreservesSnapshot(): void {
 		$page = $this->getNonexistingTestPage();
 		$title = $page->getTitle();
-		$ownerKey = $title->getPrefixedDBkey();
-		$s = $this->bootstrap( true, [ $ownerKey ] );
+		$s = $this->bootstrap( null );
 		$actor = $this->getAuthorizedActor();
 
 		// 1. Publish initial snapshot through installed API.
@@ -374,10 +302,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$protectedPage2 = $this->getNonexistingTestPage();
 		$protectedTitle2 = $protectedPage2->getTitle();
 
-		$s = $this->bootstrap( true, [
-			$protectedTitle1->getPrefixedDBkey(),
-			$protectedTitle2->getPrefixedDBkey()
-		] );
+		$s = $this->bootstrap( null );
 		$actor = $this->getAuthorizedActor();
 		$owned = [];
 		foreach ( [ $protectedTitle1, $protectedTitle2 ] as $index => $protectedTitle ) {
@@ -495,7 +420,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->where( [ 'rev_page' => $destinationId ] )->caller( __METHOD__ )->execute();
 
 		$protected = $protectDestination ? $destination : $source;
-		$this->bootstrap( true, [ $protected->getTitle()->getPrefixedDBkey() ] );
+		$this->bootstrap( null );
 		$this->doApiRequestWithToken( [ 'action' => 'layerspublish',
 			'owner' => $protected->getTitle()->getPrefixedText(), 'baserevid' => $protected->getLatest(),
 			'data' => '{"schemaVersion":1,"surfaces":[]}' ], null, $this->getAuthorizedActor() );
@@ -561,7 +486,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->set( [ 'rev_timestamp' => $this->getDb()->timestamp( '20210101000000' ) ] )
 			->where( [ 'rev_page' => $destinationId ] )->caller( __METHOD__ )->execute();
 
-		$this->bootstrap( false, [ $source->getTitle()->getPrefixedDBkey() . '_unrelated' ] );
+		$this->bootstrap( [] );
 		$actor = $this->getAuthorizedActor( [ 'read', 'edit', 'mergehistory' ] );
 
 		$beforeLogs = (int)$this->getDb()->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'logging' )
@@ -601,7 +526,7 @@ class PageOwnedPilotRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$ordinaryTitle = $ordinaryPage->getTitle();
 		$ordinaryRevId = $ordinaryPage->getLatest();
 
-		$s = $this->bootstrap( true, [ $protectedKey ] );
+		$s = $this->bootstrap( null );
 		$actor = $this->getAuthorizedActor(
 			[ 'read', 'edit', 'editlayers', 'delete', 'undelete', 'createpage', 'createtalk' ]
 		);

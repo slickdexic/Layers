@@ -429,23 +429,6 @@ class SpecialViewLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			);
 		}
 
-		// Additional rejection cases: disabled pilot
-		$disabledPilot = new PageOwnedPilot( $this->getServiceContainer(), false, [ $title->getPrefixedDBkey() ] );
-		$contextDisabled = $this->newPageContext( $reader, [
-			'owner' => $title->getPrefixedText(),
-			'revid' => (string)$validRevId,
-			'surface' => 'presentation',
-		] );
-		$entryDisabled = new SpecialViewLayersPage( $disabledPilot );
-		$entryDisabled->setContext( $contextDisabled );
-		$entryDisabled->execute( null );
-		$outDisabled = $contextDisabled->getOutput();
-		$this->assertArrayNotHasKey( 'wgLayersRevisionView', $outDisabled->getJsConfigVars() );
-		$this->assertStringContainsString(
-			$entryDisabled->msg( 'layers-revision-unavailable' )->text(),
-			$outDisabled->getHTML()
-		);
-
 		// Additional rejection case: denied page read permission
 		$this->overrideConfigValue( 'GroupPermissions', [ '*' => [ 'read' => false ] ] );
 		$deniedReader = $this->getTestUser()->getUser();
@@ -682,10 +665,9 @@ class SpecialViewLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	}
 
 	private function configure( bool $enabled, array $keys ): PageOwnedPilot {
-		$this->overrideConfigValues( [
-			'LayersPageOwnedPilotEnabled' => $enabled,
-			'LayersPageOwnedPilotOwners' => $keys,
-		] );
+		// Only the listed titles may start drawings; pages that own drawings always take part (D2).
+		$this->setService( 'LayersPageOwnedPilot',
+			static fn ( $services ) => new PageOwnedPilot( $services, $enabled ? $keys : [] ) );
 		$s = $this->getServiceContainer();
 		$pilot = null;
 		$this->overrideConfigValue( 'APIModules', $s->getMainConfig()->get( 'APIModules' ) + [

@@ -12,7 +12,7 @@ use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Hook\MediaWikiServicesHook;
 use MediaWiki\MediaWikiServices;
 
-/** Native bootstrap for the default-off page-owned revision pilot. */
+/** Native bootstrap for drawings kept in page history; always installed (D2). */
 class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 	/**
 	 * Extension registration callback. Runs before service initialization.
@@ -20,17 +20,8 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 	 * @param array $credits Extension metadata
 	 */
 	public static function onRegistration( array $credits ): void {
-		global $wgAPIModules, $wgLayersPageOwnedPilotOwners, $wgLayersPageOwnedPilotNamespaces;
-		$owners = $wgLayersPageOwnedPilotOwners ?? [];
-		$namespaces = $wgLayersPageOwnedPilotNamespaces ?? [];
-		if ( !is_array( $owners ) || !is_array( $namespaces ) ) {
-			throw new \InvalidArgumentException( 'Invalid Layers pilot owner scope' );
-		}
+		global $wgAPIModules;
 		$modules = self::apiModules();
-		// Ordinary installations retain core's merge module unchanged.
-		if ( !$owners && !$namespaces ) {
-			unset( $modules['mergehistory'] );
-		}
 		foreach ( $modules as $name => $definition ) {
 			if ( isset( $wgAPIModules[$name] ) ) {
 				throw new \LogicException( 'Conflicting Layers pilot API registration' );
@@ -41,17 +32,6 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 
 	/** @inheritDoc */
 	public function onMediaWikiServices( $services ) {
-		$config = $services->getMainConfig();
-		$owners = $config->has( 'LayersPageOwnedPilotOwners' ) ? $config->get( 'LayersPageOwnedPilotOwners' ) : [];
-		$namespaces = $config->has( 'LayersPageOwnedPilotNamespaces' ) ?
-			$config->get( 'LayersPageOwnedPilotNamespaces' ) : [];
-		if ( !is_array( $owners ) || !is_array( $namespaces ) ) {
-			throw new \InvalidArgumentException( 'Invalid Layers pilot owner scope' );
-		}
-		if ( !$owners && !$namespaces ) {
-			return;
-		}
-		// Install protection for retained owners even when the API switch is disabled.
 		// The content model itself is registered in extension.json so stored revisions always load.
 		// Callbacks are lazy: do not instantiate dependent services during container setup.
 		$services->addServiceManipulator( 'SlotRoleRegistry', static function ( $registry ) {

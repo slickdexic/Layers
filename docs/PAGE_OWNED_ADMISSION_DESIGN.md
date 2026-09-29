@@ -22,7 +22,7 @@ Fresh native regression: **140 tests / 588 assertions passed** on MediaWiki 1.45
 
 Priority remains **page revision history, then searchable textbox/callout text, then Cargo text projection/binding**. All apply to images, PDFs and general-purpose slides. Docker is only the test host. Existing Cargo gallery formatting is not the requested annotation-text integration.
 
-Normal editor saves still use legacy storage. Do not enable the experimental pilot as a production feature. The new `LayersPageOwnedPilotEnabled` setting defaults false; `LayersPageOwnedPilotOwners` defaults empty. Retained owner keys must not be removed while current or archived pilot revisions exist. Earlier unregistered/unchanged-manifest checkpoints below are historical, superseded by this entry.
+**Superseded September 29, 2026 (D2):** drawings in page history are on by default; the pilot switch and owner lists are retired in favour of `$wgLayersPageDrawingNamespaces` (see the [configuration reference](../wiki/Configuration-Reference.md)). The text below records the pilot. Normal editor saves still use legacy storage. Do not enable the experimental pilot as a production feature. The new `LayersPageOwnedPilotEnabled` setting defaults false; `LayersPageOwnedPilotOwners` defaults empty. Retained owner keys must not be removed while current or archived pilot revisions exist. Earlier unregistered/unchanged-manifest checkpoints below are historical, superseded by this entry.
 
 ## Native bootstrap composition — September 19, 2026
 

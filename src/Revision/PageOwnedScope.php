@@ -15,10 +15,9 @@ use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 
 /**
- * Which pages take part in the page-owned pilot. A page owns drawings once its current revision carries
- * the drawing slot, which only publication can write, and keeps them under any later title. Enrolled
- * titles and namespaces decide where ownership may start; with neither, the pilot is not installed and
- * nothing takes part.
+ * Which pages take part in page history for drawings. A page owns drawings once its current revision carries
+ * the drawing slot, which only publication can write, and keeps them under any later title and in any
+ * namespace. The configured namespaces (and, for tests, titles) decide where ownership may start.
  */
 final class PageOwnedScope {
 	/** @var string[] */
@@ -98,7 +97,7 @@ final class PageOwnedScope {
 	 * @return bool
 	 */
 	public function includes( PageReference $page, int $flags = IDBAccessObject::READ_NORMAL ): bool {
-		return $this->isActive() && ( $this->isEnrolled( $page ) || $this->ownsDrawings( $page, $flags ) );
+		return $this->isEnrolled( $page ) || $this->ownsDrawings( $page, $flags );
 	}
 
 	/**
@@ -108,13 +107,23 @@ final class PageOwnedScope {
 	 * @return bool
 	 */
 	public function includesRevision( PageReference $page, RevisionRecord $revision ): bool {
-		return $this->isActive() &&
-			( $revision->hasSlot( PageRevisionWriter::SLOT ) || $this->isEnrolled( $page ) );
+		return $revision->hasSlot( PageRevisionWriter::SLOT ) || $this->isEnrolled( $page );
 	}
 
-	/** @return bool Whether anything is enrolled; with nothing enrolled no page takes part */
-	private function isActive(): bool {
-		return $this->enrolled !== [] || $this->namespaces !== [];
+	/**
+	 * $wgLayersPageDrawingNamespaces, where null means the content namespaces and File:.
+	 * @param \MediaWiki\Config\Config $config
+	 * @return int[]
+	 */
+	public static function configuredNamespaces( \MediaWiki\Config\Config $config ): array {
+		$namespaces = $config->get( 'LayersPageDrawingNamespaces' );
+		if ( $namespaces === null ) {
+			$namespaces = array_merge( $config->get( 'ContentNamespaces' ), [ NS_FILE ] );
+		}
+		if ( !is_array( $namespaces ) ) {
+			throw new \InvalidArgumentException( 'Invalid $wgLayersPageDrawingNamespaces' );
+		}
+		return array_values( array_unique( array_map( 'intval', $namespaces ) ) );
 	}
 
 	/**

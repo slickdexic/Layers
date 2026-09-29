@@ -1017,7 +1017,7 @@
 	"layers-validation-fillopacity-range": "Validation error shown when the fill opacity is out of range. Parameters:\n* $1 - the minimum allowed value\n* $2 - the maximum allowed value",
 	"layers-validation-strokeopacity-invalid": "Validation error shown when the stroke opacity is not a number. See also {{msg-mw|layers-validation-opacity-invalid}}.",
 	"layers-validation-strokeopacity-range": "Validation error shown when the stroke opacity is out of range. Parameters:\n* $1 - the minimum allowed value\n* $2 - the maximum allowed value",
-	"layers-publication-disabled": "Used by the unregistered experimental page-owned publishing API. Page-owned Layers publishing is not enabled.",
+	"layers-publication-disabled": "Error from the drawing publication API when the page is outside $wgLayersPageDrawingNamespaces and has no drawings yet.",
 	"layers-publication-failed": "Used by the unregistered experimental page-owned publishing API. Layers could not confirm that the page was saved. Check its latest revision before retrying.",
 	"layers-owner-edit-denied": "Used by the unregistered experimental page-owned publishing API. You do not have permission to publish Layers on this page.",
 	"layers-invalid-publication-request": "Used by the unregistered experimental page-owned publishing API. The owner page, base revision or page-creation content is invalid.",

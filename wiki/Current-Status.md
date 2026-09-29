@@ -1,5 +1,15 @@
 # Current status and limitations
 
+## Drawings are kept in page history by default — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) decision D2, criterion HIST-3. There is no pilot switch or list of pages any more. Every page in `$wgLayersPageDrawingNamespaces` can own drawings; the default, `null`, means the content namespaces and `File:`. An administrator can limit it to other namespaces, or to none with `[]`. A page that already owns drawings keeps them in any namespace, and they stay editable and viewable there. The content model, the `layers` slot and every guard (save, import, merge, restore) are always installed, so emptying the setting can no longer leave drawings unprotected. `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are retired and ignored.
+
+Legacy shared sets and slides are unchanged until the migration (D3). Before then, editors on any content page that shows a shared set or slide get the offer to make it the page's own.
+
+Code: `services.php`, `PageOwnedScope::configuredNamespaces()`, `PageOwnedPilotRegistration` (always installed), and the switch removed from `PageOwnedPilot`, `ApiLayersPublish`, `ApiLayersRead`, `PageSurfaceRestore`, `BoundSlideHooks` and `PageOwnedCargoStore`. `layers-publication-disabled` now says the page's namespace is not set up for drawings.
+
+Fresh verification: native tests for the default namespaces, a limited list, an empty list, and pages that own drawings staying in scope under each; the tests of the retired switch were removed. Full native configuration **405 tests passed, 1 skipped**; standalone PHPUnit **1,312**; Jest **15,071**; PHP style clean. The test wiki serves pages and drawings without the pilot settings.
+
 ## Another page's drawing can be copied into a page — September 29, 2026
 
 Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-5 (decision D1 (b)). When wikitext copied from page A to page B keeps an embed naming A's drawing (`{{#Slide:<A's ID>:Plan}}`, `[[File:X|layerset=<A's ID>:Plan]]`), B still shows nothing for it and gives no edit rights over it. Editors of B who can read A now get a **Copy “Plan” from A to this page** link. It opens `Special:CopyLayersDrawing`, which shows the source page and revision; confirming (POST with the edit token) adds a copy to B as a new drawing with its own ID and the same name, and rewrites the embed to name B's copy, in one revision whose summary records the source: "Copied drawing “Plan” from [[:A]] (revision 574)", followed by an optional note. A is not changed, and later edits to either page do not affect the other. A page that already has a drawing of that name is not offered the copy. Copying from the editor's drawing list (D1) is not built.
@@ -1015,7 +1025,7 @@ Layers annotates **images**, individual **PDF pages**, and **standalone slides**
 
 ## Implemented versus planned
 
-The page-owned history pilot is off by default. Rows marked *pilot* describe it only when `$wgLayersPageOwnedPilotEnabled` is set and the page is enrolled or already owns drawings; see the dated entries at the top.
+Drawings in page history are on by default since September 29 (D2) for pages in `$wgLayersPageDrawingNamespaces` (by default the content namespaces and `File:`) and for any page that already has drawings. Rows marked *pilot* describe that behaviour; see the dated entries at the top.
 
 | Capability | Current behavior |
 | --- | --- |

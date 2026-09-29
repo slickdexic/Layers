@@ -34,7 +34,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	public function testSharedApiBoundary( string $mode, string $action ): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
 		$keys = $mode === 'empty' ? [] : [ $title->getPrefixedDBkey() . ( $mode === 'outside' ? '_other' : '' ) ];
-		$this->configure( $mode !== 'disabled', $keys );
+		$this->configure( true, $keys );
 		$actor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
 		$params = [ 'action' => $action, 'owner' => $title->getPrefixedText() ];
@@ -43,8 +43,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$this->doApiRequestWithToken( $params + [ 'baserevid' => 0,
 				'data' => '{"schemaVersion":1,"surfaces":[]}', 'maintext' => 'Denied' ], null, $actor );
 		} else {
-			$this->expectApiErrorCode(
-				$mode === 'disabled' ? 'layers-reading-disabled' : 'layers-revision-unavailable' );
+			$this->expectApiErrorCode( 'layers-revision-unavailable' );
 			$this->doApiRequest( $params + [ 'revid' => 1 ], null, false, $actor );
 		}
 	}
@@ -52,7 +51,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	/** @return array */
 	public static function provideBoundaryCases(): array {
 		$cases = [];
-		foreach ( [ 'disabled', 'empty', 'outside' ] as $mode ) {
+		foreach ( [ 'empty', 'outside' ] as $mode ) {
 			foreach ( [ 'layerspublish', 'layersread' ] as $action ) {
 				$cases[] = [ $mode, $action ];
 			}
@@ -61,8 +60,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	}
 
 	private function configure( bool $enabled, array $keys ): PageOwnedPilot {
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => $enabled,
-			'LayersPageOwnedPilotOwners' => $keys ] );
+		// Only the listed titles may start drawings; pages that own drawings always take part (D2).
+		$this->setService( 'LayersPageOwnedPilot',
+			static fn ( $services ) => new PageOwnedPilot( $services, $enabled ? $keys : [] ) );
 		$s = $this->getServiceContainer();
 		$pilot = null;
 		$this->overrideConfigValue( 'APIModules', $s->getMainConfig()->get( 'APIModules' ) + [
@@ -157,16 +157,6 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$legacy->expects( $this->never() )->method( 'getLayerSetForAdoption' );
 		$legacy->expects( $this->never() )->method( 'getLatestLayerSet' );
 		$this->setService( 'LayersDatabase', $legacy );
-
-		// 1a. Disabled pilot
-		$pilotDisabled = $this->configure( false, [ $page->getTitle()->getPrefixedDBkey() ] );
-		try {
-			$pilotDisabled->adoptDirectEmbedding( $page->getId(), $base, strlen( $prefix ), $embed,
-				202, null, $actor, 'Disabled pilot' );
-			$this->fail( 'Expected publication-disabled on disabled pilot' );
-		} catch ( PublicationException $e ) {
-			$this->assertSame( 'layers-publication-disabled', $e->getMessage() );
-		}
 
 		// 1b. Empty scope
 		$pilotEmpty = $this->configure( true, [] );
@@ -476,9 +466,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			->getRevisionByTitle( $title )->getId() );
 	}
 
-	public function testDisabledApisRetainImportProtection(): void {
+	public function testImportProtectionNeedsNoConfiguredNamespace(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$pilot = $this->configure( false, [ $title->getPrefixedDBkey() ] );
+		$pilot = $this->configure( true, [] );
 		$native = $this->createMock( OldRevisionImporter::class );
 		$native->expects( $this->never() )->method( 'import' );
 		$revision = new WikiRevision();
@@ -490,7 +480,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		} catch ( \RuntimeException $e ) {
 			$this->assertSame( 'layers-admission-unauthorized', $e->getMessage() );
 		}
-		$this->expectApiErrorCode( 'layers-reading-disabled' );
+		$this->expectApiErrorCode( 'layers-revision-unavailable' );
 		$this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(), 'revid' => 1 ] );
 	}
 
@@ -766,27 +756,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$initialRevCount = (int)$dbr->newSelectQueryBuilder()
 			->select( 'COUNT(*)' )->from( 'revision' )->caller( __METHOD__ )->fetchField();
 
-		// 1. Disabled pilot
-		$disabledPilot = $this->configure( false, [ $title->getPrefixedDBkey() ] );
-		try {
-			$disabledPilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
-			$this->fail( 'Expected disabled pilot to reject' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
-			$this->assertNull( $e->getPrevious() );
-		}
-
-		// 2. Empty scope
-		$emptyScopePilot = $this->configure( true, [] );
-		try {
-			$emptyScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed, $actor );
-			$this->fail( 'Expected empty scope to reject' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
-			$this->assertNull( $e->getPrevious() );
-		}
-
-		// 3. A page that owns drawings stays in scope when its title is no longer enrolled.
+		// A page that owns drawings stays in scope where no page may start drawings, or its title is not listed.
+		$this->assertSame( $pageId, $this->configure( true, [] )->prepareBoundEditor( $pageId, $current, $start,
+			$embed, $actor )['pageOwned']['pageId'] );
 		$unrelatedScopePilot = $this->configure( true, [ 'Unrelated_Owner_Page' ] );
 		$this->assertSame( $pageId, $unrelatedScopePilot->prepareBoundEditor( $pageId, $current, $start, $embed,
 			$actor )['pageOwned']['pageId'] );
@@ -1120,18 +1092,15 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		} catch ( \DomainException $e ) {
 			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
 		}
-		foreach ( [ [ $pilot, 'missing' ],
-			[ new PageOwnedPilot( $this->getServiceContainer(), false,
-				[ $title->getPrefixedDBkey() ] ), 'presentation' ],
-			[ new PageOwnedPilot( $this->getServiceContainer(), true, [] ), 'presentation' ]
-		] as [ $service, $surface ] ) {
-			try {
-				$service->prepareEditor( $title->getPrefixedText(), $id, $surface, $actor );
-				$this->fail( 'Expected unavailable editor' );
-			} catch ( \DomainException $e ) {
-				$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
-			}
+		try {
+			$pilot->prepareEditor( $title->getPrefixedText(), $id, 'missing', $actor );
+			$this->fail( 'Expected unavailable editor' );
+		} catch ( \DomainException $e ) {
+			$this->assertSame( 'layers-editor-unavailable', $e->getMessage() );
 		}
+		// A page that owns drawings takes part with no configured namespace or title (D2).
+		$this->assertSame( $id, ( new PageOwnedPilot( $this->getServiceContainer(), [] ) )
+			->prepareEditor( $title->getPrefixedText(), $id, 'presentation', $actor )['pageOwned']['revisionId'] );
 		$params['baserevid'] = $id;
 		$params['maintext'] = 'Newer main text';
 		$next = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish']['revid'];
@@ -1555,21 +1524,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			}
 		}
 
-		$disabledPilot = new PageOwnedPilot( $this->getServiceContainer(), false, [ $titleA->getPrefixedDBkey() ] );
-		try {
-			$disabledPilot->prepareViewer( $titleA->getPrefixedText(), $revA, 'presentation', $actor );
-			$this->fail( 'Expected prepareViewer to throw for disabled pilot' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-revision-unavailable', $e->getMessage() );
-		}
-
-		$emptyScopePilot = new PageOwnedPilot( $this->getServiceContainer(), true, [] );
-		try {
-			$emptyScopePilot->prepareViewer( $titleA->getPrefixedText(), $revA, 'presentation', $actor );
-			$this->fail( 'Expected prepareViewer to throw for empty scope pilot' );
-		} catch ( \DomainException $e ) {
-			$this->assertSame( 'layers-revision-unavailable', $e->getMessage() );
-		}
+		// Drawings stay viewable where no page may start new ones.
+		$this->assertSame( $revA, ( new PageOwnedPilot( $this->getServiceContainer(), [] ) )
+			->prepareViewer( $titleA->getPrefixedText(), $revA, 'presentation', $actor )['revisionId'] );
 
 		// Missing Layers slot
 		$pilotWithPlain = $this->configure( true,

@@ -23,8 +23,7 @@ class PageOwnedCargoStoreTest extends MediaWikiIntegrationTestCase {
 	/** @return array [ title, first revision, second revision ] */
 	private function owner(): array {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$publisher = TestingAdmissionRegistration::install( $this )['publisher'];
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
@@ -88,14 +87,8 @@ class PageOwnedCargoStoreTest extends MediaWikiIntegrationTestCase {
 		}
 	}
 
-	public function testNothingIsProjectedOutsideThePilot(): void {
-		[ $title, , $second ] = $this->owner();
-		$this->overrideConfigValue( 'LayersPageOwnedPilotEnabled', false );
-		$this->assertSame( [], $this->rows( $title, $second ) );
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true, 'LayersPageOwnedPilotOwners' => [] ] );
-		$this->assertSame( [], $this->rows( $title, $second ) );
-		// Another page never projects this page's drawings.
-		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [ $title->getPrefixedDBkey() ] );
+	public function testAnotherPageNeverProjectsThisPagesDrawings(): void {
+		[ , , $second ] = $this->owner();
 		$this->assertSame( [], $this->rows( $this->getExistingTestPage()->getTitle(), $second ) );
 	}
 }

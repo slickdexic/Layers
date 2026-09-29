@@ -1,16 +1,12 @@
 # Configuration reference
 
-## Guarded editor entry — September 20, 2026
+## Drawings in page history — September 29, 2026
 
-`Special:EditLayersPage` is registered but page-owned editing remains disabled by default. It requires LayersPageOwnedPilotEnabled, an exact retained owner entry in LayersPageOwnedPilotOwners, a registered user authorized to read/edit/editlayers, an existing Layers slot and a selected slide surface in the explicit current revision. Supply owner, revid and surface query parameters; no default/latest fallback or automatic creation is provided. Responses are not cacheable. Asset-backed surfaces, migration and historical viewing are not enabled by this entry. Do not enable it for production; see the current handoff/status for browser acceptance gates. Docker is not required by this route.
+Drawings kept in page history are on by default (charter decision D2): no switch and no list of pages is needed. The content model, the `layers` slot role and the save, import, merge and restore guards are always installed.
 
-## Experimental page-owned revision pilot
+`$wgLayersPageDrawingNamespaces` defaults to `null`, which means the content namespaces (`$wgContentNamespaces`) and `File:`. Set it to an array of namespace IDs, for example `[ NS_MAIN, NS_FILE ]`, to limit which pages may start drawings; `[]` lets no page start new ones. A page that already has drawings keeps them, and they stay editable and viewable, in any namespace.
 
-`$wgLayersPageOwnedPilotEnabled` defaults to `false`. It gates the experimental read/publication APIs; it does not connect editor saves or enable a historical viewer. Keep it disabled outside lead-controlled acceptance.
-
-`$wgLayersPageOwnedPilotOwners` defaults to `[]`. Entries are exact canonical local prefixed DB keys. A retained scope installs the native content role and save/import/move/restore/merge guards even with publication disabled. Never remove retained owners while current or archived pilot revisions exist. These pilot restrictions are not completed production lifecycle support. See [Current Status](Current-Status.md) before considering enablement. No Docker runtime is involved.
-
-`$wgLayersPageOwnedPilotNamespaces` defaults to `[]`. Entries are namespace IDs (for example `[ NS_MAIN ]`); every page in them may start owning drawings, as if its title were listed in `$wgLayersPageOwnedPilotOwners`. Enrollment only decides where ownership may start; the guards apply to pages that own drawings. Either list being non-empty installs the content role and guards, so do not empty both while page-owned drawings exist.
+The pilot settings `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are retired and ignored; remove them from `LocalSettings.php`.
 
 `$wgLayersBindingReadMaxAge` defaults to `300` (seconds). An anonymous reader's `layersread` binding read of a page's current revision, which is how page views fetch page-owned drawings, is sent as publicly cacheable for this long, so browsers and a CDN can serve it. Logged-in readers, older revisions, snapshot reads, errors and private wikis are never cached publicly. After a page is deleted, or a revision that has just stopped being current is hidden, a cached copy can be served for up to this age; `0` turns caching off.
 

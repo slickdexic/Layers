@@ -48,17 +48,9 @@
 		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport": "src/SpecialPages/SpecialLayersExport.php"
 	},
 	"config": {
-		"LayersPageOwnedPilotEnabled": {
-			"description": "Experimental page-owned revision APIs; keep disabled until pilot acceptance. Does not enable editor integration.",
-			"value": false
-		},
-		"LayersPageOwnedPilotOwners": {
-			"description": "Exact canonical DB keys of titles where page-owned drawings may start. A page that owns drawings keeps them under any later title, so removing a title stops only new ownership. Do not empty this list and LayersPageOwnedPilotNamespaces while page-owned drawings exist: the drawing slot and its guards are installed only while one of them has entries.",
-			"value": []
-		},
-		"LayersPageOwnedPilotNamespaces": {
-			"description": "Namespace IDs (for example 0 for the main namespace) all of whose pages may start owning drawings, in addition to LayersPageOwnedPilotOwners.",
-			"value": []
+		"LayersPageDrawingNamespaces": {
+			"description": "Namespace IDs whose pages may start drawings kept in their page history. null means the content namespaces ($wgContentNamespaces) and File:. An empty array lets no page start new drawings. A page that already has drawings keeps them in any namespace.",
+			"value": null
 		},
 		"LayersBindingReadMaxAge": {
 			"description": "Seconds for which browsers and the CDN may keep an anonymous reader's copy of the page-owned drawings shown on a page's current revision. Logged-in readers, older revisions and private wikis are never cached publicly. 0 disables.",

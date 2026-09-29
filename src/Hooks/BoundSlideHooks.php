@@ -49,8 +49,7 @@ class BoundSlideHooks {
 	public static function register( Parser $parser, array $binding ): array {
 		// Save-time and edit-stash renders lack the new revision ID; core must re-render after insertion.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
-		$config = MediaWikiServices::getInstance()->getMainConfig();
-		if ( !$config->get( 'LayersPageOwnedPilotEnabled' ) || $parser->getRevisionId() === null ) {
+		if ( $parser->getRevisionId() === null ) {
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		// Native parsing may supply revisionId=0 with an exact revision callback. Never query latest here.
@@ -112,9 +111,6 @@ class BoundSlideHooks {
 	 * @param Parser $parser
 	 */
 	public static function noteSharedSlide( Parser $parser ): void {
-		if ( !MediaWikiServices::getInstance()->getMainConfig()->get( 'LayersPageOwnedPilotEnabled' ) ) {
-			return;
-		}
 		$scope = self::scope();
 		$revision = $parser->getRevisionRecordObject();
 		if ( $revision ? $scope->includesRevision( $parser->getTitle(), $revision ) :

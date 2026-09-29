@@ -59,7 +59,7 @@ final class PageOwnedCargoStore {
 			$revision = $services->getRevisionLookup()->getRevisionByTitle( $title, 0,
 				IDBAccessObject::READ_LATEST );
 		}
-		if ( !$services->getMainConfig()->get( 'LayersPageOwnedPilotEnabled' ) || !$revision ||
+		if ( !$revision ||
 			!$revision->getId() || $revision->getPageId() !== $title->getArticleID() ||
 			!$revision->hasSlot( PageRevisionWriter::SLOT ) || $revision->isDeleted( RevisionRecord::DELETED_TEXT ) ||
 			!$services->getService( 'LayersPageOwnedPilot' )->getScope()->includesRevision( $title, $revision )

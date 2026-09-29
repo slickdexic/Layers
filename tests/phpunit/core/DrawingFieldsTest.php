@@ -55,8 +55,7 @@ class DrawingFieldsTest extends MediaWikiIntegrationTestCase {
 	}
 
 	public function testAPageDrawingIsNamedByPageIdAndName(): void {
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ 'DrawingFieldsNamed' ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
 		$page = $this->getExistingTestPage( 'DrawingFieldsNamed' );
 		$actor = $this->getTestUser()->getUser();

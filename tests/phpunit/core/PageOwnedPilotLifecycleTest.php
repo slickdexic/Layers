@@ -89,8 +89,7 @@ class PageOwnedPilotLifecycleTest extends MediaWikiIntegrationTestCase {
 	public function testMovedOwnerKeepsItsDrawingsAndTheOldTitleCannotClaimThem(): void {
 		$old = $this->getNonexistingTestPage()->getTitle();
 		$new = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $old->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => [] ] );
 		$s = $this->getServiceContainer();
 		[ $pageId, , $binding, $text ] = $this->owner( $old );
 		$actor = $this->actor();
@@ -141,8 +140,7 @@ class PageOwnedPilotLifecycleTest extends MediaWikiIntegrationTestCase {
 	public function testOrdinaryPagesMoveOntoAndOffEnrolledTitles(): void {
 		$page = $this->getExistingTestPage();
 		$enrolled = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $enrolled->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$s = $this->getServiceContainer();
 		$this->assertStatusGood( $s->getMovePageFactory()->newMovePage( $page->getTitle(), $enrolled )
 			->moveIfAllowed( $this->actor(), 'Onto an enrolled title' ) );

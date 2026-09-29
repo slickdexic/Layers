@@ -135,7 +135,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		$key = $source->getTitle()->getPrefixedDBkey();
 		$this->ownDrawings( $source );
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$before = $this->captureDbState( $fixture['sourceId'], $fixture['destinationId'], $fixture['revisionId'] );
@@ -168,7 +168,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		$key = $destination->getTitle()->getPrefixedDBkey();
 		$this->ownDrawings( $destination );
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$before = $this->captureDbState( $fixture['sourceId'], $fixture['destinationId'], $fixture['revisionId'] );
@@ -201,7 +201,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		// Scope is an unrelated pilot key; write-disabled composition must permit ordinary merges.
 		$key = $source->getTitle()->getPrefixedDBkey() . '_unrelated';
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$before = $this->captureDbState( $fixture['sourceId'], $fixture['destinationId'], $fixture['revisionId'] );
@@ -237,7 +237,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		$key = $source->getTitle()->getPrefixedDBkey();
 		$this->ownDrawings( $source );
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$before = $this->captureDbState( $fixture['sourceId'], $fixture['destinationId'], $fixture['revisionId'] );
@@ -269,7 +269,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		// Use unrelated pilot key so pilot guard does not preempt the core permission check.
 		$key = $source->getTitle()->getPrefixedDBkey() . '_unrelated';
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$before = $this->captureDbState( $fixture['sourceId'], $fixture['destinationId'], $fixture['revisionId'] );
@@ -302,7 +302,7 @@ class PageOwnedPilotMergeApiTest extends ApiTestCase {
 
 		$key = $source->getTitle()->getPrefixedDBkey();
 		$this->ownDrawings( $source );
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$this->setService( 'MergeHistoryFactory', $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() ) );
 
 		$actor = $this->getMergeActor();

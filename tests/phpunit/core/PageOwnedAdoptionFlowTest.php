@@ -41,8 +41,9 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	 * @return PageOwnedPilot
 	 */
 	private function configure( bool $enabled, array $keys ): PageOwnedPilot {
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => $enabled,
-			'LayersPageOwnedPilotOwners' => $keys ] );
+		// Only the listed titles may start drawings; pages that own drawings always take part (D2).
+		$this->setService( 'LayersPageOwnedPilot',
+			static fn ( $services ) => new PageOwnedPilot( $services, $enabled ? $keys : [] ) );
 		$pilot = null;
 		$this->overrideConfigValue( 'APIModules', $this->getServiceContainer()->getMainConfig()->get( 'APIModules' ) + [
 			'layerspublish' => [ 'class' => ApiLayersPublish::class,

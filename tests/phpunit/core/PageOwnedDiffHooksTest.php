@@ -41,8 +41,7 @@ class PageOwnedDiffHooksTest extends MediaWikiIntegrationTestCase {
 	/** @return array [ title, revisions, editor ] */
 	private function history(): array {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$publisher = TestingAdmissionRegistration::install( $this )['publisher'];
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
@@ -106,11 +105,5 @@ class PageOwnedDiffHooksTest extends MediaWikiIntegrationTestCase {
 		$reader = $this->getTestUser( [ 'reader' ] )->getUser();
 		$this->overrideUserPermissions( $reader, [ 'read' ] );
 		$this->assertStringNotContainsString( 'layers-drawing-diff', $this->diff( $title, $first, $second, $reader ) );
-	}
-
-	public function testPagesOutsideThePilotAreUntouched(): void {
-		[ $title, [ $first, $second ], $editor ] = $this->history();
-		$this->overrideConfigValue( 'LayersPageOwnedPilotEnabled', false );
-		$this->assertStringNotContainsString( 'layers-drawing-diff', $this->diff( $title, $first, $second, $editor ) );
 	}
 }

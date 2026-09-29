@@ -45,7 +45,7 @@ class PageOwnedPilotMergeTest extends MediaWikiIntegrationTestCase {
 				$owner->getLatest(), '{"schemaVersion":1,"surfaces":[]}', 'Owns drawings' );
 		}
 		// Write-disable must not disable merge protection for retained pilot owners.
-		$pilot = new PageOwnedPilot( $s, false, [ $key ] );
+		$pilot = new PageOwnedPilot( $s, [ $key ] );
 		$factory = $pilot->wrapMergeFactory( $s->getMergeHistoryFactory() );
 		if ( $scope === 'enrolled' ) {
 			$merge = $factory->newMergeHistory( $source, $destination );

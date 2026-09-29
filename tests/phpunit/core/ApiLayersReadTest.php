@@ -20,7 +20,6 @@ use Wikimedia\TestingAccessWrapper;
  * @group API
  */
 class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
-	private bool $enabled = true;
 	private array $ownerKeys = [];
 	private ?PageReadService $reader = null;
 	private ?\MediaWiki\Api\ApiMain $apiMain = null;
@@ -40,7 +39,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$reader = $this->reader ?? new PageReadService( new PageHistoryAccess( $s->getRevisionLookup() ),
 					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ) );
 				return new ApiLayersRead( $main, $name, $reader, $s->getTitleFactory(),
-					$this->enabled, PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader,
+					PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader,
 					$this->bindingMaxAge );
 			} ]
 		] ) );
@@ -79,7 +78,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public function testBindingReadReturnsOnlyAuthorizedSelectedDrawings(): void {
 		[ $title, $id, $user ] = $this->publish();
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, $this->ownerKeys );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
 		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
 		$surfaceId = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) )
 			->surfaces[0]->id;
@@ -105,7 +104,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public function testAnonymousReadOfCurrentDrawingsIsBrieflyCacheable(): void {
 		[ $title, $id, $user ] = $this->publish();
-		$pilot = new PageOwnedPilot( $this->getServiceContainer(), true, $this->ownerKeys );
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
 		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
 		$this->bindingMaxAge = 300;
 		$binding = 'v1:' . $title->getArticleID() . ':' . json_decode( file_get_contents(
@@ -167,9 +166,6 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$params = [ 'action' => 'layersread', 'owner' => 'Pilot', 'revid' => 1 ];
 		$this->ownerKeys = [ 'Pilot' ];
 		switch ( $case ) {
-			case 'disabled':
-				$this->enabled = false;
-				break;
 			case 'empty-scope':
 				$this->ownerKeys = [];
 				break;
@@ -204,7 +200,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public static function provideEarlyFailures(): array {
 		return [
-			[ 'disabled', 'layers-reading-disabled' ], [ 'empty-scope', 'layers-revision-unavailable' ],
+			[ 'empty-scope', 'layers-revision-unavailable' ],
 			[ 'outside-scope', 'layers-revision-unavailable' ], [ 'fragment', 'layers-revision-unavailable' ],
 			[ 'special', 'layers-revision-unavailable' ], [ 'missing-owner', 'missingparam' ],
 			[ 'missing-revision', 'missingparam' ], [ 'zero', 'outofrange' ],
@@ -233,9 +229,4 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
-	public function testReadApiDefaultsToDisabled(): void {
-		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
-		$this->assertFalse( $manifest['config']['LayersPageOwnedPilotEnabled']['value'] );
-		$this->assertSame( [], $manifest['config']['LayersPageOwnedPilotOwners']['value'] );
-	}
 }

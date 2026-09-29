@@ -24,7 +24,6 @@ use Wikimedia\Rdbms\IDBAccessObject;
 /** Shared native pilot composition. Does not register endpoints or hooks by itself. */
 class PageOwnedPilot {
 	private MediaWikiServices $services;
-	private bool $enabled;
 	private PageOwnedScope $scope;
 	private PagePublicationService $publisher;
 	private PageReadService $reader;
@@ -32,16 +31,12 @@ class PageOwnedPilot {
 
 	/**
 	 * @param MediaWikiServices $services Fully initialized native service container
-	 * @param bool $enabled Default-off API switch; guards are independent of this switch
-	 * @param string[] $ownerKeys Enrolled titles as exact prefixed DB keys; see PageOwnedScope
-	 * @param int[] $namespaces Enrolled namespaces
+	 * @param string[] $ownerKeys Titles, as exact prefixed DB keys, that may start drawings; see PageOwnedScope
+	 * @param int[] $namespaces Namespaces all of whose pages may start drawings
 	 */
-	public function __construct( MediaWikiServices $services, bool $enabled = false, array $ownerKeys = [],
-		array $namespaces = []
-	) {
+	public function __construct( MediaWikiServices $services, array $ownerKeys = [], array $namespaces = [] ) {
 		$this->scope = PageOwnedScope::newFromServices( $services, $ownerKeys, $namespaces );
 		$this->services = $services;
-		$this->enabled = $enabled;
 		$access = new PageHistoryAccess( $services->getRevisionLookup() );
 		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
 		$this->publisher = new PagePublicationService( $services->getWikiPageFactory(), $access, $sources,
@@ -69,7 +64,7 @@ class PageOwnedPilot {
 	 */
 	public function newPublishApi( ApiMain $main, string $name ): ApiLayersPublish {
 		return new ApiLayersPublish( $main, $name, $this->publisher, $this->services->getTitleFactory(),
-			$this->enabled, $this->scope );
+			$this->scope );
 	}
 
 	/**
@@ -80,7 +75,7 @@ class PageOwnedPilot {
 	public function newReadApi( ApiMain $main, string $name ): ApiLayersRead {
 		$config = $this->services->getMainConfig();
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
-			$this->enabled, $this->scope, [ $this, 'prepareBoundViewers' ],
+			$this->scope, [ $this, 'prepareBoundViewers' ],
 			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0 );
 	}
 
@@ -100,7 +95,7 @@ class PageOwnedPilot {
 		Authority $authority
 	): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
-		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
+		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
 			!$this->scope->includes( $owner ) ||
 			$revisionId < 1 || $revisionId > 2147483647 || $surfaceId === '' ||
 			$authority->getUser()->getId() <= 0
@@ -255,7 +250,7 @@ class PageOwnedPilot {
 	 */
 	public function listAdoptionCandidates( int $pageId, int $revisionId, Authority $authority ): array {
 		try {
-			if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+			if ( $authority->getUser()->getId() <= 0 ) {
 				return [];
 			}
 			$lookup = $this->services->getRevisionLookup();
@@ -378,7 +373,7 @@ class PageOwnedPilot {
 	private function assertAdoptionScope( int $pageId, int $baseRevisionId, int $start, string $expected,
 		int $legacyRevisionId, Authority $authority
 	): PageOwnedIdentityResolver {
-		if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+		if ( $authority->getUser()->getId() <= 0 ) {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
 		if ( $start < 0 || $expected === '' || $legacyRevisionId < 1 || $legacyRevisionId > 2147483647 ) {
@@ -522,7 +517,7 @@ class PageOwnedPilot {
 	 */
 	private function assertCopyScope( int $pageId, Authority $authority ): void {
 		$owner = $pageId > 0 ? $this->services->getTitleFactory()->newFromID( $pageId ) : null;
-		if ( !$this->enabled || $authority->getUser()->getId() <= 0 || !$owner || !$this->scope->includes( $owner ) ) {
+		if ( $authority->getUser()->getId() <= 0 || !$owner || !$this->scope->includes( $owner ) ) {
 			throw new PublicationException( 'layers-publication-disabled' );
 		}
 	}
@@ -566,7 +561,7 @@ class PageOwnedPilot {
 	 */
 	public function listBoundEditorSelections( int $pageId, int $revisionId, Authority $authority ): array {
 		try {
-			if ( !$this->enabled || $authority->getUser()->getId() <= 0 ) {
+			if ( $authority->getUser()->getId() <= 0 ) {
 				return [];
 			}
 			$lookup = $this->services->getRevisionLookup();
@@ -643,7 +638,7 @@ class PageOwnedPilot {
 		Authority $authority
 	): array {
 		try {
-			if ( !$this->enabled || $start < 0 || $expected === '' || $authority->getUser()->getId() <= 0 ) {
+			if ( $start < 0 || $expected === '' || $authority->getUser()->getId() <= 0 ) {
 				throw new \DomainException();
 			}
 			$lookup = $this->services->getRevisionLookup();
@@ -709,7 +704,7 @@ class PageOwnedPilot {
 	 */
 	public function prepareCurrentEditor( string $ownerText, string $surfaceId, Authority $authority ): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
-		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
+		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
 			!$this->scope->includes( $owner ) ||
 			$surfaceId === '' || $authority->getUser()->getId() <= 0
 		) {
@@ -744,7 +739,7 @@ class PageOwnedPilot {
 		Authority $authority
 	): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
-		if ( !$this->enabled || !$owner || !$owner->canExist() || $owner->hasFragment() ||
+		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
 			!$this->scope->includes( $owner ) ||
 			$revisionId < 1 || $revisionId > 2147483647 || $surfaceId === ''
 		) {
@@ -774,7 +769,7 @@ class PageOwnedPilot {
 	 * @return array[]
 	 */
 	public function getHistorySurfaces( \MediaWiki\Title\Title $owner, int $revisionId, Authority $authority ): array {
-		if ( !$this->enabled || !$this->scope->includes( $owner ) ||
+		if ( !$this->scope->includes( $owner ) ||
 			$owner->hasFragment() || $revisionId < 1 || $revisionId > 2147483647 ) {
 			return [];
 		}
@@ -817,7 +812,7 @@ class PageOwnedPilot {
 	public function prepareBoundViewers( \MediaWiki\Title\Title $owner, int $revisionId,
 		array $bindings, Authority $authority
 	): array {
-		if ( !$this->enabled || !$this->scope->includes( $owner ) ) {
+		if ( !$this->scope->includes( $owner ) ) {
 			return [];
 		}
 		$result = [];
@@ -854,7 +849,7 @@ class PageOwnedPilot {
 
 	/** @return PageSurfaceRestore */
 	public function newSurfaceRestore(): PageSurfaceRestore {
-		return new PageSurfaceRestore( $this->enabled, $this->scope, $this->services->getTitleFactory(),
+		return new PageSurfaceRestore( $this->scope, $this->services->getTitleFactory(),
 			$this->services->getRevisionLookup(), $this->publisher );
 	}
 
@@ -870,7 +865,7 @@ class PageOwnedPilot {
 	public function getDrawingChanges( \MediaWiki\Title\Title $owner, RevisionRecord $old, RevisionRecord $new,
 		Authority $authority
 	): array {
-		if ( !$this->enabled || !$this->scope->includes( $owner ) ) {
+		if ( !$this->scope->includes( $owner ) ) {
 			return [];
 		}
 		return ( new PageDrawingDiff( new PageHistoryAccess( $this->services->getRevisionLookup() ) ) )

@@ -21,9 +21,6 @@ trait ExcludesInstalledPilot {
 		$hooks['MediaWikiServices'] = array_values( array_filter( $hooks['MediaWikiServices'] ?? [],
 			static fn ( $handler ) => strpos( json_encode( $handler ), 'PageOwnedPilotRegistration' ) === false ) );
 		$this->installedPilotOverride = $registry->setAttributeForTest( 'Hooks', $hooks );
-		$this->overrideMwServices( new HashConfig( [
-			'LayersPageOwnedPilotEnabled' => false,
-			'LayersPageOwnedPilotOwners' => []
-		] ) );
+		$this->overrideMwServices( new HashConfig( [ 'LayersPageDrawingNamespaces' => [] ] ) );
 	}
 }

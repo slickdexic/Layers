@@ -107,10 +107,9 @@ class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	}
 
 	private function configure( bool $enabled, array $keys ): PageOwnedPilot {
-		$this->overrideConfigValues( [
-			'LayersPageOwnedPilotEnabled' => $enabled,
-			'LayersPageOwnedPilotOwners' => $keys,
-		] );
+		// Only the listed titles may start drawings; pages that own drawings always take part (D2).
+		$this->setService( 'LayersPageOwnedPilot',
+			static fn ( $services ) => new PageOwnedPilot( $services, $enabled ? $keys : [] ) );
 		$s = $this->getServiceContainer();
 		$pilot = null;
 		$this->overrideConfigValue( 'APIModules', $s->getMainConfig()->get( 'APIModules' ) + [
@@ -352,22 +351,8 @@ class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			);
 		}
 
-		// Additional pilot-level rejection cases: disabled pilot and empty scope
-		$disabledPilot = new PageOwnedPilot( $this->getServiceContainer(), false, [ $title->getPrefixedDBkey() ] );
-		$contextDisabled = $this->newPageContext( $actor, [
-			'owner' => $title->getPrefixedText(),
-			'revid' => (string)$validRevId,
-			'surface' => 'presentation',
-		] );
-		$entryDisabled = new SpecialEditLayersPage( $disabledPilot );
-		$entryDisabled->setContext( $contextDisabled );
-		$entryDisabled->execute( null );
-		$outDisabled = $contextDisabled->getOutput();
-		$this->assertArrayNotHasKey( 'wgLayersEditorInit', $outDisabled->getJsConfigVars() );
-		$this->assertNotContains( 'ext.layers.editor', $outDisabled->getModules() );
-		$this->assertStringNotContainsString( 'layers-editor-container', $outDisabled->getHTML() );
-
-		$emptyPilot = new PageOwnedPilot( $this->getServiceContainer(), true, [] );
+		// A page that owns drawings still opens where no page may start new ones (D2).
+		$emptyPilot = new PageOwnedPilot( $this->getServiceContainer(), [] );
 		$contextEmpty = $this->newPageContext( $actor, [
 			'owner' => $title->getPrefixedText(),
 			'revid' => (string)$validRevId,
@@ -377,9 +362,8 @@ class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$entryEmpty->setContext( $contextEmpty );
 		$entryEmpty->execute( null );
 		$outEmpty = $contextEmpty->getOutput();
-		$this->assertArrayNotHasKey( 'wgLayersEditorInit', $outEmpty->getJsConfigVars() );
-		$this->assertNotContains( 'ext.layers.editor', $outEmpty->getModules() );
-		$this->assertStringNotContainsString( 'layers-editor-container', $outEmpty->getHTML() );
+		$this->assertArrayHasKey( 'wgLayersEditorInit', $outEmpty->getJsConfigVars() );
+		$this->assertContains( 'ext.layers.editor', $outEmpty->getModules() );
 
 		// Stale revision rejection: advance current page revision
 		$params['baserevid'] = $validRevId;

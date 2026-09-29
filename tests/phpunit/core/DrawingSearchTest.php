@@ -53,8 +53,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		// The test environment uses a dummy engine; use the database's own search.
 		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$publisher = TestingAdmissionRegistration::install( $this )['publisher'];
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
@@ -82,8 +81,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	public function testMaintenanceScriptIndexesExistingDrawings(): void {
 		$this->overrideConfigValues( [ 'DisableSearchUpdate' => true, 'SearchType' => null ] );
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
 		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
@@ -99,16 +97,13 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public function testSearchEngineDocumentsCarryDrawingText(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
 		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
 			$this->document( 'zebracirrus' ), 'Drawing', new WikitextContent( 'Page' ) );
 		$fields = $this->documentFields( $title );
 		$this->assertSame( [ 'Existing', "Welcome Slide\nChecklist zebracirrus" ], $fields['auxiliary_text'] );
-		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
-		$this->assertSame( [ 'Existing' ], $this->documentFields( $title )['auxiliary_text'] );
 	}
 
 	private function documentFields( Title $title ): array {
@@ -139,8 +134,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	public function testResultFoundOnlyInADrawingShowsTheDrawingText(): void {
 		$title = $this->getNonexistingTestPage()->getTitle();
-		$this->overrideConfigValues( [ 'LayersPageOwnedPilotEnabled' => true,
-			'LayersPageOwnedPilotOwners' => [ $title->getPrefixedDBkey() ] ] );
+		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null ] );
 		$editor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
 		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
@@ -153,8 +147,6 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $core, $this->extract( $title, [ 'zebrasnippet' ], $core ) );
 		$this->assertSame( 'kept', $this->extract( $title, [], 'kept' ) );
 		$this->assertSame( 'kept', $this->extract( $title, [ 'absentword' ], 'kept' ) );
-		$this->overrideConfigValue( 'LayersPageOwnedPilotOwners', [] );
-		$this->assertSame( '', $this->extract( $title, [ 'zebrasnippet' ] ) );
 	}
 
 	public function testExtractedTextIsWhatReadersSee(): void {

@@ -1,5 +1,25 @@
 # Layers implementation handoff plan
 
+## Drawings in page history are on by default; J92 ready after J91 — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: no pilot setting remains; `$wgLayersPageDrawingNamespaces` (default `null` = content namespaces and `File:`) decides where pages may start drawings, and a page that owns drawings always takes part. The test wiki's `LocalSettings.php` still sets the retired pilot variables; they are ignored. J90 and J91 are still ready and come first. Earlier entries below are historical.
+
+### J92 — Browser acceptance of drawings on by default (ready after J91)
+
+**Advances:** HIST-3.
+
+**Purpose:** prove on the test wiki that a page nobody enrolled can start a drawing, and that a page outside the configured namespaces cannot. Acceptance only; no production code.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-default-on.spec.js`, this packet and the review ledger. **Exception to the J65 rules for this packet only:** besides the owner page you may create and edit two new pages, `Layers D2 probe` (main namespace) and `Project:Layers D2 probe`. Never delete them; on later runs, reuse them and restore their text. Do not touch any other page.
+
+1. Create or reset `Layers D2 probe` with the text `{{#Slide:<its page ID>:D2 slide}}` (create it first with plain text to learn its ID). It has no drawings and was never enrolled.
+2. On its page view the drawing controls offer "Create page drawing: D2 slide". Follow it, draw a rectangle, save with an empty summary. Exactly one new revision appears with the comment `Added drawing “D2 slide”` and the `layers-page-drawing` tag, and the page then shows the drawing.
+3. Create or reset `Project:Layers D2 probe` the same way with its own page ID. Its page view offers no "Create page drawing" link, and a `layerspublish` API request for it (with a valid document and base) fails with `layers-publication-disabled`.
+4. The owner page still works as before: open its drawing from the editor route, move a layer, save, and restore the baseline by exact-base publication.
+5. Leave both probe pages in place; their history is the record. On a rerun, first publish `Layers D2 probe` with an empty drawing list (exact base, same text), so step 2 again starts from a page without that drawing.
+
+Record durations and anything that could not be checked, then return for lead review.
+
 ## J89 accepted; another page's drawing can be copied; J91 ready after J90 — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. **J89 is accepted** (see the review ledger). Contract: an embed naming another page's drawing shows nothing and gives editors who can read that page a "Copy “<name>” from <page> to this page" link to `Special:CopyLayersDrawing`; confirming adds a new drawing and rewrites the embed in one revision. J90 is still ready and comes first; J91 follows. Earlier entries below are historical.
