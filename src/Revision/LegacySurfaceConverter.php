@@ -50,22 +50,30 @@ class LegacySurfaceConverter {
 		if ( !$data instanceof \stdClass ) {
 			throw new \InvalidArgumentException();
 		}
-		$required = [ 'revision', 'ownerId', 'schema', 'created', 'layers', 'backgroundVisible', 'backgroundOpacity' ];
+		$required = [ 'revision', 'schema', 'created', 'layers' ];
+		// Older saves lack these; the legacy viewer then shows the background fully.
+		$optional = [ 'ownerId', 'backgroundVisible', 'backgroundOpacity' ];
 		$slide = $record['mime'] === 'application/x-layers-slide';
+		$slideKeys = [ 'isSlide', 'canvasWidth', 'canvasHeight', 'backgroundColor' ];
 		if ( $slide ) {
-			$required = array_merge( $required, [ 'isSlide', 'canvasWidth', 'canvasHeight', 'backgroundColor' ] );
+			$required = array_merge( $required, $slideKeys );
+		} elseif ( ( $data->isSlide ?? null ) === false ) {
+			// Some file saves carry unused slide settings, marked as not a slide.
+			$optional = array_merge( $optional, $slideKeys );
 		}
-		if ( array_diff( array_keys( get_object_vars( $data ) ), $required ) ||
-			array_diff( $required, array_keys( get_object_vars( $data ) ) ) ||
+		$keys = array_keys( get_object_vars( $data ) );
+		if ( array_diff( $keys, $required, $optional ) || array_diff( $required, $keys ) ||
 			$data->schema !== 1 || $data->revision !== $record['revision'] ||
-			$data->created !== $record['timestamp'] || !is_int( $data->ownerId ) || $data->ownerId < 0 ) {
+			$data->created !== $record['timestamp'] ||
+			( isset( $data->ownerId ) && ( !is_int( $data->ownerId ) || $data->ownerId < 0 ) ) ) {
 			throw new \InvalidArgumentException();
 		}
 		$surface = (object)[
 			'id' => $surfaceId, 'kind' => $slide ? 'slide' : 'image', 'label' => $record['name'],
 			'canvas' => (object)[
 				'width' => null, 'height' => null, 'backgroundColor' => '#ffffff',
-				'backgroundVisible' => $data->backgroundVisible, 'backgroundOpacity' => $data->backgroundOpacity
+				'backgroundVisible' => property_exists( $data, 'backgroundVisible' ) ? $data->backgroundVisible : true,
+				'backgroundOpacity' => property_exists( $data, 'backgroundOpacity' ) ? $data->backgroundOpacity : 1
 			],
 			'layers' => $data->layers
 		];

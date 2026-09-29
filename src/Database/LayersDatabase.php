@@ -1575,6 +1575,51 @@ class LayersDatabase {
 	}
 
 	/**
+	 * The latest revision of each set name and page saved for one file version, or for one slide.
+	 * @param string $imgName File name, or slide image name
+	 * @param string $sha1 File version, or LayersConstants::TYPE_SLIDE
+	 * @return array[] id, name and page of each, ordered by name and page
+	 */
+	public function listLatestSetRows( string $imgName, string $sha1 ): array {
+		$db = $this->getReadDb();
+		if ( !$db ) {
+			return [];
+		}
+		$res = $db->newSelectQueryBuilder()->select( [ 'ls_id', 'ls_name', 'ls_page' ] )->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $this->buildImageNameLookup( $imgName ), 'ls_img_sha1' => $sha1 ] )
+			->orderBy( [ 'ls_name', 'ls_page', 'ls_revision DESC', 'ls_id DESC' ] )
+			->caller( __METHOD__ )->fetchResultSet();
+		$rows = [];
+		foreach ( $res as $row ) {
+			$key = $row->ls_name . "\n" . $row->ls_page;
+			$rows[$key] ??= [ 'id' => (int)$row->ls_id, 'name' => (string)$row->ls_name, 'page' => (int)$row->ls_page ];
+		}
+		return array_values( $rows );
+	}
+
+	/**
+	 * Sets saved for versions of a file other than the given one.
+	 * @param string $imgName
+	 * @param string $sha1 Version to leave out
+	 * @return array[] name and page of each, once, ordered
+	 */
+	public function listSetsOnOtherVersions( string $imgName, string $sha1 ): array {
+		$db = $this->getReadDb();
+		if ( !$db ) {
+			return [];
+		}
+		$res = $db->newSelectQueryBuilder()->select( [ 'ls_name', 'ls_page' ] )->distinct()->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				$db->expr( 'ls_img_sha1', '!=', $sha1 ) ] )
+			->orderBy( [ 'ls_name', 'ls_page' ] )->caller( __METHOD__ )->fetchResultSet();
+		$sets = [];
+		foreach ( $res as $row ) {
+			$sets[] = [ 'name' => (string)$row->ls_name, 'page' => (int)$row->ls_page ];
+		}
+		return $sets;
+	}
+
+	/**
 	 * Count the number of unique slides (layer sets with ls_img_sha1 = 'slide').
 	 *
 	 * Slides are identified by a special SHA1 value of 'slide' to distinguish

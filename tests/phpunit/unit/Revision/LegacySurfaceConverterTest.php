@@ -14,6 +14,43 @@ class LegacySurfaceConverterTest extends \MediaWikiUnitTestCase {
 		$this->assertNotSame( $record['timestamp'], $surface->source->timestamp );
 	}
 
+	public function testOlderSavesWithoutOwnerOrBackgroundShowTheBackgroundFully(): void {
+		foreach ( [ 'image-text-callout.json:0', 'slide-falsy-zero.json:0' ] as $case ) {
+			[ $record, $media ] = self::provideFixtures()[$case];
+			$data = json_decode( $record['json'] );
+			unset( $data->ownerId, $data->backgroundVisible, $data->backgroundOpacity );
+			$record['json'] = json_encode( $data );
+			$surface = json_decode( ( new LegacySurfaceConverter() )->convert( $record, 'A', $media ) )->surfaces[0];
+			$this->assertSame( [ true, 1 ],
+				[ $surface->canvas->backgroundVisible, $surface->canvas->backgroundOpacity ], $case );
+			$this->assertEquals( $data->layers, $surface->layers, $case );
+		}
+	}
+
+	public function testFileSaveMayCarryUnusedSlideSettingsOnlyWhenMarkedNotASlide(): void {
+		[ $record, $media ] = self::provideFixtures()['image-text-callout.json:0'];
+		$data = json_decode( $record['json'] );
+		$data->isSlide = false;
+		$data->canvasWidth = null;
+		$data->canvasHeight = null;
+		$data->backgroundColor = null;
+		$record['json'] = json_encode( $data );
+		$surface = json_decode( ( new LegacySurfaceConverter() )->convert( $record, 'A', $media ) )->surfaces[0];
+		$this->assertSame( [ $media['width'], '#ffffff' ],
+			[ $surface->canvas->width, $surface->canvas->backgroundColor ] );
+
+		foreach ( [ [ 'isSlide', true ], [ 'ownerId', -1 ], [ 'ownerId', '3' ] ] as [ $key, $value ] ) {
+			$bad = json_decode( $record['json'] );
+			$bad->$key = $value;
+			try {
+				( new LegacySurfaceConverter() )->convert( [ 'json' => json_encode( $bad ) ] + $record, 'A', $media );
+				$this->fail( "$key accepted" );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertSame( 'layers-legacy-conversion-unavailable', $e->getMessage() );
+			}
+		}
+	}
+
 	public function testDoesNotScaleAnOversizedLegacySlide(): void {
 		[ $record ] = self::provideFixtures()['slide-falsy-zero.json:0'];
 		$data = json_decode( $record['json'] );

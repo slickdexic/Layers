@@ -39,6 +39,7 @@ class Hooks {
 	public static function onListDefinedTags( &$tags ): void {
 		$tags[] = 'layers-data-change';
 		$tags[] = PagePublicationService::CHANGE_TAG;
+		$tags[] = PagePublicationService::MIGRATION_TAG;
 	}
 
 	/**

@@ -24,6 +24,8 @@ use Wikimedia\Rdbms\IDBAccessObject;
 class PagePublicationService {
 	/** Software change tag on every page-owned Layers revision; defined in Hooks::onListDefinedTags(). */
 	public const CHANGE_TAG = 'layers-page-drawing';
+	/** Added to the bot edits of the D3 migration, which `--undo` looks for. */
+	public const MIGRATION_TAG = 'layers-migration';
 
 	private WikiPageFactory $pages;
 	private PageHistoryAccess $access;
@@ -74,11 +76,13 @@ class PagePublicationService {
 	 * @param string $summary
 	 * @param WikitextContent|null $main Optional simultaneous main-slot edit
 	 * @param int|null $expectedPageId Bound existing owner; required for future binding-based callers
+	 * @param bool $migration A bot edit of the migration script, tagged MIGRATION_TAG
 	 * @return int Committed revision ID, or unchanged ID for a successful no-op
 	 * @throws PublicationException With a stable internal error code
 	 */
 	public function publish( Title $owner, Authority $authority, int $baseRevisionId,
-		string $json, string $summary, ?WikitextContent $main = null, ?int $expectedPageId = null
+		string $json, string $summary, ?WikitextContent $main = null, ?int $expectedPageId = null,
+		bool $migration = false
 	): int {
 		try {
 			$this->access->assertCanPrepareEdit( $owner, $authority );
@@ -138,6 +142,10 @@ class PagePublicationService {
 		}
 		$updater = $page->newPageUpdater( $authority );
 		$updater->addTag( self::CHANGE_TAG );
+		if ( $migration ) {
+			$updater->addTag( self::MIGRATION_TAG );
+			$updater->setFlags( EDIT_FORCE_BOT );
+		}
 		try {
 			$revision = $this->writer->save( $updater, $baseRevisionId,
 				$content, CommentStoreComment::newUnsavedComment( $summary ), $main,

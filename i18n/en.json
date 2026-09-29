@@ -14,6 +14,8 @@
 	"layers-copy-note-help": "Added to the edit summary after the drawing's source.",
 	"layers-copy-submit": "Copy to this page",
 	"layers-copy-summary": "Copied drawing “$1” from [[:$2]] (revision $3)",
+	"layers-migration-file-summary": "Moved {{PLURAL:$1|a shared layer set|$1 shared layer sets}} into page history: $2",
+	"layers-migration-pdf-page-name": "$1 (page $2)",
 	"layers-copy-conflict": "[[:$1]] has changed since this confirmation was opened, so nothing was saved.",
 	"layers-copy-not-renderable": "This drawing contains a kind of layer that page history cannot display yet, so it cannot be copied to [[:$1]]. Nothing was saved.",
 	"layers-copy-file-unavailable": "The file this drawing is drawn on is not available to you, so it cannot be copied to [[:$1]]. Nothing was saved.",
@@ -1057,6 +1059,8 @@
 	"layers-edit-filtered": "This change was blocked by the wiki's edit filters.",
 	"tag-layers-page-drawing": "Layers drawing",
 	"tag-layers-page-drawing-description": "Edit that saved a drawing owned by this page with the Layers editor.",
+	"tag-layers-migration": "Layers migration",
+	"tag-layers-migration-description": "Edit by the Layers migration script, which moved shared layer sets and slides into page history.",
 	"layers-reading-disabled": "Page-owned Layers reading is not enabled.",
 	"layers-revision-unavailable": "This Layers revision is unavailable.",
 	"layers-reading-failed": "The Layers revision could not be loaded."

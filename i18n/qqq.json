@@ -14,6 +14,8 @@
 	"layers-copy-note-help": "Help text under the note field on [[Special:CopyLayersDrawing]].",
 	"layers-copy-submit": "Submit button on [[Special:CopyLayersDrawing]].",
 	"layers-copy-summary": "Edit summary, in the content language, of the revision that copies a drawing into a page. $1 is the drawing name (plain text), $2 the page it was copied from, $3 that page's revision number. The copier's note, if any, follows after {{msg-mw|colon-separator}}.",
+	"layers-migration-file-summary": "Edit summary, in the content language, of the migration script's bot edit that adds a file's shared layer sets to its File: page as drawings. $1 is the number of drawings added, $2 their names, each in quotation marks, as a list from {{msg-mw|comma-separator}}.",
+	"layers-migration-pdf-page-name": "Name, in the content language, that the migration script gives the drawing of a PDF page other than page 1. $1 is the layer set name, $2 the page number.",
 	"layers-copy-conflict": "Error on [[Special:CopyLayersDrawing]] when the page changed after the confirmation was opened. $1 is the page title.",
 	"layers-copy-not-renderable": "Error on [[Special:CopyLayersDrawing]] when the drawing has layers page history cannot display. $1 is the page title.",
 	"layers-copy-file-unavailable": "Error on [[Special:CopyLayersDrawing]] when the user cannot use the file the drawing is drawn on. $1 is the page title.",
@@ -1051,6 +1053,8 @@
 	"layers-edit-filtered": "Error from the page-owned publishing API when the page text change was rejected by an EditFilterMergedContent handler such as AbuseFilter, SpamBlacklist or ConfirmEdit.",
 	"tag-layers-page-drawing": "Short description of the layers-page-drawing change tag, shown in Recent Changes and page history.\n\nSee also:\n* {{msg-mw|tag-layers-page-drawing-description}}",
 	"tag-layers-page-drawing-description": "Long description of the layers-page-drawing change tag, shown on [[Special:Tags]]. The tag marks revisions saved by the Layers editor for drawings owned by the page.",
+	"tag-layers-migration": "Short description of the layers-migration change tag, shown in Recent Changes and page history.\n\nSee also:\n* {{msg-mw|tag-layers-migration-description}}",
+	"tag-layers-migration-description": "Long description of the layers-migration change tag, shown on [[Special:Tags]]. The tag marks the bot edits of the migration script (maintenance/migrateLayersToPageHistory.php).",
 	"layers-reading-disabled": "Error from the experimental page-owned read API when disabled.",
 	"layers-revision-unavailable": "Generic error for missing, denied, wrong-owner or unavailable historical Layers content. Does not distinguish permission from existence.",
 	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed."

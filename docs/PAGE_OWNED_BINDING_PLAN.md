@@ -31,7 +31,7 @@ This is the design for [charter](PROJECT_CHARTER.md) decision D3 (criteria HIST-
 - **Dry run, resume, undo.** Without `--commit` the script writes nothing and lists every planned change, skip and manual case. Migrated drawings get IDs derived from the legacy row and the page, so a rerun recognises finished work and continues where it stopped. When every step has finished without a write failure, the script records `layers-page-history-migration` in `updatelog`; that record is what changes the meaning of bare names. `--undo` removes the record and reverts each migration edit that is still its page's latest revision, listing the others and any pages it created. `layer_sets` is never modified.
 - **After the migration.** A bare `layerset=<name>` or `{{#Slide:<name>}}` means the page's own drawing of that name, and `layerset=on` the page's most recently saved drawing of that file. Shared sets and slides can no longer be saved, renamed or deleted; their old revisions stay viewable.
 
-Order of work: the fixture set on the test wiki (junior), then step 1, step 2, step 3, the script with dry run, resume and undo, the change of meaning, and the upgrade guide.
+**Step 1 implemented September 29** (`FilePageMigration`, `maintenance/migrateLayersToPageHistory.php`); the dry run and resume by derived drawing IDs cover it. Order of work: the fixture set on the test wiki (junior), then step 1, step 2, step 3, the script with dry run, resume and undo, the change of meaning, and the upgrade guide.
 
 ## Source scanning follows preprocessor rules — September 26, 2026
 
