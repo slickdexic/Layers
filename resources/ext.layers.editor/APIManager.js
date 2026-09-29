@@ -356,6 +356,10 @@
 							} );
 							this.pageOwnedNameControl.mount( header, header.querySelector( '.layers-header-right' ) );
 						}
+						if ( header && classes.PageOwnedSummaryField ) {
+							this.pageOwnedSummaryField = new classes.PageOwnedSummaryField( ( key ) => mw.msg( key ) );
+							this.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
+						}
 					}
 					return state;
 				} );
@@ -1088,7 +1092,13 @@
 			if ( !this.pageOwnedDrafts ) {
 				return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
 			}
-			return this.pageOwnedDrafts.save().finally( () => {
+			const summaryField = this.pageOwnedSummaryField;
+			return this.pageOwnedDrafts.save( summaryField ? summaryField.getValue() : '' ).then( ( result ) => {
+				if ( summaryField ) {
+					summaryField.clear();
+				}
+				return result;
+			} ).finally( () => {
 				if ( this.editor ) {
 					this.hideSpinner();
 				}
@@ -1939,6 +1949,9 @@
 		}
 		if ( this.pageOwnedNameControl ) {
 			this.pageOwnedNameControl.dispose();
+		}
+		if ( this.pageOwnedSummaryField ) {
+			this.pageOwnedSummaryField.dispose();
 		}
 		if ( this.pageOwnedDrafts ) {
 			this.pageOwnedDrafts.dispose();

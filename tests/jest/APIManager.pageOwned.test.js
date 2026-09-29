@@ -13,6 +13,7 @@ require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRevisionControl.js' );
 require( '../../resources/ext.layers.editor/PageOwnedNameControl.js' );
+require( '../../resources/ext.layers.editor/PageOwnedSummaryField.js' );
 
 describe( 'APIManager page-owned routing', () => {
 	let APIManager, manager, editor, api;
@@ -109,7 +110,8 @@ describe( 'APIManager page-owned routing', () => {
 		mw.msg = jest.fn( ( key, ...args ) => [ key, ...args ].join( '|' ) );
 		await manager.loadLayers();
 		const control = header.querySelector( '.layers-page-drawing-name' );
-		expect( control.nextSibling ).toBe( right );
+		expect( control.nextSibling.className ).toBe( 'layers-page-summary' );
+		expect( control.nextSibling.nextSibling ).toBe( right );
 		expect( control.textContent ).toContain( 'layers-page-drawing-name|Welcome Slide' );
 		control.querySelector( 'button' ).click();
 		await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
@@ -120,6 +122,29 @@ describe( 'APIManager page-owned routing', () => {
 		expect( JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data ).surfaces[ 0 ].label ).toBe( 'Title slide' );
 		manager.destroy();
 		expect( header.querySelector( '.layers-page-drawing-name' ) ).toBeNull();
+	} );
+
+	it( 'publishes the header summary, clears it after the save, and keeps it when the save fails', async () => {
+		const header = document.createElement( 'div' );
+		header.className = 'layers-header';
+		const right = document.createElement( 'div' );
+		right.className = 'layers-header-right';
+		header.appendChild( right );
+		editor.uiManager.container.appendChild( header );
+		await manager.loadLayers();
+		const input = header.querySelector( '.layers-page-summary input' );
+		expect( input.parentNode.nextSibling ).toBe( right );
+		editor.stateManager.set( 'slideCanvasWidth', 901 );
+		input.value = 'Wider slide';
+		api.postWithToken.mockRejectedValueOnce( { error: { code: 'layers-edit-filtered' } } );
+		await expect( manager.saveLayers() ).rejects.toBeTruthy();
+		expect( input.value ).toBe( 'Wider slide' );
+		input.value = ' Wider slide ';
+		await manager.saveLayers();
+		expect( api.postWithToken.mock.calls[ 1 ][ 1 ].summary ).toBe( 'Wider slide' );
+		expect( input.value ).toBe( '' );
+		manager.destroy();
+		expect( header.querySelector( '.layers-page-summary' ) ).toBeNull();
 	} );
 
 	it( 'never mounts revision controls for a historical read-only session', async () => {

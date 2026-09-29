@@ -38,3 +38,23 @@
 	opacity: 0.6;
 	cursor: default;
 }
+
+.layers-page-summary {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+	font-size: 0.8125em;
+}
+
+.layers-page-summary input {
+	width: 16rem;
+	min-width: 6rem;
+	min-height: 24px;
+	padding: 0.125rem 0.375rem;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+	background: #fff;
+	color: #202122;
+	font: inherit;
+}

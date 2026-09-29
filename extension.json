@@ -317,9 +317,10 @@
 				"PageOwnedDraftLifecycle.js",
 				"PageOwnedRecoveryDialog.js",
 				"PageOwnedRevisionControl.js",
-				"PageOwnedNameControl.js"
+				"PageOwnedNameControl.js",
+				"PageOwnedSummaryField.js"
 			],
-			"styles": [ "PageOwnedRecoveryDialog.css", "PageOwnedNameControl.css" ],
+			"styles": [ "PageOwnedRecoveryDialog.css", "PageOwnedHeaderControls.css" ],
 			"messages": [
 				"layers-page-draft-dialog-title",
 				"layers-page-revision-check-button",
@@ -346,7 +347,9 @@
 				"layers-page-drawing-rename-invalid",
 				"layers-page-drawing-rename-taken",
 				"layers-page-drawing-rename-failed",
-				"layers-page-drawing-renamed"
+				"layers-page-drawing-renamed",
+				"layers-page-summary-label",
+				"layers-page-summary-placeholder"
 			]
 		},
 		"ext.layers.pageControls.styles": {

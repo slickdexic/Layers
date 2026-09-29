@@ -286,17 +286,18 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		expect( historyBeforeSave.query.pages[ 0 ].revisions[ 0 ].revid ).toBe( rev1 );
 
 		const saveSummary = 'Rename Welcome Slide to Renamed probe';
+		const summaryInput = page.getByLabel( 'Summary:' );
+		await summaryInput.fill( saveSummary );
 		const savePromise = page.waitForResponse( ( r ) => r.url().includes( 'api.php' ) &&
 			( r.request().postData() || '' ).includes( 'action=layerspublish' ) );
-		await page.evaluate( ( summary ) => {
-			return window.layersEditorInstance.apiManager.pageOwnedDrafts.save( summary );
-		}, saveSummary );
+		await page.locator( '.save-button' ).click();
 		const saveRes = await ( await savePromise ).json();
 		expect( saveRes.layerspublish?.result ).toBe( 'Success' );
 		const rev2 = saveRes.layerspublish.revid;
 		expect( rev2 ).toBeGreaterThan( rev1 );
 		lastOwnedRevision = rev2;
 		await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );
+		await expect( summaryInput ).toHaveValue( '' );
 
 		// =========================================================================
 		// Step 5: Result: Exactly one new revision.

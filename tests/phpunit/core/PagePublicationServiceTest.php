@@ -169,6 +169,24 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 		$this->assertNotSame( $id, $service->publish( $page->getTitle(), $actor, $id, json_encode( $twin ), 'Two' ) );
 	}
 
+	public function testAnEmptySummaryDescribesTheDrawingChanges(): void {
+		$this->setContentLang( 'en' );
+		$page = $this->getNonexistingTestPage();
+		$actor = $this->actor();
+		$service = $this->service();
+		$comment = fn ( int $revisionId ) => $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionById( $revisionId )->getComment()->text;
+		$id = $service->publish( $page->getTitle(), $actor, 0, $this->snapshot(), '', new WikitextContent( 'Owner' ) );
+		$this->assertSame( 'Added drawing “Ideas”', $comment( $id ) );
+		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Plans' ), '  ' );
+		$this->assertSame( 'Renamed drawing “Ideas” to “Plans”', $comment( $id ) );
+		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Ideas' ), 'My words' );
+		$this->assertSame( 'My words', $comment( $id ) );
+		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot(), '',
+			new WikitextContent( 'Text only' ) );
+		$this->assertSame( '', $comment( $id ) );
+	}
+
 	public function testRenamingADrawingRewritesThisPagesEmbeds(): void {
 		$page = $this->getNonexistingTestPage();
 		$actor = $this->actor();

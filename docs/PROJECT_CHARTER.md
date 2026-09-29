@@ -130,7 +130,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Partial: page-owned drawings only; shared layer sets still save outside history |
+| HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Partial: page-owned drawings only, each save with the editor's summary or an automatic one (September 29); shared layer sets still save outside history |
 | HIST-2 | History, old revisions, visual diffs, restoring one drawing, rollback and undo all work. Watchlists, recent changes, notifications and contributions show drawing edits. | Partial: history, old revisions, diffs, restore and rollback are built; the rest is unverified |
 | HIST-3 | On by default: no pilot setting or owner list is needed (D2). | Open |
 | HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A page shows only its own drawings. A bare `layerset=name` means this page's drawing, so it starts empty on a page that has none. | Partial: new and changed drawings need a unique name (September 27); embeds, fields and adoption use page ID plus name (September 28); bare names change meaning at the migration (HIST-8) |

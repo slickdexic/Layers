@@ -109,6 +109,9 @@ class PagePublicationService {
 		$stored = $this->access->getStoredSurfaces( $owner, $baseRevisionId, $authority );
 		$changed = self::changedSurfaceIds( $stored, $document );
 		DrawingName::assertPublishable( $document->surfaces, $changed );
+		if ( trim( $summary ) === '' ) {
+			$summary = DrawingAutoSummary::text( $stored, $document );
+		}
 		$main = $this->withRenamedEmbeds( $owner, $authority, $baseRevisionId, $stored, $document, $main );
 		foreach ( $document->surfaces as $surface ) {
 			if ( in_array( $surface->id, $changed, true ) && !PageOwnedRenderCapability::isRenderable( $surface ) ) {

@@ -190,7 +190,7 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			[ 'pageid-zero', 'outofrange' ], [ 'pageid-overflow', 'outofrange' ],
 			[ 'fragment', 'layers-invalid-publication-request' ],
 			[ 'special', 'layers-invalid-publication-request' ],
-			[ 'large', 'maxbytes' ], [ 'summary', 'maxbytes' ],
+			[ 'large', 'maxbytes' ], [ 'summary', 'maxchars' ],
 			[ 'main', 'maxbytes' ], [ 'right', 'permissiondenied' ]
 		];
 	}

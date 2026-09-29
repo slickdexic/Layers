@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## Every drawing save has a summary — September 29, 2026
+
+Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-1. The page-owned editor's header has a **Summary** field; the next save publishes it as the page revision's summary and then clears it. When it is left empty, the server writes one in the wiki's content language naming each drawing added, edited, renamed or removed, for example "Renamed drawing “Welcome Slide” to “Renamed probe”". Before this, the editor's Save button published with an empty summary. The `layerspublish` summary is now limited to 500 characters (the page history's own limit) rather than 500 bytes.
+
+Code: `Revision/DrawingAutoSummary.php` (new), `PagePublicationService::publish()`, `PageOwnedSummaryField.js` (new), `APIManager.saveLayers()`; the header styles moved to `PageOwnedHeaderControls.css`.
+
+Fresh verification: unit tests for which changes are named (a rename and an edit of the same drawing give both; key order is not an edit); a native test publishes with an empty, blank and written summary and with a text-only change; Jest for the field and for a save that publishes, clears, or on failure keeps the summary. `page-owned-rename.spec.js` now saves through the Save button with a typed summary and passed. Full native configuration **412 tests passed, 1 skipped**; standalone PHPUnit **1,312**; Jest **15,065**; PHP style clean.
+
 ## Rename accepted in the browser; corrected benchmark — September 29, 2026
 
 - **Renaming (HIST-7):** a browser check (J87) confirms that a refused name changes and publishes nothing, that a saved rename keeps the drawing's ID and rewrites the page's embeds and edit link in the same revision, and that a draft keeps a name not yet saved.

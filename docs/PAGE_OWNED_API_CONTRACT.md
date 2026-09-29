@@ -17,7 +17,7 @@ The experimental action is `layerspublish`. It requires POST and a MediaWiki CSR
 | `baserevid` | Yes | Integer 0–2,147,483,647. Zero means creation and requires main text; updates require the current owner revision. Out-of-range values fail rather than clamp. |
 | `data` | Yes | Complete versioned snapshot JSON, at most 2 MiB; the service validates the whole document. |
 | `maintext` | For creation | Optional simultaneous wikitext main-slot edit, at most 2 MiB. Omission preserves existing main content; an explicit empty string supplies empty wikitext. Cannot change the owner's main content model. |
-| `summary` | No | Edit summary, default empty, at most 500 UTF-8 bytes. |
+| `summary` | No | Edit summary, at most 500 characters. When empty, the revision gets an automatic summary naming each drawing added, edited, renamed or removed (content language); a save that changes no drawing keeps an empty summary. |
 | `token` | Yes | Core CSRF token for the request session/actor. |
 
 Each field has its own bound. Application/PHP/web-server request-body limits also apply; the two 2 MiB limits do not imply every server accepts a 4 MiB body. No partial updates, implicit latest revision, live shared-set references or caller-supplied author are accepted as substitutes for these inputs. Unknown parameters retain core's standard API handling; they do not become snapshot fields.

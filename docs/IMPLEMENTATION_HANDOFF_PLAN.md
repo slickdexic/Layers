@@ -1,5 +1,24 @@
 # Layers implementation handoff plan
 
+## Every drawing save has a summary; J88 ready — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. Contract: the page-owned editor's header has a Summary field (label "Summary:"); Save publishes it and clears it, and an empty one gets an automatic summary in the content language. Browser specs should save through the Save button and, where the summary matters, type it into that field. Earlier entries below are historical.
+
+### J88 — Measure resizing and panning; report cold and warm separately (ready)
+
+**Advances:** PERF-0 and PERF-4 (and makes PERF-2 and PERF-5 readable).
+
+**Purpose:** PERF-4 names dragging, resizing and panning; the benchmark measures only dragging. Its runs also share one browser, so run 1 is cold and the others warm, and a median across them mixes the two. Measurement only; no production code.
+
+**Allowed changes:** `tests/perf/benchmark.spec.js`, the results file it writes, this packet and the review ledger. The J65 wiki rules and the known-baseline rule apply as before.
+
+1. **Resizing:** in the 100-layer drawing, select a rectangle, press on its bottom-right resize handle and move the mouse in small steps for 2 s, counting animation frames as dragging does. Afterwards assert that the layer's width and height in `stateManager` changed; otherwise the frames were not spent resizing. Find the handle's position from the editor (the selection handles are drawn by `SelectionRenderer`; `HitTestController` decides what a point hits), not by guessing.
+2. **Panning:** the editor pans on a middle-button drag, or on a left-button drag while Space is held (`CanvasEvents.js`). Pan for 2 s the same way and assert that `canvasManager.panX` or `panY` changed.
+3. **Cold and warm:** for PERF-2, PERF-3 and PERF-5 record run 1 as cold and the median of the later runs as warm, and say in the criteria summary which one each verdict uses (warm, for all three). Keep every run's raw values.
+4. Rerun `npm run bench`. The results file gets a new time-stamped name; do not rename or edit earlier ones.
+
+Record durations and anything that could not be measured, then return for lead review.
+
 ## J86 and J87 accepted; benchmark baseline complete except resizing and panning — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. **J86 and J87 are accepted** with lead corrections (see the review ledger). Contracts: `npm run bench` starts only from the owner's known baseline, restores it, and writes a new time-stamped results file per run; typing is timed to the paint that shows the character in the editor element. The editor's Save button currently publishes with an empty summary; the lead is fixing that (HIST-1). No junior packet is ready yet. Earlier entries below are historical.
