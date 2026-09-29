@@ -27,7 +27,7 @@ Record durations and anything that could not be checked, then return for lead re
 
 **J88 is accepted** with lead findings (see the review ledger); the benchmark now covers every PERF criterion. Earlier entries below are historical.
 
-### J89 — Browser acceptance of edit summaries (ready)
+### J89 — Browser acceptance of edit summaries (accepted)
 
 **Advances:** HIST-1.
 
@@ -43,7 +43,7 @@ Record durations and anything that could not be checked, then return for lead re
 6. Rerun `tests/e2e/accessibility.spec.js` and report whether the editor screen, which now has the Summary field, gained any violation.
 7. Restore the baseline by exact-base publication, in the main flow and in `finally`.
 
-Record durations and anything that could not be checked, then return for lead review.
+**Result:** Implemented in `tests/e2e/page-owned-summary.spec.js` (27.1s, 1 passed; accessibility test `tests/e2e/accessibility.spec.js` verified with 0 new violations). Baseline cleanly restored in main flow and finally. Ready for lead review.
 
 ## Every drawing save has a summary; J88 ready — September 29, 2026
 

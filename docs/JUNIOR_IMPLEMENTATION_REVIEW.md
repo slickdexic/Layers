@@ -1,5 +1,27 @@
 # Junior implementation review — J01–J89
 
+
+## J89 accepted — September 29, 2026
+
+Advances: **HIST-1**. No lead corrections.
+
+The spec drives the real editor: it nudges the layer from the keyboard, renames through the Rename dialog, types into the Summary field and saves with the Save button. It checks each revision's exact comment and tag through the API and the order of all three on `action=history`. It refuses to start away from the known baseline and restores it. The accessibility check found nothing new on the editor with the Summary field. Note for later specs: after clicking a row in the layer list, arrow keys move within the list, so the spec blurs the row before nudging; that is the listbox behaving as designed, not a defect.
+
+## J89 implemented awaiting lead review: browser acceptance of edit summaries — September 29, 2026
+
+Advances: **HIST-1** (Every drawing save has a summary in page history).
+
+Junior authored `tests/e2e/page-owned-summary.spec.js` proving in Chromium on the test wiki (http://localhost:8080) that every drawing save through the page-owned editor gets an edit summary in MediaWiki page history:
+- **Header Summary Field:** `Special:EditLayersPage` initially displays an empty input field labelled "Summary:".
+- **Automatic Summary (One Change):** Moving the text layer via layer list selection and keyboard `ArrowDown` nudge, then saving with an empty Summary field publishes a revision with exact comment `Edited drawing “Welcome Slide”` and the `layers-page-drawing` tag.
+- **Automatic Summary (Two Changes):** Renaming the drawing to "Summary probe" via the Rename modal, moving the layer again, and saving with an empty Summary field publishes a revision with exact comment `Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”` and the `layers-page-drawing` tag.
+- **Explicit Typed Summary:** Moving the layer again, typing `Probe summary` into the header field, and saving publishes a revision with exact comment `Probe summary` and the `layers-page-drawing` tag. The Summary input field is verified to be empty immediately afterwards.
+- **History Page Verification:** Navigating to `action=history` for the owner asserts that the three revisions appear on the three newest rows in exact descending order with their expected comments.
+- **Accessibility Audit:** Reran `tests/e2e/accessibility.spec.js` with axe-core across 7 screens in light and dark mode; Screen 4 (Page-Owned Editor with Summary field in header) gained zero new violations (identical baseline of 4 total occurrences / 2 serious `nested-interactive` on layer list items).
+- **Baseline Enforcement & Cleanup:** Enforced J65 quiet rules, verified known baseline (revision 1803), and cleanly restored baseline wikitext and initial snapshot via exact-base CAS publication in both the main flow and `finally`.
+- Zero production code edits. Zero page or file deletions. No foreign pages touched. Serial execution (`--workers=1`).
+- Duration: **27.1s** (1 passed); ESLint clean (**0 errors, 0 warnings**).
+
 ## J88 accepted with lead findings — September 29, 2026
 
 Advances: **PERF-0** and **PERF-4**.
