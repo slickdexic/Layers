@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
+use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
 use MediaWiki\FileRepo\File\File;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\MergeHistoryFactory;
@@ -538,6 +539,15 @@ class PageOwnedPilot {
 			$this->services->getRepoGroup(), $this->services->getTitleFactory(), $lookup,
 			new PageHistoryAccess( $lookup ),
 			new LegacyMediaResolver( $sources ), new LegacySurfaceConverter(), $this->publisher );
+	}
+
+	/** @return PageCopyMigration Step 2 of the D3 migration, for the maintenance script */
+	public function newPageCopyMigration(): PageCopyMigration {
+		$lookup = $this->services->getRevisionLookup();
+		return new PageCopyMigration( $this->services->getService( 'LayersDatabase' ), $this->scope,
+			$this->services->getRepoGroup(), $this->services->getTitleFactory(), $lookup,
+			new PageHistoryAccess( $lookup ), new LegacySurfaceConverter(), $this->newRewriter(),
+			$this->fileTargets(), $this->services->getConnectionProvider(), $this->publisher );
 	}
 
 	/** @return PageOwnedIdentityResolver */

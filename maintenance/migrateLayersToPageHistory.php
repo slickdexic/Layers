@@ -18,7 +18,10 @@ require_once "$IP/maintenance/Maintenance.php";
 // @codeCoverageIgnoreEnd
 
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
+use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
+use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
+use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Permissions\UltimateAuthority;
@@ -33,6 +36,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 	private const DEFAULT_USER = 'Layers migration';
 
 	private int $failures = 0;
+	/** @var string[] Documents step 1 would write, by File: page ID, for planning step 2 in a dry run */
+	private array $pending = [];
 
 	public function __construct() {
 		parent::__construct();
@@ -41,7 +46,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$this->addOption( 'commit', 'Make the edits' );
 		$this->addOption( 'user', 'Account that makes the edits; default: the "' . self::DEFAULT_USER .
 			'" system user', false, true );
-		$this->addOption( 'file', 'Only this file (name without "File:")', false, true );
+		$this->addOption( 'file', 'Only move this file\'s sets to its File: page (name without "File:")', false, true );
+		$this->addOption( 'page', 'Only give this page copies of the sets and slides it shows', false, true );
 		$this->setBatchSize( 100 );
 		$this->requireExtension( 'Layers' );
 	}
@@ -51,14 +57,104 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$commit = $this->hasOption( 'commit' );
 		$user = $commit ? $this->actor() : $this->planner();
 		$this->output( $commit ? "Migrating.\n" : "Dry run: nothing is written. Add --commit to make these edits.\n" );
-		$migration = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' )->newFilePageMigration();
-		foreach ( $this->files() as $name ) {
-			$this->migrateFile( $migration, $name, $user, $commit );
+		$pilot = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' );
+		if ( !$this->hasOption( 'page' ) ) {
+			$this->output( "Step 1: shared sets onto their File: pages.\n" );
+			$migration = $pilot->newFilePageMigration();
+			foreach ( $this->files() as $name ) {
+				$this->migrateFile( $migration, $name, $user, $commit );
+			}
+		}
+		if ( !$this->hasOption( 'file' ) ) {
+			$this->output( "Step 2: copies for the pages that show shared sets and slides.\n" );
+			$migration = $pilot->newPageCopyMigration();
+			foreach ( $this->pages( $pilot->getScope() ) as $pageId ) {
+				$this->migratePage( $migration, $pageId, $user, $commit );
+			}
 		}
 		if ( $this->failures > 0 ) {
 			$this->fatalError( $this->failures . " edit(s) failed; run the script again to retry them." );
 		}
 		return true;
+	}
+
+	/**
+	 * @param PageCopyMigration $migration
+	 * @param int $pageId
+	 * @param Authority $user
+	 * @param bool $commit
+	 */
+	private function migratePage( PageCopyMigration $migration, int $pageId, Authority $user, bool $commit ): void {
+		$plan = $migration->plan( $pageId, $user, $commit ? [] : $this->pending );
+		$page = $plan['title'] ? $plan['title']->getPrefixedText() : "page $pageId";
+		if ( $plan['problem'] !== null ) {
+			$this->output( "$page: not changed ({$plan['problem']})\n" );
+			return;
+		}
+		foreach ( $plan['done'] as $name ) {
+			$this->output( "$page: already has \"$name\"\n" );
+		}
+		foreach ( $plan['notMoved'] as $skip ) {
+			$this->output( "$page: {$skip['what']} not copied ({$skip['reason']})\n" );
+		}
+		foreach ( $plan['copies'] as $copy ) {
+			$from = $copy['kind'] === 'slide' ? "slide \"{$copy['source']}\"" : $copy['source'] .
+				( $copy['sourceRevision'] ? " (revision {$copy['sourceRevision']})" : ' (after step 1)' );
+			$this->output( "$page: copy \"{$copy['name']}\" from $from, " . ( $copy['template'] ?
+				'shown through a template' : "named by {$copy['embeds']} embed(s)" ) . "\n" );
+		}
+		if ( $plan['main'] !== null && !$plan['copies'] ) {
+			$this->output( "$page: point embeds at its own drawings\n" );
+		}
+		if ( !$commit || $plan['document'] === null ) {
+			return;
+		}
+		try {
+			$revision = $migration->commit( $plan, $user );
+			$this->output( "$page: saved revision $revision\n" );
+		} catch ( PublicationException $e ) {
+			$this->failures++;
+			$this->error( "$page: not saved (" . $e->getMessage() . ")" );
+		}
+	}
+
+	/**
+	 * Pages in the drawing namespaces, then pages elsewhere that showed shared sets when last parsed.
+	 * @param PageOwnedScope $scope
+	 * @return iterable<int>
+	 */
+	private function pages( PageOwnedScope $scope ): iterable {
+		if ( $this->hasOption( 'page' ) ) {
+			$title = $this->getServiceContainer()->getTitleFactory()->newFromText( (string)$this->getOption( 'page' ) );
+			if ( !$title || !$title->exists() ) {
+				$this->fatalError( 'No such page: ' . $this->getOption( 'page' ) );
+			}
+			yield $title->getArticleID();
+			return;
+		}
+		$namespaces = PageOwnedScope::configuredNamespaces( $this->getConfig() );
+		$db = $this->getReplicaDB();
+		foreach ( [ true, false ] as $inScope ) {
+			$last = 0;
+			do {
+				$query = $db->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
+					->where( $db->expr( 'page_id', '>', $last ) )->orderBy( 'page_id' )->limit( $this->getBatchSize() );
+				if ( $inScope ) {
+					$query->where( [ 'page_namespace' => $namespaces ?: [ -1 ] ] );
+				} else {
+					$query->join( 'page_props', null, 'pp_page = page_id' )
+						->where( [ 'pp_propname' => ShownLayerSets::PROPERTY ] );
+					if ( $namespaces ) {
+						$query->where( $db->expr( 'page_namespace', '!=', $namespaces ) );
+					}
+				}
+				$ids = $query->caller( __METHOD__ )->fetchFieldValues();
+				foreach ( $ids as $id ) {
+					$last = (int)$id;
+					yield $last;
+				}
+			} while ( count( $ids ) === $this->getBatchSize() );
+		}
 	}
 
 	/**
@@ -85,6 +181,9 @@ class MigrateLayersToPageHistory extends Maintenance {
 				"(layer_sets row {$add['legacyId']})\n" );
 		}
 		if ( !$commit || !$plan['add'] ) {
+			if ( $plan['document'] !== null ) {
+				$this->pending[$plan['pageId']] = $plan['document'];
+			}
 			return;
 		}
 		try {

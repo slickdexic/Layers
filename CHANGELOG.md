@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Migration step 2 (September 29): pages that show shared sets and slides get their own copies in one bot edit, and their direct embeds are rewritten to name them; sets shown through templates are copied under their own name.
 - Migration step 1 (September 29): `maintenance/migrateLayersToPageHistory.php` lists, and with `--commit` makes, one bot edit per `File:` page that turns the file's current shared sets into drawings of that page. The legacy converter used by adoption now accepts older saves without `ownerId` or background settings.
 - Drawings in page history are on by default (September 29): `$wgLayersPageDrawingNamespaces` (default: content namespaces and `File:`) replaces the retired `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces`; pages that own drawings always keep them.
 

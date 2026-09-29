@@ -1,5 +1,26 @@
 # Current status and limitations
 
+## Migration step 2: pages that show shared sets and slides get their own copies — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) decision D3, criterion HIST-8 (partial). The migration script now also runs step 2 of the [D3 design](../docs/PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026) (`PageCopyMigration`). Each page in `$wgLayersPageDrawingNamespaces` gets one bot edit that adds its own copy of every set and slide it shows, and rewrites its direct embeds to name the copies.
+
+- **Sources.** A file set is copied from the drawing step 1 put on the `File:` page, and the summary names that page and revision. A slide is copied from its legacy row and named after the slide, or "<slide> (<set>)" when the page shows several sets of one slide. Several embeds of one set share one copy.
+- **Selectors.** `layerset=on` becomes the set that is latest now. `layerset=off` and embeds without `layerset=` stay as they are.
+- **Templates.** A set that the page shows only through a template (its `layers-shown-sets` property) is copied under the set's own name and the text is left alone, so that after the migration the template's bare name finds the copy.
+- **A file page showing its own set.** Its embed is only rewritten, because step 1 already gave it the drawing.
+- **Listed, not changed.** Embeds of files that step 1 has not moved yet, embeds pinned to a legacy row with `layersetid=`, template embeds asking for the latest set or whose name is already taken on the page, and pages elsewhere that showed sets.
+- **Options.** `--file` runs only step 1 for one file, and `--page` only step 2 for one page. A dry run plans step 2 against the `File:` pages step 1 would write.
+- **Test wiki dry run.** It plans copies on 7 pages, including 9 differently-set embeds of one slide on one page.
+
+Fresh verification: native `PageCopyMigrationTest` covers these cases.
+
+- **File embeds:** direct file embeds with `on`, `off`, none, repeated sets and PDF pages. It checks the exact rewritten text, summary, tags and copy IDs, and that a rerun does nothing.
+- **Slides:** named per set.
+- **Templates:** template copies and the latest-set listing.
+- **Others:** a file page naming its own drawing, a file not yet migrated, a pinned revision, and another namespace.
+
+Step 1's fixtures moved into a shared trait. Full native configuration **417 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,071**; `npm test` passed; PHP style clean. Not built yet: step 3 (slides shown nowhere), undo, the completion record and the change of bare names.
+
 ## Migration step 1: a file's shared sets become drawings of its File: page — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) decision D3, criterion HIST-8 (partial). `maintenance/migrateLayersToPageHistory.php` implements step 1 of the [D3 design](../docs/PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026). Without `--commit` it writes nothing and lists, for every file with shared sets, what it would do. With `--commit` it makes one bot edit per `File:` page: the latest revision of each set and PDF page saved for the file's current version becomes a drawing of that page. Each drawing is named after its set, as "<set> (page N)" for later PDF pages, and gets a number if the page already uses the name. The edits are tagged `layers-migration` and `layers-page-drawing` and made by the `Layers migration` system user in the `bot` group, unless `--user` names another account; the dry run creates no user. Drawing IDs are derived from the legacy row and the page, so a rerun skips what is done. Sets of earlier file versions, deleted or foreign files, and `File:` pages outside `$wgLayersPageDrawingNamespaces` are listed and not moved. `layer_sets` is only read. Not built yet: step 2 (pages that show sets), step 3 (slides), undo, and the change in meaning of bare names.
