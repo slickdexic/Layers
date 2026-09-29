@@ -89,12 +89,12 @@ class PageCopyMigration {
 	 * @param string[] $pending Documents step 1 plans but has not written, keyed by File: page ID (dry run)
 	 * @return array title (?Title); pageId; baseRevisionId; copies (name, source, sourceRevision, embeds, template
 	 *  for each new drawing); done (names of copies already made); notMoved (what and why); problem (?string);
-	 *  document and main (proposed JSON and text, or null when nothing changes)
+	 *  document and main (proposed JSON and text, or null when nothing changes); slides (shared slides it shows)
 	 */
 	public function plan( int $pageId, Authority $authority, array $pending = [] ): array {
 		$this->pending = $pending;
 		$plan = [ 'title' => null, 'pageId' => $pageId, 'baseRevisionId' => 0, 'copies' => [], 'done' => [],
-			'notMoved' => [], 'problem' => null, 'document' => null, 'main' => null ];
+			'notMoved' => [], 'problem' => null, 'document' => null, 'main' => null, 'slides' => [] ];
 		$title = $this->titles->newFromID( $pageId, IDBAccessObject::READ_LATEST );
 		$base = $title ? $this->revisions->getRevisionByPageId( $pageId, 0, IDBAccessObject::READ_LATEST ) : null;
 		if ( !$title || !$base ) {
@@ -139,6 +139,9 @@ class PageCopyMigration {
 			) {
 				continue;
 			}
+			if ( $candidate['kind'] === 'slide' ) {
+				$plan['slides'][] = str_replace( ' ', '_', $candidate['target'] );
+			}
 			$selector = self::option( $options, [ 'layerset', 'layers', 'layer' ] );
 			if ( self::option( $options, [ 'layersetid' ] ) !== null ) {
 				$plan['notMoved'][] = [ 'what' => $candidate['raw'], 'reason' => 'pinned-revision' ];
@@ -159,6 +162,9 @@ class PageCopyMigration {
 			$rewrites[] = [ $candidate, $source['key'] ];
 		}
 		foreach ( $shown as [ $kind, $name, $set ] ) {
+			if ( $kind === ShownLayerSets::SLIDE ) {
+				$plan['slides'][] = str_replace( ' ', '_', $name );
+			}
 			$reason = null;
 			$source = $kind === ShownLayerSets::FILE ?
 				$this->fileSource( 'File:' . $name, $set === '' ? 'on' : $set, 1, $authority, $reason ) :

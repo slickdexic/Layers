@@ -19,6 +19,7 @@
 	"layers-migration-page-summary": "Copied {{PLURAL:$1|a shared drawing|$1 shared drawings}} into this page: $2",
 	"layers-migration-copy-item": "$1 from [[:$2]] (revision $3)",
 	"layers-migration-slide-set-name": "$1 ($2)",
+	"layers-migration-slide-page-summary": "Created to keep shared slide “$1”, which no page showed",
 	"layers-migration-slide-item": "$1 from shared slide “$2”",
 	"layers-migration-embeds-summary": "Pointed embeds at this page's own drawings",
 	"layers-copy-conflict": "[[:$1]] has changed since this confirmation was opened, so nothing was saved.",

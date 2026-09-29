@@ -14,6 +14,7 @@ use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
 use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
+use MediaWiki\Extension\Layers\Migration\SlidePageMigration;
 use MediaWiki\FileRepo\File\File;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\MergeHistoryFactory;
@@ -548,6 +549,13 @@ class PageOwnedPilot {
 			$this->services->getRepoGroup(), $this->services->getTitleFactory(), $lookup,
 			new PageHistoryAccess( $lookup ), new LegacySurfaceConverter(), $this->newRewriter(),
 			$this->fileTargets(), $this->services->getConnectionProvider(), $this->publisher );
+	}
+
+	/** @return SlidePageMigration Step 3 of the D3 migration, for the maintenance script */
+	public function newSlidePageMigration(): SlidePageMigration {
+		return new SlidePageMigration( $this->services->getService( 'LayersDatabase' ), $this->scope,
+			$this->services->getTitleFactory(), $this->services->getRevisionLookup(),
+			$this->services->getConnectionProvider(), $this->services->getSlotRoleStore(), $this->publisher );
 	}
 
 	/** @return PageOwnedIdentityResolver */

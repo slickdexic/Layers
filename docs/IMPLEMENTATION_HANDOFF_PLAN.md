@@ -1,8 +1,25 @@
 # Layers implementation handoff plan
 
-## J90–J92 accepted; D3 designed; J93 ready — September 29, 2026
+## J90–J92 accepted; migration steps 1–3 built; J93 ready, J94 after it — September 29, 2026
 
-**J90, J91 and J92 are accepted** with lead tightening (see the review ledger). The design of the migration (charter D3, HIST-8) is in the [binding plan](PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026). The lead implements it; J93 builds the test wiki fixture it will be checked against. Earlier entries below are historical.
+**J90, J91 and J92 are accepted** with lead tightening (see the review ledger). The design of the migration (charter D3, HIST-8) is in the [binding plan](PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026). Steps 1 to 3 are implemented (see the [current status](CURRENT_STATUS.md)); undo, the completion record and the change of bare names are next for the lead. J93 builds the test wiki fixtures; J94 then runs the migration on them only. Earlier entries below are historical.
+
+### J94 — Migration acceptance on the fixtures (ready after J93)
+
+**Advances:** HIST-8.
+
+**Purpose:** run migration steps 1 to 3 on J93's fixtures only, and prove that they do what `expected-plan.json` says and that every fixture page looks the same afterwards. The change of bare names is not built, so template embeds still show the shared set; record that.
+
+**Allowed changes:** `tests/e2e/migration-fixtures.spec.js`, this packet and the review ledger. You may run `maintenance/migrateLayersToPageHistory.php` in the test container, **only** with one of `--file=<fixture file>`, `--page=<fixture page>` or `--slide=Layers_migration_fixture_slide_two`. Never run it without one of these options, and never on anything that is not a J93 fixture. Until `--undo` exists this is one-shot: do not rerun the seeder afterwards.
+
+1. Before migrating, the spec records, for every embed on every fixture page, a screenshot of the painted drawing and the page's text.
+2. For each fixture, run the script without `--commit` and save the output. Compare it with `expected-plan.json` and list every difference. Do not edit `expected-plan.json` to match the output; a difference is a finding for the lead.
+3. Run the same commands with `--commit`, in order: files A, B, C; then every fixture page; then slide two. Record each revision the script reports.
+4. Check through the API that each revision is tagged `layers-migration` and `layers-page-drawing`, is marked as a bot edit, and has the expected summary, drawings and text.
+5. The spec then checks every fixture page again. Each embed shows the same drawing: compare the screenshots within a small tolerance and report the largest difference. `Project:Layers migration fixture` is unchanged, and `Slide:Layers migration fixture slide two` exists with its drawings.
+6. Rerun the committed commands. Each must report that nothing is left to do, and no new revision may appear.
+
+Record durations, differences and anything that could not be checked, then return for lead review.
 
 ### J93 — Migration fixtures on the test wiki (ready)
 

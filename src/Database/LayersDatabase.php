@@ -1575,6 +1575,21 @@ class LayersDatabase {
 	}
 
 	/**
+	 * @param string $after List slide image names sorting after this one
+	 * @param int $limit
+	 * @return string[] Image names (`Slide:<name>`) of slides that have sets, in order
+	 */
+	public function listSlidesWithSets( string $after, int $limit ): array {
+		$db = $this->getReadDb();
+		if ( !$db ) {
+			return [];
+		}
+		return $db->newSelectQueryBuilder()->select( 'ls_img_name' )->distinct()->from( 'layer_sets' )
+			->where( [ 'ls_img_sha1' => LayersConstants::TYPE_SLIDE, $db->expr( 'ls_img_name', '>', $after ) ] )
+			->orderBy( 'ls_img_name' )->limit( $limit )->caller( __METHOD__ )->fetchFieldValues();
+	}
+
+	/**
 	 * The latest revision of each set name and page saved for one file version, or for one slide.
 	 * @param string $imgName File name, or slide image name
 	 * @param string $sha1 File version, or LayersConstants::TYPE_SLIDE

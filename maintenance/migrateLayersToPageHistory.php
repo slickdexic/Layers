@@ -19,6 +19,7 @@ require_once "$IP/maintenance/Maintenance.php";
 
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
 use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
+use MediaWiki\Extension\Layers\Migration\SlidePageMigration;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
@@ -38,6 +39,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 	private int $failures = 0;
 	/** @var string[] Documents step 1 would write, by File: page ID, for planning step 2 in a dry run */
 	private array $pending = [];
+	/** @var true[] Shared slides some page showed, by name, as step 2 found them */
+	private array $shownSlides = [];
 
 	public function __construct() {
 		parent::__construct();
@@ -48,6 +51,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 			'" system user', false, true );
 		$this->addOption( 'file', 'Only move this file\'s sets to its File: page (name without "File:")', false, true );
 		$this->addOption( 'page', 'Only give this page copies of the sets and slides it shows', false, true );
+		$this->addOption( 'slide', 'Only give this shared slide a page, if no page shows it', false, true );
 		$this->setBatchSize( 100 );
 		$this->requireExtension( 'Layers' );
 	}
@@ -58,24 +62,83 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$user = $commit ? $this->actor() : $this->planner();
 		$this->output( $commit ? "Migrating.\n" : "Dry run: nothing is written. Add --commit to make these edits.\n" );
 		$pilot = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' );
-		if ( !$this->hasOption( 'page' ) ) {
+		$scoped = $this->hasOption( 'file' ) || $this->hasOption( 'page' ) || $this->hasOption( 'slide' );
+		if ( !$scoped || $this->hasOption( 'file' ) ) {
 			$this->output( "Step 1: shared sets onto their File: pages.\n" );
 			$migration = $pilot->newFilePageMigration();
 			foreach ( $this->files() as $name ) {
 				$this->migrateFile( $migration, $name, $user, $commit );
 			}
 		}
-		if ( !$this->hasOption( 'file' ) ) {
+		if ( !$scoped || $this->hasOption( 'page' ) ) {
 			$this->output( "Step 2: copies for the pages that show shared sets and slides.\n" );
 			$migration = $pilot->newPageCopyMigration();
 			foreach ( $this->pages( $pilot->getScope() ) as $pageId ) {
 				$this->migratePage( $migration, $pageId, $user, $commit );
 			}
 		}
+		if ( !$scoped || $this->hasOption( 'slide' ) ) {
+			$this->output( "Step 3: pages for shared slides that no page shows.\n" );
+			$this->migrateUnshownSlides( $pilot->newSlidePageMigration(), $pilot->newPageCopyMigration(), $user,
+				$commit );
+		}
 		if ( $this->failures > 0 ) {
 			$this->fatalError( $this->failures . " edit(s) failed; run the script again to retry them." );
 		}
 		return true;
+	}
+
+	/**
+	 * @param SlidePageMigration $slides
+	 * @param PageCopyMigration $copies
+	 * @param Authority $user
+	 * @param bool $commit
+	 */
+	private function migrateUnshownSlides( SlidePageMigration $slides, PageCopyMigration $copies, Authority $user,
+		bool $commit
+	): void {
+		$all = $this->hasOption( 'slide' ) ?
+			[ str_replace( ' ', '_', trim( (string)$this->getOption( 'slide' ) ) ) ] : $slides->listSlides();
+		if ( $this->hasOption( 'slide' ) ) {
+			// Step 2 did not run, so read every page to learn which slides are shown; page properties can be stale.
+			$scope = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' )->getScope();
+			foreach ( $this->pages( $scope ) as $pageId ) {
+				foreach ( $copies->plan( $pageId, $user )['slides'] as $shown ) {
+					$this->shownSlides[$shown] = true;
+				}
+			}
+		}
+		$copied = $slides->copiedSlides( $all );
+		foreach ( $all as $slide ) {
+			if ( isset( $this->shownSlides[$slide] ) || isset( $copied[$slide] ) ||
+				( $this->hasOption( 'slide' ) && $slides->shownByPageProperties( $slide ) )
+			) {
+				if ( $this->hasOption( 'slide' ) ) {
+					$this->output( "Slide \"$slide\": a page shows it or has a copy; nothing to create\n" );
+				}
+				continue;
+			}
+			$plan = $slides->plan( $slide );
+			$page = $plan['title'] ? $plan['title']->getPrefixedText() : "Slide $slide";
+			if ( $plan['problem'] !== null ) {
+				$this->output( "$page: not created for slide \"$slide\" ({$plan['problem']})\n" );
+				continue;
+			}
+			$this->output( "$page: create, showing slide \"$slide\" set(s) " . implode( ', ', $plan['sets'] ) . "\n" );
+			if ( !$commit ) {
+				continue;
+			}
+			try {
+				$pageId = $slides->commit( $plan, $user );
+			} catch ( PublicationException $e ) {
+				$this->failures++;
+				$this->error( "$page: not created (" . $e->getMessage() . ")" );
+				continue;
+			}
+			if ( $pageId ) {
+				$this->migratePage( $copies, $pageId, $user, true );
+			}
+		}
 	}
 
 	/**
@@ -86,6 +149,9 @@ class MigrateLayersToPageHistory extends Maintenance {
 	 */
 	private function migratePage( PageCopyMigration $migration, int $pageId, Authority $user, bool $commit ): void {
 		$plan = $migration->plan( $pageId, $user, $commit ? [] : $this->pending );
+		foreach ( $plan['slides'] as $slide ) {
+			$this->shownSlides[$slide] = true;
+		}
 		$page = $plan['title'] ? $plan['title']->getPrefixedText() : "page $pageId";
 		if ( $plan['problem'] !== null ) {
 			$this->output( "$page: not changed ({$plan['problem']})\n" );

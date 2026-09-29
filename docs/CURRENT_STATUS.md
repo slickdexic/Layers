@@ -1,5 +1,11 @@
 # Current status and limitations
 
+## Migration step 3: shared slides that no page shows get a page — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) decision D3, criterion HIST-8 (partial). The migration script now runs step 3 of the [D3 design](../docs/PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026) (`SlidePageMigration`). A slide is "shown nowhere" when no page's text or `layers-shown-sets` property shows it and no page has a copy of it yet. Copies are recognised by their derived IDs, so reruns do not create a second page. Such a slide gets a new main-namespace page `Slide:<name>` whose text shows each of its sets as a legacy embed. Step 2 then runs on that page in the same run, adding the copies and naming them, so the page never shows anything the slide did not. An existing page of that title is never overwritten; the slide is listed instead. `--slide=<name>` runs step 3 for one slide. It first reads every page, because page properties can be stale: on the test wiki they miss a page showing `S000001`. The test wiki dry run plans four such pages.
+
+Fresh verification: native `SlidePageMigrationTest` checks four things. An unshown slide with two sets gets its page, then its copies and named embeds, and a rerun finds it copied. An existing title is refused. Page properties are matched exactly. Full native configuration **421 tests passed, 1 skipped**; Jest **15,071**; `npm test` passed; PHP style clean. Not built yet: undo, the completion record and the change of bare names.
+
 ## Migration step 2: pages that show shared sets and slides get their own copies — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) decision D3, criterion HIST-8 (partial). The migration script now also runs step 2 of the [D3 design](../docs/PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026) (`PageCopyMigration`). Each page in `$wgLayersPageDrawingNamespaces` gets one bot edit that adds its own copy of every set and slide it shows, and rewrites its direct embeds to name the copies.
