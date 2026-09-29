@@ -1,4 +1,61 @@
-# Junior implementation review — J01–J87
+# Junior implementation review — J01–J89
+
+## J88 accepted with lead findings — September 29, 2026
+
+Advances: **PERF-0** and **PERF-4**.
+
+- **Accepted.** Resizing finds the bottom-right handle from the editor and checks it with `HitTestController` before pressing, then asserts the layer's width and height changed; panning uses the middle-button drag `CanvasEvents.js` handles and asserts the pan offset changed. Both run at 60 frames per second, as does dragging. Typing's worst character was painted within 5.6 ms. PERF-4 is met on the test wiki. Cold and warm are now reported separately, each with the rule its verdict uses. No production code changed.
+- **Finding, warm PERF-2 has two samples:** with three runs, "warm" is the median of runs 2 and 3, which is their average. Run 2 took 3.1 s and run 3 0.6 s; J86's run 2 was also slow (2.7 s) while the lead's was not (0.6 s). The `layersread` fetch took the same 0.53 s in every run, so the slow warm run is spent somewhere else, and nothing yet shows where. The charter records the range rather than the average. The performance pass needs a breakdown (module load, fetch start and end, the canvas's own image) before it tunes anything.
+- **Note:** `typingDelayWorstMsMedian` is the worst across runs, not a median. The verdict correctly uses it; only the name is wrong.
+- **No lead code changes.** The results file `2026-09-29-0405-test-wiki.json` is J88's record.
+
+## J88 implemented awaiting lead review: measure resizing and panning; report cold and warm separately — September 30, 2026
+
+Advances: **PERF-0** and **PERF-4** (and makes **PERF-2** and **PERF-5** readable).
+
+Junior updated the benchmark in `tests/perf/benchmark.spec.js` to measure resizing and panning in the 100-layer drawing alongside dragging, asserted layer dimension mutations in `stateManager` and pan offset changes in `canvasManager`, recorded cold run (run 1) and warm median (runs 2 & 3) separately for PERF-2, PERF-3, and PERF-5, explicitly declared `verdictUses: 'warm'` for all three, and wrote the new time-stamped results file `tests/perf/results/2026-09-29-0405-test-wiki.json` (preserving all earlier results files untouched).
+- Measurement only: strictly zero production code changes.
+- Enforced all J65 wiki rules: serial execution (`--workers=1`); verified known baseline (revision 1803) before test and cleanly restored known baseline via CAS exact-base publication in both main flow and `finally` (ending at revision 1883); strictly zero foreign pages touched (`Layers_history_test` never touched) and zero page or file deletions.
+- Duration: **2.7m** (1 passed); ESLint clean (**0 errors, 0 warnings**).
+
+### Summary of Additions & Methodologies in J88
+
+1. **PERF-4 Resizing (2 seconds via bottom-right `se` handle):**
+   - In the 100-layer drawing during PERF-4, after dragging rectangle 0 (`rect_0`), the bottom-right resize handle (`se`) was located directly from `SelectionRenderer` (`cm.renderer.getHandles()` / `cm.renderer.selectionHandles`).
+   - The handle coordinates were tested against `HitTestController` (`cm.hitTestController.hitTestSelectionHandles( { x: handleCanvasX, y: handleCanvasY } )`), asserting `hit && hit.type === 'se'` rather than guessing.
+   - Mouse events moved the mouse in small steps for 2 seconds while counting animation frames with `requestAnimationFrame`.
+   - Afterwards asserted that `stateManager.get('layers')` reflects altered `width` and `height` (`expect( resizedLayer.width !== layerBeforeResize.width ).toBe( true )` and `expect( resizedLayer.height !== layerBeforeResize.height ).toBe( true )`).
+   - Results: 60.5 FPS median (cold run 1: 60.5 FPS; run 2: 60.0 FPS; run 3: 60.5 FPS). Target $\ge 50\text{ FPS}$: **Met**.
+2. **PERF-4 Panning (2 seconds via middle-button drag):**
+   - Canvas center was targeted with middle-button drag (`button: 1, buttons: 4` per `CanvasEvents.js`) for 2 seconds in small sinusoidal steps, counting animation frames with `requestAnimationFrame`.
+   - Afterwards asserted that `canvasManager.panX` or `panY` changed (`expect( movedPan.panX !== initialPan.panX || movedPan.panY !== initialPan.panY ).toBe( true )`).
+   - Results: 60.0 FPS median (cold run 1: 60.0 FPS; run 2: 60.5 FPS; run 3: 60.0 FPS). Target $\ge 50\text{ FPS}$: **Met**.
+3. **PERF-4 Inside-the-Page Typing Latency:**
+   - 20 characters typed into textbox layer and timed to paint frame inside the page.
+   - Results: median 2.0 ms (cold: 2.3 ms; run 2: 1.9 ms; run 3: 2.0 ms); worst single-character latency 5.6 ms (cold: 5.6 ms; run 2: 5.4 ms; run 3: 3.5 ms). Target $\le 50\text{ ms}$: **Met**.
+   - Overall PERF-4 status on test wiki: **Met**.
+4. **Cold and Warm Reporting (PERF-2, PERF-3, PERF-5):**
+   - Run 1 is recorded as `coldRun`, and the median of later runs (runs 2 & 3) is recorded as `warm`.
+   - `verdictUses: 'warm'` is explicitly recorded in `criteriaSummary` for PERF-2, PERF-3, and PERF-5, and all three verdicts evaluate against the warm values. Raw values are preserved across all runs in `runs`.
+   - **PERF-2:** Cold: 8,052.6 ms (`layersread`: 560.8 ms). Warm: 1,836.05 ms (`layersread`: 533.6 ms). Target $\le 300\text{ ms}$: **Not met on test wiki** (slower due to Docker Windows shared-folder I/O overhead and `layersread` round-trip; target applies to production reference install).
+   - **PERF-3:** Cold: 5,318 ms. Warm: 1,574.5 ms. Target $\le 3\text{ s}$: **Met on test wiki**.
+   - **PERF-5:** Cold: 1,640.03 ms publish / 3,184.04 ms viewPrev. Warm: 1,593.82 ms publish / 1,036.36 ms viewPrev. Target $\le 1\text{ s}$: **Not met on test wiki** (slower due to Docker Windows shared-folder I/O overhead; target applies to production reference install).
+5. **Other Criteria Summary:**
+   - **PERF-1:** Layers modules alone in fresh context: 83,055 B gzip on owner page; 0 B on Main_Page. Verdict uses median: **Met**.
+   - **PERF-6:** 0 long tasks (>50 ms) after all 20 drawings confirmed painted. Verdict uses median: **Met**.
+   - **PERF-7:** Revision 1 slot 200,787 B, Revision 2 slot 200,787 B, delta 0 B; full re-serialization into layers slot (FEAT-3c). Verdict uses median: **Not met**.
+
+### Benchmark Run Results (Cold vs Warm on Test Wiki)
+
+| Criterion | Charter Target | Cold Run (Run 1) | Warm Median (Runs 2 & 3) | Verdict Uses | Status on Test Wiki | Notes |
+|-----------|----------------|------------------|--------------------------|--------------|---------------------|-------|
+| **PERF-1** | Page with drawings gets $\le 150\text{ KB}$ gzip Layers code/styles; page without gets none | 83,055 B owner / 0 B Main_Page | 83,055 B owner / 0 B Main_Page | median | **Met** | Measures Layers' own modules alone in fresh context; excludes core bundles |
+| **PERF-2** | Drawing appears within $300\text{ ms}$ after its image has loaded | 8,052.6 ms (`layersread`: 560.8 ms) | 1,836.05 ms (`layersread`: 533.6 ms) | warm | **Not met** | Measured from core `img.layers-bound-file` load to painted; slower due to shared folder mount overhead and `layersread` round-trip; target applies to production reference install. Verdict uses warm measurement |
+| **PERF-3** | Editor usable within $3\text{ s}$ of pressing Edit, warm cache | 5,318 ms | 1,574.5 ms | warm | **Met** | Warm cache median $< 3\text{ s}$. Verdict uses warm measurement |
+| **PERF-4** | 100 layers: dragging, resizing, panning $\ge 50\text{ FPS}$; each typed character appears within $50\text{ ms}$ | Drag 60 FPS / Resize 60.5 FPS / Pan 60 FPS / Typing median 2.3 ms, worst 5.6 ms | Drag 60 FPS / Resize 60.25 FPS / Pan 60.25 FPS / Typing median 1.95 ms, worst 4.45 ms (Overall median: Drag 60 / Resize 60.5 / Pan 60 / Typing med 2.0 ms, worst 5.6 ms) | median | **Met** | Dragging (60 FPS), resizing (60.5 FPS), and panning (60 FPS) all $\ge 50\text{ FPS}$; typing median 2.0 ms and worst-case single-character latency 5.6 ms both $\le 50\text{ ms}$ |
+| **PERF-5** | Saving 100 layers takes $\le 1\text{ s}$ on server; viewing old revision takes $\le 1\text{ s}$ | 1,640.03 ms publish / 3,184.04 ms view | 1,593.82 ms publish / 1,036.36 ms view | warm | **Not met** | Slower due to Windows Docker shared-folder mount I/O overhead; target applies to production reference install. Verdict uses warm measurement |
+| **PERF-6** | On page with 20 drawings, off-screen deferred, no task $> 200\text{ ms}$ | 0 tasks $> 50\text{ ms}$ (0 ms total / max) | 0 tasks $> 50\text{ ms}$ (0 ms total / max) | median | **Met** | Measured with `type: 'longtask', buffered: true` after waiting until all 20 drawings confirmed painted |
+| **PERF-7** | Small edit does not copy image data into new revision (FEAT-3c) | Rev1: 200,787 B, Rev2: 200,787 B, Delta: 0 B | Rev1: 200,787 B, Rev2: 200,787 B, Delta: 0 B | median | **Not met** | Each edit re-serializes the full drawing including 200 KB image payload into layers slot rather than storing delta (FEAT-3c) |
 
 ## J86 and J87 accepted with lead corrections — September 29, 2026
 

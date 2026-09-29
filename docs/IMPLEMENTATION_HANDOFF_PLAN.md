@@ -1,10 +1,32 @@
 # Layers implementation handoff plan
 
+## J88 accepted; PERF-4 met; J89 ready — September 29, 2026
+
+**J88 is accepted** with lead findings (see the review ledger); the benchmark now covers every PERF criterion. Earlier entries below are historical.
+
+### J89 — Browser acceptance of edit summaries (ready)
+
+**Advances:** HIST-1.
+
+**Purpose:** prove in the browser that every drawing save through the editor gets a summary in page history: the one typed into the header's Summary field, or an automatic one naming what changed. Acceptance only; no production code.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-summary.spec.js`, this packet and the review ledger. The J65 wiki rules and the known-baseline rule apply: fail unless the owner starts at its baseline, and restore that baseline, not the state found.
+
+1. Open the editor on the owner's current revision (`Special:EditLayersPage` with `owner`, `revid` and `surface=presentation`, as `page-owned-workflow.spec.js` does). The header must show a field labelled "Summary:" that is empty.
+2. **Automatic, one change:** move the text layer (select it in the layer list, press an arrow key) and press Save with the Summary field empty. The new revision's comment must be exactly `Edited drawing “Welcome Slide”`, and it must carry the `layers-page-drawing` tag.
+3. **Automatic, two changes:** rename the drawing to "Summary probe" with the Rename button, move the layer again, and Save with the field empty. The comment must be exactly `Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”`.
+4. **Typed:** move the layer again, type `Probe summary` into the field and Save. The comment must be exactly `Probe summary`, and the field must be empty afterwards.
+5. **History page:** open `action=history` for the owner and check that the three summaries from steps 2 to 4 appear on the three newest rows, in order.
+6. Rerun `tests/e2e/accessibility.spec.js` and report whether the editor screen, which now has the Summary field, gained any violation.
+7. Restore the baseline by exact-base publication, in the main flow and in `finally`.
+
+Record durations and anything that could not be checked, then return for lead review.
+
 ## Every drawing save has a summary; J88 ready — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: the page-owned editor's header has a Summary field (label "Summary:"); Save publishes it and clears it, and an empty one gets an automatic summary in the content language. Browser specs should save through the Save button and, where the summary matters, type it into that field. Earlier entries below are historical.
 
-### J88 — Measure resizing and panning; report cold and warm separately (ready)
+### J88 — Measure resizing and panning; report cold and warm separately (accepted)
 
 **Advances:** PERF-0 and PERF-4 (and makes PERF-2 and PERF-5 readable).
 
@@ -18,6 +40,23 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: the page-owned edit
 4. Rerun `npm run bench`. The results file gets a new time-stamped name; do not rename or edit earlier ones.
 
 Record durations and anything that could not be measured, then return for lead review.
+
+**Status:** implemented awaiting lead review; benchmark script `tests/perf/benchmark.spec.js` verified via `npm run bench` (`npx playwright test -c tests/perf --workers=1`) (**1 passed**, 2.7m); new time-stamped results file written to `tests/perf/results/2026-09-29-0405-test-wiki.json` (earlier results files preserved untouched); ESLint clean (**0 errors, 0 warnings**). Measured 3 complete iterations across all criteria:
+- **Baseline enforcement:** Verified owner begins in known baseline state (revision 1803: text `"Dedicated automated Layers history acceptance page."`, single slide drawing `presentation` labelled `"Welcome Slide"`). Verified owner restored to this known baseline at conclusion (revision 1883) and in `finally`.
+- **PERF-4 (Dragging, Resizing, Panning, and Inside-the-Page Typing):**
+  - Dragging: 60.0 FPS median (cold: 60 FPS; run 2: 60 FPS; run 3: 60 FPS; target $\ge 50\text{ FPS}$: met).
+  - Resizing: Bottom-right (`se`) handle found from `SelectionRenderer` and verified via `HitTestController.hitTestSelectionHandles` (not guessed); moved mouse for 2 s in small steps; verified layer width and height in `stateManager` changed. Results: 60.5 FPS median (cold: 60.5 FPS; run 2: 60.0 FPS; run 3: 60.5 FPS; target $\ge 50\text{ FPS}$: met).
+  - Panning: Middle-button drag (`button: 1, buttons: 4`) moved canvas for 2 s; verified `canvasManager.panX` and `panY` changed. Results: 60.0 FPS median (cold: 60.0 FPS; run 2: 60.5 FPS; run 3: 60.0 FPS; target $\ge 50\text{ FPS}$: met).
+  - Typing: 20 characters inside the page timed to frame paint. Results: median 2.0 ms (cold: 2.3 ms; run 2: 1.9 ms; run 3: 2.0 ms; target $\le 50\text{ ms}$: met); worst single-character latency 5.6 ms (cold: 5.6 ms; run 2: 5.4 ms; run 3: 3.5 ms; target $\le 50\text{ ms}$: met).
+  - Overall PERF-4 status on test wiki: **Met** (verdict uses median).
+- **Cold and Warm Reporting (PERF-2, PERF-3, PERF-5):**
+  - **PERF-2:** Cold run (run 1): 8,052.6 ms (`layersread` duration: 560.8 ms). Warm median (runs 2 & 3): 1,836.05 ms (warm `layersread`: 533.6 ms). Verdict uses: **warm**. Target $\le 300\text{ ms}$: **Not met on test wiki** (due to Docker shared-folder I/O and `layersread` round-trip; target applies to reference install).
+  - **PERF-3:** Cold run: 5,318 ms. Warm median: 1,574.5 ms. Verdict uses: **warm**. Target $\le 3\text{ s}$: **Met on test wiki**.
+  - **PERF-5:** Cold run: 1,640.03 ms publish / 3,184.04 ms viewPrev. Warm median: 1,593.82 ms publish / 1,036.36 ms viewPrev. Verdict uses: **warm**. Target $\le 1\text{ s}$: **Not met on test wiki** (slower due to Docker shared folder mount overhead; target applies to production reference install).
+- **Other Criteria:**
+  - **PERF-1:** Layers modules alone in fresh context: 83,055 B gzip on owner page; 0 B on Main_Page; none on page without drawings. Verdict uses median: **Met**.
+  - **PERF-6:** 0 long tasks (>50 ms) after all 20 drawings confirmed painted; 0 ms duration. Verdict uses median: **Met**.
+  - **PERF-7:** Revision 1 slot 200,787 B, Revision 2 slot 200,787 B, delta 0 B; full drawing re-serialized rather than delta (FEAT-3c). Verdict uses median: **Not met**.
 
 ## J86 and J87 accepted; benchmark baseline complete except resizing and panning — September 29, 2026
 

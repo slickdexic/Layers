@@ -1,5 +1,9 @@
 # Current status and limitations
 
+## Benchmark covers every performance criterion — September 29, 2026
+
+J88 added resizing and panning to `npm run bench` and reports cold and warm separately. On the test wiki, dragging, resizing and panning a 100-layer drawing all run at 60 frames per second and a typed character is painted within 6 ms, so **PERF-4 is met**. PERF-2 (0.6 s to 3.1 s warm) and PERF-5 (saving 1.6 s) are not met, and PERF-7 (every edit stores the whole drawing again) remains open. Results: `tests/perf/results/2026-09-29-0405-test-wiki.json`.
+
 ## Every drawing save has a summary — September 29, 2026
 
 Part of [charter](../docs/PROJECT_CHARTER.md) criterion HIST-1. The page-owned editor's header has a **Summary** field; the next save publishes it as the page revision's summary and then clears it. When it is left empty, the server writes one in the wiki's content language naming each drawing added, edited, renamed or removed, for example "Renamed drawing “Welcome Slide” to “Renamed probe”". Before this, the editor's Save button published with an empty summary. The `layerspublish` summary is now limited to 500 characters (the page history's own limit) rather than 500 bytes.
