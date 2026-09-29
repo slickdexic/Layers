@@ -1,5 +1,20 @@
 # Current status and limitations
 
+## After the migration, bare names mean the page's own drawings — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criteria HIST-4 and HIST-8 (partial). Once the migration's completion record exists (`layers-page-history-migration` in `updatelog`), bare names are the page's own drawings, as decided on September 28:
+
+- **File embeds.** `[[File:X|layerset=<name>]]` means the page's drawing named `<name>`, as `layerset=<pageId>:<name>` does. `layerset=on` means the page's only drawing of that file, and shows nothing when it has none or several. `layerset=off` and embeds without `layerset=` stay plain images.
+- **Slides.** `{{#Slide:<name>}}` means the page's drawing named `<name>`.
+- **No shared data.** A shared set or slide is never shown after the migration. A bare name the page lacks shows nothing, and editors get the "Create page drawing" link.
+- **Parser cache.** Parsing reads the record through a parser option, `layersPageDrawings`, that is part of the parser cache key. Recording or removing it gives every page a fresh render. Before the migration the option is empty, so installing this leaves existing cache keys unchanged.
+- **Read-only shared sets.** `layerssave`, `layersdelete` and `layersrename` refuse shared sets and slides with `layers-shared-sets-migrated`; old revisions stay readable.
+- **Not covered yet.** `<gallery>` lines, Cargo galleries and `{{#layers_hint:}}` still show shared sets.
+
+The test wiki has no completion record, so nothing changes there until the owner approves the full migration.
+
+Fresh verification: native `BareNamesAfterMigrationTest` checks three things. Before the record, a migrated page's template embeds still show the shared sets and the cache key is unchanged. After it, the named set, `on` and the slide bind the page's own drawings, a missing name offers creation, and the cache key changes. Shared-set saves are refused. Full native configuration **430 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,072**; `npm test` passed; PHP style clean.
+
 ## The migration can be undone, and records when it has finished — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8 (partial). `migrateLayersToPageHistory.php --undo` lists, and with `--commit` makes, one bot edit per page that puts the page back as it was before the migration's edits (`MigrationUndo`).

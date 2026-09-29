@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
@@ -20,6 +21,36 @@ use MediaWiki\Parser\Parser;
 use MediaWiki\Title\Title;
 
 class WikitextHooks {
+	/**
+	 * Parser cache entries differ before and after the migration, because bare names change meaning.
+	 * @param array &$defaults
+	 * @param array &$inCacheKey
+	 * @param array &$lazyLoad
+	 */
+	public static function onParserOptionsRegister( &$defaults, &$inCacheKey, &$lazyLoad ): void {
+		$defaults[MigrationState::PARSER_OPTION] = null;
+		$inCacheKey[MigrationState::PARSER_OPTION] = true;
+		$lazyLoad[MigrationState::PARSER_OPTION] = [ MigrationState::class, 'parserOptionValue' ];
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @param string $filename DB key of the embedded file
+	 * @param string $value Bare layerset= value
+	 * @return string|null `<pageId>:<name>` of this page's drawing, or null when the value can name none
+	 */
+	private static function ownDrawingReference( Parser $parser, string $filename, string $value ): ?string {
+		$revision = $parser->getRevisionRecordObject();
+		$pageId = $revision ? $revision->getPageId() : 0;
+		if ( $pageId <= 0 || str_starts_with( $value, 'id:' ) ) {
+			return null;
+		}
+		$name = SetNameResolver::isShowIntent( $value ) ?
+			BoundSlideHooks::onlyDrawingOf( $parser, 'File:' . $filename ) :
+			trim( (string)preg_replace( '/^name:/', '', $value ) );
+		return $name === null || $name === '' ? null : $pageId . ':' . $name;
+	}
+
 	use StaticLoggerAwareTrait;
 
 	/**
@@ -1100,6 +1131,16 @@ class WikitextHooks {
 				if ( $layersValue !== null && preg_match( '/\A\s*[0-9]+:/', $layersValue ) ) {
 					// `<pageId>:<name>` names one of this page's drawings, never a shared set.
 					$namedMap[$filename][$offset] = $layersValue;
+					$layersValue = null;
+					self::$pageHasLayers = true;
+				} elseif ( $layersValue !== null && $parser instanceof Parser && MigrationState::forParser( $parser ) &&
+					!SetNameResolver::isHideIntent( $layersValue )
+				) {
+					// After the migration a bare name is this page's drawing too; shared sets are never shown.
+					$own = self::ownDrawingReference( $parser, $filename, $layersValue );
+					if ( $own !== null ) {
+						$namedMap[$filename][$offset] = $own;
+					}
 					$layersValue = null;
 					self::$pageHasLayers = true;
 				}

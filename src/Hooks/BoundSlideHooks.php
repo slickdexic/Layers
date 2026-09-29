@@ -88,21 +88,54 @@ class BoundSlideHooks {
 			$parser->getOutput()->setExtensionData( self::COPYABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
-		$surfaces = [];
-		if ( $revision->hasSlot( PageRevisionWriter::SLOT ) ) {
-			$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
-			if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
-				throw new \DomainException( 'layers-page-binding-unavailable' );
-			}
-			$surfaces = json_decode( $content->getText(), true )['surfaces'] ?? [];
-		}
-		$surfaceId = PageOwnedBinding::resolveNamed( $named, $surfaces, $kind, $fileTitle );
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, self::pageDrawings( $parser ), $kind, $fileTitle );
 		if ( $surfaceId === null ) {
 			// The page names a drawing it does not have yet; output() offers editors to create it.
 			$parser->getOutput()->setExtensionData( self::CREATABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		return [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
+	}
+
+	/**
+	 * The name of the page's only drawing of a file, for `layerset=on` once bare names mean the page's own.
+	 * @param Parser $parser
+	 * @param string $fileTitle 'File:<DB key>'
+	 * @return string|null Null when the page has none or several
+	 */
+	public static function onlyDrawingOf( Parser $parser, string $fileTitle ): ?string {
+		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
+		try {
+			$labels = [];
+			foreach ( self::pageDrawings( $parser ) as $surface ) {
+				if ( ( $surface['source']['fileTitle'] ?? null ) === $fileTitle ) {
+					$labels[] = (string)$surface['label'];
+				}
+			}
+		} catch ( \DomainException $e ) {
+			return null;
+		}
+		return count( $labels ) === 1 ? $labels[0] : null;
+	}
+
+	/**
+	 * @param Parser $parser
+	 * @return array[] Drawings of the exact revision being parsed
+	 * @throws \DomainException layers-page-binding-unavailable
+	 */
+	private static function pageDrawings( Parser $parser ): array {
+		$revision = $parser->getRevisionRecordObject();
+		if ( !$revision || $revision->getId() <= 0 ) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		if ( !$revision->hasSlot( PageRevisionWriter::SLOT ) ) {
+			return [];
+		}
+		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
+		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
+			throw new \DomainException( 'layers-page-binding-unavailable' );
+		}
+		return json_decode( $content->getText(), true )['surfaces'] ?? [];
 	}
 
 	/**

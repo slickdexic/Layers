@@ -95,7 +95,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 		}
 		if ( $commit && !$scoped ) {
 			MigrationState::markComplete( $this->getPrimaryDB() );
-			$this->output( "Migration recorded as complete.\n" );
+			$this->output( "Migration recorded as complete: bare set and slide names now mean each page's own " .
+				"drawings.\n" );
 		}
 		return true;
 	}
@@ -144,7 +145,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 		}
 		if ( $commit && !$scoped ) {
 			MigrationState::clear( $this->getPrimaryDB() );
-			$this->output( "Migration record removed.\n" );
+			$this->output( "Migration record removed: bare set and slide names mean shared sets again.\n" );
 		}
 	}
 

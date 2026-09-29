@@ -148,6 +148,7 @@ class ApiLayersSave extends ApiBase {
 				'dbschema-missing'
 			);
 		}
+		$this->requireSharedSetsWritable( $db );
 
 		$data = $params['data'];
 		// Only an omitted/empty name requests recency resolution. Never redirect

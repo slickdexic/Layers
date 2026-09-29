@@ -40,6 +40,17 @@ trait LayersApiHelperTrait {
 	}
 
 	/**
+	 * Shared sets and slides are read-only once the migration has moved them into page history.
+	 * @param LayersDatabase $db
+	 * @throws \MediaWiki\Api\ApiUsageException
+	 */
+	protected function requireSharedSetsWritable( LayersDatabase $db ): void {
+		if ( $db->isPageHistoryMigrationComplete() ) {
+			$this->dieWithError( 'layers-shared-sets-migrated', 'migrated' );
+		}
+	}
+
+	/**
 	 * Ensure the database schema is ready, or die with error.
 	 *
 	 * @param LayersDatabase $db The LayersDatabase instance

@@ -108,6 +108,7 @@ class ApiLayersRename extends ApiBase {
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
+			$this->requireSharedSetsWritable( $db );
 
 			// RATE LIMITING: Check early before expensive DB work
 			$rateLimiter = $this->createRateLimiter();
@@ -314,6 +315,7 @@ class ApiLayersRename extends ApiBase {
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
+			$this->requireSharedSetsWritable( $db );
 
 			// Rate limiting (before DB lookups to prevent abuse)
 			$rateLimiter = $this->createRateLimiter();

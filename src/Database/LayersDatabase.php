@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers\Database;
 
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use Psr\Log\LoggerInterface;
@@ -1587,6 +1588,14 @@ class LayersDatabase {
 		return $db->newSelectQueryBuilder()->select( 'ls_img_name' )->distinct()->from( 'layer_sets' )
 			->where( [ 'ls_img_sha1' => LayersConstants::TYPE_SLIDE, $db->expr( 'ls_img_name', '>', $after ) ] )
 			->orderBy( 'ls_img_name' )->limit( $limit )->caller( __METHOD__ )->fetchFieldValues();
+	}
+
+	/**
+	 * @return bool Whether the migration has moved shared sets into page history, which makes them read-only
+	 */
+	public function isPageHistoryMigrationComplete(): bool {
+		$db = $this->getReadDb();
+		return $db ? MigrationState::isComplete( $db ) : false;
 	}
 
 	/**

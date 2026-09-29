@@ -2,7 +2,7 @@
 
 ## J95 accepted — September 29, 2026
 
-**J95 is accepted** (see the review ledger): migration steps 1 to 3 and undo pass on the corrected fixtures. The lead's next work is the change of bare names, which needs the owner's approval before the completion record is set on the test wiki. Earlier entries below are historical.
+**J95 is accepted** (see the review ledger): migration steps 1 to 3 and undo pass on the corrected fixtures. The change of bare names is built (see the [current status](CURRENT_STATUS.md)). Recording completion on the test wiki needs the owner's approval, because it makes every shared set read-only there and ends the legacy browser specs; no junior packet is ready until then. Earlier entries below are historical.
 
 ## J93 and J94 accepted with findings; undo built; J95 ready — September 29, 2026
 

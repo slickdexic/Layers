@@ -1032,6 +1032,7 @@
 	"layers-validation-fillopacity-range": "Fill opacity must be between $1 and $2",
 	"layers-validation-strokeopacity-invalid": "Invalid stroke opacity value",
 	"layers-validation-strokeopacity-range": "Stroke opacity must be between $1 and $2",
+	"layers-shared-sets-migrated": "Shared layer sets and slides have moved into page history and can no longer be changed here. Edit the drawing on the page that shows it.",
 	"layers-publication-disabled": "Drawings cannot be saved in this page’s history, because its namespace is not set up for drawings.",
 	"layers-publication-failed": "Layers could not confirm that the page was saved. Check its latest revision before retrying.",
 	"layers-owner-edit-denied": "You do not have permission to publish Layers on this page.",

@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
@@ -158,6 +159,12 @@ class SlideHooks {
 		if ( $binding === null ) {
 			$named = \MediaWiki\Extension\Layers\Revision\PageOwnedBinding::parseNamed(
 				(string)( $params['name'] ?? '' ) );
+			if ( $named === null && MigrationState::forParser( $parser ) ) {
+				// After the migration a bare slide name is this page's drawing; shared slides are never shown.
+				$revision = $parser->getRevisionRecordObject();
+				$named = \MediaWiki\Extension\Layers\Revision\PageOwnedBinding::parseNamed(
+					( $revision ? $revision->getPageId() : 0 ) . ':' . trim( (string)( $params['name'] ?? '' ) ) );
+			}
 			if ( $named !== null ) {
 				$binding = BoundSlideHooks::named( $parser, $named, 'slide', null );
 			}
