@@ -1,4 +1,54 @@
-# Junior implementation review — J01–J89
+# Junior implementation review — J01–J92
+
+## J90, J91 and J92 accepted — September 29, 2026
+
+Advances: **HIST-4** (J90), **HIST-5** (J91), **HIST-3** (J92). No product defects; lead tightening of the specs.
+
+All three specs pass again on the lead's run, before and after the tightening (48.8 s, 39.0 s and 41.3 s). Afterwards the owner's drawing matches revision 1908 exactly and `Layers history test` is still at revision 574.
+
+- **Correction:** the packets asked for "exactly one new revision", but the specs only checked that the revision ID grew. Each now checks that the new revision's parent is the previous one (J90 twice, J91, J92).
+- **Correction:** J91 checked that the owner page changed after moving a layer of the copy, not that the move landed on the copy. It now checks that the saved copy keeps its ID and that its layers differ from the source's.
+- **Correction:** the three entries below were dated September 30; the work was done on September 29.
+- **Note:** J90's coordinate helper assumes an 800×600 slide, so on the image drawing the rectangle lands elsewhere than the numbers say. Harmless, because the spec only needs one rectangle.
+- **Note:** J92 leaves `Layers D2 probe` (page 232) and `Project:Layers D2 probe` (page 233, shown as `PV:` on this wiki) in place as agreed. The first now owns a drawing history; reruns publish an empty drawing list first.
+
+## J92 implemented awaiting lead review: browser acceptance of drawings on by default — September 29, 2026
+
+Advances: **HIST-3** (Drawings in page history are on by default for standard content pages; $wgLayersPageDrawingNamespaces replaces pilot settings).
+
+Junior authored `tests/e2e/page-owned-default-on.spec.js` proving on the test wiki (http://localhost:8080) that a page nobody enrolled can start a drawing, and that a page outside configured namespaces cannot:
+- **Unenrolled Content Page (`Layers D2 probe`):** Created probe page (namespace 0) with embed `{{#Slide:<pageId>:D2 slide}}`. Verified page view offers "Create page drawing: D2 slide". Followed link, drew a rectangle, saved with empty summary. Verified exactly one new revision appeared with comment `Added drawing “D2 slide”` and tag `layers-page-drawing`, and the page view then painted the drawing with link "Edit page drawing: D2 slide".
+- **Non-Content Namespace (`Project:Layers D2 probe`):** Created probe page in project namespace (`PV:Layers D2 probe`, namespace 4) with embed `{{#Slide:<pageId>:D2 slide}}`. Verified page view offers zero "Create page drawing" links, and an authorized `layerspublish` API request fails with `layers-publication-disabled`.
+- **Owner Baseline Regression Check:** Verified owner page `Layers_browser_acceptance` still opens editor, moves a layer, saves, and cleanly restores known baseline via exact-base CAS publication in main flow and finally.
+- **Probe Page Retention & Rerun Handling:** Both probe pages remain in place (never deleted; history is the record). Rerun handling verified: `Layers D2 probe` resets with an empty drawing list via `layerspublish` so step 2 cleanly starts from an uncreated drawing.
+- Duration: **39.6s** (1 passed); ESLint clean (**0 errors, 0 warnings**).
+
+## J91 implemented awaiting lead review: browser acceptance of copying another page's drawing — September 29, 2026
+
+Advances: **HIST-5** and **TYPES-3** (A drawing on another page can be copied into the current page under a new name; copy preserves source kind and file reference).
+
+Junior authored `tests/e2e/page-owned-copy.spec.js` proving in Chromium on the test wiki (http://localhost:8080) that an embed of another page's drawing can be copied into the current page, records its source, and decouples both pages:
+- **Foreign Embed Detection:** From baseline, published exact-base revision renaming baseline drawing to "Copy probe baseline" and appending `{{#Slide:227:Welcome Slide}}` (reading page 227 and revision dynamically from API). Verified page view shows no drawing, no edit link for "Welcome Slide", and exactly one "Copy “Welcome Slide” from Layers history test to this page" link to `Special:CopyLayersDrawing`.
+- **Confirmation Page & Cancel Behavior:** Followed copy link. Verified `Special:CopyLayersDrawing` names source page `Layers history test` and its current revision ID, and writes nothing to owner. Clicking Cancel navigates back to owner with zero revisions written.
+- **Accessibility Audit:** While `Special:CopyLayersDrawing` confirmation page was open, executed axe-core (WCAG 2.2 A and AA) on `.mw-htmlform` as in Screen 6 of `tests/e2e/accessibility.spec.js`. Result: **0 critical or serious violations** (clean).
+- **Copy Execution & Provenance:** Followed link again, entered note "J91 copy", and confirmed. Exactly one new revision appeared with comment `Copied drawing “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy` and tag `layers-page-drawing`. Verified wikitext rewrote embed to owner's own page ID `{{#Slide:228:Welcome Slide}}`. Verified `layers` slot holds baseline drawing unchanged plus "Welcome Slide" with a new ID (not `presentation`) and identical layers to source.
+- **Source Page Protection & Independence:** Verified source page `Layers_history_test` remained untouched at revision 574. On owner page view, copy is painted, controls offer "Edit page drawing: Welcome Slide" and zero copy links. Followed edit link, moved a layer, and saved: owner updated to new revision, while source page 227 remained untouched at revision 574 with its layer coordinates unchanged.
+- **Baseline Enforcement & Cleanup:** Verified baseline and cleanly restored baseline wikitext and initial snapshot via CAS exact-base publication in main flow and finally.
+- Duration: **57.0s** (1 passed); ESLint clean (**0 errors, 0 warnings**).
+
+## J90 implemented awaiting lead review: browser acceptance of creating a drawing from an embed — September 29, 2026
+
+Advances: **HIST-4** (An embed can start a new drawing: Create link, empty editor, first save adds it).
+
+Junior authored `tests/e2e/page-owned-create.spec.js` proving in Chromium on the test wiki (http://localhost:8080) that a page can start its own drawing from an embed, nothing is written until the first save, and foreign embeds are never offered:
+- **Embed Controls on Page View:** From baseline, published page text with 3 embeds: `{{#Slide:<pageId>:Created slide}}`, `[[File:B010.jpg|layerset=<pageId>:Created notes]]`, and `{{#Slide:<pageId + 1>:Other page}}`. On page view, drawing controls listed "Create page drawing: Created slide" and "Create page drawing: Created notes", and nothing for "Other page". Neither embed showed a drawing canvas.
+- **Slide Drawing & Rename Refusal:** Opened "Create page drawing: Created slide". Header displayed "Drawing: Created slide". Pressing "Rename drawing" showed exact notification text `Save this new drawing before renaming it: the page's embed names it, and would no longer find it.`. Leaving editor without saving verified latest revision ID was unchanged.
+- **Draft Recovery & First Save:** Reopened "Create page drawing: Created slide", drew a rectangle via toolbar shapes dropdown, waited for debounced localStorage draft, reloaded editor page, restored draft via recovery dialog, and confirmed rectangle was present. Saved with empty summary: exactly one new revision appeared with comment `Added drawing “Created slide”` and tag `layers-page-drawing`, containing baseline drawing unchanged plus slide "Created slide" with 1 rectangle.
+- **Image Drawing Creation:** Reused existing image fixture `File:B010.jpg`. Opened "Create page drawing: Created notes", verified background image loaded, drew a rectangle, and saved. New drawing verified as kind `image` with `source` naming uploaded file's current version (fileTitle, timestamp, sha1).
+- **Post-Creation Page View:** On page view, both drawings painted on canvas, controls updated to "Edit page drawing: …" for both, and "Other page" offered nothing.
+- **Accessibility Audit:** Reran `tests/e2e/accessibility.spec.js` across 7 screens in light and dark mode; 0 new violations (identical baseline of 4 occurrences / 2 serious on layer list items).
+- **Baseline Enforcement & Cleanup:** Cleanly restored baseline wikitext and initial snapshot via CAS exact-base publication in main flow and finally.
+- Duration: **47.1s** (1 passed); ESLint clean (**0 errors, 0 warnings**).
 
 ## J89 accepted — September 29, 2026
 

@@ -1,5 +1,27 @@
 # Layers implementation handoff plan
 
+## J90–J92 accepted; D3 designed; J93 ready — September 29, 2026
+
+**J90, J91 and J92 are accepted** with lead tightening (see the review ledger). The design of the migration (charter D3, HIST-8) is in the [binding plan](PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026). The lead implements it; J93 builds the test wiki fixture it will be checked against. Earlier entries below are historical.
+
+### J93 — Migration fixtures on the test wiki (ready)
+
+**Advances:** HIST-8.
+
+**Purpose:** a small, repeatable set of shared sets, slides and pages on the test wiki that covers every case of the D3 design, plus a written statement of what the migration should do with each. No production code, and no migration is run.
+
+**Allowed changes:** `tests/e2e/fixtures/seed-migration-fixtures.js`, `tests/fixtures/migration/expected-plan.json`, this packet and the review ledger. **Exception to the J65 rules for this packet only:** you may upload files named `Layers migration fixture *`, create and edit pages named `Layers migration fixture/…`, `Project:Layers migration fixture` and `Template:Layers migration fixture frame`, and save shared sets and slides on those files and on slides named `Layers migration fixture …`, through the ordinary API (`layerssave` with `filename` or `slidename`). Touch nothing else; in particular never `File:B010.jpg`, `Layers_browser_acceptance` or `Layers_history_test`. Do not create `Slide:…` pages, and never delete anything.
+
+1. The seeder is a Node script using the same login configuration as the specs. It is idempotent: on a rerun it checks that each fixture is as expected and creates only what is missing. If a fixture exists in an unexpected state, it stops and says which one, without changing it.
+2. Fixtures (each set holds at least one visible layer with distinctive text, so a later check can tell them apart):
+   - **A.** An image `Layers migration fixture A.png` with sets `anatomy` and `labels`; `labels` saved three times with different text, and saved last.
+   - **B.** A three-page PDF `Layers migration fixture B.pdf` with set `notes` on pages 1 and 3 only. If the wiki cannot render PDFs, stop and report.
+   - **C.** An image `Layers migration fixture C.png`, uploaded, given set `old`, then uploaded again as a different image, so `old` belongs only to the earlier version.
+   - **Slides:** `Layers migration fixture slide one` (shown by two pages) and `Layers migration fixture slide two` (shown nowhere).
+   - **Pages:** `Layers migration fixture/Direct` embeds A with `layerset=anatomy` twice, A with `layerset=on` once, A with `layerset=off` once, A with no `layerset`, and B pages 1 and 3 with `layerset=notes` (`page=` option). `Layers migration fixture/Slides 1` and `/Slides 2` each embed `{{#Slide:Layers migration fixture slide one}}`. `Template:Layers migration fixture frame` contains `[[File:Layers migration fixture A.png|thumb|layerset=anatomy]]`, and `Layers migration fixture/Template` uses only that template. `Layers migration fixture/Taken` embeds A with `layerset=anatomy` and already owns a page drawing named `anatomy` (create it through its own Create link or `layerspublish`). `Layers migration fixture/Uses C` embeds C with `layerset=old`. `Project:Layers migration fixture` embeds A with `layerset=anatomy`.
+3. `expected-plan.json` states, for every fixture, what the design says the migration must do: which drawings each `File:` page gets and their names, which pages get which copies and names, which embeds are rewritten and to what (write `<pageId>` for the page's own ID), which pages are template copies, which cases are listed for manual follow-up or not moved, and why. Take every rule from the design section, and write down any case the design does not decide instead of guessing.
+4. Run the seeder twice; the second run must change nothing. Record the revision IDs it created and anything that could not be checked, then return for lead review.
+
 ## Drawings in page history are on by default; J92 ready after J91 — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: no pilot setting remains; `$wgLayersPageDrawingNamespaces` (default `null` = content namespaces and `File:`) decides where pages may start drawings, and a page that owns drawings always takes part. The test wiki's `LocalSettings.php` still sets the retired pilot variables; they are ignored. J90 and J91 are still ready and come first. Earlier entries below are historical.
@@ -19,6 +41,8 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: no pilot setting re
 5. Leave both probe pages in place; their history is the record. On a rerun, first publish `Layers D2 probe` with an empty drawing list (exact base, same text), so step 2 again starts from a page without that drawing.
 
 Record durations and anything that could not be checked, then return for lead review.
+
+**Result:** Implemented in `tests/e2e/page-owned-default-on.spec.js` (39.6s, 1 passed). Created probe pages `Layers D2 probe` and `Project:Layers D2 probe` and preserved them in place (never deleted), with rerun reset verified (Layers D2 probe reset with empty drawing list). Owner page verified working as before and baseline cleanly restored in main flow and finally. Ready for lead review.
 
 ## J89 accepted; another page's drawing can be copied; J91 ready after J90 — September 29, 2026
 
@@ -43,6 +67,8 @@ See the [current status](CURRENT_STATUS.md) entry. **J89 is accepted** (see the 
 
 Record durations and anything that could not be checked, then return for lead review.
 
+**Result:** Implemented in `tests/e2e/page-owned-copy.spec.js` (57.0s, 1 passed). Special:CopyLayersDrawing audited with axe-core (0 critical or serious violations). Source `Layers_history_test` left untouched at revision 574. Baseline cleanly restored in main flow and finally. Ready for lead review.
+
 ## An embed can start a new drawing; J90 ready after J89 — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: an embed on its own page naming a drawing the page lacks gets a "Create page drawing: <name>" link in the page's drawing controls; it opens the editor on an empty drawing and only the first save writes. J89 comes first; J90 follows. Earlier entries below are historical.
@@ -65,6 +91,8 @@ See the [current status](CURRENT_STATUS.md) entry. Contract: an embed on its own
 8. Restore the baseline by exact-base publication, in the main flow and in `finally`.
 
 Record durations and anything that could not be checked, then return for lead review.
+
+**Result:** Implemented in `tests/e2e/page-owned-create.spec.js` (47.1s, 1 passed). Tested slide creation, draft recovery and first save, and image creation on existing fixture `File:B010.jpg`. Reran accessibility audit `tests/e2e/accessibility.spec.js` (0 new violations). Baseline cleanly restored in main flow and finally. Ready for lead review.
 
 ## J88 accepted; PERF-4 met; J89 ready — September 29, 2026
 
