@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\DrawingName;
 use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
@@ -95,6 +96,39 @@ class BoundSlideHooks {
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
 		return [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
+	}
+
+	/**
+	 * The page's drawing of a file that a bare set name means once the migration has finished: the drawing of
+	 * that name, or else the one of that file with that name and a number, which the migration gives a copy
+	 * when two files on the page had sets of the same name.
+	 * @param Parser $parser
+	 * @param string $fileTitle 'File:<DB key>'
+	 * @param string $name
+	 * @return string The name to resolve
+	 */
+	public static function drawingOfFileNamed( Parser $parser, string $fileTitle, string $name ): string {
+		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
+		try {
+			$numbered = [];
+			foreach ( self::pageDrawings( $parser ) as $surface ) {
+				if ( ( $surface['source']['fileTitle'] ?? null ) !== $fileTitle ) {
+					continue;
+				}
+				$label = (string)$surface['label'];
+				if ( DrawingName::key( $label ) === DrawingName::key( $name ) ) {
+					return $label;
+				}
+				if ( preg_match( '/\A(.+) [0-9]+\z/', $label, $match ) &&
+					DrawingName::key( $match[1] ) === DrawingName::key( $name )
+				) {
+					$numbered[] = $label;
+				}
+			}
+		} catch ( \DomainException $e ) {
+			return $name;
+		}
+		return count( $numbered ) === 1 ? $numbered[0] : $name;
 	}
 
 	/**

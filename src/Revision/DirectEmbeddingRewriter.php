@@ -153,15 +153,20 @@ class DirectEmbeddingRewriter {
 	 * @param int $pageId Owner page
 	 * @param string[] $renames New canonical names, keyed by DrawingName::key() of the old ones
 	 * @param callable $resolveFile
+	 * @param bool $bareNames Bare names mean the page's own drawings (after the migration); they become named
 	 * @return string
 	 * @throws \InvalidArgumentException When the scanner refuses the text
 	 */
-	public function renameReferences( string $text, int $pageId, array $renames, callable $resolveFile ): string {
+	public function renameReferences( string $text, int $pageId, array $renames, callable $resolveFile,
+		bool $bareNames = false
+	): string {
 		$edits = [];
 		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
 			try {
-				$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+				$explicit = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
 					$candidate['target'] );
+				$named = $explicit ?? ( $bareNames ? PageOwnedBindingOptions::named( $candidate['options'],
+					$candidate['kind'], $candidate['target'], $pageId ) : null );
 			} catch ( \InvalidArgumentException $e ) {
 				continue;
 			}
@@ -180,10 +185,13 @@ class DirectEmbeddingRewriter {
 					$equalsPos = strpos( $part, '=' );
 					$key = $equalsPos === false ? '' :
 						strtolower( trim( substr( $part, 0, $equalsPos ), " \t\r\n\f" ) );
-					if ( in_array( $key, [ 'layerset', 'layers' ], true ) &&
-						preg_match( '/\A\s*[0-9]+:/', substr( $part, $equalsPos + 1 ) )
+					if ( in_array( $key, [ 'layerset', 'layers' ], true ) && ( $explicit === null ||
+						preg_match( '/\A\s*[0-9]+:/', substr( $part, $equalsPos + 1 ) ) )
 					) {
 						$parts[$i] = substr( $part, 0, $equalsPos + 1 ) . $reference;
+						if ( $explicit === null ) {
+							break;
+						}
 					}
 				}
 			}

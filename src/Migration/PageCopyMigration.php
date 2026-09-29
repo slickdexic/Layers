@@ -217,8 +217,10 @@ class PageCopyMigration {
 			}
 			$wanted = DrawingName::normalize( $source['wanted'] ) ?? $copyId;
 			$name = DrawingName::unused( $wanted, $taken );
-			if ( !empty( $source['template'] ) && $name !== $wanted ) {
-				$plan['notMoved'][] = [ 'what' => $wanted, 'reason' => 'template-name-taken' ];
+			if ( !empty( $source['template'] ) && $name !== $wanted && $source['kind'] === 'slide' ) {
+				// A bare slide name finds only that exact name; a file's finds a numbered one of the same file.
+				$plan['notMoved'][] = [ 'what' => $source['source'] . ' ' . $wanted,
+					'reason' => 'template-name-taken' ];
 				continue;
 			}
 			$surface = clone $source['surface'];

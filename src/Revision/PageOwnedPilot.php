@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Migration\FilePageMigration;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Migration\MigrationUndo;
 use MediaWiki\Extension\Layers\Migration\PageCopyMigration;
 use MediaWiki\Extension\Layers\Migration\SlidePageMigration;
@@ -426,19 +427,28 @@ class PageOwnedPilot {
 	 * The page drawing a scanned embed selects, by binding or by `<pageId>:<name>`.
 	 * @param array $candidate From DirectEmbeddingRewriter::scan()
 	 * @param array[]|callable $surfaces The page's drawings, or a function that reads them
+	 * @param int $pageId The page carrying the embed; its bare names are its own drawings after the migration
 	 * @return array|null Canonical identity
 	 * @throws \InvalidArgumentException For a malformed selector
 	 */
-	private function embedBinding( array $candidate, $surfaces ): ?array {
+	private function embedBinding( array $candidate, $surfaces, int $pageId ): ?array {
 		$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
-		$named = $binding === null ?
-			PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'] ) : null;
+		$named = $binding === null ? PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+			$candidate['target'], self::bareOwner( $pageId ) ) : null;
 		if ( $named === null ) {
 			return $binding;
 		}
 		$surfaceId = PageOwnedBinding::resolveNamed( $named, is_callable( $surfaces ) ? $surfaces() : $surfaces,
 			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null );
 		return $surfaceId === null ? null : [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
+	}
+
+	/**
+	 * @param int $pageId
+	 * @return int|null The page, once the migration has made bare names mean its own drawings
+	 */
+	private static function bareOwner( int $pageId ): ?int {
+		return MigrationState::isCompleteNow() ? $pageId : null;
 	}
 
 	/**
@@ -453,7 +463,8 @@ class PageOwnedPilot {
 		if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
 			return null;
 		}
-		$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'] );
+		$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'],
+			self::bareOwner( $pageId ) );
 		// A drawing of that name of another kind or on another file still takes the name.
 		return $named === null || $named['pageId'] !== $pageId ||
 			PageOwnedBinding::resolveNamed( $named, $surfaces, null, null ) !== null ? null : $named['name'];
@@ -627,7 +638,7 @@ class PageOwnedPilot {
 			$selections = [];
 			foreach ( $candidates as $candidate ) {
 				try {
-					$binding = $this->embedBinding( $candidate, $surfaces );
+					$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
 					$missing = $binding ? null : self::missingName( $candidate, $pageId, $surfaces );
 					if ( $missing !== null && !isset( $selections['new:' . DrawingName::key( $missing )] ) ) {
 						$selections['new:' . DrawingName::key( $missing )] = [ 'label' => $missing, 'create' => true,
@@ -698,7 +709,7 @@ class PageOwnedPilot {
 				}
 				$surfaces = $revision->hasSlot( PageRevisionWriter::SLOT ) ?
 					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
-				$binding = $this->embedBinding( $candidate, $surfaces );
+				$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
 				if ( !$binding ) {
 					$missing = self::missingName( $candidate, $pageId, $surfaces );
 					if ( $missing === null ) {

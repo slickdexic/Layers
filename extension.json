@@ -227,6 +227,7 @@
 	},
 	"Hooks": {
 		"MediaWikiServices": "LayersPageOwnedPilotRegistration",
+		"APIQuerySiteInfoGeneralInfo": "LayersHooks",
 		"BeforePageDisplay": "LayersHooks",
 		"ChangeTagsAllowedAdd": "LayersHooks",
 		"ChangeTagsListActive": "LayersHooks",

@@ -1,5 +1,29 @@
 # Layers implementation handoff plan
 
+## Test wiki migrated; J96 ready — September 29, 2026
+
+With the owner's approval the whole test wiki is migrated and recorded as complete (see the [current status](CURRENT_STATUS.md)). Shared sets and slides are read-only there now. `meta=siteinfo` reports `layerspagehistorymigrated: true`. Earlier entries below are historical.
+
+### J96 — Browser specs on the migrated test wiki (ready)
+
+**Advances:** HIST-4 and HIST-8.
+
+**Purpose:** sort the browser specs into those that still apply and those that describe shared sets, which the migration retired, and prove bare names in the browser.
+
+**Allowed changes:** a helper `tests/e2e/helpers/migration.js`, which reads `layerspagehistorymigrated` from `meta=siteinfo`; skip conditions in existing specs, as described below; a new spec `tests/e2e/bare-names-after-migration.spec.js`; this packet and the review ledger. No production code. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline.
+
+1. Run every spec in `tests/e2e` once, serially, and record each result with its duration.
+2. A spec that fails because it saves, renames, deletes or adopts shared sets or slides, or expects a shared set to be shown or found by search, describes the wiki before the migration. Make it skip, with the reason "shared sets are read-only after the migration", when the helper reports the wiki migrated. Skip only the affected tests, and weaken no other assertion. Any other failure is a finding for the lead: record it and leave that spec unchanged.
+3. The new spec:
+   - From the owner page's baseline, publish text that adds `{{#Slide:Bare probe}}` and `[[File:B010.jpg|layerset=Bare notes]]`.
+   - The page view offers "Create page drawing: Bare probe" and "Create page drawing: Bare notes". Create the slide through its link, draw a rectangle and save. The page then paints it, and the embed in the page text is still bare.
+   - Rename the drawing to "Bare probe renamed" in the editor and save. The embed becomes `{{#Slide:<pageId>:Bare probe renamed}}`.
+   - A `layerssave` request for `B010.jpg` fails with `migrated`.
+   - Restore the baseline by exact-base publication, in the main flow and in `finally`.
+4. Read-only: on `DeleteMe006` the images of `FT-Image-149-000001.jpg` and `FT-Image-149-000002.jpg` both paint their drawings, and `FT-Image-149-000003.jpg` is a plain image.
+
+Record findings, then return for lead review.
+
 ## J95 accepted — September 29, 2026
 
 **J95 is accepted** (see the review ledger): migration steps 1 to 3 and undo pass on the corrected fixtures. The change of bare names is built (see the [current status](CURRENT_STATUS.md)). Recording completion on the test wiki needs the owner's approval, because it makes every shared set read-only there and ends the legacy browser specs; no junior packet is ready until then. Earlier entries below are historical.

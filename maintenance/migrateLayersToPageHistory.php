@@ -97,8 +97,26 @@ class MigrateLayersToPageHistory extends Maintenance {
 			MigrationState::markComplete( $this->getPrimaryDB() );
 			$this->output( "Migration recorded as complete: bare set and slide names now mean each page's own " .
 				"drawings.\n" );
+			$this->purgePagesShowingSets();
 		}
 		return true;
+	}
+
+	/**
+	 * Renders cached before this version of Layers do not vary on the migration, so the pages whose
+	 * bare names change meaning are purged.
+	 */
+	private function purgePagesShowingSets(): void {
+		$ids = $this->getReplicaDB()->newSelectQueryBuilder()->select( 'pp_page' )->from( 'page_props' )
+			->where( [ 'pp_propname' => ShownLayerSets::PROPERTY ] )->caller( __METHOD__ )->fetchFieldValues();
+		$pages = $this->getServiceContainer()->getWikiPageFactory();
+		foreach ( $ids as $id ) {
+			$page = $pages->newFromID( (int)$id );
+			if ( $page ) {
+				$page->doPurge();
+			}
+		}
+		$this->output( 'Purged ' . count( $ids ) . " page(s) that showed shared sets.\n" );
 	}
 
 	/**
@@ -146,6 +164,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 		if ( $commit && !$scoped ) {
 			MigrationState::clear( $this->getPrimaryDB() );
 			$this->output( "Migration record removed: bare set and slide names mean shared sets again.\n" );
+			$this->purgePagesShowingSets();
 		}
 	}
 

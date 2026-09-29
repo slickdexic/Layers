@@ -47,7 +47,8 @@ class WikitextHooks {
 		}
 		$name = SetNameResolver::isShowIntent( $value ) ?
 			BoundSlideHooks::onlyDrawingOf( $parser, 'File:' . $filename ) :
-			trim( (string)preg_replace( '/^name:/', '', $value ) );
+			BoundSlideHooks::drawingOfFileNamed( $parser, 'File:' . $filename,
+				trim( (string)preg_replace( '/^name:/', '', $value ) ) );
 		return $name === null || $name === '' ? null : $pageId . ':' . $name;
 	}
 

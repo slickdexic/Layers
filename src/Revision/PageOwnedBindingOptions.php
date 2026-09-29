@@ -4,6 +4,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Revision;
 
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
+
 /**
  * Pure adapter for extracting a single page-owned binding from ordered option strings.
  *
@@ -76,19 +78,27 @@ final class PageOwnedBindingOptions {
 
 	/**
 	 * The drawing an embed names as `<pageId>:<name>`: a file embed's layerset= (or layers=)
-	 * value, or a slide embed's target.
+	 * value, or a slide embed's target. With $bareOwner, a bare name is that page's drawing too,
+	 * as it is once the migration has finished.
 	 *
 	 * @param array $options Ordered option strings, as for extract()
 	 * @param string $kind 'file' or 'slide'
 	 * @param string $target Slide target, or the file title
+	 * @param int|null $bareOwner The page carrying the embed, when bare names mean its own drawings
 	 * @return array{pageId:int,name:string}|null
 	 * @throws \InvalidArgumentException For a malformed or repeated name
 	 */
-	public static function named( array $options, string $kind, string $target ): ?array {
+	public static function named( array $options, string $kind, string $target, ?int $bareOwner = null ): ?array {
 		if ( $kind === 'slide' ) {
-			return PageOwnedBinding::parseNamed( $target );
+			$named = PageOwnedBinding::parseNamed( $target );
+			if ( $named === null && $bareOwner !== null ) {
+				$name = DrawingName::normalize( trim( $target ) );
+				return $name === null ? null : [ 'pageId' => $bareOwner, 'name' => $name ];
+			}
+			return $named;
 		}
 		$found = null;
+		$bare = null;
 		foreach ( $options as $option ) {
 			$equalsPos = strpos( (string)$option, '=' );
 			$name = $equalsPos === false ? '' : strtolower( trim( substr( $option, 0, $equalsPos ), " \t\r\n\f" ) );
@@ -101,7 +111,15 @@ final class PageOwnedBindingOptions {
 					throw new \InvalidArgumentException( 'layers-invalid-page-binding' );
 				}
 				$found = $named;
+			} else {
+				$bare ??= trim( substr( $option, $equalsPos + 1 ), " \t\r\n\f" );
 			}
+		}
+		if ( $found === null && $bareOwner !== null && $bare !== null &&
+			!SetNameResolver::isGenericIntent( $bare ) && !str_starts_with( $bare, 'id:' )
+		) {
+			$name = DrawingName::normalize( (string)preg_replace( '/^name:/', '', $bare ) );
+			return $name === null ? null : [ 'pageId' => $bareOwner, 'name' => $name ];
 		}
 		return $found;
 	}

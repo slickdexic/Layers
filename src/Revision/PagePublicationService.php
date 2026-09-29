@@ -9,6 +9,7 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Context\DerivativeContext;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\HookContainer\HookContainer;
 use MediaWiki\Page\WikiPage;
 use MediaWiki\Page\WikiPageFactory;
@@ -283,7 +284,7 @@ class PagePublicationService {
 					$title = Title::newFromText( $name );
 					return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() &&
 						!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
-				} );
+				}, MigrationState::isCompleteNow() );
 		} catch ( \InvalidArgumentException $e ) {
 			// Text the scanner refuses keeps its bytes; its named embeds then show nothing.
 			return $main;

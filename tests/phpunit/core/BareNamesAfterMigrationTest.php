@@ -106,9 +106,72 @@ class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertNull( $output->getExtensionData( BoundSlideHooks::ADOPTABLE_KEY ) );
 	}
 
+	public function testATemplateShowingTwoFilesSetsOfOneNameFindsEachFilesCopy(): void {
+		$files = $this->pilot->newFilePageMigration();
+		foreach ( [ 'Row_one.png', 'Row_two.png' ] as $name ) {
+			$file = $this->upload( $name );
+			$this->saveSet( $file, 'default', 1, $name );
+			$files->commit( $files->plan( $file->getName(), $this->actor ), $this->actor );
+		}
+		$this->editPage( Title::newFromText( 'Template:Row' ), '[[File:{{{1}}}|layerset=default]]', '', NS_MAIN,
+			$this->actor );
+		$page = Title::newFromText( 'Rows page' );
+		$this->editPage( $page, "{{Row|Row_one.png}}\n{{Row|Row_two.png}}", '', NS_MAIN, $this->actor );
+		$this->getDb()->newDeleteQueryBuilder()->deleteFrom( 'page_props' )
+			->where( [ 'pp_page' => $page->getArticleID(), 'pp_propname' => ShownLayerSets::PROPERTY ] )
+			->caller( __METHOD__ )->execute();
+		$this->getDb()->newInsertQueryBuilder()->insertInto( 'page_props' )->row( [
+			'pp_page' => $page->getArticleID(), 'pp_propname' => ShownLayerSets::PROPERTY,
+			'pp_value' => '[["file","Row_one.png","default"],["file","Row_two.png","default"]]'
+		] )->caller( __METHOD__ )->execute();
+		$copies = $this->pilot->newPageCopyMigration();
+		$plan = $copies->plan( $page->getArticleID(), $this->actor );
+		$this->assertSame( [ [ 'default', true ], [ 'default 2', true ] ],
+			array_map( static fn ( $c ) => [ $c['name'], $c['template'] ], $plan['copies'] ) );
+		$this->assertSame( [], $plan['notMoved'] );
+		$copies->commit( $plan, $this->actor );
+
+		MigrationState::markComplete( $this->getDb() );
+		$surfaces = $this->surfaces( $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page ) );
+		$ids = array_column( $surfaces, 'id', 'label' );
+		$this->assertEqualsCanonicalizing( [ 'v1:' . $page->getArticleID() . ':' . $ids['default'],
+			'v1:' . $page->getArticleID() . ':' . $ids['default 2'] ],
+			array_keys( $this->parse( $page )->getExtensionData( BoundSlideHooks::DATA_KEY ) ?? [] ) );
+	}
+
+	public function testEditLinksAndRenamesUnderstandBareNamesAfterTheMigration(): void {
+		$page = Title::newFromText( 'Bare links page' );
+		$this->editPage( $page, "Intro\n{{#Slide:Deck}}", '', NS_MAIN, $this->actor );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$base = $lookup->getRevisionByTitle( $page )->getId();
+		$this->assertSame( [], $this->pilot->listBoundEditorSelections( $page->getArticleID(), $base, $this->actor ),
+			'before the migration a bare name is a shared slide' );
+
+		MigrationState::markComplete( $this->getDb() );
+		$this->assertSame( [ [ 'Deck', true ] ], array_map( static fn ( $s ) => [ $s['label'], $s['create'] ?? false ],
+			$this->pilot->listBoundEditorSelections( $page->getArticleID(), $base, $this->actor ) ) );
+
+		$slide = static fn ( string $label ) => json_encode( [ 'schemaVersion' => 1, 'surfaces' => [ [
+			'id' => 'deck', 'kind' => 'slide', 'label' => $label, 'layers' => [],
+			'canvas' => [ 'width' => 800, 'height' => 600, 'backgroundColor' => '#ffffff',
+				'backgroundVisible' => true, 'backgroundOpacity' => 1 ] ] ] ] );
+		$first = $this->doApiRequestWithToken( [ 'action' => 'layerspublish', 'owner' => $page->getPrefixedText(),
+			'baserevid' => $base, 'data' => $slide( 'Deck' ) ], null, $this->actor )[0]['layerspublish']['revid'];
+		$this->assertSame( [ [ 'Deck', false ] ], array_map( static fn ( $s ) => [ $s['label'], $s['create'] ?? false ],
+			$this->pilot->listBoundEditorSelections( $page->getArticleID(), $first, $this->actor ) ) );
+
+		$renamed = $this->doApiRequestWithToken( [ 'action' => 'layerspublish', 'owner' => $page->getPrefixedText(),
+			'baserevid' => $first, 'data' => $slide( 'Deck two' ) ], null, $this->actor )[0]['layerspublish']['revid'];
+		$this->assertSame( "Intro\n{{#Slide:" . $page->getArticleID() . ':Deck two}}',
+			$lookup->getRevisionById( $renamed )->getContent( 'main' )->getText() );
+	}
+
 	public function testSharedSetsCannotBeChangedAfterTheMigration(): void {
+		$siteinfo = [ 'action' => 'query', 'meta' => 'siteinfo', 'siprop' => 'general' ];
+		$this->assertFalse( $this->doApiRequest( $siteinfo )[0]['query']['general']['layerspagehistorymigrated'] );
 		$image = $this->upload( 'Frozen_photo.png' );
 		MigrationState::markComplete( $this->getDb() );
+		$this->assertTrue( $this->doApiRequest( $siteinfo )[0]['query']['general']['layerspagehistorymigrated'] );
 		$this->expectApiErrorCode( 'migrated' );
 		$this->doApiRequestWithToken( [ 'action' => 'layerssave', 'filename' => $image->getName(),
 			'data' => '[]', 'setname' => 'anatomy' ], null, $this->actor );

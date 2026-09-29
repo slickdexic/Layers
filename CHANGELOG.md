@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- The test wiki is migrated (September 29). A bare file name also finds a numbered copy of that file, for templates that show several files with one set name; edit and create links and renames understand bare names after the migration; recording completion purges pages that showed shared sets; `meta=siteinfo` reports `layerspagehistorymigrated`.
 - After the migration (September 29): bare `layerset=<name>` and `{{#Slide:<name>}}` mean the page's own drawing, `layerset=on` its only drawing of that file; shared sets are read-only (`layers-shared-sets-migrated`); a parser option in the cache key re-renders every page when the migration is recorded or undone.
 - The migration can be undone (September 29): `--undo` puts pages back as they were before its edits, where nobody has edited them since, and deletes the pages it created; a finished unscoped run is recorded in `updatelog`.
 - Page-owned file embeds keep the replaced image's border, margin and alignment, so the page does not move; the migration lists slide embeds the legacy parser refused, sets missing from the current file version and unmoved template sets, and a scoped dry run plans step 1 as needed (September 29).

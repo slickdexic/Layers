@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Utility\RenderCache;
@@ -48,6 +49,15 @@ class Hooks {
 	 */
 	public static function onChangeTagsListActive( &$tags ): void {
 		self::onListDefinedTags( $tags );
+	}
+
+	/**
+	 * `meta=siteinfo` says whether shared sets have moved into page history, for tools that must not write to find out.
+	 * @param mixed $module
+	 * @param array &$results
+	 */
+	public static function onAPIQuerySiteInfoGeneralInfo( $module, &$results ): void {
+		$results['layerspagehistorymigrated'] = MigrationState::isCompleteNow();
 	}
 
 	/**

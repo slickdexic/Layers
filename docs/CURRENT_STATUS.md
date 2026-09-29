@@ -1,5 +1,27 @@
 # Current status and limitations
 
+## The test wiki is migrated — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criteria HIST-4 and HIST-8. With the owner's approval, `migrateLayersToPageHistory.php --commit` ran on the whole test wiki.
+
+- **What it wrote.** 16 bot edits and 4 new `Slide:Layers…` pages: the file pages of `FT-Image-149-000001/2`, `ImageTest02`, `ImageTest03` and `Somepdf`; the `DeleteMe…` pages; and the four adoption-test slides no page showed. It recorded completion. A rerun finds nothing left to do.
+- **Listed, not moved:** seven deleted files, one set of an earlier file version, embeds of sets the current file lacks (`DeleteMe002`, `DeleteMe006` and the storyboard pages), one refused slide name, and two pages outside the drawing namespaces.
+- **In the browser**, every drawing host paints on `DeleteMe001` (12), `DeleteMe003` (14), `DeleteMe006` (2), a created `Slide:` page and the template fixture. `meta=siteinfo` reports `layerspagehistorymigrated: true`.
+
+Fixed while migrating:
+
+- **Two files, one set name, one template.** `DeleteMe006` shows three images through one template, each with `layerset=default`. The migration now gives a template copy whose name is taken the first free number ("default 2") instead of listing it. After the migration, a bare file name finds the page's drawing of that name, or else the page's one drawing of that file named with that name and a number. So each image shows its own copy. Slides keep the listing, because a bare slide name has no file to tell copies apart.
+- **Stale cache.** Pages cached by an older Layers do not vary on the new parser option. Recording or removing completion now purges every page whose `layers-shown-sets` property shows it showed shared sets (8 on the test wiki).
+- **Bare names in the editor.** After the migration, "Edit page drawing" and "Create page drawing" links, and renames, treat a bare name in the page's text as the page's own drawing. A rename rewrites such an embed to the `<pageId>:<name>` form.
+- **Readable state.** `meta=siteinfo` reports the state as `layerspagehistorymigrated`, so tools and specs can check it without writing.
+
+**Legacy browser specs.** Browser specs that save, rename, delete, adopt or search shared sets now fail on the test wiki by design; J96 sorts them out.
+
+Fresh verification:
+
+- `BareNamesAfterMigrationTest` adds three cases: the two-files template, edit and create links with a rename rewriting a bare slide embed, and the siteinfo flag.
+- Full native configuration **432 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,072**; `npm test` passed; PHP style clean.
+
 ## After the migration, bare names mean the page's own drawings — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criteria HIST-4 and HIST-8 (partial). Once the migration's completion record exists (`layers-page-history-migration` in `updatelog`), bare names are the page's own drawings, as decided on September 28:
