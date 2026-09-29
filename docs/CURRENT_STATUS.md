@@ -1,5 +1,26 @@
 # Current status and limitations
 
+## Migration fixes after the first fixture run; drawings replacing images keep the image's box — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8 (partial). J94 ran migration steps 1 to 3 on J93's fixtures, and the review found and fixed the following:
+
+- **Page-owned file embeds kept their place.** The canvas that replaces the image of a page-owned file embed now takes over the image's vertical alignment, border, padding, margin and background from the skin. Before, a thumbnail lost its 1 px border and moved down by 4 px. Figure, link and caption boxes now measure the same as the legacy image's.
+- **The migration shows only what legacy embeds showed.**
+  - A `{{#Slide:}}` embed whose name the legacy parser refuses showed an error. It is listed as `invalid-slide-name` and left alone, and does not count as showing the slide in step 3; step 3 does not create pages for such names either.
+  - A file embed naming a set that the current file version does not have is listed as `no-current-set`.
+  - A set that a page shows only through a template is listed when its file has not been moved yet.
+- **Dry runs are complete when scoped.** A dry run of step 2 plans step 1 for each file it needs, so `--page` alone reports the copies it would make.
+- **One legacy difference is deliberate.** A legacy file embed with `page=N` and a named set showed the set's page-1 layers on page N (`ImageLinkProcessor::resolveLayerSetFromParam()`). After the migration it shows page N's own layers, as saved.
+
+Fresh verification:
+
+- **Native tests:** a new `PageCopyMigrationTest` case covers a dry run against step 1's plan, the template listing, `no-current-set` and an invalid slide name.
+- **Jest:** a new case checks that the image's box is copied.
+- **Full native configuration:** 422 tests passed, 1 skipped.
+- **Jest suite:** 15,072 tests.
+- **Other checks:** `npm test` passed and PHP style is clean.
+- **Layout probe:** a browser probe on the migrated fixture page shows identical boxes.
+
 ## Migration step 3: shared slides that no page shows get a page — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) decision D3, criterion HIST-8 (partial). The migration script now runs step 3 of the [D3 design](../docs/PAGE_OWNED_BINDING_PLAN.md#moving-existing-drawings-into-page-history-the-d3-design--september-29-2026) (`SlidePageMigration`). A slide is "shown nowhere" when no page's text or `layers-shown-sets` property shows it and no page has a copy of it yet. Copies are recognised by their derived IDs, so reruns do not create a second page. Such a slide gets a new main-namespace page `Slide:<name>` whose text shows each of its sets as a legacy embed. Step 2 then runs on that page in the same run, adding the copies and naming them, so the page never shows anything the slide did not. An existing page of that title is never overwritten; the slide is listed instead. `--slide=<name>` runs step 3 for one slide. It first reads every page, because page properties can be stale: on the test wiki they miss a page showing `S000001`. The test wiki dry run plans four such pages.

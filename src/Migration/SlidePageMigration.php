@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
@@ -140,6 +141,11 @@ class SlidePageMigration {
 	 */
 	public function plan( string $slide ): array {
 		$plan = [ 'slide' => $slide, 'title' => null, 'sets' => [], 'problem' => null, 'main' => null ];
+		if ( !( new SlideNameValidator() )->isValid( $slide ) ) {
+			// Its embeds would show an error, so step 2 could not give the page the slide.
+			$plan['problem'] = 'invalid-slide-name';
+			return $plan;
+		}
 		$title = $this->titles->newFromText( LayersConstants::SLIDE_PREFIX . $slide );
 		if ( !$title || $title->getNamespace() !== NS_MAIN || $title->isExternal() || $title->hasFragment() ) {
 			$plan['problem'] = 'invalid-title';

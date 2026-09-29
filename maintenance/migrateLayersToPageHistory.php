@@ -37,7 +37,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 	private const DEFAULT_USER = 'Layers migration';
 
 	private int $failures = 0;
-	/** @var string[] Documents step 1 would write, by File: page ID, for planning step 2 in a dry run */
+	/** @var (string|null)[] Documents step 1 would write, by file name, for planning step 2 in a dry run */
 	private array $pending = [];
 	/** @var true[] Shared slides some page showed, by name, as step 2 found them */
 	private array $shownSlides = [];
@@ -148,7 +148,8 @@ class MigrateLayersToPageHistory extends Maintenance {
 	 * @param bool $commit
 	 */
 	private function migratePage( PageCopyMigration $migration, int $pageId, Authority $user, bool $commit ): void {
-		$plan = $migration->plan( $pageId, $user, $commit ? [] : $this->pending );
+		$plan = $migration->plan( $pageId, $user,
+			$commit ? null : fn ( string $file ): ?string => $this->pendingFor( $file, $user ) );
 		foreach ( $plan['slides'] as $slide ) {
 			$this->shownSlides[$slide] = true;
 		}
@@ -182,6 +183,21 @@ class MigrateLayersToPageHistory extends Maintenance {
 			$this->failures++;
 			$this->error( "$page: not saved (" . $e->getMessage() . ")" );
 		}
+	}
+
+	/**
+	 * What step 1 would write for a file, planned once, so a dry run of step 2 alone is still complete.
+	 * @param string $file
+	 * @param Authority $user
+	 * @return string|null
+	 */
+	private function pendingFor( string $file, Authority $user ): ?string {
+		if ( !array_key_exists( $file, $this->pending ) ) {
+			$plan = $this->getServiceContainer()->getService( 'LayersPageOwnedPilot' )->newFilePageMigration()
+				->plan( $file, $user );
+			$this->pending[$file] = $plan['problem'] === null ? $plan['document'] : null;
+		}
+		return $this->pending[$file];
 	}
 
 	/**
@@ -247,9 +263,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 				"(layer_sets row {$add['legacyId']})\n" );
 		}
 		if ( !$commit || !$plan['add'] ) {
-			if ( $plan['document'] !== null ) {
-				$this->pending[$plan['pageId']] = $plan['document'];
-			}
+			$this->pending[$name] = $plan['problem'] === null ? $plan['document'] : null;
 			return;
 		}
 		try {

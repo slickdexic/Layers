@@ -134,6 +134,23 @@ describe( 'Historical viewer bootstrap', () => {
 			dispose();
 		} );
 
+		it( 'gives the canvas host the image\'s own box, so the page layout does not move', () => {
+			const link = image( 'v1:10:plan', '42' );
+			const img = link.querySelector( 'img' );
+			img.style.verticalAlign = 'middle';
+			img.style.border = '1px solid rgb(200, 204, 209)';
+			img.style.padding = '0px';
+			img.style.margin = '3px';
+			mount.mountInline( container, { 'v1:10:plan': pdfBundle } );
+			const host = link.querySelector( '.layers-bound-file-view' );
+			expect( host.style.verticalAlign ).toBe( 'middle' );
+			expect( host.style.borderTopWidth ).toBe( '1px' );
+			expect( host.style.borderLeftStyle ).toBe( 'solid' );
+			expect( host.style.borderBottomColor ).toBe( 'rgb(200, 204, 209)' );
+			expect( host.style.marginRight ).toBe( '3px' );
+			expect( host.style.display ).toBe( 'inline-block' );
+		} );
+
 		it( 'never puts an image surface in a slide host or a slide in an image host', () => {
 			const link = image( 'v1:10:a', '42' );
 			const slide = document.createElement( 'div' );

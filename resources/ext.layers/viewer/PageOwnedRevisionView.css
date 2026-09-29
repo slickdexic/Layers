@@ -26,3 +26,8 @@
 .ext-layers-historical-view--inline {
 	display: block;
 }
+
+/* An empty status line would add a line of height below an embedded image. */
+.ext-layers-historical-view--inline .ext-layers-historical-status:empty {
+	display: none;
+}

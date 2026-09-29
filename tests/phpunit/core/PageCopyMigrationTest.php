@@ -198,4 +198,37 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( 'namespace-not-enabled',
 			$migration->plan( $project->getArticleID(), $this->actor )['problem'] );
 	}
+
+	public function testDryRunPlansAgainstStepOneAndListsWhatLegacyEmbedsDidNotShow(): void {
+		$image = $this->upload( 'Dry_run.png' );
+		$this->saveSet( $image, 'anatomy', 1, 'Heart' );
+		$this->saveSlide( 'Valid_slide', 'default', 'Shown' );
+		$this->page( 'Template:Dry frame', '[[File:Dry_run.png|layerset=anatomy]]' );
+		$title = $this->page( 'Migration dry run', "{{Dry frame}}\n" .
+			"[[File:Dry_run.png|layerset=missing]]\n{{#Slide:Valid slide}}\n{{#Slide:Valid_slide}}" );
+		$migration = $this->pilot->newPageCopyMigration();
+
+		$stepOne = $this->pilot->newFilePageMigration()->plan( $image->getName(), $this->actor );
+		$asked = [];
+		$plan = $migration->plan( $title->getArticleID(), $this->actor,
+			static function ( string $file ) use ( $stepOne, &$asked ): ?string {
+				$asked[] = $file;
+				return $file === 'Dry_run.png' ? $stepOne['document'] : null;
+			} );
+		$this->assertContains( 'Dry_run.png', $asked );
+		$this->assertSame( [ [ 'Valid_slide', null, false ], [ 'anatomy', null, true ] ],
+			array_map( static fn ( $c ) => [ $c['name'], $c['sourceRevision'], $c['template'] ], $plan['copies'] ) );
+		// The legacy parser refuses a slide name with spaces, and legacy embeds see only the current version.
+		$this->assertSame( [
+			[ 'what' => '[[File:Dry_run.png|layerset=missing]]', 'reason' => 'no-current-set' ],
+			[ 'what' => '{{#Slide:Valid slide}}', 'reason' => 'invalid-slide-name' ]
+		], $plan['notMoved'] );
+		$this->assertSame( [ 'Valid_slide' ], $plan['slides'] );
+		$this->assertStringContainsString( '{{#Slide:Valid slide}}', $plan['main'] );
+		$this->assertFalse( $this->latest( $image->getTitle() )->hasSlot( 'layers' ), 'nothing written' );
+
+		// Without step 1, the template's set is listed rather than skipped.
+		$this->assertSame( [ 'no-current-set', 'invalid-slide-name', 'file-not-migrated' ],
+			array_column( $migration->plan( $title->getArticleID(), $this->actor )['notMoved'], 'reason' ) );
+	}
 }

@@ -4,6 +4,9 @@
 	const HOSTS = '.layers-bound-slide, img.layers-bound-file';
 	// Diff pages show the same drawing at two revisions; the server emits these hosts per request.
 	const COMPARISON_HOSTS = '.layers-drawing-diff-view';
+	const IMAGE_BOX_STYLES = [ 'vertical-align', 'background-color' ].concat(
+		...[ 'top', 'right', 'bottom', 'left' ].map( ( side ) => [ 'margin-' + side, 'padding-' + side,
+			'border-' + side + '-width', 'border-' + side + '-style', 'border-' + side + '-color' ] ) );
 	// {{name}} in drawing text shows the value the page gives through {{#layers_fields:}}.
 	const DrawingFields = () => window.Layers.DrawingFields;
 	/**
@@ -74,6 +77,11 @@
 			// Keep core's layout box and link; the canvas replaces the (possibly newer) image version.
 			const host = document.createElement( 'span' );
 			host.className = 'layers-bound-file-view';
+			// The skin styles the image by element and class; the host must take the same box or the page moves.
+			const computed = window.getComputedStyle( container );
+			IMAGE_BOX_STYLES.forEach( ( name ) => {
+				host.style.setProperty( name, computed.getPropertyValue( name ) );
+			} );
 			host.style.display = 'inline-block';
 			host.style.maxWidth = '100%';
 			host.style.width = ( parseInt( container.getAttribute( 'width' ), 10 ) || container.width ) + 'px';

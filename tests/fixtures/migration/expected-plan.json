@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Layers D3 Migration Expected Plan for J93/J94 Fixtures",
+  "description": "States what the D3 migration design specifies for each J93 fixture on the test wiki.",
+  "files": {
+    "Layers migration fixture A.png": {
+      "pageTitle": "File:Layers migration fixture A.png",
+      "step": 1,
+      "action": "move-to-file-page",
+      "drawingsAdded": [
+        {
+          "name": "anatomy",
+          "set": "anatomy",
+          "page": 1,
+          "sourceRevision": 1
+        },
+        {
+          "name": "labels",
+          "set": "labels",
+          "page": 1,
+          "sourceRevision": 3,
+          "notes": "labels was saved three times with different text and saved last; latest revision 3 moves"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "summary": "Moved 2 shared layer sets into page history: \"anatomy\", \"labels\"",
+      "expectedScriptOutput": [
+        "File:Layers migration fixture A.png: add drawing \"anatomy\" from set \"anatomy\" page 1 (layer_sets row <legacyId>)",
+        "File:Layers migration fixture A.png: add drawing \"labels\" from set \"labels\" page 1 (layer_sets row <legacyId>)"
+      ]
+    },
+    "Layers migration fixture B.pdf": {
+      "pageTitle": "File:Layers migration fixture B.pdf",
+      "step": 1,
+      "action": "move-to-file-page",
+      "drawingsAdded": [
+        {
+          "name": "notes",
+          "set": "notes",
+          "page": 1,
+          "sourceRevision": 1
+        },
+        {
+          "name": "notes (page 3)",
+          "set": "notes",
+          "page": 3,
+          "sourceRevision": 1,
+          "notes": "PDF set on page other than 1 is named '<set> (page N)' in content language"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "summary": "Moved 2 shared layer sets into page history: \"notes\", \"notes (page 3)\"",
+      "expectedScriptOutput": [
+        "File:Layers migration fixture B.pdf: add drawing \"notes\" from set \"notes\" page 1 (layer_sets row <legacyId>)",
+        "File:Layers migration fixture B.pdf: add drawing \"notes (page 3)\" from set \"notes\" page 3 (layer_sets row <legacyId>)"
+      ]
+    },
+    "Layers migration fixture C.png": {
+      "pageTitle": "File:Layers migration fixture C.png",
+      "step": 1,
+      "action": "none",
+      "drawingsAdded": [],
+      "notMoved": [
+        {
+          "set": "old",
+          "page": 1,
+          "reason": "earlier-file-version",
+          "explanation": "Sets saved only for earlier file versions do not move; the dry run lists them."
+        }
+      ],
+      "problem": null,
+      "summary": null,
+      "expectedScriptOutput": [
+        "File:Layers migration fixture C.png: set \"old\" page 1 not moved (earlier-file-version)"
+      ]
+    }
+  },
+  "pages": {
+    "Layers migration fixture/Direct": {
+      "pageTitle": "Layers migration fixture/Direct",
+      "step": 2,
+      "action": "copy-and-rewrite",
+      "templateCopy": false,
+      "copies": [
+        {
+          "name": "anatomy",
+          "kind": "image",
+          "source": "File:Layers migration fixture A.png",
+          "embeds": 2,
+          "template": false
+        },
+        {
+          "name": "labels",
+          "kind": "image",
+          "source": "File:Layers migration fixture A.png",
+          "embeds": 1,
+          "template": false,
+          "notes": "layerset=on becomes the set that was latest when the migration ran (labels)"
+        },
+        {
+          "name": "notes",
+          "kind": "pdf",
+          "source": "File:Layers migration fixture B.pdf",
+          "embeds": 1,
+          "template": false
+        },
+        {
+          "name": "notes (page 3)",
+          "kind": "pdf",
+          "source": "File:Layers migration fixture B.pdf",
+          "embeds": 1,
+          "template": false
+        }
+      ],
+      "embedRewrites": [
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb|layerset=anatomy]]",
+          "to": "[[File:Layers migration fixture A.png|thumb|layerset=<pageId>:anatomy]]"
+        },
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb|layerset=anatomy]]",
+          "to": "[[File:Layers migration fixture A.png|thumb|layerset=<pageId>:anatomy]]"
+        },
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb|layerset=on]]",
+          "to": "[[File:Layers migration fixture A.png|thumb|layerset=<pageId>:labels]]"
+        },
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb|layerset=off]]",
+          "to": "[[File:Layers migration fixture A.png|thumb|layerset=off]]",
+          "notes": "layerset=off is left alone"
+        },
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb]]",
+          "to": "[[File:Layers migration fixture A.png|thumb]]",
+          "notes": "embed with no layerset= is left alone"
+        },
+        {
+          "from": "[[File:Layers migration fixture B.pdf|page=1|thumb|layerset=notes]]",
+          "to": "[[File:Layers migration fixture B.pdf|page=1|thumb|layerset=<pageId>:notes]]"
+        },
+        {
+          "from": "[[File:Layers migration fixture B.pdf|page=3|thumb|layerset=notes]]",
+          "to": "[[File:Layers migration fixture B.pdf|page=3|thumb|layerset=<pageId>:notes (page 3)]]"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Direct: copy \"anatomy\" from File:Layers migration fixture A.png (revision <rev>), named by 2 embed(s)",
+        "Layers migration fixture/Direct: copy \"labels\" from File:Layers migration fixture A.png (revision <rev>), named by 1 embed(s)",
+        "Layers migration fixture/Direct: copy \"notes\" from File:Layers migration fixture B.pdf (revision <rev>), named by 1 embed(s)",
+        "Layers migration fixture/Direct: copy \"notes (page 3)\" from File:Layers migration fixture B.pdf (revision <rev>), named by 1 embed(s)"
+      ]
+    },
+    "Layers migration fixture/Slides 1": {
+      "pageTitle": "Layers migration fixture/Slides 1",
+      "step": 2,
+      "action": "copy-and-rewrite",
+      "templateCopy": false,
+      "copies": [
+        {
+          "name": "Layers migration fixture slide one",
+          "kind": "slide",
+          "source": "Layers migration fixture slide one",
+          "embeds": 1,
+          "template": false
+        }
+      ],
+      "embedRewrites": [
+        {
+          "from": "{{#Slide:Layers migration fixture slide one}}",
+          "to": "{{#Slide:<pageId>:Layers migration fixture slide one}}"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Slides 1: copy \"Layers migration fixture slide one\" from slide \"Layers migration fixture slide one\", named by 1 embed(s)"
+      ]
+    },
+    "Layers migration fixture/Slides 2": {
+      "pageTitle": "Layers migration fixture/Slides 2",
+      "step": 2,
+      "action": "copy-and-rewrite",
+      "templateCopy": false,
+      "copies": [
+        {
+          "name": "Layers migration fixture slide one",
+          "kind": "slide",
+          "source": "Layers migration fixture slide one",
+          "embeds": 1,
+          "template": false
+        }
+      ],
+      "embedRewrites": [
+        {
+          "from": "{{#Slide:Layers migration fixture slide one}}",
+          "to": "{{#Slide:<pageId>:Layers migration fixture slide one}}"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Slides 2: copy \"Layers migration fixture slide one\" from slide \"Layers migration fixture slide one\", named by 1 embed(s)"
+      ]
+    },
+    "Template:Layers migration fixture frame": {
+      "pageTitle": "Template:Layers migration fixture frame",
+      "step": 2,
+      "action": "none",
+      "templateCopy": false,
+      "copies": [],
+      "embedRewrites": [],
+      "notMoved": [],
+      "problem": "namespace-not-enabled",
+      "notes": "Template namespace (NS 10) is not in $wgLayersPageDrawingNamespaces. Embed remains in template unchanged."
+    },
+    "Layers migration fixture/Template": {
+      "pageTitle": "Layers migration fixture/Template",
+      "step": 2,
+      "action": "copy-template-set",
+      "templateCopy": true,
+      "copies": [
+        {
+          "name": "anatomy",
+          "kind": "image",
+          "source": "File:Layers migration fixture A.png",
+          "embeds": 0,
+          "template": true,
+          "notes": "Shown through template; copy made under set name 'anatomy'. Wikitext is not rewritten; after migration bare name in template finds this copy."
+        }
+      ],
+      "embedRewrites": [],
+      "notMoved": [],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Template: copy \"anatomy\" from File:Layers migration fixture A.png (revision <rev>), shown through a template"
+      ]
+    },
+    "Layers migration fixture/Taken": {
+      "pageTitle": "Layers migration fixture/Taken",
+      "step": 2,
+      "action": "copy-and-rewrite-with-renaming",
+      "templateCopy": false,
+      "copies": [
+        {
+          "name": "anatomy 2",
+          "kind": "image",
+          "source": "File:Layers migration fixture A.png",
+          "embeds": 1,
+          "template": false,
+          "notes": "Name 'anatomy' is already taken by existing page drawing; copy gets first free number 'anatomy 2'"
+        }
+      ],
+      "embedRewrites": [
+        {
+          "from": "[[File:Layers migration fixture A.png|thumb|layerset=anatomy]]",
+          "to": "[[File:Layers migration fixture A.png|thumb|layerset=<pageId>:anatomy 2]]"
+        }
+      ],
+      "notMoved": [],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Taken: copy \"anatomy 2\" from File:Layers migration fixture A.png (revision <rev>), named by 1 embed(s)"
+      ]
+    },
+    "Layers migration fixture/Uses C": {
+      "pageTitle": "Layers migration fixture/Uses C",
+      "step": 2,
+      "action": "none",
+      "templateCopy": false,
+      "copies": [],
+      "embedRewrites": [],
+      "notMoved": [
+        {
+          "what": "[[File:Layers migration fixture C.png|thumb|layerset=old]]",
+          "reason": "file-not-migrated",
+          "notes": "Source File:Layers migration fixture C.png set 'old' was not migrated because it belonged to an earlier file version"
+        }
+      ],
+      "problem": null,
+      "expectedScriptOutput": [
+        "Layers migration fixture/Uses C: [[File:Layers migration fixture C.png|thumb|layerset=old]] not copied (file-not-migrated)"
+      ]
+    },
+    "Project:Layers migration fixture": {
+      "pageTitle": "Project:Layers migration fixture",
+      "step": 2,
+      "action": "none",
+      "templateCopy": false,
+      "copies": [],
+      "embedRewrites": [],
+      "notMoved": [],
+      "problem": "namespace-not-enabled",
+      "notes": "Project namespace (NS 4) is outside $wgLayersPageDrawingNamespaces. Listed and left alone.",
+      "expectedScriptOutput": [
+        "PV:Layers migration fixture: not changed (namespace-not-enabled)"
+      ]
+    }
+  },
+  "slides": {
+    "Layers migration fixture slide one": {
+      "name": "Layers migration fixture slide one",
+      "step": 3,
+      "action": "none",
+      "pageCreated": null,
+      "notes": "Shown by Layers migration fixture/Slides 1 and /Slides 2; step 2 handles copies, so step 3 creates nothing",
+      "problem": null
+    },
+    "Layers migration fixture slide two": {
+      "name": "Layers migration fixture slide two",
+      "step": 3,
+      "action": "create-slide-page-and-copy",
+      "pageCreated": "Slide:Layers migration fixture slide two",
+      "initialMain": "{{#Slide:Layers migration fixture slide two|layerset=default}}",
+      "drawingsAdded": [
+        {
+          "name": "Layers migration fixture slide two",
+          "kind": "slide",
+          "source": "Layers migration fixture slide two",
+          "embeds": 1
+        }
+      ],
+      "rewrittenMain": "{{#Slide:<pageId>:Layers migration fixture slide two}}",
+      "problem": null,
+      "expectedScriptOutput": [
+        "Slide:Layers migration fixture slide two: create, showing slide \"Layers_migration_fixture_slide_two\" set(s) default"
+      ]
+    }
+  }
+}

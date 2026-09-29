@@ -21,6 +21,7 @@ use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\FileRepo\RepoGroup;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
@@ -49,8 +50,8 @@ class PageCopyMigration {
 	private $fileTargets;
 	private IConnectionProvider $db;
 	private PagePublicationService $publisher;
-	/** @var string[] */
-	private array $pending = [];
+	/** @var callable|null */
+	private $pendingFile = null;
 
 	/**
 	 * @param LayersDatabase $legacy
@@ -86,13 +87,14 @@ class PageCopyMigration {
 	/**
 	 * @param int $pageId
 	 * @param Authority $authority The migration's actor
-	 * @param string[] $pending Documents step 1 plans but has not written, keyed by File: page ID (dry run)
+	 * @param callable|null $pendingFile (string $fileName): ?string The document step 1 would write on that file's
+	 *  page, for a dry run in which step 1 has written nothing
 	 * @return array title (?Title); pageId; baseRevisionId; copies (name, source, sourceRevision, embeds, template
 	 *  for each new drawing); done (names of copies already made); notMoved (what and why); problem (?string);
 	 *  document and main (proposed JSON and text, or null when nothing changes); slides (shared slides it shows)
 	 */
-	public function plan( int $pageId, Authority $authority, array $pending = [] ): array {
-		$this->pending = $pending;
+	public function plan( int $pageId, Authority $authority, ?callable $pendingFile = null ): array {
+		$this->pendingFile = $pendingFile;
 		$plan = [ 'title' => null, 'pageId' => $pageId, 'baseRevisionId' => 0, 'copies' => [], 'done' => [],
 			'notMoved' => [], 'problem' => null, 'document' => null, 'main' => null, 'slides' => [] ];
 		$title = $this->titles->newFromID( $pageId, IDBAccessObject::READ_LATEST );
@@ -122,8 +124,8 @@ class PageCopyMigration {
 			$plan['problem'] = 'unscannable-text';
 			return $plan;
 		}
-		$document = isset( $this->pending[$pageId] ) ?
-			json_decode( $this->pending[$pageId], false, 64, JSON_THROW_ON_ERROR ) :
+		$pending = $title->getNamespace() === NS_FILE ? $this->pendingDocument( $title->getDBkey() ) : null;
+		$document = $pending !== null ? json_decode( $pending, false, 64, JSON_THROW_ON_ERROR ) :
 			$this->document( $title, $base, $authority );
 		$labels = [];
 		foreach ( $document->surfaces as $surface ) {
@@ -132,6 +134,7 @@ class PageCopyMigration {
 
 		$copies = [];
 		$rewrites = [];
+		$direct = [];
 		foreach ( $candidates as $candidate ) {
 			$options = $candidate['options'];
 			if ( PageOwnedBindingOptions::extract( $options ) !== null ||
@@ -139,10 +142,11 @@ class PageCopyMigration {
 			) {
 				continue;
 			}
-			if ( $candidate['kind'] === 'slide' ) {
+			if ( $candidate['kind'] === 'slide' && self::validSlide( $candidate['target'] ) ) {
 				$plan['slides'][] = str_replace( ' ', '_', $candidate['target'] );
 			}
 			$selector = self::option( $options, [ 'layerset', 'layers', 'layer' ] );
+			$direct[self::shownKey( $candidate['kind'], $candidate['target'], $selector )] = true;
 			if ( self::option( $options, [ 'layersetid' ] ) !== null ) {
 				$plan['notMoved'][] = [ 'what' => $candidate['raw'], 'reason' => 'pinned-revision' ];
 				continue;
@@ -162,18 +166,28 @@ class PageCopyMigration {
 			$rewrites[] = [ $candidate, $source['key'] ];
 		}
 		foreach ( $shown as [ $kind, $name, $set ] ) {
-			if ( $kind === ShownLayerSets::SLIDE ) {
+			if ( $kind === ShownLayerSets::SLIDE && self::validSlide( $name ) ) {
 				$plan['slides'][] = str_replace( ' ', '_', $name );
 			}
+			if ( isset( $direct[self::shownKey( $kind, $name, $set === '' ? null : $set )] ) ) {
+				// The page's own text shows it; that embed was handled above.
+				continue;
+			}
+			$what = $kind . ' ' . $name . ( $set === '' ? '' : ' ' . $set );
 			$reason = null;
 			$source = $kind === ShownLayerSets::FILE ?
 				$this->fileSource( 'File:' . $name, $set === '' ? 'on' : $set, 1, $authority, $reason ) :
 				$this->slideSource( $name, $set === '' ? null : $set, $reason );
-			if ( !$source || isset( $copies[$source['key']] ) ) {
+			if ( !$source ) {
+				if ( $reason !== null ) {
+					$plan['notMoved'][] = [ 'what' => $what, 'reason' => $reason ];
+				}
+				continue;
+			}
+			if ( isset( $copies[$source['key']] ) ) {
 				continue;
 			}
 			// Shown through a template: after the migration the template's bare name must find the copy.
-			$what = $kind . ' ' . $name . ( $set === '' ? '' : ' ' . $set );
 			if ( $set === '' && $kind === ShownLayerSets::FILE ) {
 				$plan['notMoved'][] = [ 'what' => $what, 'reason' => 'template-latest-set' ];
 				continue;
@@ -182,6 +196,7 @@ class PageCopyMigration {
 			$source['wanted'] = $kind === ShownLayerSets::FILE ? $set : $name;
 			$copies[$source['key']] = $source;
 		}
+		$plan['slides'] = array_values( array_unique( $plan['slides'] ) );
 
 		$names = [];
 		$taken = array_values( $labels );
@@ -294,14 +309,19 @@ class PageCopyMigration {
 		$row = $set === null ? null :
 			$this->legacy->getLayerSetByName( $file->getName(), $file->getSha1(), $set, $page );
 		if ( !$row ) {
+			if ( SetNameResolver::isSpecificName( $selector ) ) {
+				// Shown nothing before either, as legacy embeds look only at the current file version.
+				$reason = 'no-current-set';
+			}
 			return null;
 		}
 		$filePage = $file->getTitle();
 		$filePageId = $filePage->getArticleID( IDBAccessObject::READ_LATEST );
 		$surfaceId = FilePageMigration::surfaceId( (int)$row['id'], $filePageId );
 		$revision = null;
-		if ( isset( $this->pending[$filePageId] ) ) {
-			$surfaces = json_decode( $this->pending[$filePageId], false, 64, JSON_THROW_ON_ERROR )->surfaces;
+		$pending = $this->pendingDocument( $file->getName() );
+		if ( $pending !== null ) {
+			$surfaces = json_decode( $pending, false, 64, JSON_THROW_ON_ERROR )->surfaces;
 		} else {
 			$revision = $filePageId > 0 ?
 				$this->revisions->getRevisionByPageId( $filePageId, 0, IDBAccessObject::READ_LATEST ) : null;
@@ -327,6 +347,11 @@ class PageCopyMigration {
 	 * @return array|null
 	 */
 	private function slideSource( string $slide, ?string $selector, ?string &$reason ): ?array {
+		if ( !self::validSlide( $slide ) ) {
+			// The legacy parser shows an error for this name, not the slide.
+			$reason = 'invalid-slide-name';
+			return null;
+		}
 		$imgName = LayersConstants::SLIDE_PREFIX . $slide;
 		$set = SetNameResolver::resolve( $this->legacy, $imgName, LayersConstants::TYPE_SLIDE, $selector );
 		$row = $set === null ? null : $this->legacy->getLayerSetByName( $imgName, LayersConstants::TYPE_SLIDE, $set );
@@ -375,6 +400,34 @@ class PageCopyMigration {
 			->select( 'pp_value' )->from( 'page_props' )
 			->where( [ 'pp_page' => $pageId, 'pp_propname' => ShownLayerSets::PROPERTY ] )
 			->caller( __METHOD__ )->fetchField() );
+	}
+
+	/**
+	 * @param string $fileName
+	 * @return string|null The document step 1 would write on the file's page, in a dry run
+	 */
+	private function pendingDocument( string $fileName ): ?string {
+		return $this->pendingFile ? ( $this->pendingFile )( $fileName ) : null;
+	}
+
+	/**
+	 * @param string $kind 'file' or 'slide'
+	 * @param string $name File title or DB key, or slide name
+	 * @param string|null $selector Set selector; null or a show intent for the latest set
+	 * @return string Same for an embed in the text and the page property entry it produces
+	 */
+	private static function shownKey( string $kind, string $name, ?string $selector ): string {
+		$name = str_replace( ' ', '_', preg_replace( '/^File:/', '', trim( $name ) ) );
+		$set = $selector === null || SetNameResolver::isShowIntent( $selector ) ? '' : trim( $selector );
+		return $kind . "\n" . $name . "\n" . $set;
+	}
+
+	/**
+	 * @param string $slide
+	 * @return bool Whether the legacy parser accepts the name
+	 */
+	private static function validSlide( string $slide ): bool {
+		return ( new SlideNameValidator() )->isValid( trim( $slide ) );
 	}
 
 	/**
