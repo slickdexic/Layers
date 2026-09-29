@@ -1,10 +1,14 @@
 # Layers implementation handoff plan
 
+## J86 and J87 accepted; benchmark baseline complete except resizing and panning — September 29, 2026
+
+See the [current status](CURRENT_STATUS.md) entry. **J86 and J87 are accepted** with lead corrections (see the review ledger). Contracts: `npm run bench` starts only from the owner's known baseline, restores it, and writes a new time-stamped results file per run; typing is timed to the paint that shows the character in the editor element. The editor's Save button currently publishes with an empty summary; the lead is fixing that (HIST-1). No junior packet is ready yet. Earlier entries below are historical.
+
 ## Drawings can be renamed in the editor; J87 ready — September 29, 2026
 
 See the [current status](CURRENT_STATUS.md) entry. Contract: the page-owned editor's header shows "Drawing: <name>" and a Rename button (accessible name "Rename drawing"). A rename is an unsaved edit: nothing is published until Save, and the draft keeps it. J86 remains ready and comes first; J87 follows. Earlier entries below are historical.
 
-### J87 — Browser acceptance of renaming a drawing (ready)
+### J87 — Browser acceptance of renaming a drawing (accepted)
 
 **Advances:** HIST-7.
 
@@ -27,7 +31,7 @@ Record durations and anything that could not be checked, then return for lead re
 
 See the [current status](CURRENT_STATUS.md) entry. **J85 is accepted** with lead findings (see the review ledger). Its PERF-1, PERF-3, PERF-4 dragging, PERF-5, PERF-6 and PERF-7 figures are the first baseline and are now in the charter. Its PERF-2 and PERF-4 typing figures are not evidence: J86 corrects them. Earlier entries below are historical.
 
-### J86 — Measure PERF-2 from the reader's image, and typing inside the page (ready)
+### J86 — Measure PERF-2 from the reader's image, and typing inside the page (accepted)
 
 **Advances:** PERF-0, PERF-2 and PERF-4.
 
@@ -41,6 +45,25 @@ See the [current status](CURRENT_STATUS.md) entry. **J85 is accepted** with lead
 4. **Baseline:** the benchmark must restore the owner's known baseline (the text "Dedicated automated Layers history acceptance page." and the one slide drawing `presentation`, "Welcome Slide", as in revision 1803), not the state it found when it started, and must fail if the page does not start in that state. Debug runs follow the same rule.
 
 Record durations and anything that could not be measured, then return for lead review.
+
+**Status:** implemented awaiting lead review; benchmark script `tests/perf/benchmark.spec.js` and `"bench"` script in `package.json` (`npx playwright test -c tests/perf --workers=1`) verified (**1 passed**, 2.4m); new results file written to `tests/perf/results/2026-09-30-test-wiki.json` (J83 and J85 results files preserved as historical records); ESLint clean (**0 errors, 0 warnings**). Measured 3 complete iterations for PERF-1 through PERF-7 with corrected methodologies:
+- **Baseline enforcement:** Verified owner begins in known baseline state (revision 1803: text `"Dedicated automated Layers history acceptance page."`, single slide drawing `presentation` labelled `"Welcome Slide"`). Verified owner restored to this known baseline at conclusion (revision 1830) and in `finally`.
+- **PERF-2 (Core Image Load to Painted):** Dropped `window.Image` interceptor and DOM observer over all images. Started clock at core `img.layers-bound-file` load timestamp (via listener or `entry.responseEnd`). Stopped clock when seeded solid red rectangle is painted. Recorded `layersread` duration alongside from resource timing. Results:
+  - Cold run (Run 1): 8,366.6 ms (core image load at 1,081.5 ms, canvas painted at 9,448.1 ms; `layersread` duration: 607.5 ms).
+  - Run 2: 2,699 ms (`layersread` duration: 526.6 ms).
+  - Run 3: 575.2 ms (`layersread` duration: 516.9 ms).
+  - Median: 2,699 ms (median `layersread` duration: 526.6 ms). Charter target $\le 300\text{ ms}$: **Not met on test wiki** (due to Docker Windows shared-folder I/O overhead and `layersread` round-trip; target applies to reference install).
+- **PERF-4 (Inside-the-Page Typing Latency & Dragging):**
+  - Dragging: 60 FPS median (cold: 60 FPS; run 2: 60 FPS; run 3: 60.5 FPS; charter target $\ge 50\text{ FPS}$: met).
+  - Typing: Measured inside the page with capture `keydown` listener recording $t_0$ directly (no fallback) and polling via `requestAnimationFrame` until character appears in `editingLayer.text`, then recording $t_1$ at the next frame. All 20 characters typed and measured without Playwright round-trip overhead.
+  - Typing median: 41.8 ms (cold: 41.4 ms; run 2: 41.8 ms; run 3: 43.25 ms; charter target $\le 50\text{ ms}$: met).
+  - Typing worst single-character latency: 50.6 ms (cold: 49.9 ms; run 2: 50.1 ms; run 3: 50.6 ms; charter target $\le 50\text{ ms}$: missed on single frame by 0.6 ms). Overall PERF-4 on test wiki: **Not met**.
+- **PERF-1:** Layers' own ResourceLoader modules alone in fresh browser context: 83,055 B gzip on owner page; 0 B gzip on `Main_Page`; no Layers module loaded on page without drawings. (Median: 83,055 B). Charter target $\le 150\text{ KB}$: **Met on test wiki**.
+- **PERF-3:** Edit link click to editor readiness with warm cache: 1,585 ms median (cold run: 5,074 ms). Charter target $\le 3\text{ s}$: **Met on test wiki**.
+- **PERF-5:** Saving 100-layer drawing: 1,595.37 ms publish response median (cold: 1,874.82 ms); viewing old revision in `Special:ViewLayersPage`: 1,036.68 ms median (cold: 3,068.05 ms). Charter target $\le 1\text{ s}$: **Not met on test wiki** (slower due to Windows Docker shared-folder mount I/O overhead; target applies to production reference install).
+- **PERF-6:** Long tasks (`type: 'longtask', buffered: true`) during owner page load with 20 slide drawings, read after all 20 drawings confirmed painted: 0 long tasks (>50 ms) detected; 0 ms total / max duration. Charter target no task > 200 ms: **Met on test wiki**.
+- **PERF-7:** Revision 1 slot size (200,787 B) to Revision 2 slot size (200,787 B) with text edit to drawing holding 200 KB image layer (`rvprop=slotsize&rvslots=layers`): slot delta is 0 B; drawing slot size remains ~200 KB because each edit re-serializes the full drawing with image payload into the layers slot rather than storing only the delta (FEAT-3c). Charter criterion: **Not met on test wiki**.
+Exact-base CAS restoration to known baseline confirmed after run (revision 1830). Full details in the review ledger.
 
 ## J83 and J84 accepted; four accessibility fixes; J85 ready — September 28, 2026
 

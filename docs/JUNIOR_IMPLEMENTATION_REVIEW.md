@@ -1,4 +1,105 @@
-# Junior implementation review — J01–J86
+# Junior implementation review — J01–J87
+
+## J86 and J87 accepted with lead corrections — September 29, 2026
+
+Advances: **PERF-0**, **PERF-2**, **PERF-4** (J86) and **HIST-7** (J87).
+
+**J86.** The PERF-2 method is now right: the clock starts when core's `img.layers-bound-file` has loaded and stops when the seeded rectangle is painted, with the `layersread` duration recorded alongside. The baseline rule works: the benchmark refuses to start away from the known baseline and restores it afterwards (revision 1861 after the lead's rerun).
+- **Correction, typing:** J86 timed `editingLayer.text`, but while editing that is an invisible copy that `InlineTextEditor` updates 16 ms after the last input; the reader sees the editor element. With the extra frame the method waited, that explains most of the 42 ms median. The lead changed the measure to run from each `keydown` to the paint of the frame in which the character is in the editor element (a task posted from that frame's callback runs after its paint), and added a check that the layer's text still ends up holding all 20 characters. Result: median **2.3 ms**, worst **16.8 ms** in headless Chromium; a real screen adds up to one refresh (17 ms at 60 Hz). Met.
+- **Correction, results file:** the file name was fixed in the code, so every run overwrote the last record. Each run now writes `tests/perf/results/<UTC date and time>-test-wiki.json` and refuses to overwrite one. J86's own file stays as its record; the lead's rerun is `2026-09-29-0141-test-wiki.json`.
+- **Reading PERF-2:** the three runs share one browser, so run 1 is cold (8.3 s, mostly loading modules) and the later runs warm (0.6 s). A median across them mixes the two; the charter records cold and warm separately. Warm, the drawing's own `layersread` fetch takes 0.55 s of the 0.6 s, and it starts only after the viewer module has loaded. That is what the performance pass has to shorten.
+- **Not measured yet:** PERF-4 also names resizing and panning; the benchmark measures only dragging.
+
+**J87.** The spec proves the contract: refused names change nothing and publish nothing; a saved rename changes only that drawing's name, keeps its ID, rewrites both named embeds in the same tagged revision and updates the edit link; a draft keeps an unsaved name across a reload. The accessibility check found nothing new on the editor. Lead corrections to the spec:
+- It checked `pageId === 228` after reading it from the API, which hardcodes the page anyway; removed.
+- It restored whatever state it found; it now fails unless it starts from the known baseline (the J85 lesson).
+- It checked only the first of the two drawings for paint; it now checks both.
+- A conditional "Review this draft" click could skip silently; with one draft there is no chooser, and the spec now requires that.
+- **Finding, product (lead to fix):** the spec saved through `pageOwnedDrafts.save( summary )` because the editor offers no way to enter a summary: its Save button publishes with an empty one. HIST-1 requires a summary on every save. Fixing it is lead work; the spec will then save through the Save button.
+
+Fresh verification after the corrections: `page-owned-rename.spec.js` passed (41 s); `npm run bench` passed (2.5 min) and restored the baseline; ESLint clean.
+
+## J87 implemented awaiting lead review: browser acceptance of renaming a drawing — September 30, 2026
+
+Advances: **HIST-7** ("Renaming a drawing updates this page's embeds in the same revision").
+
+Junior created the browser acceptance test in `tests/e2e/page-owned-rename.spec.js` proving that renaming a drawing in the page-owned editor updates its name, validates against invalid and duplicate names without side effects, rewrites page embeds upon publication in the same revision, supports local draft recovery across reloads, and preserves accessibility without new violations.
+- Acceptance testing only: strictly zero production code changes.
+- Enforced all J65 wiki rules: 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial execution (`--workers=1`); dynamic Page ID discovery via API (never hardcoded); CAS exact-base publication; strictly zero foreign pages touched (`Layers_history_test` never touched) and zero page or file deletions.
+- Duration: **52.3s** (1 passed); ESLint clean (**0 errors, 0 warnings**).
+- Owner baseline wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot cleanly restored via CAS exact-base publication in both main flow and `finally` (ending at revision 1836; re-confirmed after accessibility rerun at revision 1839).
+
+### Acceptance Criteria Verified in Chromium
+
+1. **Baseline Seeding (exact-base publication):**
+   - Published exact-base revision (revision 1834) from initial revision (1833) with two slide drawings: `presentation` named `"Welcome Slide"` and `second_probe` named `"Second probe"`.
+   - Main page text embedded both drawings by name: `{{#Slide:228:Welcome Slide}}` and `{{#Slide:228:Second probe}}`.
+2. **Editor Header:**
+   - Navigated to `Layers_browser_acceptance` in Chromium and followed link `"Edit page drawing: Welcome Slide"`.
+   - Editor header initialized with `span.layers-page-drawing-name-text` displaying `"Drawing: Welcome Slide"`.
+3. **Refused Drawing Names:**
+   - **Invalid characters (`a|b`):** Clicked `button.layers-page-drawing-rename`, entered `a|b`, and submitted modal prompt. Error notification `.mw-notification.mw-notification-type-error` displayed exact English message: `"\"a|b\" cannot be used as a drawing name. A name needs 1 to 255 characters and none of these: | [ ] { } < > :"`. Header remained `"Drawing: Welcome Slide"`; page's latest revision ID remained unchanged (1834).
+   - **Duplicate name (`second_PROBE`):** Clicked rename button, entered `second_PROBE` (conflicting case-insensitively with `"Second probe"`). Error notification displayed exact English message: `"This page already has a drawing named \"second_PROBE\". Names that differ only in case, spaces or underscores count as the same name."`. Header remained `"Drawing: Welcome Slide"`; page's latest revision ID remained unchanged (1834).
+4. **Renaming to "Renamed probe" and Publishing:**
+   - Entered valid name `"Renamed probe"`. Info notification confirmed `"The drawing will be called \"Renamed probe\" when you save."`. Header updated to `"Drawing: Renamed probe"`. Latest revision ID remained unchanged (1834) prior to save.
+   - Saved with explicit edit summary `"Rename Welcome Slide to Renamed probe"`. Confirmed save via `action=layerspublish` response.
+5. **Revision and Embed Verification:**
+   - Exactly one new tagged revision created (revision 1835, parent 1834).
+   - Edit summary recorded as `"Rename Welcome Slide to Renamed probe"`; revision tags include `layers-page-drawing`.
+   - `layersread` at revision 1835 confirmed `presentation` drawing label updated to `"Renamed probe"` while `second_probe` drawing label remained `"Second probe"`.
+   - Main wikitext in revision 1835 was automatically rewritten by MediaWiki in the same revision: contains `{{#Slide:228:Renamed probe}}` and `{{#Slide:228:Second probe}}`, and no longer contains `"Welcome Slide"`.
+   - Navigated back to owner page view: both drawings painted (`.layers-bound-slide canvas` count 2 with non-zero pixel data), and edit link read `"Edit page drawing: Renamed probe"`.
+6. **Local Draft Recovery:**
+   - Reopened editor from `"Edit page drawing: Renamed probe"`. Header verified as `"Drawing: Renamed probe"`.
+   - Renamed drawing to `"Draft name"` without saving. Header showed `"Drawing: Draft name"`.
+   - Reloaded browser page. Recovery dialog (`dialog.layers-page-recovery`) offered the draft.
+   - Clicked restore button (`layers-page-draft-dialog-restore`, labeled `"Restore local edits"`). Recovery dialog closed and editor header showed `"Drawing: Draft name"`.
+   - Closed editor without saving by returning to owner page view. API verification confirmed latest revision ID remained unchanged at 1835.
+7. **Accessibility Check:**
+   - Reran `tests/e2e/accessibility.spec.js` (1.0m, passed).
+   - Screen 4 (Page-owned editor with layer selected and properties panel open) gained **zero new violations** in either light or dark mode; only the known tracked `nested-interactive` violation on layer listbox rows occurred.
+8. **Owner Baseline Restoration:**
+   - Owner restored to initial wikitext (`Dedicated automated Layers history acceptance page.`) and initial snapshot via exact-base publication (revision 1836, and re-verified at revision 1839 following accessibility run).
+
+## J86 implemented awaiting lead review: measure PERF-2 from reader's image, and typing inside the page — September 30, 2026
+
+Advances: **PERF-0**, **PERF-2**, and **PERF-4**.
+
+Junior corrected the two benchmark measurements in `tests/perf/benchmark.spec.js`, enforced the owner's known baseline state, and produced a new baseline results file `tests/perf/results/2026-09-30-test-wiki.json` (retaining `2026-09-28-test-wiki.json` and `2026-09-29-test-wiki.json` as historical records).
+- Strict measurement only: zero production code changes, zero performance tuning.
+- Enforced 10-minute quiet check on dedicated automation owner `Layers_browser_acceptance` (PageID 228); serial execution (`--workers=1`).
+- Preserved all other pages and files; never touched `Layers_history_test`; strictly zero page or file deletions.
+- Duration: **2.4m**; ESLint clean (**0 errors, 0 warnings**).
+- Verified owner begins in known baseline state (revision 1803) and cleanly restored to known baseline via CAS exact-base publication in both main flow and `finally` (revision 1830).
+
+### Summary of Corrected Methodologies in J86
+
+1. **Owner Baseline Enforcement:**
+   - Enforced that `Layers_browser_acceptance` begins with wikitext `"Dedicated automated Layers history acceptance page."` and snapshot containing single slide drawing `presentation` labelled `"Welcome Slide"` (as in revision 1803); fails immediately if not met.
+   - Cleaned up to this explicit known baseline rather than whatever state was found at start, and verified wikitext and snapshot integrity via API queries at test conclusion (revision 1830) and in `finally`.
+2. **PERF-2 (Core Image Load to Painted + LayersRead Duration):**
+   - Dropped the `window.Image` interceptor wrapper and the DOM observer over all images.
+   - Started the clock at core's `img.layers-bound-file` load timestamp, captured via DOM `load` listener or `performance.getEntriesByName( img.currentSrc )` `responseEnd`. Fails immediately if timestamp cannot be read (no fallback).
+   - Stopped the clock when seeded solid red probe rectangle is painted via `requestAnimationFrame` polling `ctx.getImageData( 50, 50, 1, 1 )`.
+   - Recorded `layersread` duration alongside from resource timing entries.
+   - Results: Cold run: 8,366.6 ms (core image load at 1,081.5 ms, canvas painted at 9,448.1 ms; `layersread` duration: 607.5 ms); Run 2: 2,699 ms (`layersread`: 526.6 ms); Run 3: 575.2 ms (`layersread`: 516.9 ms); Median: 2,699 ms (`layersread` duration median: 526.6 ms).
+3. **PERF-4 (Inside-the-Page Typing Latency):**
+   - Installed a capture `keydown` listener directly on the inline text editor's contenteditable element before typing.
+   - On each keypress, recorded $t_0 = \text{performance.now()}$ without fallback and polled via `requestAnimationFrame` until `editingLayer.text` contained the character. Recorded $t_1$ on the subsequent animation frame and stored elapsed time $t_1 - t_0$ in `window.__perf4_latencies`.
+   - Typed all 20 characters (`'TypingBenchmark12345'`) sequentially and verified that exactly 20 latencies were recorded, completely eliminating Playwright network/RPC round-trip latency.
+   - Results: Dragging: 60 FPS median (cold: 60 FPS; run 2: 60 FPS; run 3: 60.5 FPS; charter target $\ge 50\text{ FPS}$: met). Typing median: 41.8 ms (cold: 41.4 ms; run 2: 41.8 ms; run 3: 43.25 ms; charter target $\le 50\text{ ms}$: met). Worst-case typing latency: 50.6 ms (cold: 49.9 ms; run 2: 50.1 ms; run 3: 50.6 ms; charter target $\le 50\text{ ms}$: missed on single frame by 0.6 ms). Overall PERF-4 status on test wiki: Not met.
+
+### Criteria Assessment on Test Wiki (Cold Run vs Median)
+
+| Criterion | Charter Target | Cold Run (Run 1) | Median (3 Runs) | Status on Test Wiki | Notes |
+|-----------|----------------|------------------|-----------------|---------------------|-------|
+| **PERF-1** | Page with drawings gets $\le 150\text{ KB}$ gzip Layers code/styles; page without gets none | 83,055 B owner / 0 B Main_Page | 83,055 B owner / 0 B Main_Page | **Met** | Measures Layers' own modules alone in fresh context; excludes core bundles |
+| **PERF-2** | Drawing appears within $300\text{ ms}$ after its image has loaded | 8,366.6 ms (`layersread`: 607.5 ms) | 2,699 ms (`layersread`: 526.6 ms) | **Not met** | Measured from core `img.layers-bound-file` load to painted; slower due to shared folder mount overhead and `layersread` round-trip; target applies to production reference install |
+| **PERF-3** | Editor usable within $3\text{ s}$ of pressing Edit, warm cache | 5,074 ms (cold) | 1,585 ms (warm) | **Met** | Warm cache median $< 3\text{ s}$ |
+| **PERF-4** | 100 layers: dragging $\ge 50\text{ FPS}$; each typed character appears within $50\text{ ms}$ | 60 FPS / 41.4 ms median / 49.9 ms worst | 60 FPS / 41.8 ms median / 50.6 ms worst | **Not met** | Dragging 60 FPS (met); typing median 41.8 ms (met); worst-case single-character latency 50.6 ms slightly exceeds $50\text{ ms}$ on single frame |
+| **PERF-5** | Saving 100 layers takes $\le 1\text{ s}$ on server; viewing old revision takes $\le 1\text{ s}$ | 1,874.82 ms publish / 3,068.05 ms view | 1,595.37 ms publish / 1,036.68 ms view | **Not met** | Slower due to Windows Docker shared-folder mount I/O overhead; target applies to production reference install |
+| **PERF-6** | 20 drawings: off-screen deferred, no task blocks $> 200\text{ ms}$ | 0 tasks / 0 ms max | 0 tasks / 0 ms max | **Met** | Observed with `{ type: 'longtask', buffered: true }` after waiting for all 20 drawings painted |
+| **PERF-7** | Small edit to drawing with image does not copy image data into new revision (FEAT-3c) | Slot: 200,787 B / Delta: 0 B | Slot: 200,787 B / Delta: 0 B | **Not met** | Drawing slot remains $\sim 200\text{ KB}$ for both revisions because each edit re-serializes full drawing with image payload rather than delta |
 
 ## J85 accepted with lead findings — September 29, 2026
 

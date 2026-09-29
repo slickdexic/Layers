@@ -1,5 +1,13 @@
 # Current status and limitations
 
+## Rename accepted in the browser; corrected benchmark — September 29, 2026
+
+- **Renaming (HIST-7):** a browser check (J87) confirms that a refused name changes and publishes nothing, that a saved rename keeps the drawing's ID and rewrites the page's embeds and edit link in the same revision, and that a draft keeps a name not yet saved.
+- **Benchmark (PERF-0):** typing is now timed to the paint that shows the character; the worst of 20 characters is 17 ms (PERF-4, before the screen refresh). A drawing appears 0.6 s after its image with a warm cache and 8.3 s cold (PERF-2, not met); most of the warm time is the drawing's own fetch, which starts only after the viewer module has loaded. Resizing and panning are not measured yet.
+- **Known gap (HIST-1):** the editor's Save button publishes with an empty summary; there is no summary field yet.
+
+Results: `tests/perf/results/2026-09-29-0141-test-wiki.json`.
+
 ## Drawings can be renamed in the editor — September 29, 2026
 
 Fifth step of [charter](../docs/PROJECT_CHARTER.md) decision D1 (HIST-7). The page-owned editor's header shows the drawing's name with a **Rename** button. A new name is checked in the browser by the server's rules (1 to 255 characters, none of `| [ ] { } < > :`, and not the name of another drawing on the page, ignoring case, spacing and underscores) and becomes one of the unsaved edits: the local draft keeps it, a revision check keeps it, and the next save publishes it and rewrites the page's embeds that name the drawing. The server still makes the final check.
