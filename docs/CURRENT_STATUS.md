@@ -1198,4 +1198,4 @@ A controlled Chromium probe reproduced and verified the lightbox scaling fix on 
 
 `main` requires MediaWiki >=1.44 according to `extension.json`; use a supported MediaWiki release and that release's PHP/database requirements. `REL1_43` is the separate 1.43 branch; do not assume every main-branch fix is already backported. `REL1_39` is unmaintained. Check the destination branch's changelog before an upgrade.
 
-Back up the wiki database, uploads and configuration. Update the extension and run MediaWiki's database updater before use. Preserve old assets and Layers rows in backups: an article-only wikitext export is not a complete backup of annotations.
+Back up the wiki database, uploads and configuration. Update the extension and run MediaWiki's database updater before use. The [upgrade guide](../docs/UPGRADING.md) covers moving shared sets and slides into page history. Preserve old assets and Layers rows in backups: an article-only wikitext export is not a complete backup of annotations.

@@ -71,7 +71,7 @@ From the MediaWiki root:
 php maintenance/run.php update
 ```
 
-The updater creates/migrates `layer_sets`. Do not manually create tables from a documentation sample. Back up the database and uploads before upgrading. No Node/Composer developer toolchain is required just to load the committed extension assets.
+The updater creates/migrates `layer_sets`. Do not manually create tables from a documentation sample. Back up the database and uploads before upgrading. No Node/Composer developer toolchain is required just to load the committed extension assets. To move shared layer sets and slides into page history, follow the [upgrade guide](docs/UPGRADING.md).
 
 `REL1_43` is the separate branch for MediaWiki 1.43; consult its own changelog and verify security backports. `REL1_39` is unmaintained. Do not treat a branch name as evidence of parity with `main`.
 

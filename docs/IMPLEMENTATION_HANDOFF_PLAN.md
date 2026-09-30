@@ -24,6 +24,10 @@ Record findings, then return for lead review.
 
 **Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. Gallery images showing the page's own drawings are covered by native tests only. The lead writes this packet after reviewing J97.
 
+### J99 — Rehearse the upgrade guide on the test wiki (queued)
+
+**Advances:** OPS-1 and HIST-8. Follow [the upgrade guide](UPGRADING.md) from step 3 on the test wiki: undo the whole migration, confirm that bare names show shared sets again, then refresh links, dry-run, commit and compare the result with the first migration (16 edits and 4 slide pages). Record every place where the guide is unclear or wrong. It runs after J98, because undoing the migration changes what every other spec sees. The lead writes this packet after reviewing J98.
+
 ## Test wiki migrated; J96 accepted — September 29, 2026
 
 With the owner's approval the whole test wiki is migrated and recorded as complete (see the [current status](CURRENT_STATUS.md)). Shared sets and slides are read-only there now. `meta=siteinfo` reports `layerspagehistorymigrated: true`. Earlier entries below are historical.

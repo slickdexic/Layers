@@ -160,7 +160,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| OPS-1 | Install and upgrade from 1.5.x with `update.php` and documented maintenance scripts. The migration has a dry run and a way back. | Partial |
+| OPS-1 | Install and upgrade from 1.5.x with `update.php` and documented maintenance scripts. The migration has a dry run and a way back. | Partial: [upgrade guide](UPGRADING.md) written (September 29); not yet followed on a copy of a 1.5.x wiki |
 | OPS-2 | Every setting and API is documented, examples are checked against real behaviour, and [known issues](KNOWN_ISSUES.md) is current. | Partial: known issues was last updated September 11 |
 | OPS-3 | All automated gates are green: `npm test`, PHP style, standalone and native PHPUnit, and the full browser suite, with statement coverage of at least 90%. | Met (95.87% statements, measured September 2) |
 | OPS-4 | Every criterion in this charter has an automated test, and every user-facing one also has a browser acceptance spec. | Partial |

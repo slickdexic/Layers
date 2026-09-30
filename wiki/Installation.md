@@ -58,7 +58,7 @@ Back up the database, uploads and configuration. Record the current branch/commi
 git pull --ff-only
 ```
 
-Run the MediaWiki updater again, refresh browser assets, then repeat the save/view checks. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
+Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](../docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
 
 The post-1.5.95 fixes bind server export cache files to their source title and preserve creator identity. Regenerate old cached exports. Legacy sets with missing historical creator evidence require `layers-admin` for delete/rename. No schema migration was introduced by those particular fixes.
 
@@ -66,4 +66,4 @@ The post-1.5.95 fixes bind server export cache files to their source title and p
 
 See [[Configuration Reference]] for actual defaults and limits, and [[Permissions]] for group configuration. Keep the export cache outside the document root. Enable same-origin framing only if using the editor modal and your core/proxy policy requires it.
 
-Before using slide-based SOPs, read [[Current Status]]: article revision capture and annotation full-text search remain planned features.
+Before using slide-based SOPs, read [[Current Status]]: page drawings have page history and are searchable, while shared layer sets have neither.
