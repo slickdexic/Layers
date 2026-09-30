@@ -14,6 +14,10 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Migration\FilePageDrawings;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
+use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
+use MediaWiki\Html\Html;
 use MediaWiki\MediaWikiServices;
 
 class UIHooks {
@@ -106,6 +110,15 @@ class UIHooks {
 			// ignore
 		}
 
+		// After the migration the tab opens the page's own drawings; without any there is nothing to open.
+		if ( MigrationState::isCompleteNow() ) {
+			$current = MediaWikiServices::getInstance()->getRevisionLookup()->getRevisionByTitle( $title );
+			if ( !$current || !$current->hasSlot( PageRevisionWriter::SLOT ) ) {
+				$log( 'Skip: migrated, and the file page has no drawings' );
+				return;
+			}
+		}
+
 		// Optionally check file existence (relaxed: show tab even if lookup fails)
 		try {
 			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
@@ -170,12 +183,7 @@ class UIHooks {
 			}
 		}
 		$links['views'] = $newViews;
-
-		// Also expose as an action for skins that render actions separately
-		if ( !isset( $links['actions']['editlayers'] ) ) {
-			$links['actions']['editlayers'] = $editLayersTab;
-			$log( 'Inserted into actions' );
-		}
+		// Not also under actions: skins render both menus, which gave the page two #ca-editlayers links.
 		$log( 'Inserted into views (after edit when present)' );
 
 		// Optional: when debugging, add a subtle debug-only action alongside the normal tab
@@ -242,6 +250,12 @@ class UIHooks {
 			$fileName = $file->getName();
 			$sha1 = $file->getSha1();
 
+			if ( MigrationState::isCompleteNow() ) {
+				// Shared sets are read-only; list the drawings the File: page owns instead.
+				$html .= self::buildDrawingsSection( $imagePage->getContext(), $title );
+				return true;
+			}
+
 			// Get the database service
 			$services = MediaWikiServices::getInstance();
 			$db = $services->getService( 'LayersDatabase' );
@@ -270,6 +284,41 @@ class UIHooks {
 		}
 
 		return true;
+	}
+
+	/**
+	 * The File: page's own drawings, after the migration.
+	 * @param \MediaWiki\Context\IContextSource $context
+	 * @param \MediaWiki\Title\Title $title
+	 * @return string HTML; empty when the page has no drawings the reader may see
+	 */
+	private static function buildDrawingsSection( $context, $title ): string {
+		$authority = $context->getAuthority();
+		[ $revisionId, $drawings ] = FilePageDrawings::current( $title, $authority );
+		if ( !$drawings ) {
+			return '';
+		}
+		$canEdit = $authority->isAllowed( 'editlayers' ) && $authority->probablyCan( 'edit', $title );
+		$rows = '';
+		foreach ( $drawings as $drawing ) {
+			$rows .= Html::rawElement( 'tr', [],
+				Html::rawElement( 'td', [], Html::element( 'a',
+					[ 'href' => FilePageDrawings::viewUrl( $title, $revisionId, $drawing['id'] ) ],
+					(string)$drawing['label'] ) ) .
+				Html::rawElement( 'td', [ 'class' => 'layers-filepage-actions' ], $canEdit ? Html::element( 'a',
+					[ 'href' => FilePageDrawings::editUrl( $title, $drawing['id'] ) ],
+					$context->msg( 'layers-filepage-edit' )->text() ) : '' ) );
+		}
+		$head = Html::rawElement( 'tr', [],
+			Html::element( 'th', [], $context->msg( 'layers-filepage-drawing-name' )->text() ) .
+			Html::element( 'th', [] ) );
+		return Html::rawElement( 'div', [ 'id' => 'mw-imagepage-section-layers', 'class' => 'layers-filepage-section' ],
+			Html::element( 'h2', [], $context->msg( 'layers-filepage-section-title' )->text() ) .
+			Html::rawElement( 'table', [ 'class' => 'wikitable layers-filepage-table' ],
+				Html::rawElement( 'thead', [], $head ) . Html::rawElement( 'tbody', [], $rows ) ) .
+			Html::rawElement( 'p', [ 'class' => 'layers-filepage-hint' ], Html::element( 'small', [],
+				$context->msg( 'layers-filepage-usage-hint-migrated' )
+					->plaintextParams( $title->getText(), (string)$title->getArticleID() )->text() ) ) );
 	}
 
 	/**

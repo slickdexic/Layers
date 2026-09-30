@@ -1,5 +1,16 @@
 # Current status and limitations
 
+## The legacy editors lead to page drawings after the migration — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criteria HIST-8 and UI-7. After the migration nobody can save a shared set, so the entry points of the shared-set editors now lead to the drawings that replaced them.
+
+- **The File page** lists its own drawings under "Layer Annotations", each linked to the read-only viewer, with an Edit link for people who may edit the page. A hint says how to show one on another page: `[[File:X|layerset=<page ID>:<name>]]` there, then the copy link. A File page without drawings has no section, and one that never had any has no "Edit layers" tab.
+- **`action=editlayers`** opens the page-owned editor for the File page's drawing that `setname=` names (on PDF page N, the drawing the migration named "<set> (page N)"), or the page's only drawing when there is no name. Otherwise it says that shared sets moved into page history and lists the page's drawings, or says how to start one.
+- **`Special:EditSlide` and `Special:Slides/<name>`** go to the `Slide:<name>` page the migration made for a slide no page showed. Otherwise they say where shared slides went and how to make a new slide. `Special:Slides` says the same and no longer offers to create or delete shared slides.
+- **Fixed on the way.** The "Edit layers" tab was added to both the views and the actions menus, so Vector 2022 showed it twice and the page had two elements with the ID `ca-editlayers`. `Special:Slides`, `Special:EditSlide` and `Special:LayersExport` had no aliases, so building their links raised a warning.
+
+Fresh verification: native `LegacyEntryPointsAfterMigrationTest` covers the File page section, tab and `action=editlayers` before and after the migration, for an editor and a reader, and the slide pages. On the migrated test wiki `File:ImageTest03.png` lists "001" and "002", and `action=editlayers&setname=002` opens the page-owned editor with the file and its two layers. Full native configuration **437 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,072**; `npm test` passed; PHP style clean.
+
 ## Galleries follow the migration — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8. Images in `<gallery>` blocks, in Cargo `format=gallery` results and those named by `{{#layers_hint:}}` now follow the same rules as file embeds.

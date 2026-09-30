@@ -871,6 +871,9 @@
 	"layers-filepage-edit": "Edit",
 	"layers-filepage-view": "View",
 	"layers-filepage-usage-hint": "To display layers on a page, use: [[File:Example.jpg|layerset=setname]]",
+	"layers-filepage-drawing-name": "Drawing",
+	"layers-filepage-usage-hint-migrated": "To show one of these drawings on another page, add [[File:$1|layerset=$2:name]] to that page and follow its link to copy the drawing.",
+	"layers-filepage-no-drawings": "This file's page has no drawings. To draw on the file, add <code><nowiki>[[File:$1|layerset=name]]</nowiki></code> to a page and follow its \"Create page drawing\" link.",
 
 	"special-editslide-title": "Edit Slide: $1",
 	"special-editslide-desc": "Edit a slide graphic",
@@ -962,6 +965,7 @@
 	"special-slides": "Slides",
 	"special-slides-desc": "View and manage slides",
 	"special-slides-create": "Create Slide",
+	"special-slides-migrated": "To make a new slide, add <code><nowiki>{{#Slide:name}}</nowiki></code> to a page and follow its \"Create page drawing\" link.",
 	"special-slides-create-and-edit": "Create and Edit",
 	"special-slides-create-title": "Create Slide: $1",
 	"special-slides-create-failed": "Failed to create slide",

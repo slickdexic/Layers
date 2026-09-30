@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -79,6 +80,13 @@ class SpecialSlides extends SpecialPage {
 		$permissionManager = $services->getPermissionManager();
 		$canCreate = $permissionManager->userHasRight( $user, 'editlayers' );
 		$canDelete = $permissionManager->userHasRight( $user, 'layers-admin' );
+		if ( MigrationState::isCompleteNow() ) {
+			// Shared slides are read-only; new slides are drawings of a page.
+			$out->addWikiMsg( 'layers-shared-sets-migrated' );
+			$out->addWikiMsg( 'special-slides-migrated' );
+			$canCreate = false;
+			$canDelete = false;
+		}
 
 		// Get configuration for JS
 		$jsConfig = [
@@ -165,6 +173,12 @@ class SpecialSlides extends SpecialPage {
 		$validator = new SlideNameValidator();
 		if ( !$validator->isValid( $slideName ) ) {
 			$out->showErrorPage( 'error', 'layers-slide-invalid-name' );
+			return;
+		}
+
+		if ( MigrationState::isCompleteNow() ) {
+			// Special:EditSlide sends it to the slide's page, or says where shared slides went.
+			$out->redirect( $this->getSlideEditorUrl( $slideName ) );
 			return;
 		}
 

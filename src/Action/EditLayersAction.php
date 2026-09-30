@@ -8,9 +8,12 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Action;
 
+use MediaWiki\Extension\Layers\Migration\FilePageDrawings;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Utility\FramingHeaders;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Html\Html;
 use MediaWiki\SpecialPage\SpecialPage;
 
 class EditLayersAction extends \Action {
@@ -85,6 +88,12 @@ class EditLayersAction extends \Action {
 		// Sanitize: must pass the same validation as the API
 		if ( $initialSetName !== '' && !SetNameSanitizer::isValid( $initialSetName ) ) {
 			$initialSetName = '';
+		}
+
+		if ( MigrationState::isCompleteNow() ) {
+			// Shared sets are read-only now; the file's drawings belong to its File: page.
+			$this->showFilePageDrawings( $file->getName(), $initialSetName, $request->getInt( 'page', 1 ) );
+			return;
 		}
 
 		// Check if auto-create is requested (for layerslink=editor to non-existent sets)
@@ -341,5 +350,34 @@ class EditLayersAction extends \Action {
 	 */
 	private function getImageBaseUrl(): string {
 		return $this->getContext()->getConfig()->get( 'UploadPath' ) . '/';
+	}
+
+	/**
+	 * After the migration: open the File page's drawing the request names, or list its drawings.
+	 * @param string $fileName
+	 * @param string $setName Requested set, '' for none
+	 * @param int $page Requested PDF page
+	 */
+	private function showFilePageDrawings( string $fileName, string $setName, int $page ): void {
+		$out = $this->getOutput();
+		$title = $this->getTitle();
+		[ , $drawings ] = FilePageDrawings::current( $title, $this->getAuthority() );
+		$drawing = FilePageDrawings::find( $drawings, $setName, $page );
+		if ( $drawing !== null ) {
+			$out->redirect( FilePageDrawings::editUrl( $title, $drawing['id'] ) );
+			return;
+		}
+		$out->setPageTitle( $this->msg( 'layers-editor-title' )->text() . ': ' . $fileName );
+		$out->addWikiMsg( 'layers-shared-sets-migrated' );
+		if ( !$drawings ) {
+			$out->addWikiMsg( 'layers-filepage-no-drawings', $fileName );
+			return;
+		}
+		$items = '';
+		foreach ( $drawings as $item ) {
+			$items .= Html::rawElement( 'li', [], Html::element( 'a',
+				[ 'href' => FilePageDrawings::editUrl( $title, $item['id'] ) ], (string)$item['label'] ) );
+		}
+		$out->addHTML( Html::rawElement( 'ul', [ 'class' => 'layers-filepage-drawings' ], $items ) );
 	}
 }

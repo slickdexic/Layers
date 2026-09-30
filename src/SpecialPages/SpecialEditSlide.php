@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Utility\FramingHeaders;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
@@ -65,7 +66,17 @@ class SpecialEditSlide extends SpecialPage {
 			return;
 		}
 
-		// Check permissions
+		if ( MigrationState::isCompleteNow() ) {
+			// Shared slides are read-only. One that no page showed now has a page of its own.
+			$page = \MediaWiki\Title\Title::newFromText( LayersConstants::SLIDE_PREFIX . $slideName );
+			if ( $page && $page->exists() ) {
+				$out->redirect( $page->getLocalURL() );
+				return;
+			}
+			$out->addWikiMsg( 'layers-shared-sets-migrated' );
+			$out->addWikiMsg( 'special-slides-migrated' );
+			return;
+		}
 		$services = MediaWikiServices::getInstance();
 		$permissionManager = $services->getPermissionManager();
 		if ( !$permissionManager->userHasRight( $user, 'editlayers' ) ) {

@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- The legacy editors lead to page drawings after the migration (September 29): the File page lists its own drawings with view and edit links, `action=editlayers` opens the one it names, and the shared-slide pages send people to the slide's page. The "Edit layers" tab no longer appears twice, and the slide and export special pages have aliases.
 - Galleries follow the migration (September 29): images in `<gallery>`, Cargo galleries and `{{#layers_hint:}}` record the sets they show, so search and the migration see them; the migration copies them, and a latest set whenever it becomes the page's only drawing of that file; afterwards a gallery image shows the page's own drawing (an unnamed one as `layerset=on`), and images outside a page parse show no shared set.
 - The test wiki is migrated (September 29). A bare file name also finds a numbered copy of that file, for templates that show several files with one set name; edit and create links and renames understand bare names after the migration; recording completion purges pages that showed shared sets; `meta=siteinfo` reports `layerspagehistorymigrated`.
 - After the migration (September 29): bare `layerset=<name>` and `{{#Slide:<name>}}` mean the page's own drawing, `layerset=on` its only drawing of that file; shared sets are read-only (`layers-shared-sets-migrated`); a parser option in the cache key re-renders every page when the migration is recorded or undone.

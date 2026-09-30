@@ -780,6 +780,9 @@
 	"layers-filepage-edit": "Link text for editing a layer set from the File page list",
 	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
+	"layers-filepage-drawing-name": "Column heading for the names of the drawings a File page owns, shown after the migration of shared layer sets into page history.",
+	"layers-filepage-usage-hint-migrated": "Hint below the list of a File page's drawings after the migration. Plain text, not parsed.\n\nParameters:\n* $1 - file name without namespace\n* $2 - page ID of the File page",
+	"layers-filepage-no-drawings": "Shown by action=editlayers after the migration when the File page has no drawings. Parsed as wikitext.\n\nParameters:\n* $1 - file name without namespace",
 
 	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
 	"special-editslide-desc": "Description of the Special:EditSlide page.",
@@ -871,6 +874,7 @@
 	"special-slides": "Name of the Special:Slides page shown in the page title",
 	"special-slides-desc": "Description of the Special:Slides page shown on Special:SpecialPages",
 	"special-slides-create": "Button label to create a new slide",
+	"special-slides-migrated": "Shown on Special:Slides and Special:EditSlide after the migration of shared slides into page history, which makes shared slides read-only. Parsed as wikitext.",
 	"special-slides-create-and-edit": "Button label to create a slide and immediately open it for editing",
 	"special-slides-create-title": "Title shown when creating a new slide. $1 is the slide name",
 	"special-slides-create-failed": "Error message shown when slide creation fails",
