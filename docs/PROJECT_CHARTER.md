@@ -276,7 +276,7 @@ Reviewed by the lead against section 10, with fresh evidence: 204 Jest suites (1
 | 2. On by default | Done (HIST-3) |
 | 3. Migration and upgrade guide | Done on the test wiki (HIST-8, OPS-1). Left: the owner's wiki (S7) |
 | 4. History checks | Done except notifications and browser acceptance (J101): recent changes, contributions and watchlist verified, and undo of a drawing edit fixed (September 30, after this review) |
-| 5. Links from layers | Not started. The largest unbuilt feature (FEAT-8, SEC-5, SRCH-3, CARGO-1) |
+| 5. Links from layers | Designed in one piece (September 30, [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md)), not built. The largest unbuilt feature (FEAT-8, SEC-5, SRCH-3, CARGO-1) |
 | 6. Images and clipboard | Not started (FEAT-3a to FEAT-3c, FEAT-5, PERF-7) |
 | 7. Design pass | Not started (D4, UI-1, UI-2, UI-4 to UI-9) |
 | 8. Performance fixes | Not started. PERF-2, PERF-5 and PERF-7 are not met |

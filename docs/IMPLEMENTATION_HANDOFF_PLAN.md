@@ -2,7 +2,7 @@
 
 ## J100 ready — September 30, 2026
 
-**J99 is accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. Earlier entries below are historical.
+**J99 is accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. J101 is queued for browser acceptance of history tools (HIST-2). The lead designed Charter Item 5 (Links from layers: FEAT-8, SEC-5, SRCH-3, CARGO-1) as a unified piece in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md). Earlier entries below are historical.
 
 ### J100 — Browser acceptance of copying from the editor's list (ready)
 
@@ -18,6 +18,24 @@
 4. **Showing it.** Publish the owner page's text with `[[File:<the source's file>|layerset=<owner page ID>:anatomy]]` (take the file from the source drawing's `source.fileTitle`). The page paints the copy: the stroke colour of the source's rectangle or line is found along it, and not found on a control line, as in J98.
 5. **Stale and unreadable.** Open the confirmation page, publish another revision of the owner page, then submit the form: the page refuses with the edit conflict message and adds no drawing. Anonymously, the `layersdrawings` API answers `permissiondenied`.
 6. Run the spec twice in a row, serially. The second run must pass too, and afterwards the owner page's latest snapshot must equal its baseline.
+
+Record findings, then return for lead review.
+
+### J101 — Browser acceptance of history tools (queued)
+
+**Advances:** HIST-2.
+
+**Purpose:** prove in Chromium on the test wiki that page history undo links, feeds, and notifications reflect drawing edits and work as intended.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-history-tools.spec.js`, this packet and the review ledger. No production code: report a defect, do not fix it. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline by exact-base publication, in the main flow and in `finally`. Skip when `isWikiMigrated` is false.
+
+1. **Changed drawing gets drawing undo link:** On an edit that modified an existing drawing (such as "Welcome Slide"), `action=history` replaces core's undo link with `undo drawing: Welcome Slide` (class `layers-history-undo-link`, inside `.mw-pager-tools`; its `href` is `Special:ViewLayersPage` with `owner=Layers_browser_acceptance`, `revid=` the **previous** revision and `surface=` the drawing's ID: assert all three exactly). Core's `rollback` remains available.
+2. **Drawing undo flow:** Following the link opens `Special:ViewLayersPage` with the drawing's prior canvas and the "Restore this version" button. Submitting it publishes a new revision. **Prove the restore by value**: read the latest `layers` slot through the API before and after, and assert that the drawing's title layer `x` went from the edited value back to the earlier one, that the page text is unchanged, and that the other drawings are untouched. A success message alone is not a pass.
+3. **Text-only edit keeps core undo:** An edit modifying only wikitext keeps core's standard `action=edit&undo=...` link.
+4. **Added drawing shows no undo link:** An edit that only added a brand-new drawing (which had no prior version on the page) shows no drawing undo link and shows no core undo either (core's undo would only change the text).
+5. **Permission check:** A reader who cannot edit sees no undo links. The case that matters is an account with `edit` but **without** `editlayers`: it must see neither core's undo nor drawing undo links on a drawing edit. You may not create accounts; if the wiki has no such account, record that part as **not tested**, not passed.
+6. **Feeds:** (Notifications need Echo, which is not installed; report them as out of scope.) Verify in the browser that `Special:RecentChanges`, `Special:Watchlist` (watch the page first, and restore the watch state after) and `Special:Contributions` list the drawing edit with its edit summary and the `layers-page-drawing` change tag.
+7. Run the spec twice in a row, serially. The second run must pass too, and afterwards the owner page's latest snapshot must equal its baseline.
 
 Record findings, then return for lead review.
 
