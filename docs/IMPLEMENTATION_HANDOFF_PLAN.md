@@ -1,5 +1,41 @@
 # Layers implementation handoff plan
 
+## J102 and J103 ready — September 30, 2026
+
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
+
+### J102 — Links, part 1: the `link` property and its server validation (ready)
+
+**Advances:** FEAT-8, SEC-3, SEC-5 (design PR 1).
+
+**Purpose:** a layer may carry an optional `link`; the server accepts a good one unchanged and refuses a bad one, for page-owned publication. Nothing reads `link` yet (tracking, search, Cargo, viewer and PDF are later packets).
+
+**Allowed changes:** `src/Validation/` (a new `LayerLinkValidator`, and `ServerSideLayerValidator.php`), `src/Api/ApiLayersSave.php`, `i18n/en.json` and `i18n/qqq.json` (edit textually, never with `JSON.stringify`), `docs/API.md` and `docs/PAGE_OWNED_DOCUMENT_FORMAT.md` (the property), tests under `tests/phpunit/`, this packet and the review ledger. No JavaScript.
+
+1. **The rule (design sections 2.2, 2.3, 1a items 1, 7).** `link` is a string on any renderable layer type. It is refused, never repaired: empty string, any control character (`\x00`–`\x1F`, `\x7F`), leading or trailing whitespace, more than 2048 bytes, a non-string. A value matching `'/^(?:' . $protocols . ')/i'` is an **external URL**: it must parse with `parse_url()` and have a host (except `mailto:`). `$protocols` comes from `MediaWikiServices::getInstance()->getUrlUtils()->validProtocols()` (a *partial* pattern, see the design); inject it into the validator's constructor so standalone tests can pass a fixed one. Anything else is an **internal link**: the text before `#` must be a valid title, or empty when the value starts with `#` followed by at least one character. Validate a title through `Title::newFromText()` with the default (main) namespace, through an injectable callable so standalone tests do not need MediaWiki. `javascript:`, `data:`, `vbscript:`, `file:` and `blob:` are refused by name even if a wiki lists them in `$wgUrlProtocols`.
+2. **Wiring.** Add `'link' => 'string'` to `ALLOWED_PROPERTIES` and to `STRICT_PROPERTIES`, and route it through `LayerLinkValidator` **instead of** `validateStringProperty()`, which strips tags and may truncate (read it: a link must be stored byte for byte). One new i18n key per refusal reason (`layers-validation-link-…`), in `en.json`, `qqq.json` and wherever the existing `layers-validation-*` keys are declared; run `npm run check:i18n`.
+3. **Publication.** `DocumentSchema` uses the same validator, so a document with a good link publishes unchanged and one with a bad link fails with `invalid-or-lossy-layer-data`. Prove both with a native test in `tests/phpunit/core/` (publish through `layerspublish`, then read the slot back and compare the `link` value exactly).
+4. **Legacy refusal (design 1a item 7).** `ApiLayersSave` (legacy `layer_sets`) must refuse any layer carrying `link` with a new error `layers-link-page-drawings-only` and save nothing. Do it **before** anything is written, and test that nothing was.
+5. **Tests that can fail.** Standalone unit tests for every refusal above and for acceptance of: `Operations/Intake#Procedure`, `#Section`, `https://example.org/a?b=c#d`, `mailto:a@example.org`, `//example.org/x` (only when the injected protocol list includes `//`), a title with an accent and one with a space. Each refusal test must fail if the rule is deleted: check at least three by temporarily removing the rule. Verify that the stored value is identical to the input (`assertSame`).
+6. **Gates.** Standalone `phpunit.xml`, the native suite in the container, phpcs (lines up to 120), `check:i18n`, `check:phprefs`, `check:parallel`, `npm test`, `node scripts/verify-docs.js`. Note the Jest count is unchanged.
+
+Record findings, then return for lead review. If a rule above conflicts with existing code, report it; do not guess.
+
+### J103 — Links, part 2: one shared layer-bounds function (ready)
+
+**Advances:** FEAT-8 (design 1a item 3).
+
+**Purpose:** the link overlay and the PDF annotations both need each layer's axis-aligned box in surface pixels, for **every** layer type and with rotation. Today the logic lives in the editor only (`resources/ext.layers.editor/GeometryUtils.js`, `getLayerBoundsForType()`), which the viewer does not load. Make one implementation that both can use.
+
+**Allowed changes:** a new `resources/ext.layers.shared/LayerBounds.js` (registered in the right `extension.json` modules, in the same style as its neighbours, plus the bundle budget if `check:bundlesize` demands it), its Jest test, `GeometryUtils.js` (delegate to it), this packet and the review ledger.
+
+1. **API.** `LayerBounds.getBounds( layer, options )` returns `{ x, y, width, height }` or `null` (no visible area, such as a group). Cover every type in `ServerSideLayerValidator::SUPPORTED_LAYER_TYPES`: boxes (`rectangle`, `textbox`, `image`, `callout`…), `circle` and `ellipse` (centre plus radius), `line` and `arrow` (`x1, y1, x2, y2`, plus stroke width), `path`, `polygon`, `star` (points), `marker`, `customShape` and text layers. For a text layer without a width, `options.measureText( layer )` supplies `{ width, height }`; return `null` when it is absent and needed. Apply `rotation` (degrees, about the layer's centre) and return the box that contains the rotated shape.
+2. **Behaviour must match the editor.** Read `GeometryUtils.getLayerBoundsForType()` and its tests first. The new module reproduces it exactly for every case it handles, and `GeometryUtils` then delegates to the new module. **The existing editor tests must pass unmodified**; if one cannot, report it rather than editing it.
+3. **Tests that can fail.** One Jest case per type with hand-computed expected numbers (write the arithmetic in a comment); rotation by 90° swapping width and height of a non-square box; 45° of a square; a line with negative direction (`x2 < x1`); a path and a polygon with negative coordinates; `null` for `group`; the missing-measurer case. No expected value may be produced by calling the code under test.
+4. **Gates.** `npm test` (every Jest suite and the bundle budgets), coverage of the new file at 95% or more, `check:parallel`. Do not change any production file other than those named.
+
+Record findings, then return for lead review.
+
 ## J100 and J101 accepted — September 30, 2026
 
 **J100 and J101 are accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. The lead designed Charter Item 5 (Links from layers: FEAT-8, SEC-5, SRCH-3, CARGO-1) as a unified piece in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md). Earlier entries below are historical.
