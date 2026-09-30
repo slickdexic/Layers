@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J102 and J103 ready — September 30, 2026
+## J102 to J105 ready — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
@@ -33,6 +33,36 @@ Record findings, then return for lead review. If a rule above conflicts with exi
 2. **Behaviour must match the editor.** Read `GeometryUtils.getLayerBoundsForType()` and its tests first. The new module reproduces it exactly for every case it handles, and `GeometryUtils` then delegates to the new module. **The existing editor tests must pass unmodified**; if one cannot, report it rather than editing it.
 3. **Tests that can fail.** One Jest case per type with hand-computed expected numbers (write the arithmetic in a comment); rotation by 90° swapping width and height of a non-square box; 45° of a square; a line with negative direction (`x2 < x1`); a path and a polygon with negative coordinates; `null` for `group`; the missing-measurer case. No expected value may be produced by calling the code under test.
 4. **Gates.** `npm test` (every Jest suite and the bundle budgets), coverage of the new file at 95% or more, `check:parallel`. Do not change any production file other than those named.
+
+Record findings, then return for lead review.
+
+### J104 — Performance: why a drawing paints late (PERF-2) (ready)
+
+**Advances:** PERF-2 ("a drawing appears within 300 ms after its image has loaded"; measured 0.6 s to 3.1 s warm, 8.1 s cold). Independent of J102 and J103.
+
+**Purpose:** find what is slow, then fix it in the viewer's start-up path. Known: the drawing's own fetch takes about 0.55 s and starts only after the viewer module has loaded; what makes some warm runs slow is **not known**.
+
+**Allowed changes:** the viewer start-up code (`resources/ext.layers/`, the bound-file and page-owned bootstraps), the `extension.json` module declarations that load it, their Jest tests, `tests/perf/` (only to add a measurement), this packet and the review ledger. The bundle budgets and PERF-1 (150 KB gzip, nothing blocks rendering, nothing on a page without drawings) must still hold. No server code.
+
+1. **Diagnose first, with numbers.** Use `npm run bench` (read `tests/perf/benchmark.spec.js`; run serially). Add a per-stage timeline for a warm and a cold load, from the `img.layers-bound-file` load event to the first painted frame: module request and execution, the `layersread` request (queueing, waiting, download), image decode of the pinned rendition, and the first paint. Report which stage or stages account for the slow warm runs, and show the evidence (a table of at least five runs). If the slow runs have different causes, say so.
+2. **Fix what the numbers show.** Likely candidates, to confirm or reject: start the drawing's fetch before the viewer module has executed (the identity is in the page output, so the fetch needs no module); fetch the pinned rendition in parallel with the drawing; avoid repainting or re-decoding. Do not add a second delivery path or cache anything that may differ between readers (see the read contract: only an anonymous read of the owner's current revision may be publicly cached).
+3. **Prove it.** Before and after tables from the same bench, warm and cold. The charter target is 300 ms warm; report the real result even if it falls short, with what remains.
+4. **Gates.** `npm test`, `npm run check:bundlesize`, the existing Playwright specs that touch viewers (`page-owned-search-pdf-gallery.spec.js` and the journey specs), each run serially.
+
+Record findings, then return for lead review.
+
+### J105 — Performance: where saving and old-revision views spend time (PERF-5) (ready, report only)
+
+**Advances:** PERF-5 (saving a 100-layer drawing at most 1 s on the server, and so does viewing an old revision; measured 1.6 s saving, 1.0 s warm and 3.2 s cold opening an old revision). Independent of the others.
+
+**Purpose:** a profile, not a fix. The server path is the lead's; you report, the lead decides.
+
+**Allowed changes:** a new `tests/perf/` spec or script and a new document `docs/PERF5_PROFILE.md`, this packet and the review ledger. **No production code.**
+
+1. Reproduce both timings with `npm run bench` and report the server-side share: measure inside the container with a temporary timing probe that you **do not commit** (for example `microtime` around stages in a scratch copy, or the MediaWiki debug log `$wgDebugLogFile` timings), for `layerspublish` of a 100-layer drawing (one property changed) and for `Special:ViewLayersPage` of an old revision.
+2. Break the time into stages: request and validation (`ServerSideLayerValidator`, `DocumentSchema`), snapshot encoding and hashing, the compare-and-swap and page save (core's edit, `LinksUpdate`, search updates, job queue), the slot reads, and on the view side the source rendition and page rendering. Give each stage's milliseconds over at least five runs, warm and cold, in a table.
+3. Name the three largest costs and, for each, what would reduce it and what it would risk (correctness, history, permissions). Do not implement anything.
+4. Remove every probe and leave the tree clean apart from the two new files; run `node scripts/verify-docs.js`.
 
 Record findings, then return for lead review.
 
