@@ -95,7 +95,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | UI-3 | Layers' own UI meets WCAG 2.2 AA: keyboard operable, visible focus, 4.5:1 text contrast, and names for screen readers. Checked by automated accessibility checks in browser tests and one manual screen-reader pass. | Partial: axe checks run on seven screens in light and dark (J84); four violation kinds fixed; layer rows still nest buttons in listbox options |
 | UI-4 | Readers who cannot see a drawing can get its text in reading order. | Open |
 | UI-5 | Right-to-left interface languages lay out correctly. | Open |
-| UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial: the colour picker is the known gap |
+| UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial: the colour picker is the known gap; in the page-owned editor Escape with the pointer tool closes the editor instead of deselecting, and its return target is the file page, not the page that owns the drawing (J97 findings, September 30) |
 | UI-7 | Every error says what failed and what to do next. | Partial: J79 found a raw key and unfilled limits, now fixed; no systematic review yet |
 | UI-8 | Tablets can edit by touch (select, move, resize, draw, type), and phones can view. | Partial: basic touch works |
 | UI-9 | The owner signs off a screenshot set of every screen, in light and dark. | Open |
@@ -122,28 +122,28 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | ID | Criterion | Baseline |
 | --- | --- | --- |
 | TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Partial: JPEG and PNG tested; GIF, WebP and SVG untested; TIFF partial |
-| TYPES-2 | PDFs: each page is annotated separately; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial |
+| TYPES-2 | PDFs: each page is annotated separately; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial: a PDF page can get its own drawing, which paints over that page and is absent from earlier revisions (browser acceptance J98); new PDF versions and export are unverified |
 | TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, with a full-size view, and copyable to other pages. | Partial: a page that embeds another page's slide can copy it (September 29); copying from the editor's drawing list is not built |
-| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey spec covers most steps; diff and restore are in J81; export is not covered |
+| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey specs cover create, save, history, diff, restore, search (J98) and copy to another page; Cargo and export are not covered |
 
 ### 5.7 Page history (HIST)
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Partial: page-owned drawings only, each save with the editor's summary or an automatic one (September 29, browser acceptance J89); shared layer sets still save outside history |
+| HIST-1 | Every save of any drawing creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Met once the migration is recorded (September 30): shared sets and slides are then read-only (`layers-shared-sets-migrated`), so every Layers write is a page revision with the editor's summary or an automatic one (J89). Before the migration shared sets still save outside history; the [upgrade guide](UPGRADING.md) ends that window |
 | HIST-2 | History, old revisions, visual diffs, restoring one drawing, rollback and undo all work. Watchlists, recent changes, notifications and contributions show drawing edits. | Partial: history, old revisions, diffs, restore and rollback are built; the rest is unverified |
 | HIST-3 | On by default: no pilot setting or owner list is needed (D2). | Met (September 29): `$wgLayersPageDrawingNamespaces` defaults to the content namespaces and `File:`; the pilot settings are retired (browser acceptance J92) |
 | HIST-4 | Every drawing belongs to one page and has a name that is unique on that page. Its full identity is the page's ID plus the name (D1). A page shows only its own drawings. A bare `layerset=name` means this page's drawing, so it starts empty on a page that has none. | Partial: new and changed drawings need a unique name (September 27); embeds, fields and adoption use page ID plus name (September 28); an embed naming a drawing the page lacks offers to create it, and the first save adds it (September 29; browser acceptance J90); bare names mean the page's own drawing once the migration is recorded (September 29) |
 | HIST-5 | Another page's drawing can be **copied** into a new drawing of this page, a new branch (D1). The copy's first revision records where it came from, and it never follows the original. Nothing is shared live between pages. Copying wikitext never gives edit rights over another page's drawing. | Partial: shared sets can be copied into a page, and a copied embed shows nothing on another page; an embed naming another page's drawing now offers editors to copy it here, as a new drawing whose revision names the source page and revision (September 29; browser acceptance J91); copying from the editor's drawing list is not built |
 | HIST-6 | Old revisions of a page show every drawing as it was then. | Met for page-owned drawings |
 | HIST-7 | Renaming a drawing updates this page's embeds in the same revision. | Met on the test wiki (September 29): the editor's Rename control publishes a new name with the next save, which rewrites the page's direct embeds in the same revision (browser acceptance J87) |
-| HIST-8 | Existing drawings move into page history (D3). The migration has a dry run, can be resumed and undone, loses nothing, and pages look the same afterwards. | Partial: step 1 (a file's current sets onto its `File:` page) step 2 (copies for the pages that show sets and slides) and step 3 (pages for slides shown nowhere), with dry run, resume and undo, accepted on the test wiki fixtures (September 29, J95); after the completion record, bare names mean the page's own drawings and shared sets are read-only (September 29); the test wiki is migrated (September 29, owner-approved); galleries follow the same rules (September 29, native tests; browser check queued as J98) |
+| HIST-8 | Existing drawings move into page history (D3). The migration has a dry run, can be resumed and undone, loses nothing, and pages look the same afterwards. | Met on the test wiki (September 30): steps 1 to 3, dry run, resume and undo (J95); bare names mean the page's own drawings and shared sets are read-only afterwards; galleries follow the same rules (browser-checked in J98); the legacy editor links lead to page drawings; the test wiki was migrated, undone and migrated twice from the upgrade guide (J99). Left: the owner's own wiki (S7) |
 
 ### 5.8 Search (SRCH)
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| SRCH-1 | Database search finds a page by the text of its drawings, and a `File:` page by the text of its own drawings. Results show the drawing text as the snippet. | Met (J80; `File:` results have no snippet, a core limit) |
+| SRCH-1 | Database search finds a page by the text of its drawings, and a `File:` page by the text of its own drawings. Results show the drawing text as the snippet. | Met (J80); after the migration a word in a page's own drawing is found about 2 seconds after the save and gone about 2 seconds after the restore (browser acceptance J98). `File:` results have no snippet, a core limit |
 | SRCH-2 | The index follows every change (save, delete, rename, restore, revision deletion, page deletion) without manual steps, and a maintenance script rebuilds everything. | Partial: revision deletion and suppression untested |
 | SRCH-3 | Link text and link targets from layers are searchable. | Open (needs FEAT-8) |
 
@@ -162,7 +162,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | --- | --- | --- |
 | OPS-1 | Install and upgrade from 1.5.x with `update.php` and documented maintenance scripts. The migration has a dry run and a way back. | Partial: [upgrade guide](UPGRADING.md) written (September 29) and rehearsed on the test wiki (September 30: undo, refresh, migrate again, undo and migrate a second time); not yet followed on a copy of a 1.5.x wiki |
 | OPS-2 | Every setting and API is documented, examples are checked against real behaviour, and [known issues](KNOWN_ISSUES.md) is current. | Partial: known issues was last updated September 11 |
-| OPS-3 | All automated gates are green: `npm test`, PHP style, standalone and native PHPUnit, and the full browser suite, with statement coverage of at least 90%. | Met (95.87% statements, measured September 2) |
+| OPS-3 | All automated gates are green: `npm test`, PHP style, standalone and native PHPUnit, and the full browser suite, with statement coverage of at least 90%. | Partial: JavaScript statement coverage 94.95%, branches 86.45% (September 30, 15,072 tests); PHP coverage cannot be measured here (no coverage driver); the full browser suite has not been run in one pass since the migration |
 | OPS-4 | Every criterion in this charter has an automated test, and every user-facing one also has a browser acceptance spec. | Partial |
 
 ## 6. Decisions
@@ -265,3 +265,40 @@ Worth doing later, but none of these holds up the finish line:
 11. [2] **Owner acceptance** (section 7), then release 2.0.
 
 Alongside, juniors: the performance benchmark (PERF-0), automated accessibility checks (UI-3) and browser acceptance of each step (OPS-4, TYPES-4).
+
+## 11. Progress review — September 30, 2026
+
+Reviewed by the lead against section 10, with fresh evidence: 204 Jest suites (15,072 tests, 94.95% statements), 437 native tests, 1,314 standalone tests, and browser acceptance specs J87 to J99 on the test wiki.
+
+| Item | State |
+| --- | --- |
+| 1. Drawings belong to pages | Built, except the editor's list of other pages' drawings and its **copy** action (HIST-5, TYPES-3, scenario S4). Copying works only from an embed that names the other page's drawing. About 2 deliverables |
+| 2. On by default | Done (HIST-3) |
+| 3. Migration and upgrade guide | Done on the test wiki (HIST-8, OPS-1). Left: the owner's wiki (S7) |
+| 4. History checks | Diffs, restore and rollback are built and browser-checked. Watchlists, recent changes, contributions, notifications and undo are **unverified** (HIST-2). About 2 deliverables |
+| 5. Links from layers | Not started. The largest unbuilt feature (FEAT-8, SEC-5, SRCH-3, CARGO-1) |
+| 6. Images and clipboard | Not started (FEAT-3a to FEAT-3c, FEAT-5, PERF-7) |
+| 7. Design pass | Not started (D4, UI-1, UI-2, UI-4 to UI-9) |
+| 8. Performance fixes | Not started. PERF-2, PERF-5 and PERF-7 are not met |
+| 9. Conflict comparison, exports, revision deletion | Not started (DATA-2, DATA-4, DATA-5, FEAT-3d, TYPES-2) |
+| 10. Documentation and security review | Not started. [Known issues](KNOWN_ISSUES.md) still dates from September 11 and contradicts the code on search and Cargo |
+| 11. Owner acceptance | Not started |
+
+**Are we on track?** Yes on scope, behind on pace.
+
+- **Scope.** Every piece of work since September 27 advanced a criterion: the migration and its guide (HIST-8, OPS-1), the change of bare names and galleries (HIST-4, HIST-8), the legacy entry points (HIST-8, UI-7) and the browser specs J93 to J99 (OPS-4, TYPES-4, FEAT-1, FEAT-4, FEAT-6). Nothing was built that the charter does not ask for.
+- **Pace.** Items 1 to 3 (14 of the 48 deliverables) took about four days, roughly four a day against the five to ten planned, because the migration needed four rounds of review and a rehearsal on the test wiki. At that rate the remaining 34 take about nine working days. The estimate of one to two weeks still holds, nearer two.
+- **Stale rows fixed today:** HIST-1, HIST-8, TYPES-2, TYPES-4, SRCH-1, UI-6 and OPS-3 (above). The coverage figure was from September 2.
+
+**Risks, in order of size**
+
+1. **Scenario S4 cannot be run** until the editor's drawing list and copy action exist. It is the next deliverable.
+2. **Links (FEAT-8)** touch validation, link tables, search, Cargo, diffs and PDF export in one feature. Design it in one piece before building.
+3. **Images by reference (FEAT-3c, PERF-7)** need a storage decision first: the drawing slot repeats 200 KB of image data on every save, which no amount of tuning fixes.
+4. **The escaped-defect pattern from J79 and J97**: a green gate that tested nothing. Two J97 tests and one J98 check passed while asserting nothing. Review of every new spec for discriminating assertions stays part of done.
+5. **New attack surface since the last audit** (Adopt and Copy special pages, the migration script, the File page drawing entry points). Each has tests; SEC-6 still covers them last, on the release candidate.
+
+**For the owner**
+
+- **Legacy code.** The shared-set editor, the slide special pages and the old save APIs stay in the tree for the upgrade window, and refuse writes once the migration is recorded. Delete them in 2.0, or keep them for one more release? The charter does not say.
+- **S7 needs a copy of your real wiki.** Until we have one, the upgrade has only been rehearsed on the test wiki.
