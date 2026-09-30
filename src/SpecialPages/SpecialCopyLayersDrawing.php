@@ -20,6 +20,8 @@ use MediaWiki\Title\TitleFactory;
  */
 class SpecialCopyLayersDrawing extends SpecialPage {
 	private const FIELDS = [ 'pageid', 'revid', 'start', 'expected', 'sourcerev' ];
+	/** A drawing picked from the editor's list names its source page and drawing, not an embed. */
+	private const LIST_FIELDS = [ 'pageid', 'revid', 'sourcepage', 'sourcesurface', 'sourcerev' ];
 
 	/** Failure codes with their own explanation; everything else gets one generic message. */
 	private const MESSAGES = [
@@ -66,8 +68,11 @@ class SpecialCopyLayersDrawing extends SpecialPage {
 			return;
 		}
 		try {
-			$preview = $this->pilot->previewCopy( $selection['pageid'], $selection['revid'], $selection['start'],
-				$selection['expected'], $selection['sourcerev'], $this->getAuthority() );
+			$preview = isset( $selection['sourcepage'] ) ?
+				$this->pilot->previewListCopy( $selection['pageid'], $selection['revid'], $selection['sourcepage'],
+					$selection['sourcesurface'], $selection['sourcerev'], $this->getAuthority() ) :
+				$this->pilot->previewCopy( $selection['pageid'], $selection['revid'], $selection['start'],
+					$selection['expected'], $selection['sourcerev'], $this->getAuthority() );
 		} catch ( PublicationException $e ) {
 			$this->showFailure( $e, $selection['pageid'] );
 			return;
@@ -118,8 +123,13 @@ class SpecialCopyLayersDrawing extends SpecialPage {
 		}
 		try {
 			// No automatic retry: a repeated or stale submission fails the base-revision check.
-			$this->pilot->copyDrawing( $selection['pageid'], $selection['revid'], $selection['start'],
-				$selection['expected'], $selection['sourcerev'], $this->getAuthority(), $note );
+			if ( isset( $selection['sourcepage'] ) ) {
+				$this->pilot->copyListDrawing( $selection['pageid'], $selection['revid'], $selection['sourcepage'],
+					$selection['sourcesurface'], $selection['sourcerev'], $this->getAuthority(), $note );
+			} else {
+				$this->pilot->copyDrawing( $selection['pageid'], $selection['revid'], $selection['start'],
+					$selection['expected'], $selection['sourcerev'], $this->getAuthority(), $note );
+			}
 		} catch ( PublicationException $e ) {
 			return Status::newFatal( ...self::failureMessage( $e, $owner ) );
 		} catch ( \Throwable $e ) {
@@ -166,6 +176,9 @@ class SpecialCopyLayersDrawing extends SpecialPage {
 			return null;
 		}
 		$request = $this->getRequest();
+		if ( $request->getCheck( 'sourcepage' ) ) {
+			return $this->readListSelection( $request );
+		}
 		$selection = [];
 		foreach ( self::FIELDS as $field ) {
 			$value = $request->getVal( $field );
@@ -181,6 +194,36 @@ class SpecialCopyLayersDrawing extends SpecialPage {
 			}
 			if ( !( ( $field === 'start' && $value === '0' ) || preg_match( '/^[1-9][0-9]{0,9}$/D', $value ) ) ||
 				(float)$value > 2147483647 ) {
+				return null;
+			}
+			$selection[$field] = (int)$value;
+		}
+		return $selection;
+	}
+
+	/**
+	 * @param \MediaWiki\Request\WebRequest $request
+	 * @return array|null Without a revid, the page's current revision, which the form then carries to the POST
+	 */
+	private function readListSelection( $request ): ?array {
+		$selection = [];
+		foreach ( self::LIST_FIELDS as $field ) {
+			$value = $request->getVal( $field );
+			if ( $field === 'revid' && $value === null ) {
+				$owner = $this->titles->newFromID( $request->getInt( 'pageid' ) );
+				$value = $owner ? (string)$owner->getLatestRevID() : null;
+			}
+			if ( !is_string( $value ) ) {
+				return null;
+			}
+			if ( $field === 'sourcesurface' ) {
+				if ( !preg_match( '/^[A-Za-z0-9_.:-]{1,80}$/D', $value ) ) {
+					return null;
+				}
+				$selection[$field] = $value;
+				continue;
+			}
+			if ( !preg_match( '/^[1-9][0-9]{0,9}$/D', $value ) || (float)$value > 2147483647 ) {
 				return null;
 			}
 			$selection[$field] = (int)$value;

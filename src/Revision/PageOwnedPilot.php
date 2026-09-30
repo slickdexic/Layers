@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
+use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
@@ -82,6 +83,15 @@ class PageOwnedPilot {
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
 			$this->scope, [ $this, 'prepareBoundViewers' ],
 			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0 );
+	}
+
+	/**
+	 * @param ApiMain $main
+	 * @param string $name
+	 * @return ApiLayersDrawings
+	 */
+	public function newDrawingsApi( ApiMain $main, string $name ): ApiLayersDrawings {
+		return new ApiLayersDrawings( $main, $name, $this );
 	}
 
 	/**
@@ -526,6 +536,63 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * Other pages' drawings the editor may copy here, for the editor's list. Read with the caller's own rights.
+	 * @param string $search Start of a page title; empty lists the pages edited last
+	 * @param int $pageId The page being edited
+	 * @param int $limit
+	 * @param Authority $authority
+	 * @return array[] title, pageId, revisionId and drawings of each page
+	 */
+	public function searchDrawings( string $search, int $pageId, int $limit, Authority $authority ): array {
+		try {
+			$this->assertCopyScope( $pageId, $authority );
+		} catch ( PublicationException $e ) {
+			return [];
+		}
+		return ( new DrawingCatalog( $this->services->getConnectionProvider(), $this->services->getSlotRoleStore(),
+			$this->services->getTitleFactory(), [ $this, 'getHistorySurfaces' ] ) )
+			->search( $search, $pageId, $limit, $authority );
+	}
+
+	/**
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $sourcePageId
+	 * @param string $sourceSurfaceId
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @return array owner and source Titles, label and source revision
+	 * @throws PublicationException
+	 */
+	public function previewListCopy( int $pageId, int $revisionId, int $sourcePageId, string $sourceSurfaceId,
+		int $sourceRevisionId, Authority $authority
+	): array {
+		$this->assertCopyScope( $pageId, $authority );
+		return $this->newDrawingCopy()->previewFromList( $pageId, $revisionId, $sourcePageId, $sourceSurfaceId,
+			$sourceRevisionId, $authority );
+	}
+
+	/**
+	 * Internal composition: HTTP callers must enforce POST, CSRF, rate limits and confirmation.
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $sourcePageId
+	 * @param string $sourceSurfaceId
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @param string $note
+	 * @return int New revision of this page
+	 * @throws PublicationException
+	 */
+	public function copyListDrawing( int $pageId, int $revisionId, int $sourcePageId, string $sourceSurfaceId,
+		int $sourceRevisionId, Authority $authority, string $note
+	): int {
+		$this->assertCopyScope( $pageId, $authority );
+		return $this->newDrawingCopy()->copyFromList( $pageId, $revisionId, $sourcePageId, $sourceSurfaceId,
+			$sourceRevisionId, $authority, $note );
+	}
+
+	/**
 	 * @param int $pageId
 	 * @param Authority $authority
 	 * @throws PublicationException
@@ -827,7 +894,8 @@ class PageOwnedPilot {
 		$surfaces = [];
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
 			if ( in_array( $surface['kind'], [ 'slide', 'image', 'pdf' ], true ) ) {
-				$surfaces[] = [ 'id' => $surface['id'], 'label' => $surface['label'] ?? $surface['id'] ];
+				$surfaces[] = [ 'id' => $surface['id'], 'label' => $surface['label'] ?? $surface['id'],
+					'kind' => $surface['kind'] ];
 			}
 		}
 		return $surfaces;

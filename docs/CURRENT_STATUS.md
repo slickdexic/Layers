@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## The editor lists other pages' drawings and copies one — September 30, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criteria HIST-5 and TYPES-3 (decision D1, scenario S4). From the page-owned editor an author can now pick a drawing of another page and copy it into this page as a new drawing, without an embed that names it first.
+
+- **The list.** The editor header has "Copy from another page". It opens a dialog with a search box (the start of a page title, with or without a namespace) and lists each drawing with its page. With nothing typed it lists the pages edited last. It is keyboard operable, announces the number found, keeps Tab inside, and Escape closes it without closing the editor.
+- **What the list shows.** `action=layersdrawings` (new, read-only, needs `editlayers` and a named account, shares the `editlayers-list` limit, never cached) reads each page's current revision with the caller's own rights through the same path as history. A page, revision or file the caller cannot read is left out, not reported as missing. The page being edited is never listed.
+- **The copy.** A result links to `Special:CopyLayersDrawing` with the source page, drawing and revision. GET shows what will be copied and changes nothing; only a POST with the edit token writes, with an optional note. The copy is a new drawing with its own ID and the source's name, or the name with the first free number ("Overview 2") when the page already has one. The page's text is untouched: the author embeds the copy where it belongs. The revision summary names the source page and revision, and nothing links the copy to its source afterwards. A stale confirmation is refused with the edit conflict message.
+- **Unsaved work.** The dialog warns when the editor has unsaved changes, because the copy is a new revision of the page and the editor's base would then be stale.
+- **Not built.** Copying a selection of layers between drawings (FEAT-3a, FEAT-5); the list shows no thumbnails.
+
+Fresh verification: native `CopyFromListTest` (list, exclusion of this page, search, reading rights, the copy and its summary, refusals, the API and the confirmation page), Jest `PageOwnedCopyPicker.test.js` (9 tests), and a probe in Chromium on the test wiki: the dialog lists 14 drawings, stays above the editor, a search narrows it, Escape leaves the editor open, and a result opens the confirmation page for "005" of `DeleteMe001`. Full native configuration **442 tests passed, 1 skipped**; standalone PHPUnit **1,314**; Jest **15,081**; `npm test` passed; PHP style clean. The browser acceptance spec is J100.
+
 ## The legacy editors lead to page drawings after the migration — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criteria HIST-8 and UI-7. After the migration nobody can save a shared set, so the entry points of the shared-set editors now lead to the drawings that replaced them.

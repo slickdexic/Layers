@@ -83,6 +83,18 @@ List standalone slides by name prefix; this is not annotation full-text search.
 | `sort` | created, modified, name | name | Slide sorting mode. |
 | `continue` | string | Not declared in metadata | Continuation returned by the previous response; return it unchanged. |
 
+### layersdrawings — GET
+
+List other pages' current drawings that the editor may copy into the page being edited (D1). Requires the `editlayers` right and a named account, and shares the `editlayers-list` rate limit. Every page is read with the caller's own rights, so pages, revisions and files the caller cannot see are left out. The answer is private and never cached.
+
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `search` | string | Empty; up to 255 bytes | Start of a page title, optionally with a namespace. Empty lists the pages edited last. |
+| `exclude` | integer | 0 | ID of the page being edited, whose own drawings are not listed. |
+| `limit` | limit | 10; min 1; max 20 | Maximum pages to list. |
+
+Each page in `layersdrawings.pages` has `title`, `pageid`, `revid` and `drawings` (`id`, `label`, `kind`). The copy itself is confirmed on `Special:CopyLayersDrawing` with `pageid`, `sourcepage`, `sourcesurface` and `sourcerev`, which copies with a POST and the user's edit token.
+
 ### layerspdfexport — POST + CSRF
 
 Generate a cached server-rendered PDF for an uploaded file. Standalone slides are not supported by this server endpoint.

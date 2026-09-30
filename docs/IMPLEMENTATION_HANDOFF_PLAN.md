@@ -1,8 +1,29 @@
 # Layers implementation handoff plan
 
-## J99 accepted with lead corrections — September 30, 2026
+## J100 ready — September 30, 2026
 
-**J99 is accepted with lead corrections** (see the review ledger). The upgrade guide was followed on the test wiki and amended. No junior packet is ready: the next work is the lead's (legacy-editor retirement follow-ups, the design pass D4, and the performance pass). Earlier entries below are historical.
+**J99 is accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. Earlier entries below are historical.
+
+### J100 — Browser acceptance of copying from the editor's list (ready)
+
+**Advances:** HIST-5, TYPES-3 and scenario S4.
+
+**Purpose:** prove in Chromium what native and Jest tests cover, on the test wiki.
+
+**Allowed changes:** a new spec `tests/e2e/page-owned-copy-from-list.spec.js`, this packet and the review ledger. No production code: report a defect, do not fix it. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline by exact-base publication, in the main flow and in `finally`. Skip when `isWikiMigrated` is false. Read the lessons of J97 and J98 first: every assertion must be able to fail, and a bound canvas holds the photograph, so check a drawing by its own stroke colour, as `page-owned-search-pdf-gallery.spec.js` does.
+
+1. **The list.** Open the owner page's editor. "Copy from another page" is visible; the dialog opens with focus in the search box and lists drawings with their pages, never one of the owner page's own. A search for the start of a title (for example `Layers migration fixture/Direct`) lists only drawings of pages with that start; a search for a string that matches nothing says so. Escape closes the dialog and leaves the editor open with focus back on the button. Tab never leaves the dialog.
+2. **The confirmation.** Choose "anatomy" of `Layers migration fixture/Direct` (or another drawing with a distinct stroke colour and no name like the owner's "Welcome Slide"). The confirmation page names the drawing, the source page and revision and this page; a GET changes nothing (the owner's latest revision is the same afterwards).
+3. **The copy.** Submit with the note "J100". The owner page has a new revision tagged `layers-page-drawing` whose summary is `Copied drawing “anatomy” from [[:Layers migration fixture/Direct]] (revision N): J100`. Its page text is unchanged; `layersread` lists "Welcome Slide" and "anatomy", and the copy's layers equal the source's. The source page's latest revision is unchanged. Do the copy a second time from the list: the new drawing is named "anatomy 2".
+4. **Showing it.** Publish the owner page's text with `[[File:<the source's file>|layerset=<owner page ID>:anatomy]]` (take the file from the source drawing's `source.fileTitle`). The page paints the copy: the stroke colour of the source's rectangle or line is found along it, and not found on a control line, as in J98.
+5. **Stale and unreadable.** Open the confirmation page, publish another revision of the owner page, then submit the form: the page refuses with the edit conflict message and adds no drawing. Anonymously, the `layersdrawings` API answers `permissiondenied`.
+6. Run the spec twice in a row, serially. The second run must pass too, and afterwards the owner page's latest snapshot must equal its baseline.
+
+Record findings, then return for lead review.
+
+### J99 accepted — September 30, 2026
+
+The upgrade guide was followed on the test wiki and amended (see the review ledger).
 
 ## Test wiki migrated; J96 accepted — September 29, 2026
 

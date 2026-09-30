@@ -124,6 +124,107 @@ class PageDrawingCopy {
 	}
 
 	/**
+	 * Every check copyFromList() makes, without writing, for the confirmation step.
+	 * @param int $pageId This page
+	 * @param int $revisionId This page's revision the copy is based on; must still be current
+	 * @param int $sourcePageId
+	 * @param string $sourceSurfaceId
+	 * @param int $sourceRevisionId The source revision the list showed
+	 * @param Authority $authority
+	 * @return array owner and source Titles, label and source revision
+	 * @throws PublicationException
+	 */
+	public function previewFromList( int $pageId, int $revisionId, int $sourcePageId, string $sourceSurfaceId,
+		int $sourceRevisionId, Authority $authority
+	): array {
+		$prepared = $this->prepareFromList( $pageId, $revisionId, $sourcePageId, $sourceSurfaceId,
+			$sourceRevisionId, $authority );
+		unset( $prepared['document'] );
+		return $prepared;
+	}
+
+	/**
+	 * A drawing picked from the editor's list of other pages' drawings becomes a new drawing of this page.
+	 * The page's text is untouched: the author embeds the copy where it should appear.
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $sourcePageId
+	 * @param string $sourceSurfaceId
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @param string $note Optional words of the copier, after the recorded source
+	 * @return int New revision of this page
+	 * @throws PublicationException No automatic retry
+	 */
+	public function copyFromList( int $pageId, int $revisionId, int $sourcePageId, string $sourceSurfaceId,
+		int $sourceRevisionId, Authority $authority, string $note
+	): int {
+		$prepared = $this->prepareFromList( $pageId, $revisionId, $sourcePageId, $sourceSurfaceId,
+			$sourceRevisionId, $authority );
+		$summary = wfMessage( 'layers-copy-summary' )->plaintextParams( $prepared['label'] )
+			->params( $prepared['source']->getPrefixedText(), (string)$sourceRevisionId )
+			->inContentLanguage()->text();
+		if ( trim( $note ) !== '' ) {
+			$summary .= wfMessage( 'colon-separator' )->inContentLanguage()->text() . trim( $note );
+		}
+		return $this->publisher->publish( $prepared['owner'], $authority, $revisionId, $prepared['document'],
+			$summary, null, $pageId );
+	}
+
+	/**
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $sourcePageId
+	 * @param string $sourceSurfaceId
+	 * @param int $sourceRevisionId
+	 * @param Authority $authority
+	 * @return array
+	 * @throws PublicationException
+	 */
+	private function prepareFromList( int $pageId, int $revisionId, int $sourcePageId, string $sourceSurfaceId,
+		int $sourceRevisionId, Authority $authority
+	): array {
+		if ( $sourcePageId < 1 || $sourcePageId === $pageId || $sourceRevisionId < 1 ||
+			$sourceRevisionId > 2147483647 || !preg_match( '/^[A-Za-z0-9_.:-]{1,80}$/D', $sourceSurfaceId )
+		) {
+			throw new PublicationException( 'layers-copy-source-unavailable' );
+		}
+		try {
+			[ $owner, , , $document ] = $this->target( $pageId, $revisionId, $authority );
+		} catch ( \DomainException $e ) {
+			throw new PublicationException( $e->getMessage() === 'layers-edit-conflict' ?
+				'layers-edit-conflict' : 'layers-owner-unavailable' );
+		}
+		try {
+			$title = $this->titles->newFromID( $sourcePageId, IDBAccessObject::READ_LATEST );
+			if ( !$title ) {
+				throw new \InvalidArgumentException();
+			}
+			// Objects, not arrays: an empty JSON object in a layer must stay an object in the copy.
+			$source = json_decode( $this->access->read( $title, $sourceRevisionId, $authority, $sourcePageId )
+				->getText(), false, 64, JSON_THROW_ON_ERROR );
+		} catch ( \DomainException | \InvalidArgumentException | \JsonException $e ) {
+			throw new PublicationException( 'layers-copy-source-unavailable' );
+		}
+		$copy = null;
+		foreach ( $source->surfaces as $surface ) {
+			if ( $surface->id === $sourceSurfaceId ) {
+				$copy = clone $surface;
+			}
+		}
+		if ( !$copy ) {
+			throw new PublicationException( 'layers-copy-source-unavailable' );
+		}
+		$taken = array_map( static fn ( $surface ) => (string)$surface->label, $document->surfaces );
+		$label = DrawingName::unused( DrawingName::normalize( (string)$copy->label ) ?? 'Copy', $taken );
+		$copy->id = NewPageDrawing::surfaceId( $pageId, $revisionId, $label );
+		$copy->label = $label;
+		$document->surfaces[] = $copy;
+		return [ 'owner' => $owner, 'source' => $title, 'label' => $label, 'sourceRevision' => $sourceRevisionId,
+			'document' => JsonSnapshotCodec::encode( $document ) ];
+	}
+
+	/**
 	 * @param int $pageId
 	 * @param int $revisionId
 	 * @param int $start

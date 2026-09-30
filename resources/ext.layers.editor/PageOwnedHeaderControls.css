@@ -58,3 +58,78 @@
 	color: #202122;
 	font: inherit;
 }
+
+.layers-page-copy-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000001;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba( 0, 0, 0, 0.5 );
+}
+
+.layers-page-copy-dialog {
+	box-sizing: border-box;
+	width: min( 32rem, 92vw );
+	max-height: 80vh;
+	padding: 1rem;
+	overflow: auto;
+	border-radius: 2px;
+	background: #fff;
+	color: #202122;
+}
+
+.layers-page-copy-dialog h2 {
+	margin: 0 0 0.75rem;
+	font-size: 1.125em;
+}
+
+.layers-page-copy-search {
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 32px;
+	padding: 0.25rem 0.5rem;
+	border: 1px solid #72777d;
+	border-radius: 2px;
+	background: #fff;
+	color: #202122;
+	font: inherit;
+}
+
+.layers-page-copy-status {
+	margin: 0.5rem 0;
+	color: #54595d;
+}
+
+.layers-page-copy-unsaved {
+	margin: 0 0 0.5rem;
+	padding: 0.5rem;
+	border: 1px solid #edab00;
+	background: #fef6e7;
+}
+
+.layers-page-copy-results {
+	margin: 0 0 0.75rem;
+	padding: 0;
+	list-style: none;
+}
+
+.layers-page-copy-results a {
+	display: block;
+	padding: 0.5rem;
+	color: #36c;
+}
+
+.layers-page-copy-results a:hover,
+.layers-page-copy-results a:focus-visible {
+	background: #eaf3ff;
+}
+
+.layers-page-copy-dialog .layers-page-drawing-rename {
+	color: #202122;
+}
+
+.layers-page-drawing-copy {
+	font-size: 0.8125em;
+}

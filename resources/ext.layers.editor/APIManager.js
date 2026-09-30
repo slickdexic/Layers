@@ -356,6 +356,20 @@
 							} );
 							this.pageOwnedNameControl.mount( header, header.querySelector( '.layers-header-right' ) );
 						}
+						const ownPageId = this.editor.config.pageOwned.pageId;
+						if ( header && classes.PageOwnedCopyPicker && ownPageId ) {
+							this.pageOwnedCopyPicker = new classes.PageOwnedCopyPicker( {
+								search: ( text ) => this.api.get( {
+									action: 'layersdrawings', search: text, exclude: ownPageId, format: 'json', formatversion: 2
+								} ).then( ( data ) => data.layersdrawings.pages ),
+								copyUrl: ( page, drawing ) => mw.util.getUrl( 'Special:CopyLayersDrawing', {
+									pageid: ownPageId, sourcepage: page.pageid, sourcesurface: drawing.id, sourcerev: page.revid
+								} ),
+								isDirty: () => this.editor.hasUnsavedChanges(),
+								message: ( key, ...args ) => mw.msg( key, ...args )
+							} );
+							this.pageOwnedCopyPicker.mount( header, header.querySelector( '.layers-header-right' ) );
+						}
 						if ( header && classes.PageOwnedSummaryField ) {
 							this.pageOwnedSummaryField = new classes.PageOwnedSummaryField( ( key ) => mw.msg( key ) );
 							this.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
@@ -1949,6 +1963,9 @@
 		}
 		if ( this.pageOwnedNameControl ) {
 			this.pageOwnedNameControl.dispose();
+		}
+		if ( this.pageOwnedCopyPicker ) {
+			this.pageOwnedCopyPicker.dispose();
 		}
 		if ( this.pageOwnedSummaryField ) {
 			this.pageOwnedSummaryField.dispose();

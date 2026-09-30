@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- The editor lists other pages' drawings and copies one (September 30): "Copy from another page" in the page-owned editor searches pages by title (`action=layersdrawings`) and opens `Special:CopyLayersDrawing` for the chosen drawing, which becomes a new drawing of this page with its source in the revision summary.
 - Upgrade guide rehearsed (September 30): undoing the migration and migrating again needs a links refresh in between, and a refresh after the migration is recorded erases what the migration needs; the shared-set and adoption browser specs were repaired for the unmigrated state.
 - Upgrade guide (September 29): `docs/UPGRADING.md` takes a 1.5.x wiki through the updater, a links refresh, the migration's dry run, `--commit` and `--undo`, and lists every reason the dry run can give.
 - The legacy editors lead to page drawings after the migration (September 29): the File page lists its own drawings with view and edit links, `action=editlayers` opens the one it names, and the shared-slide pages send people to the slide's page. The "Edit layers" tab no longer appears twice, and the slide and export special pages have aliases.

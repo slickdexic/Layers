@@ -317,6 +317,7 @@
 				"PageOwnedRecoveryDialog.js",
 				"PageOwnedRevisionControl.js",
 				"PageOwnedNameControl.js",
+				"PageOwnedCopyPicker.js",
 				"PageOwnedSummaryField.js"
 			],
 			"styles": [ "PageOwnedRecoveryDialog.css", "PageOwnedHeaderControls.css" ],
@@ -349,7 +350,17 @@
 				"layers-page-drawing-rename-new",
 				"layers-page-drawing-renamed",
 				"layers-page-summary-label",
-				"layers-page-summary-placeholder"
+				"layers-page-summary-placeholder",
+				"layers-page-copy-from-page",
+				"layers-page-copy-title",
+				"layers-page-copy-search",
+				"layers-page-copy-searching",
+				"layers-page-copy-result",
+				"layers-page-copy-count",
+				"layers-page-copy-none",
+				"layers-page-copy-failed",
+				"layers-page-copy-unsaved",
+				"layers-page-copy-close"
 			]
 		},
 		"ext.layers.pageControls.styles": {
