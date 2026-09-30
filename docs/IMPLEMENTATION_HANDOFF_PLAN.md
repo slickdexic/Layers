@@ -1,27 +1,25 @@
 # Layers implementation handoff plan
 
-## J97 accepted; J98 ready — September 30, 2026
+## J98 accepted; J99 ready — September 30, 2026
 
-**J97 is accepted with lead corrections** (see the review ledger). The seven editor specs and `page-owned-workflow.spec.js` run on the page-owned editor, and the owner page's latest snapshot is its baseline (title at x 99). Earlier entries below are historical.
+**J98 is accepted with lead corrections** (see the review ledger). `page-owned-search-pdf-gallery.spec.js` proves search, a PDF page drawing and gallery images on the migrated test wiki. Earlier entries below are historical.
 
-### J98 — Search, PDF pages and galleries after the migration (ready)
+### J99 — Rehearse the upgrade guide on the test wiki (ready)
 
-**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words, draws on a PDF page, or shows a gallery image's own drawing.
+**Advances:** OPS-1 and HIST-8. The owner has approved changes to the test wiki, which holds nothing that cannot be lost.
 
-**Purpose:** prove in the browser what native tests only cover, on the page-owned drawings that replaced shared sets.
+**Purpose:** find out whether [the upgrade guide](UPGRADING.md) works when a person follows it, by undoing the test wiki's migration and doing it again from the guide alone.
 
-**Allowed changes:** a new spec `tests/e2e/page-owned-search-pdf-gallery.spec.js` (reuse `tests/e2e/helpers/migration.js` and the fixtures' login), this packet and the review ledger. No production code. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline by exact-base publication, in the main flow and in `finally`. Skip when `isWikiMigrated` is false.
+**Allowed changes:** `docs/UPGRADING.md` (fix what you find unclear or wrong), this packet and the review ledger. No production code and no spec changes. Run the commands inside the `mediawiki-145` container, as the guide's paths differ only by `docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145`. Do not write to any page by hand.
 
-1. **Search.** Publish a revision of the owner page whose drawing text holds a nonce word (letters only, so the search index tokenises it), wait for the job queue and poll `Special:Search` (`fulltext=1&ns0=1`) until the page is found. The result shows the drawing text as the snippet with `.searchmatch` around the word. After the baseline is restored, the word no longer finds the page. Say how long the index took.
-2. **PDF page.** On the owner page embed `[[File:Layers migration fixture B.pdf|page=2|layerset=Page two notes]]`. Follow "Create page drawing", draw a rectangle and save. The page paints it over the rendition of page 2 (not page 1), and `layersread` gives the surface a source for page 2. Then open an earlier revision of the owner page from its history: it does not show the drawing. Report anything the editor refuses on a PDF page.
-3. **Galleries.** With that drawing and one for `B010.jpg` named "Gallery notes" on the owner page, add to its text `<gallery>` lines: `File:B010.jpg|layerset=Gallery notes|Named`, `File:B010.jpg|Unnamed` (B010.jpg has one drawing, so both paint it), and a line for a file the page has no drawing of (a plain image). Check each image's canvas against a screenshot of the drawing's pixels, as J65 does, and that no caption shows `layerset=`. Then add `[[Category:Layers browser gallery]]` to the page, open the category page and check that its gallery shows plain images with no canvas.
-4. Run the spec twice in a row, serially. The second run must pass too.
+1. **Before.** Record: `meta=siteinfo` `layerspagehistorymigrated`; the count of edits tagged `layers-migration` (`list=recentchanges&rctag=layers-migration&rclimit=500`, or the `change_tag` table through the `sql` maintenance script); the row count of `layer_sets` (`sql` maintenance script); and the latest revision of `Layers_browser_acceptance`, which must not change.
+2. **Undo (guide step 6).** Run the dry run, save its output, then `--undo --commit`. Record every page listed as not undone and why. Confirm `layerspagehistorymigrated` is false, `layer_sets` has the same row count, and `DeleteMe001` and `File:ImageTest03.png` show shared sets again.
+3. **While undone.** Run `named-sets.spec.js`, `shown-set-search.spec.js`, `page-owned-adoption.spec.js`, `page-owned-file-adoption.spec.js` and `page-owned-journey-acceptance.spec.js` once each. They skip on a migrated wiki, so this is their first real run since the migration; report each result and do not change a spec. Any failure is a finding: say whether it comes from the wiki, the spec or the product.
+4. **Migrate again from the guide (steps 3 to 5).** Follow it literally: refresh links and run the jobs, dry run, then `--commit`. Compare the dry run with the first migration (16 edits and 4 new `Slide:` pages) and explain every difference. Run the dry run again: it must find nothing to do.
+5. **After.** Run `bare-names-after-migration.spec.js`, `page-owned-search-pdf-gallery.spec.js` and `accessibility.spec.js`; all must pass. Check that `layerspagehistorymigrated` is true, `layer_sets` still has its row count, and the owner page's latest revision is the one from step 1 or a later restore to the same snapshot.
+6. Record each place where the guide was unclear, wrong, or missing a step, with the fix you made in `docs/UPGRADING.md`.
 
 Record findings, then return for lead review.
-
-### J99 — Rehearse the upgrade guide on the test wiki (queued)
-
-**Advances:** OPS-1 and HIST-8. Follow [the upgrade guide](UPGRADING.md) from step 3 on the test wiki: undo the whole migration, confirm that bare names show shared sets again, then refresh links, dry-run, commit and compare the result with the first migration (16 edits and 4 slide pages). Record every place where the guide is unclear or wrong. It runs after J98, because undoing the migration changes what every other spec sees. The lead writes this packet after reviewing J98.
 
 ## Test wiki migrated; J96 accepted — September 29, 2026
 

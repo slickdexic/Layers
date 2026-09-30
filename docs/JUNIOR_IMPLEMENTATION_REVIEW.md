@@ -1,4 +1,63 @@
-# Junior implementation review — J01–J97
+# Junior implementation review — J01–J98
+
+## J98 accepted with lead corrections — September 30, 2026
+
+Advances: **TYPES-2**, **TYPES-4** and **HIST-8**. No product code changed.
+
+The lead read the spec, probed the page, strengthened the checks below and ran the spec twice serially on the migrated test wiki (2.7 and 2.4 minutes, both passed). The owner page's latest snapshot is its baseline: text unchanged, title at x 99, y 60, visible.
+
+- **Result:** after the migration the page's own drawing text is found by `Special:Search` about two seconds after the save and is gone about two seconds after the restore, with the drawing text as the snippet. A page-owned drawing on PDF page 2 paints over page 2, and `layersread` gives it a page 2 source and rendition. Two `<gallery>` lines of one file paint that file's drawing and a line of another file stays a plain image. The captions do not show `layerset=`.
+- **Correction:** the pixel check passed for any canvas. The lead probed `DeleteMe001`: a bound canvas holds the photograph as well (no transparent pixel, 800,000 dark ones), so "the canvas has non-white pixels" proved only that a canvas was mounted. The check now samples the rectangle's own stroke along its top edge and against a control line above it. The gallery drawing gets a magenta stroke, because the photograph is dark enough for a black stroke to match a control line (75%). Both gallery images and the PDF page pass.
+- **Correction:** the "earlier revision" check opened the revision before the embed existed, where nothing could show a canvas. It opens the revision that has the embed but not yet the drawing, and requires the embed to be there.
+- **Correction:** the packet's category-page check was hollow. The category holds the owner page, and its gallery shows files, so the page had no gallery at all. The spec keeps it and adds `Special:NewFiles`, a gallery rendered outside any page parse: its `B010.jpg` thumbnail must be a plain image with no canvas and no annotation attributes. That is the code path the native test `testImagesOutsideAParseShowNoSharedSetAfterTheMigration` covers.
+- **Note:** the report printed the baseline with `"backgroundVisible":""` and `"visible":""`. That is how a request without `formatversion=2` shows a boolean; the stored snapshot has `true`, as the lead's `formatversion=2` read shows.
+- **Note:** the spec sets up its embeds with `layerspublish` and `maintext`, as the other acceptance specs do, on the dedicated owner page only.
+- **Finding:** the page-owned editor has no page navigation for a PDF drawing, by design (a drawing belongs to one page). Editors reach another page of the same PDF only through another embed and another drawing.
+
+## J98 implemented awaiting lead review: search, PDF pages and galleries after migration — September 30, 2026
+
+Advances: **TYPES-2** (PDF page drawings), **TYPES-4** (Galleries), and **HIST-8** (Moving existing drawings into page history).
+
+Junior completed J98:
+- **`tests/e2e/page-owned-search-pdf-gallery.spec.js`**:
+  - Implemented end-to-end browser acceptance suite verifying post-migration page-owned drawings across Search, PDF page 2 embeddings, and `<gallery>` structures.
+  - **Part 1 (Search):**
+    - Letters-only nonce word (`layersacceptance...`) verified to yield 0 hits initially on `Special:Search` (`fulltext=1&ns0=1`).
+    - Published revision on `Layers_browser_acceptance` with drawing text containing the nonce word.
+    - `Special:Search` indexed the page-owned drawing within 2.1s (Run 1) and 2.2s (Run 2).
+    - Result snippet displayed drawing text with `.searchmatch` highlighting the nonce word.
+    - Verified that after restoring the baseline, `Special:Search` cleared the hit within 2.2s.
+  - **Part 2 (PDF Page Drawings):**
+    - Embedded `[[File:Layers migration fixture B.pdf|page=2|layerset=Page two notes]]` on `Layers_browser_acceptance`.
+    - Followed "Create page drawing: Page two notes" to `Special:EditLayersPage`, drew rectangle, and saved via `.save-button`.
+    - Page view paints canvas over page 2 rendition (container link `href` contains `page=2` and not `page=1`; canvas context has drawn non-white pixels).
+    - API `layersread` confirmed surface properties: `kind: 'pdf'`, `source.fileTitle: 'File:Layers_migration_fixture_B.pdf'`, `source.page: 2`, and `sourceRenditions` URL containing `page2-`.
+    - Historical view of owner page at earlier revision (`&oldid=...`) verified to display 0 canvases.
+    - **Editor Findings on PDF Pages:** The page-owned editor exposes no multi-page navigation controls (`.page-nav-group` count 0), strictly pinning the editing session to page 2 of the PDF source.
+  - **Part 3 (Galleries & Category):**
+    - Created image drawing "Gallery notes" on `File:B010.jpg`.
+    - Published wikitext containing:
+      ```wikitext
+      <gallery>
+      File:B010.jpg|layerset=Gallery notes|Named
+      File:B010.jpg|Unnamed
+      File:B020.jpg|No drawing
+      </gallery>
+      [[Category:Layers browser gallery]]
+      ```
+    - Verified both B010.jpg gallery items paint the "Gallery notes" drawing (canvases mounted with drawn pixels; pixel difference between them is 0.00% / $\le 5\%$).
+    - Verified B020.jpg renders as a plain `<img>` with 0 canvases mounted.
+    - Verified captions display "Named", "Unnamed", and "No drawing", strictly omitting `layerset=`.
+    - Verified category page `Category:Layers browser gallery` displays plain thumbnails with 0 canvases mounted and lists the owner page.
+  - **Cleanup & Baseline Integrity:**
+    - CAS exact-base publication restores baseline in main flow and in `finally`.
+    - Verified snapshot at `revid: 2325` has title at exact coordinates `x: 99, y: 60`, visible, with zero coordinate drift.
+  - **Serial Double-Run:**
+    - Run 1 passed (1 passed, 2.3m).
+    - Run 2 passed (1 passed, 2.3m).
+  - **Rules Compliance:**
+    - Zero production code changes (`src/` and `resources/` untouched).
+    - Only allowed test files and documentation modified.
 
 ## J97 accepted with lead corrections — September 30, 2026
 
