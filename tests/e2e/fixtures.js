@@ -271,6 +271,17 @@ class LayersEditorPage {
 	}
 
 	/**
+	 * Open the shared-set editor on a File page. It exists only until the migration to page history.
+	 * @param {string} filename
+	 */
+	async openLegacyEditor( filename ) {
+		await this.page.goto( `/index.php?title=File:${ filename }&action=editlayers` );
+		await this.page.waitForSelector( this.selectors.canvas, { timeout: 10000 } );
+		await this.page.waitForSelector( this.selectors.saveButton, { timeout: 5000 } );
+		await this.page.waitForTimeout( 500 );
+	}
+
+	/**
 	 * Login to MediaWiki using acceptance config credentials (or env vars).
 	 */
 	async login() {
@@ -407,7 +418,7 @@ class LayersEditorPage {
 		const response = await responsePromise;
 		expect( response.ok() ).toBe( true );
 		const data = await response.json();
-		expect( data.layerspublish?.result ).toBe( 'Success' );
+		expect( data.layerspublish?.result ?? ( data.layerssave?.success === 1 ? 'Success' : undefined ) ).toBe( 'Success' );
 		await this.page.waitForTimeout( 500 );
 		return response;
 	}

@@ -1,25 +1,8 @@
 # Layers implementation handoff plan
 
-## J98 accepted; J99 ready — September 30, 2026
+## J99 accepted with lead corrections — September 30, 2026
 
-**J98 is accepted with lead corrections** (see the review ledger). `page-owned-search-pdf-gallery.spec.js` proves search, a PDF page drawing and gallery images on the migrated test wiki. Earlier entries below are historical.
-
-### J99 — Rehearse the upgrade guide on the test wiki (ready)
-
-**Advances:** OPS-1 and HIST-8. The owner has approved changes to the test wiki, which holds nothing that cannot be lost.
-
-**Purpose:** find out whether [the upgrade guide](UPGRADING.md) works when a person follows it, by undoing the test wiki's migration and doing it again from the guide alone.
-
-**Allowed changes:** `docs/UPGRADING.md` (fix what you find unclear or wrong), this packet and the review ledger. No production code and no spec changes. Run the commands inside the `mediawiki-145` container, as the guide's paths differ only by `docker exec -e MW_INSTALL_PATH=/var/www/html mediawiki-145`. Do not write to any page by hand.
-
-1. **Before.** Record: `meta=siteinfo` `layerspagehistorymigrated`; the count of edits tagged `layers-migration` (`list=recentchanges&rctag=layers-migration&rclimit=500`, or the `change_tag` table through the `sql` maintenance script); the row count of `layer_sets` (`sql` maintenance script); and the latest revision of `Layers_browser_acceptance`, which must not change.
-2. **Undo (guide step 6).** Run the dry run, save its output, then `--undo --commit`. Record every page listed as not undone and why. Confirm `layerspagehistorymigrated` is false, `layer_sets` has the same row count, and `DeleteMe001` and `File:ImageTest03.png` show shared sets again.
-3. **While undone.** Run `named-sets.spec.js`, `shown-set-search.spec.js`, `page-owned-adoption.spec.js`, `page-owned-file-adoption.spec.js` and `page-owned-journey-acceptance.spec.js` once each. They skip on a migrated wiki, so this is their first real run since the migration; report each result and do not change a spec. Any failure is a finding: say whether it comes from the wiki, the spec or the product.
-4. **Migrate again from the guide (steps 3 to 5).** Follow it literally: refresh links and run the jobs, dry run, then `--commit`. Compare the dry run with the first migration (16 edits and 4 new `Slide:` pages) and explain every difference. Run the dry run again: it must find nothing to do.
-5. **After.** Run `bare-names-after-migration.spec.js`, `page-owned-search-pdf-gallery.spec.js` and `accessibility.spec.js`; all must pass. Check that `layerspagehistorymigrated` is true, `layer_sets` still has its row count, and the owner page's latest revision is the one from step 1 or a later restore to the same snapshot.
-6. Record each place where the guide was unclear, wrong, or missing a step, with the fix you made in `docs/UPGRADING.md`.
-
-Record findings, then return for lead review.
+**J99 is accepted with lead corrections** (see the review ledger). The upgrade guide was followed on the test wiki and amended. No junior packet is ready: the next work is the lead's (legacy-editor retirement follow-ups, the design pass D4, and the performance pass). Earlier entries below are historical.
 
 ## Test wiki migrated; J96 accepted — September 29, 2026
 

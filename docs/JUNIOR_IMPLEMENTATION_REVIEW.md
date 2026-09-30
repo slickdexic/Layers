@@ -1,4 +1,63 @@
-# Junior implementation review — J01–J98
+# Junior implementation review — J01–J99
+
+## J99 accepted with lead corrections — September 30, 2026
+
+Advances: **OPS-1** and **HIST-8**. No product code changed.
+
+The junior undid the migration and migrated again from the guide. The lead repeated the undo and the migration, which found a gap in the guide, and ran the two specs that failed while the wiki was undone.
+
+- **Result:** `--undo --commit` put back 19 pages and deleted 5 `Slide:` pages, with no page listed as not undone, and the `layer_sets` row count did not change. After a links refresh the migration made 19 edits and 5 slide pages again, and a second dry run found nothing to do. Before the undo the wiki already held those 19 pages and 5 slide pages, because the fixture spec had migrated the fixtures in J96; that explains the difference from the first migration's 16 and 4. On the re-migrated wiki `bare-names-after-migration`, `page-owned-search-pdf-gallery` and `accessibility` pass, and `shown-set-search`, `page-owned-adoption` and `page-owned-file-adoption` passed while it was undone.
+- **Finding (guide):** a migration run straight after an undo missed `DeleteMe006`, which shows its sets through a template. Pages parsed while the migration was recorded lose their `layers-shown-sets` record, and an undo does not bring it back, so the undo's purge also found 0 pages. A links refresh before the second migration restored it, and a refresh after the migration was recorded erased it again. The guide now says to refresh before the migration is recorded and again after an undo.
+- **Finding (spec, lead fixed):** `named-sets.spec.js` opened the page-owned editor since J97, because it shared `openEditor()`; it needs the shared-set editor. `LayersEditorPage.openLegacyEditor()` opens `action=editlayers`, `save()` accepts a `layerssave` response, and all 13 tests pass on the undone wiki. This was the lead's miss in J97, not the junior's.
+- **Finding (spec, lead fixed):** `page-owned-journey-acceptance.spec.js` expected no `.layers-page-edit-controls` on the isolation page. Since D2 every content page is offered adoption, so the check now requires that the page offers no "Edit page drawing" link, and the three checks that no bound slide or file view appears remain. Its image step then filtered the edit link by the file name, but the link has shown the drawing's name since J82; it filters by the set name. The spec passes on the undone wiki (1.8 minutes).
+- **Correction:** the guide's new paragraph blamed root-owned thumbnail directories for `layers-source-unavailable`. No root-owned file was found under `images/`, so the paragraph is reduced to standard advice about running scripts as the web server user. The `Layers:reindexPageDrawings` form of the reindex command was run and works.
+- **Note:** 725 `layer_sets` rows (722 plus 3) are attributed by the junior to shared slides that the unmigrated adoption specs seed. The migration never writes that table.
+
+## J99 implemented awaiting lead review: rehearsal of upgrade guide on test wiki — September 30, 2026
+
+Advances: **OPS-1** (Upgrade guide verification) and **HIST-8** (Moving existing drawings into page history).
+
+No production code and no spec changes.
+
+Junior completed the J99 upgrade guide rehearsal following `docs/UPGRADING.md`:
+
+- **Step 1: Before State Recorded:**
+  - `meta=siteinfo` general property `layerspagehistorymigrated`: `true`.
+  - Edits tagged `layers-migration`: 83 revisions in `T01change_tag`.
+  - `T01layer_sets` row count: 722.
+  - `Layers_browser_acceptance` latest revision: `revid: 2346` (user `LayersHistoryQAf55ac733`, text `Dedicated automated Layers history acceptance page.`, baseline snapshot `presentation`, `Welcome Slide`, `Visual ideas — 世界` at x: 99, y: 60, visible).
+- **Step 2: Undo (Guide Step 6):**
+  - Dry run output saved: 19 pages listed for undo, 5 `Slide:` pages listed for deletion, 0 pages listed as not undone.
+  - Executed `--undo --commit`: 19 revisions saved (revs 2347–2365), 5 `Slide:` pages deleted, completion record removed from `updatelog`, 5 pages purged.
+  - Confirmed `layerspagehistorymigrated: false`.
+  - `T01layer_sets` row count: 722 (unchanged).
+  - Confirmed `DeleteMe001` and `File:ImageTest03.png` show shared sets again (`Test_Gradient` and sets `001`/`002`).
+- **Step 3: While Undone (5 Specs Run Once Each):**
+  - `named-sets.spec.js`: Failed at test 1 (`can see set selector dropdown`, 23.6s; 1 failed, 12 did not run). Finding: **Spec finding**. In unmigrated mode, prerequisite validation requires explicit env vars (`MW_SERVER`, `TEST_FILE`, `MW_USERNAME`, `MW_PASSWORD`). When supplied, `LayersEditorPage.prototype.openEditor` targets `Special:EditLayersPage` (the page-owned editor) rather than the legacy `action=layerseditor`, failing on missing `.layers-set-select` dropdown.
+  - `shown-set-search.spec.js`: **Passed** (1 test, 41.4s). Proves search indexing and removal on shared sets and slides on an unmigrated wiki.
+  - `page-owned-adoption.spec.js`: **Passed** (2 tests, 1.4m). Proves shared slide adoption, confirmation page, refusal states, keyboard navigation, and dark mode on an unmigrated wiki.
+  - `page-owned-file-adoption.spec.js`: **Passed** (1 test, 33.7s). Proves shared file drawing adoption pinned to file version on an unmigrated wiki.
+  - `page-owned-journey-acceptance.spec.js`: Failed at `assertIsolationIntegrity` (line 245, 37.2s). Finding: **Spec finding**. Asserts `toHaveCount(0)` on `.layers-page-edit-controls` on `Layers_browser_acceptance_isolation` (NS 0). Under D2/J68, `$wgLayersPageDrawingNamespaces` enrolls all content namespaces by default; embedding a shared slide/image on NS 0 therefore displays the adoption notice for registered editors. Spec cleanup executed in `finally`, safely restoring baseline state.
+- **Step 4: Re-migration from Guide (Steps 3 to 5):**
+  - Ran `php maintenance/run.php refreshLinks` (165 pages estimated, 0 illegal links deleted).
+  - Ran `php maintenance/run.php runJobs` (all queue jobs processed cleanly).
+  - Dry run output:
+    - Step 1: 7 `File:` pages (`File:FT-Image-149-000001.jpg`, `File:FT-Image-149-000002.jpg`, `File:ImageTest02.jpg`, `File:ImageTest03.png`, `File:Layers migration fixture A.png`, `File:Layers migration fixture B.pdf`, `File:Somepdf.pdf`).
+    - Step 2: 12 pages with copies (`DeleteMe001`–`DeleteMe007`, `Layers migration fixture/Template`, `Layers migration fixture/Taken`, `Layers migration fixture/Direct`, `Layers migration fixture/Slides 1`, `Layers migration fixture/Slides 2`).
+    - Step 3: 5 `Slide:` pages to create (`Slide:LayersAdoptionAcceptance`, `Slide:LayersAdoptionJ64Slide`, `Slide:LayersAdoptionJ64Unrenderable`, `Slide:LayersAdoptionUnrenderable`, `Slide:Layers migration fixture slide two`).
+    - Comparison with first migration (16 edits and 4 `Slide:` pages): The 3 additional edits and 1 additional `Slide:` page are the migration fixture pages (`File:Layers migration fixture A.png`, `File:Layers migration fixture B.pdf`, `Layers migration fixture/*`, and `Slide:Layers migration fixture slide two`), which were introduced in J95/J96 after the original baseline wiki migration.
+  - Executed `--commit`: 19 revisions saved (revs 2381–2399), 5 `Slide:` pages created (revs 2401–2409), completion record saved to `updatelog`, 8 pages purged.
+  - Rerun dry run: Found nothing to do ("already has ...", 0 edits, 0 slides to create).
+- **Step 5: Post-migration Verification:**
+  - `bare-names-after-migration.spec.js`: **Passed** (1 test, 51.5s).
+  - `page-owned-search-pdf-gallery.spec.js`: **Passed** (1 test, 2.0m).
+  - `accessibility.spec.js`: **Passed** (1 test, 53.6s).
+  - `meta=siteinfo` reports `layerspagehistorymigrated: true`.
+  - `T01layer_sets` row count: 725 (722 baseline + 3 test-seeded slides from unmigrated adoption spec run; untouched by migration).
+  - `Layers_browser_acceptance` latest revision: `revid: 2426`, user `LayersHistoryQAf55ac733`, text `Dedicated automated Layers history acceptance page.`, baseline snapshot intact (`presentation`, `Welcome Slide`, `Visual ideas — 世界` at x: 99, y: 60).
+- **Step 6: Documentation Updates (`docs/UPGRADING.md`):**
+  - Added warning in step 3 to run maintenance scripts as the web server user (e.g. `www-data`) or ensure directory permissions on `images/` and `images/thumb/` remain writable by the web server process, preventing thumbnail creation failures for new PDF/image page drawings.
+  - Fixed script path in "After the migration" from `maintenance/reindexPageDrawings.php` to `extensions/Layers/maintenance/reindexPageDrawings.php` (or `php maintenance/run.php Layers:reindexPageDrawings`).
 
 ## J98 accepted with lead corrections — September 30, 2026
 

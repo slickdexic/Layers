@@ -79,7 +79,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const page = await context.newPage();
 			const ep = new LayersEditorPage( page );
 			await ep.login();
-			await ep.openEditor( process.env.TEST_FILE );
+			await ep.openLegacyEditor( process.env.TEST_FILE );
 			initialSetNames = await page.evaluate( async ( filename ) => {
 				const result = await new mw.Api().get( { action: 'layersinfo', filename } );
 				return result.layersinfo.named_sets.map( ( entry ) => entry.name );
@@ -100,7 +100,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 		try {
 			const ep = new LayersEditorPage( page );
 			await ep.login();
-			await ep.openEditor( process.env.TEST_FILE );
+			await ep.openLegacyEditor( process.env.TEST_FILE );
 
 			const cleanupResult = await cleanupTestSets(
 				page,
@@ -156,7 +156,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 	test.describe( 'Set Selection & Switching', () => {
 		test( 'can see set selector dropdown', async ( { page } ) => {
 			const testFile = process.env.TEST_FILE;
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const setSelector = page.locator( '.layers-set-select' );
 			await expect( setSelector ).toBeVisible();
@@ -164,7 +164,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 		test( 'a set is selected initially', async ( { page } ) => {
 			const testFile = process.env.TEST_FILE;
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const setSelector = page.locator( '.layers-set-select' );
 			await expect( setSelector ).toBeVisible();
@@ -176,7 +176,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const newSetName = `${ RUN_PREFIX }_create`;
 			createdSetNames.add( newSetName );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -203,7 +203,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			createdSetNames.add( setA );
 			createdSetNames.add( setB );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -256,7 +256,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const setCancel = `${ RUN_PREFIX }_sw_c`;
 			createdSetNames.add( setCancel );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -302,7 +302,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const activeSet = `${ RUN_PREFIX }_sw_fail`;
 			createdSetNames.add( activeSet );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -356,7 +356,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const uniqueSetName = `${ RUN_PREFIX }_persist`;
 			createdSetNames.add( uniqueSetName );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -382,7 +382,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 			// Reload page and re-open editor
 			await page.reload();
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			// Select the same set again
 			const selectorAfter = page.locator( '.layers-set-select' );
@@ -400,7 +400,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			createdSetNames.add( set1 );
 			createdSetNames.add( set2 );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -441,7 +441,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 	test.describe( 'Revision History', () => {
 		test( 'can view revision history for a set', async ( { page } ) => {
 			const testFile = process.env.TEST_FILE;
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			// Revision dropdown and load button are unconditional controls in header
 			const revSelector = page.locator( '.layers-revision-select' );
@@ -456,7 +456,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const testSetName = `${ RUN_PREFIX }_rev`;
 			createdSetNames.add( testSetName );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -491,7 +491,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const toDeleteName = `${ RUN_PREFIX }_to_del`;
 			createdSetNames.add( toDeleteName );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();
@@ -533,7 +533,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 			const newName = `${ RUN_PREFIX }_new_ren`;
 			createdSetNames.add( originalName );
 
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			// Ensure set selector is present; fail explicitly if absent
 			const selector = page.locator( '.layers-set-select' );
@@ -581,7 +581,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 			// Verify persistence after reload: reopen editor and check database-backed sets
 			await page.reload();
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const reloadedSelector = page.locator( '.layers-set-select' );
 			await expect( reloadedSelector ).toBeVisible();
@@ -592,7 +592,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 		test( 'maximum-set-cap behavior over repeated runs', async ( { page } ) => {
 			const testFile = process.env.TEST_FILE;
-			await editorPage.openEditor( testFile );
+			await editorPage.openLegacyEditor( testFile );
 
 			const selector = page.locator( '.layers-set-select' );
 			await expect( selector ).toBeVisible();

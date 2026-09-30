@@ -34,7 +34,11 @@ php maintenance/run.php refreshLinks
 php maintenance/run.php runJobs
 ```
 
+Run maintenance scripts as the web server user (for example `sudo -u www-data php maintenance/run.php ...`), or ensure permissions on the upload and thumbnail directories (`images/` and `images/thumb/`) remain writable by the web server process. A directory that a root-run script created can stop the web server from writing thumbnails there.
+
 Pages that show sets directly in their text are found from the text itself.
+
+Do this while the migration is not recorded as complete. A page parsed after that has no record of the shared sets it showed, because they are no longer shown, so a links refresh then erases what step 4 needs.
 
 ## 4. Dry run
 
@@ -83,11 +87,11 @@ php extensions/Layers/maintenance/migrateLayersToPageHistory.php --undo
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php --undo --commit
 ```
 
-The first command lists, the second makes, one bot edit per page that puts the page back as it was before the migration's edits, tagged `layers-migration-undo`. Pages the migration created are deleted. A page someone has edited since is listed as `edited-since-migration` and left alone; restore it from its history if needed. An unscoped undo removes the completion record and purges the same pages, so bare names mean shared sets again and they can be edited. With `--file`, `--page` or `--slide`, undo works on that one page. A page that was put back can be migrated again.
+The first command lists, the second makes, one bot edit per page that puts the page back as it was before the migration's edits, tagged `layers-migration-undo`. Pages the migration created are deleted. A page someone has edited since is listed as `edited-since-migration` and left alone; restore it from its history if needed. An unscoped undo removes the completion record and purges the same pages, so bare names mean shared sets again and they can be edited. With `--file`, `--page` or `--slide`, undo works on that one page. A page that was put back can be migrated again, but first run the links refresh of step 3 again: pages parsed while the migration was recorded have lost their record of the sets they showed through templates and galleries, and the undo's purge finds only pages that still have one.
 
 ## After the migration
 
-- Search indexes page drawings with their page. `maintenance/reindexPageDrawings.php` reindexes existing pages if the search index was built before this version of Layers.
+- Search indexes page drawings with their page. `extensions/Layers/maintenance/reindexPageDrawings.php` (or `php maintenance/run.php Layers:reindexPageDrawings`) reindexes existing pages if the search index was built before this version of Layers.
 - Category pages and special pages show gallery images without drawings, because no page owns them there.
 - To show one page's drawing on another page, embed it there as `layerset=<page ID>:<name>` (or `{{#Slide:<page ID>:<name>}}`) and follow the "Copy" link: the copy becomes a drawing of that page. The File page's section gives the page ID.
 - The legacy tables stay. They are only read, for old revisions and for undo.

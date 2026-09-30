@@ -242,7 +242,8 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 		// Helper to verify isolation page integrity
 		const assertIsolationIntegrity = async ( stageDesc ) => {
 			await page.goto( `${ base }/index.php?title=${ isolationOwner }` );
-			await expect( page.locator( '.layers-page-edit-controls' ) ).toHaveCount( 0 );
+			// Pages in the drawing namespaces are offered adoption; they must never edit the owner's drawings
+			await expect( page.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing' } ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-bound-slide' ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-bound-file-view' ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-slide-container' ) ).toHaveCount( 1 );
@@ -410,7 +411,7 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 
 		// Open image from page edit link and edit
 		await page.goto( `${ base }/index.php?title=${ owner }` );
-		const imgEditLink = page.locator( '.layers-page-edit-link' ).filter( { hasText: imageFile.name } );
+		const imgEditLink = page.locator( '.layers-page-edit-link' ).filter( { hasText: imgSetName } );
 		await expect( imgEditLink ).toHaveCount( 1 );
 		await Promise.all( [ page.waitForNavigation(), imgEditLink.click() ] );
 		await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 &&
