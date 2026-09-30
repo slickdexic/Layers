@@ -11,10 +11,12 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
 // Skip tests if no MediaWiki server configured
-const describeGroups = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeGroups = hasServer ? test.describe : test.describe.skip;
 
 describeGroups( 'Layer Groups', () => {
 	let editorPage;
@@ -26,8 +28,7 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Group Creation', () => {
 		test.beforeEach( async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 		} );
 
 		test( 'can create an empty folder', async ( { page } ) => {
@@ -49,7 +50,7 @@ describeGroups( 'Layer Groups', () => {
 
 				// Should have a group/folder in the list
 				const folderItem = await page.$(
-					'.layer-item[data-type="group"], .group-layer, .folder-item'
+					'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 				);
 				expect( folderItem ).not.toBeNull();
 			}
@@ -59,6 +60,7 @@ describeGroups( 'Layer Groups', () => {
 			// Create two layers first
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 150, 150 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 200, 50, 300, 150 );
 
 			const initialCount = await editorPage.getLayerCount();
@@ -74,7 +76,7 @@ describeGroups( 'Layer Groups', () => {
 
 			// Should now have a group layer
 			const groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			expect( groupItem ).not.toBeNull();
 		} );
@@ -105,8 +107,7 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Group Expansion', () => {
 		test.beforeEach( async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create a group with layers
 			await editorPage.selectTool( 'rectangle' );
@@ -162,36 +163,39 @@ describeGroups( 'Layer Groups', () => {
 		} );
 
 		test( 'group expansion state persists after save', async ( { page } ) => {
-			// Collapse the group
-			const expandToggle = await page.$(
-				'.group-expand-toggle, .folder-toggle, [data-action="toggle-expand"]'
-			);
+			const initialSnapshot = await editorPage.readSnapshot();
+			try {
+				// Collapse the group
+				const expandToggle = await page.$(
+					'.group-expand-toggle, .folder-toggle, [data-action="toggle-expand"]'
+				);
 
-			if ( expandToggle ) {
-				await expandToggle.click();
-				await page.waitForTimeout( 300 );
+				if ( expandToggle ) {
+					await expandToggle.click();
+					await page.waitForTimeout( 300 );
 
-				const countCollapsed = await editorPage.getLayerCount();
+					const countCollapsed = await editorPage.getLayerCount();
 
-				// Save
-				await editorPage.save();
-				await page.waitForTimeout( 1000 );
+					// Save
+					await editorPage.save();
+					await page.waitForTimeout( 1000 );
 
-				// Reload
-				const testFile = process.env.TEST_FILE || 'Test.png';
-				await editorPage.openEditor( testFile );
+					// Reload
+					await editorPage.openEditor();
 
-				// Group should still be collapsed
-				const countAfterReload = await editorPage.getLayerCount();
-				expect( countAfterReload ).toBe( countCollapsed );
+					// Group should still be collapsed
+					const countAfterReload = await editorPage.getLayerCount();
+					expect( countAfterReload ).toBe( countCollapsed );
+				}
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot );
 			}
 		} );
 	} );
 
 	describeGroups( 'Group Visibility', () => {
 		test( 'toggling group visibility affects children', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create layers and group them
 			await editorPage.selectTool( 'rectangle' );
@@ -203,7 +207,7 @@ describeGroups( 'Layer Groups', () => {
 
 			// Find the group's visibility toggle
 			const groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 
 			if ( groupItem ) {
@@ -231,12 +235,12 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Ungroup', () => {
 		test( 'can ungroup layers (Ctrl+Shift+G)', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create and group layers
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 100, 100 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 150, 50, 200, 100 );
 			await page.keyboard.press( 'Control+a' );
 			await page.waitForTimeout( 200 );
@@ -245,12 +249,17 @@ describeGroups( 'Layer Groups', () => {
 
 			// Verify group exists
 			let groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			expect( groupItem ).not.toBeNull();
 
-			// Select the group
-			await groupItem.click();
+			// Select the group via grab area (avoids triggering rename mode)
+			const grabArea = await groupItem.$( '.layer-grab-area' );
+			if ( grabArea ) {
+				await grabArea.click();
+			} else {
+				await groupItem.click( { position: { x: 5, y: 5 } } );
+			}
 			await page.waitForTimeout( 200 );
 
 			// Ungroup with Ctrl+Shift+G
@@ -259,7 +268,7 @@ describeGroups( 'Layer Groups', () => {
 
 			// Group should no longer exist
 			groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			expect( groupItem ).toBeNull();
 
@@ -271,8 +280,7 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Drag and Drop', () => {
 		test( 'can drag layer into a group', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create a standalone layer
 			await editorPage.selectTool( 'rectangle' );
@@ -288,9 +296,9 @@ describeGroups( 'Layer Groups', () => {
 			}
 
 			// Get the layer item and the folder item
-			const layerItems = await page.$$( '.layer-item:not([data-type="group"])' );
+			const layerItems = await page.$$( '.layer-item:not([data-type="group"]):not(.layer-item-group)' );
 			const folderItem = await page.$(
-				'.layer-item[data-type="group"], .folder-item'
+				'.layer-item[data-type="group"], .folder-item, .layer-item-group'
 			);
 
 			if ( layerItems.length > 0 && folderItem ) {
@@ -325,12 +333,12 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Group Selection', () => {
 		test( 'clicking group selects all child layers', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create layers and group them
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 100, 100 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 150, 50, 200, 100 );
 			await page.keyboard.press( 'Control+a' );
 			await page.waitForTimeout( 200 );
@@ -338,12 +346,12 @@ describeGroups( 'Layer Groups', () => {
 			await page.waitForTimeout( 500 );
 
 			// Deselect all
-			await page.keyboard.press( 'Escape' );
+			await editorPage.clickCanvas( 10, 10 );
 			await page.waitForTimeout( 200 );
 
 			// Click on the group in the layer panel
 			const groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			if ( groupItem ) {
 				await groupItem.click();
@@ -361,8 +369,7 @@ describeGroups( 'Layer Groups', () => {
 
 	describeGroups( 'Group Deletion', () => {
 		test( 'deleting group shows options dialog', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create layers and group them
 			await editorPage.selectTool( 'rectangle' );
@@ -374,7 +381,7 @@ describeGroups( 'Layer Groups', () => {
 
 			// Select the group
 			const groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			if ( groupItem ) {
 				await groupItem.click();
@@ -407,8 +414,7 @@ describeGroups( 'Layer Groups', () => {
 		} );
 
 		test( 'can delete folder only, keeping children', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 
 			// Create layers and group them
 			await editorPage.selectTool( 'rectangle' );
@@ -424,7 +430,7 @@ describeGroups( 'Layer Groups', () => {
 
 			// Select and delete the group
 			const groupItem = await page.$(
-				'.layer-item[data-type="group"], .group-layer, .folder-item'
+				'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 			);
 			if ( groupItem ) {
 				await groupItem.click();
@@ -449,7 +455,7 @@ describeGroups( 'Layer Groups', () => {
 
 					// No more groups
 					const groupAfter = await page.$(
-						'.layer-item[data-type="group"], .group-layer, .folder-item'
+						'.layer-item[data-type="group"], .group-layer, .folder-item, .layer-item-group'
 					);
 					expect( groupAfter ).toBeNull();
 				}

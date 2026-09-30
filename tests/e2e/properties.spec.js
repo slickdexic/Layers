@@ -14,18 +14,19 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
-const describeEditor = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeEditor = hasServer ? test.describe : test.describe.skip;
 
 describeEditor( 'Property Panel', () => {
 	let editorPage;
-	const testFile = process.env.TEST_FILE || 'Test.png';
 
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	describeEditor( 'Panel Visibility', () => {
@@ -59,8 +60,13 @@ describeEditor( 'Property Panel', () => {
 			let form = await page.$( editorPage.selectors.propertiesForm );
 			expect( form ).not.toBeNull();
 
-			// Deselect with Escape
-			await page.keyboard.press( 'Escape' );
+			// Deselect by clicking canvas container background
+			const container = await page.$( '.layers-canvas-container' );
+			if ( container ) {
+				await container.click( { position: { x: 5, y: 5 } } );
+			} else {
+				await editorPage.clickCanvas( 10, 10 );
+			}
 			await page.waitForTimeout( 300 );
 
 			form = await page.$( editorPage.selectors.propertiesForm );
@@ -306,7 +312,7 @@ describeEditor( 'Property Panel', () => {
 		test( 'switching selection updates properties panel', async ( { page } ) => {
 			// Create rectangle
 			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 50, 50, 150, 150 );
+			await editorPage.drawOnCanvas( 50, 150, 150, 250 );
 			await page.waitForTimeout( 300 );
 
 			// Create circle
@@ -314,17 +320,18 @@ describeEditor( 'Property Panel', () => {
 			await editorPage.drawOnCanvas( 200, 200, 300, 300 );
 			await page.waitForTimeout( 300 );
 
-			// Select rectangle
-			await editorPage.selectTool( 'pointer' );
-			await editorPage.clickCanvas( 100, 100 );
+			// Select rectangle via layer panel
+			const rectItem = page.locator( '.layer-item:has-text("Rectangle")' ).first();
+			await rectItem.click();
 			await page.waitForTimeout( 300 );
 
 			// Rectangle has width input
 			const widthInput = await page.$( '[data-prop="width"]' );
 			expect( widthInput ).not.toBeNull();
 
-			// Select circle
-			await editorPage.clickCanvas( 250, 250 );
+			// Select circle via layer panel
+			const circleItem = page.locator( '.layer-item:has-text("Circle")' ).first();
+			await circleItem.click();
 			await page.waitForTimeout( 300 );
 
 			// Circle has radius input

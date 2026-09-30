@@ -14,10 +14,12 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
 // Skip tests if no MediaWiki server configured
-const describeShapeLibrary = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeShapeLibrary = hasServer ? test.describe : test.describe.skip;
 
 describeShapeLibrary( 'Shape Library Panel', () => {
 	let editorPage;
@@ -26,9 +28,7 @@ describeShapeLibrary( 'Shape Library Panel', () => {
 		editorPage = new LayersEditorPage( page );
 		// Login required for all editor operations
 		await editorPage.login();
-		// Open editor on test file
-		const testFile = process.env.TEST_FILE || 'Test.png';
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	describeShapeLibrary( 'Panel Opening and Closing', () => {
@@ -125,8 +125,8 @@ describeShapeLibrary( 'Shape Library Panel', () => {
 			await page.waitForTimeout( 200 ); // Allow shapes to load
 
 			// Should have an active category
-			const activeCategory = await page.$( '.layers-shape-library-category.active' );
-			expect( activeCategory ).not.toBeNull();
+			const activeBg = await secondCategory.evaluate( ( el ) => el.style.background );
+			expect( activeBg ).toContain( 'eaecf0' );
 		} );
 
 		test( 'displays shapes when category selected', async ( { page } ) => {
@@ -350,8 +350,7 @@ describeShapeLibrary( 'Shape Library Categories', () => {
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
-		const testFile = process.env.TEST_FILE || 'Test.png';
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	/**

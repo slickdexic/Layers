@@ -6,7 +6,22 @@
  */
 
 /* eslint-env node */
-const { test: base } = require( '@playwright/test' );
+const { test: base, expect } = require( '@playwright/test' );
+const fs = require( 'fs' );
+const path = require( 'path' );
+
+/**
+ * Get acceptance config from environment or temp file.
+ * @return {Object|null}
+ */
+function getAcceptanceConfig() {
+	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
+		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
+	if ( configPath && fs.existsSync( configPath ) ) {
+		return JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
+	}
+	return null;
+}
 
 /**
  * Custom test fixtures for Layers E2E tests
@@ -16,23 +31,48 @@ const test = base.extend( {
 	 * Page fixture with MediaWiki login
 	 */
 	loggedInPage: async ( { page }, use ) => {
-		// Skip login in smoke tests or if no credentials
-		if ( !process.env.MW_USERNAME || !process.env.MW_PASSWORD ) {
+		const config = getAcceptanceConfig();
+		const username = ( process.env.MW_USERNAME && process.env.MW_PASSWORD ) ?
+			process.env.MW_USERNAME : ( config?.username || process.env.MW_USERNAME );
+		const password = ( process.env.MW_USERNAME && process.env.MW_PASSWORD ) ?
+			process.env.MW_PASSWORD : ( config?.password || process.env.MW_PASSWORD );
+		const baseServer = process.env.MW_SERVER || config?.base || 'http://localhost:8080';
+
+		if ( !username || !password ) {
 			await use( page );
 			return;
 		}
 
-		// Navigate to Special:UserLogin
-		await page.goto( '/index.php?title=Special:UserLogin' );
-		
-		// Fill login form
-		await page.fill( '#wpName1', process.env.MW_USERNAME );
-		await page.fill( '#wpPassword1', process.env.MW_PASSWORD );
-		await page.click( '#wpLoginAttempt' );
-		
-		// Wait for redirect
-		await page.waitForLoadState( 'networkidle' );
-		
+		const req = page.context().request;
+		const tokenRes = await req.get( `${ baseServer }/api.php?action=query&meta=tokens&type=login&format=json&formatversion=2` );
+		const tokenData = await tokenRes.json();
+		const logintoken = tokenData?.query?.tokens?.logintoken;
+		if ( logintoken ) {
+			const loginRes = await req.post( `${ baseServer }/api.php`, {
+				form: {
+					action: 'login',
+					lgname: username,
+					lgpassword: password,
+					lgtoken: logintoken,
+					format: 'json',
+					formatversion: '2'
+				}
+			} );
+			const loginData = await loginRes.json();
+			if ( loginData?.login?.result === 'Success' ) {
+				await use( page );
+				return;
+			}
+		}
+
+		await page.goto( `${ baseServer }/index.php?title=Special:UserLogin` );
+		await page.fill( '#wpName1', username );
+		await page.fill( '#wpPassword1', password );
+		await Promise.all( [
+			page.waitForNavigation( { waitUntil: 'domcontentloaded' } ),
+			page.click( '#wpLoginAttempt' )
+		] );
+
 		await use( page );
 	},
 
@@ -139,36 +179,140 @@ class LayersEditorPage {
 			'rectangle', 'circle', 'ellipse', 'polygon', 'star',
 			'arrow', 'line'
 		] );
+
+		// Clean leftover drafts on any navigation to ensure test isolation
+		this.page.addInitScript( () => {
+			try {
+				const toRemove = [];
+				for ( let i = 0; i < window.localStorage.length; i++ ) {
+					const key = window.localStorage.key( i );
+					if ( key && ( key.startsWith( 'layers-' ) || key.startsWith( 'layers_page_' ) ) ) {
+						toRemove.push( key );
+					}
+				}
+				for ( const key of toRemove ) {
+					window.localStorage.removeItem( key );
+				}
+			} catch ( e ) {}
+		} ).catch( () => {} );
 	}
 
 	/**
-	 * Open the layers editor for a file
+	 * Open Special:EditLayersPage for the owner page's drawing.
+	 * Follows the "Edit page drawing" link if already visible,
+	 * or navigates directly to Special:EditLayersPage for the drawing.
+	 *
+	 * @param {string} [owner='Layers_browser_acceptance']
+	 * @param {string} [surface='presentation']
 	 */
-	async openEditor( filename ) {
-		await this.page.goto( `/index.php?title=File:${ filename }&action=editlayers` );
-		await this.page.waitForSelector( this.selectors.canvas, { timeout: 10000 } );
-		// Wait for editor to fully initialize (toolbar, panels, etc.)
-		await this.page.waitForSelector( this.selectors.saveButton, { timeout: 5000 } );
-		// Small delay to ensure all event handlers are attached
-		await this.page.waitForTimeout( 500 );
+	async openEditor( owner = 'Layers_browser_acceptance', surface = 'presentation' ) {
+		const config = getAcceptanceConfig();
+		const base = process.env.MW_SERVER || config?.base || 'http://localhost:8080';
+		// If passed a filename like 'Test.png' or 'ImageTest03.png' by legacy callers, target the owner page instead
+		const targetOwner = ( typeof owner === 'string' && ( owner.endsWith( '.png' ) || owner.endsWith( '.jpg' ) || owner.endsWith( '.pdf' ) ) ) ?
+			'Layers_browser_acceptance' : ( owner || 'Layers_browser_acceptance' );
+
+		// Clear any leftover local drafts to maintain test isolation
+		await this.page.evaluate( () => {
+			try {
+				const toRemove = [];
+				for ( let i = 0; i < window.localStorage.length; i++ ) {
+					const key = window.localStorage.key( i );
+					if ( key && ( key.startsWith( 'layers-' ) || key.startsWith( 'layers_page_' ) ) ) {
+						toRemove.push( key );
+					}
+				}
+				for ( const key of toRemove ) {
+					window.localStorage.removeItem( key );
+				}
+			} catch ( e ) {}
+		} ).catch( () => {} );
+
+		const editLink = this.page.locator( '.layers-page-edit-link' ).first();
+		if ( await editLink.isVisible().catch( () => false ) ) {
+			await Promise.all( [
+				this.page.waitForNavigation(),
+				editLink.click()
+			] );
+		} else {
+			await this.page.goto( `${ base }/index.php?title=Special:EditLayersPage&owner=${ encodeURIComponent( targetOwner ) }&surface=${ encodeURIComponent( surface ) }&revid=current` );
+		}
+		await this.page.waitForSelector( this.selectors.canvas, { timeout: 15000 } );
+		await this.page.waitForSelector( this.selectors.saveButton, { timeout: 10000 } );
+
+		// Wait for editor instance and bridge to finish loading
+		await this.page.waitForFunction( () => {
+			const inst = window.layersEditorInstance;
+			if ( !inst || !inst.stateManager ) {
+				return false;
+			}
+			const bridge = ( inst.apiManager || inst.api )?.pageOwnedBridge;
+			if ( bridge ) {
+				return Boolean( bridge.loaded );
+			}
+			return true;
+		}, { timeout: 20000 } );
+
+		// Wait for DOM layer items to match stateManager layers count
+		await this.page.waitForFunction( () => {
+			const mgr = window.layersEditorInstance?.stateManager;
+			if ( !mgr ) {
+				return false;
+			}
+			const layers = mgr.get( 'layers' );
+			if ( !Array.isArray( layers ) ) {
+				return false;
+			}
+			const domLayers = document.querySelectorAll( '.layer-item:not(.background-layer-item)' );
+			return domLayers.length === layers.length;
+		}, { timeout: 10000 } );
+
+		await this.page.waitForTimeout( 300 );
 	}
 
 	/**
-	 * Login to MediaWiki (required for save operations)
+	 * Login to MediaWiki using acceptance config credentials (or env vars).
 	 */
 	async login() {
-		const username = process.env.MW_USERNAME;
-		const password = process.env.MW_PASSWORD;
-		
+		const config = getAcceptanceConfig();
+		const username = ( process.env.MW_USERNAME && process.env.MW_PASSWORD ) ?
+			process.env.MW_USERNAME : ( config?.username || process.env.MW_USERNAME );
+		const password = ( process.env.MW_USERNAME && process.env.MW_PASSWORD ) ?
+			process.env.MW_PASSWORD : ( config?.password || process.env.MW_PASSWORD );
+		const base = process.env.MW_SERVER || config?.base || 'http://localhost:8080';
+
 		if ( !username || !password ) {
-			throw new Error( 'MW_USERNAME and MW_PASSWORD required for login' );
+			throw new Error( 'MW_USERNAME and MW_PASSWORD (or LAYERS_ACCEPTANCE_CONFIG) required for login' );
 		}
-		
-		await this.page.goto( '/index.php?title=Special:UserLogin' );
+
+		const req = this.page.context().request;
+		const tokenRes = await req.get( `${ base }/api.php?action=query&meta=tokens&type=login&format=json&formatversion=2` );
+		const tokenData = await tokenRes.json();
+		const logintoken = tokenData?.query?.tokens?.logintoken;
+		if ( logintoken ) {
+			const loginRes = await req.post( `${ base }/api.php`, {
+				form: {
+					action: 'login',
+					lgname: username,
+					lgpassword: password,
+					lgtoken: logintoken,
+					format: 'json',
+					formatversion: '2'
+				}
+			} );
+			const loginData = await loginRes.json();
+			if ( loginData?.login?.result === 'Success' ) {
+				return;
+			}
+		}
+
+		await this.page.goto( `${ base }/index.php?title=Special:UserLogin` );
 		await this.page.fill( '#wpName1', username );
 		await this.page.fill( '#wpPassword1', password );
-		await this.page.click( '#wpLoginAttempt' );
-		await this.page.waitForLoadState( 'networkidle' );
+		await Promise.all( [
+			this.page.waitForNavigation( { waitUntil: 'domcontentloaded' } ),
+			this.page.click( '#wpLoginAttempt' )
+		] );
 	}
 
 	/**
@@ -243,31 +387,29 @@ class LayersEditorPage {
 	}
 
 	/**
-	 * Save layers
+	 * Save layers in the page-owned editor (waits for layerspublish and verifies success)
 	 */
 	async save() {
-		// Set up response listener BEFORE clicking (avoid race condition)
-		// Note: MediaWiki API uses POST body for action parameter, not URL query string
-		// So we check for POST to api.php and verify action=layerssave in postData
 		const responsePromise = this.page.waitForResponse(
 			( response ) => {
 				const url = response.url();
 				const request = response.request();
-				// Check if it's a POST to api.php with layerssave action
 				if ( url.includes( 'api.php' ) && request.method() === 'POST' ) {
 					const postData = request.postData() || '';
-					return postData.includes( 'action=layerssave' );
+					return postData.includes( 'action=layerspublish' ) || postData.includes( 'action=layerssave' );
 				}
 				return false;
 			},
-			{ timeout: 15000 }
+			{ timeout: 30000 }
 		);
-		
-		// Click save button
+
 		await this.page.click( this.selectors.saveButton );
-		
-		// Wait for response
-		return responsePromise;
+		const response = await responsePromise;
+		expect( response.ok() ).toBe( true );
+		const data = await response.json();
+		expect( data.layerspublish?.result ).toBe( 'Success' );
+		await this.page.waitForTimeout( 500 );
+		return response;
 	}
 
 	/**
@@ -394,11 +536,81 @@ class LayersEditorPage {
 			await this.page.mouse.move( box.x + x, box.y + y );
 		}
 		await this.page.mouse.up();
-		await this.page.waitForTimeout( 200 );
+	}
+
+	/**
+	 * Get an API client using the page's request context
+	 * @return {Promise<{get: Function, post: Function}>}
+	 */
+	async getApiClient() {
+		const config = getAcceptanceConfig();
+		const base = process.env.MW_SERVER || config?.base || 'http://localhost:8080';
+		const req = this.page.context().request;
+		return {
+			get: async ( params ) => {
+				const res = await req.get( `${ base }/api.php`, { params: { ...params, format: 'json', formatversion: '2' } } );
+				return res.json();
+			},
+			post: async ( params ) => {
+				const res = await req.post( `${ base }/api.php`, { form: { ...params, format: 'json', formatversion: '2' } } );
+				return res.json();
+			}
+		};
+	}
+
+	/**
+	 * Read the latest snapshot for the given owner
+	 * @param {string} [owner='Layers_browser_acceptance']
+	 * @return {Promise<Object>}
+	 */
+	async readSnapshot( owner = 'Layers_browser_acceptance' ) {
+		const api = await this.getApiClient();
+		const history = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const revid = history.query.pages[ 0 ].revisions[ 0 ].revid;
+		const readRes = await api.get( { action: 'layersread', owner, revid: String( revid ) } );
+		return readRes.layersread.snapshot;
+	}
+
+	/**
+	 * Get the latest revision ID for the given owner
+	 * @param {string} [owner='Layers_browser_acceptance']
+	 * @return {Promise<number>}
+	 */
+	async getLatestRevisionId( owner = 'Layers_browser_acceptance' ) {
+		const api = await this.getApiClient();
+		const history = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		return history.query.pages[ 0 ].revisions[ 0 ].revid;
+	}
+
+	/**
+	 * Restore snapshot by exact-base publication
+	 * @param {Object} snapshot
+	 * @param {number} [baseRevId]
+	 * @param {string} [owner='Layers_browser_acceptance']
+	 * @return {Promise<Object>}
+	 */
+	async restoreSnapshot( snapshot, baseRevId, owner = 'Layers_browser_acceptance' ) {
+		const api = await this.getApiClient();
+		const history = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const latestRev = history.query.pages[ 0 ].revisions[ 0 ].revid;
+		const tokenRes = await api.get( { action: 'query', meta: 'tokens', type: 'csrf' } );
+		const csrfToken = tokenRes.query.tokens.csrftoken;
+		const pubRes = await api.post( {
+			action: 'layerspublish',
+			owner,
+			baserevid: String( latestRev ),
+			data: JSON.stringify( snapshot ),
+			maintext: 'Dedicated automated Layers history acceptance page.',
+			summary: 'Restore baseline snapshot via exact-base publication',
+			token: csrfToken
+		} );
+		expect( pubRes.error, 'the owner page must be restored to its baseline' ).toBeUndefined();
+		return pubRes;
 	}
 }
 
 module.exports = {
 	test,
-	LayersEditorPage
+	LayersEditorPage,
+	getAcceptanceConfig
 };

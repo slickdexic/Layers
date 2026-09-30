@@ -1,28 +1,23 @@
 # Layers implementation handoff plan
 
-## J96 accepted; J97 ready — September 29, 2026
+## J97 accepted; J98 ready — September 30, 2026
 
-**J96 is accepted with lead corrections** (see the review ledger). The browser specs are sorted: the ones about shared sets skip on the migrated wiki, `bare-names-after-migration.spec.js` proves bare names in the browser, and `accessibility.spec.js` runs again without the shared slide. Earlier entries below are historical.
+**J97 is accepted with lead corrections** (see the review ledger). The seven editor specs and `page-owned-workflow.spec.js` run on the page-owned editor, and the owner page's latest snapshot is its baseline (title at x 99). Earlier entries below are historical.
 
-### J97 — The editor specs on the page-owned editor (ready)
+### J98 — Search, PDF pages and galleries after the migration (ready)
 
-**Advances:** FEAT-1, FEAT-4 and FEAT-6, in the editor that is kept.
+**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words, draws on a PDF page, or shows a gallery image's own drawing.
 
-**Purpose:** `editor`, `emoji-picker`, `keyboard`, `layer-groups`, `properties`, `shape-library` and `transforms` test the editor's tools and panels through the legacy editor (`action=editlayers` on a `File:` page, via `LayersEditorPage.openEditor()` in `tests/e2e/fixtures.js`). After the migration nobody can save from that editor, so these specs cover an editor that is being retired. Move them onto the page-owned editor. Also stop `page-owned-workflow.spec.js` from moving the owner page's drawing.
+**Purpose:** prove in the browser what native tests only cover, on the page-owned drawings that replaced shared sets.
 
-**Allowed changes:** those seven specs, `tests/e2e/fixtures.js`, `tests/e2e/page-owned-workflow.spec.js`, this packet and the review ledger. No production code. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline.
+**Allowed changes:** a new spec `tests/e2e/page-owned-search-pdf-gallery.spec.js` (reuse `tests/e2e/helpers/migration.js` and the fixtures' login), this packet and the review ledger. No production code. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline by exact-base publication, in the main flow and in `finally`. Skip when `isWikiMigrated` is false.
 
-1. Give `LayersEditorPage` a way to open `Special:EditLayersPage` for the owner page's `presentation` drawing, as screen 4 of `accessibility.spec.js` does, and a save that waits for `layerspublish` and checks it succeeded. Log in with the acceptance config that the page-owned specs use (`LAYERS_ACCEPTANCE_CONFIG`, or `layers-original-session.json` in `TEMP`), so the specs no longer skip silently when `MW_SERVER`, `MW_USERNAME` and `MW_PASSWORD` are unset.
-2. Switch the seven specs to it and keep their assertions about tools, shortcuts, undo, groups, properties, the Shape Library and the emoji picker. Drop only assertions about things the page-owned editor does not have, such as the named-set selector, and list each one you drop with the reason. A test that saves restores the baseline by exact-base publication in `finally`.
-3. `editor.spec.js` clicks the first `a[href*="action=editlayers"]` on the `File:` page. That was a hidden duplicate of the tab, which the lead has removed; after the migration the tab lists or opens the File page's own drawings. Replace that test with one that opens the owner page and follows its "Edit page drawing: Welcome Slide" link (`.layers-page-edit-link`).
-4. `page-owned-workflow.spec.js` saves arrow-key nudges and restores only visibility, so the title of "Welcome Slide" has drifted from x 99 to x 103 over runs (revisions 2210 to 2215). Capture the owner's snapshot at the start of each test and publish it back at the end. Then restore the baseline once, with the title at x 99.
-5. Run each changed spec twice in a row, serially. The second run must pass too, and afterwards the owner page's latest snapshot must equal the baseline.
+1. **Search.** Publish a revision of the owner page whose drawing text holds a nonce word (letters only, so the search index tokenises it), wait for the job queue and poll `Special:Search` (`fulltext=1&ns0=1`) until the page is found. The result shows the drawing text as the snippet with `.searchmatch` around the word. After the baseline is restored, the word no longer finds the page. Say how long the index took.
+2. **PDF page.** On the owner page embed `[[File:Layers migration fixture B.pdf|page=2|layerset=Page two notes]]`. Follow "Create page drawing", draw a rectangle and save. The page paints it over the rendition of page 2 (not page 1), and `layersread` gives the surface a source for page 2. Then open an earlier revision of the owner page from its history: it does not show the drawing. Report anything the editor refuses on a PDF page.
+3. **Galleries.** With that drawing and one for `B010.jpg` named "Gallery notes" on the owner page, add to its text `<gallery>` lines: `File:B010.jpg|layerset=Gallery notes|Named`, `File:B010.jpg|Unnamed` (B010.jpg has one drawing, so both paint it), and a line for a file the page has no drawing of (a plain image). Check each image's canvas against a screenshot of the drawing's pixels, as J65 does, and that no caption shows `layerset=`. Then add `[[Category:Layers browser gallery]]` to the page, open the category page and check that its gallery shows plain images with no canvas.
+4. Run the spec twice in a row, serially. The second run must pass too.
 
 Record findings, then return for lead review.
-
-### J98 — Search, PDF pages and galleries after the migration (queued)
-
-**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. Gallery images showing the page's own drawings are covered by native tests only. The lead writes this packet after reviewing J97.
 
 ### J99 — Rehearse the upgrade guide on the test wiki (queued)
 

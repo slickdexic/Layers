@@ -10,10 +10,12 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
 // Skip tests if no MediaWiki server configured
-const describeEmoji = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeEmoji = hasServer ? test.describe : test.describe.skip;
 
 describeEmoji( 'Emoji Picker', () => {
 	let editorPage;
@@ -21,8 +23,7 @@ describeEmoji( 'Emoji Picker', () => {
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
-		const testFile = process.env.TEST_FILE || 'Test.png';
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	test.describe( 'Opening and Closing', () => {
@@ -67,7 +68,7 @@ describeEmoji( 'Emoji Picker', () => {
 			await expect( page.locator( '.layers-emoji-picker' ) ).toBeVisible();
 
 			// Click the overlay (not the panel)
-			await page.click( '.layers-emoji-picker-overlay' );
+			await page.click( '.layers-emoji-picker-overlay', { position: { x: 10, y: 10 } } );
 
 			// Panel should be gone
 			await expect( page.locator( '.layers-emoji-picker' ) ).not.toBeVisible();

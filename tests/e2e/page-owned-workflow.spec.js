@@ -9,12 +9,12 @@ const getConfigPath = () => process.env.LAYERS_ACCEPTANCE_CONFIG ||
 
 // All tests advance the same dedicated automation owner; never run them concurrently.
 test.describe.configure( { mode: 'serial' } );
-let restoreVisibility = null;
+let restoreBaselineSnapshot = null;
 test.afterEach( async () => {
 	// Playwright gives teardown its own time budget, including after a test timeout.
-	if ( restoreVisibility ) {
-		const restore = restoreVisibility;
-		restoreVisibility = null;
+	if ( restoreBaselineSnapshot ) {
+		const restore = restoreBaselineSnapshot;
+		restoreBaselineSnapshot = null;
 		await restore();
 	}
 } );
@@ -48,6 +48,17 @@ test( 'reload recovers an unsaved local drawing only after confirmation without 
 	expect( pageId ).toBeGreaterThanOrEqual( 1 );
 	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
+	const initialSnapshot = JSON.parse( JSON.stringify( before.layersread.snapshot ) );
+	restoreBaselineSnapshot = async () => {
+		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const latestRevision = latestHistory.query.pages[ 0 ].revisions[ 0 ].revid;
+		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
+		if ( JSON.stringify( latestRead.layersread.snapshot ) !== JSON.stringify( initialSnapshot ) ) {
+			const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+			await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
+				data: JSON.stringify( initialSnapshot ), summary: 'Restore baseline snapshot after test 1', token: csrfToken }, true );
+		}
+	};
 	await page.goto( config.base + '/index.php?' + new URLSearchParams( {
 		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
 	} ) );
@@ -137,67 +148,85 @@ test( 'two editors reject conflicting saves and retain the unsaved drawing durin
 	expect( pageId ).toBeGreaterThanOrEqual( 1 );
 	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
-	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
-		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
-	} );
-	const other = await context.newPage();
-	for ( const tab of [ page, other ] ) {
-		await tab.goto( editorUrl );
-		await expect( tab.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
-		const tabInitPageId = await tab.evaluate( () => {
-			const init = window.wgLayersEditorInit ||
-				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
-			return init?.pageOwned?.pageId;
-		} );
-		expect( tabInitPageId ).toBe( pageId );
-	}
-	for ( const [ tab, key ] of [ [ page, 'ArrowRight' ], [ other, 'ArrowDown' ] ] ) {
-		await tab.locator( '.layer-item:not(.background-layer-item)' ).first().click();
-		await tab.keyboard.press( key );
-	}
-	const save = async ( tab ) => {
-		let capturedRequest = null;
-		const pending = tab.waitForResponse( ( response ) => {
-			if ( response.url().includes( 'api.php' ) &&
-				( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
-				capturedRequest = response.request();
-				return true;
-			}
-			return false;
-		} );
-		await tab.locator( '.save-button' ).click();
-		const response = await pending;
-		const postParams = new URLSearchParams( capturedRequest.postData() );
-		expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
-		expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
-		return response.json();
-	};
-	const winner = await save( page );
-	expect( winner.error ).toBeUndefined();
-	const savedRevision = winner.layerspublish.revid;
-	const rejected = await save( other );
-	expect( rejected.error.code ).toBe( 'layers-edit-conflict' );
-	const status = () => other.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedBridge.session.getStatus() );
-	await expect.poll( async () => ( await status() ).phase ).toBe( 'conflict' );
-	const local = await other.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
-	expect( local[ 0 ].x ).toBe( before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x );
-	expect( local[ 0 ].y ).toBe( before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].y + 1 );
-	let posts = 0;
-	other.on( 'request', ( request ) => {
-		if ( ( request.postData() || '' ).includes( 'action=layerspublish' ) ) {
-			posts++;
+	const initialSnapshot = JSON.parse( JSON.stringify( before.layersread.snapshot ) );
+	restoreBaselineSnapshot = async () => {
+		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const latestRevision = latestHistory.query.pages[ 0 ].revisions[ 0 ].revid;
+		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
+		if ( JSON.stringify( latestRead.layersread.snapshot ) !== JSON.stringify( initialSnapshot ) ) {
+			const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+			await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
+				data: JSON.stringify( initialSnapshot ), summary: 'Restore baseline snapshot after test 2', token: csrfToken }, true );
 		}
-	} );
-	// The deliberate check may read, but must neither merge conflicting changes nor publish.
-	await other.locator( '.layers-page-revision-check-button' ).click();
-	await expect( other.locator( '.layers-page-revision-check-status' ) ).toHaveText(
-		await other.evaluate( () => mw.msg( 'layers-page-revision-check-conflict' ) ) );
-	expect( ( await status() ).phase ).toBe( 'conflict' );
-	expect( await other.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) ) ).toEqual( local );
-	expect( posts ).toBe( 0 );
-	const after = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
-	expect( after.query.pages[ 0 ].revisions[ 0 ].revid ).toBe( savedRevision );
-	expect( await api( { action: 'layersread', owner, revid: String( revision ) } ) ).toEqual( before );
+	};
+	try {
+		const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
+			title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
+		} );
+		const other = await context.newPage();
+		for ( const tab of [ page, other ] ) {
+			await tab.goto( editorUrl );
+			await expect( tab.locator( '.layers-page-revision-check-button' ) ).toBeVisible();
+			const tabInitPageId = await tab.evaluate( () => {
+				const init = window.wgLayersEditorInit ||
+					( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+				return init?.pageOwned?.pageId;
+			} );
+			expect( tabInitPageId ).toBe( pageId );
+		}
+		for ( const [ tab, key ] of [ [ page, 'ArrowRight' ], [ other, 'ArrowDown' ] ] ) {
+			await tab.locator( '.layer-item:not(.background-layer-item)' ).first().click();
+			await tab.keyboard.press( key );
+		}
+		const save = async ( tab ) => {
+			let capturedRequest = null;
+			const pending = tab.waitForResponse( ( response ) => {
+				if ( response.url().includes( 'api.php' ) &&
+					( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+					capturedRequest = response.request();
+					return true;
+				}
+				return false;
+			} );
+			await tab.locator( '.save-button' ).click();
+			const response = await pending;
+			const postParams = new URLSearchParams( capturedRequest.postData() );
+			expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
+			expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
+			return response.json();
+		};
+		const winner = await save( page );
+		expect( winner.error ).toBeUndefined();
+		const savedRevision = winner.layerspublish.revid;
+		const rejected = await save( other );
+		expect( rejected.error.code ).toBe( 'layers-edit-conflict' );
+		const status = () => other.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedBridge.session.getStatus() );
+		await expect.poll( async () => ( await status() ).phase ).toBe( 'conflict' );
+		const local = await other.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
+		expect( local[ 0 ].x ).toBe( before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x );
+		expect( local[ 0 ].y ).toBe( before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].y + 1 );
+		let posts = 0;
+		other.on( 'request', ( request ) => {
+			if ( ( request.postData() || '' ).includes( 'action=layerspublish' ) ) {
+				posts++;
+			}
+		} );
+		// The deliberate check may read, but must neither merge conflicting changes nor publish.
+		await other.locator( '.layers-page-revision-check-button' ).click();
+		await expect( other.locator( '.layers-page-revision-check-status' ) ).toHaveText(
+			await other.evaluate( () => mw.msg( 'layers-page-revision-check-conflict' ) ) );
+		expect( ( await status() ).phase ).toBe( 'conflict' );
+		expect( await other.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) ) ).toEqual( local );
+		expect( posts ).toBe( 0 );
+		const after = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		expect( after.query.pages[ 0 ].revisions[ 0 ].revid ).toBe( savedRevision );
+		expect( await api( { action: 'layersread', owner, revid: String( revision ) } ) ).toEqual( before );
+	} finally {
+		if ( restoreBaselineSnapshot ) {
+			await restoreBaselineSnapshot();
+			restoreBaselineSnapshot = null;
+		}
+	}
 } );
 
 test( 'native editor save preserves the old revision and opens it from page history', async ( { page, context } ) => {
@@ -229,67 +258,85 @@ test( 'native editor save preserves the old revision and opens it from page hist
 	expect( pageId ).toBeGreaterThanOrEqual( 1 );
 	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
-	expect( before.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( true );
-	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
-		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
-	} );
-	const readRequestPromise = page.waitForRequest( ( request ) => {
-		const u = new URL( request.url() );
-		return u.searchParams.get( 'action' ) === 'layersread';
-	} );
-	await page.goto( editorUrl );
-	const readRequest = await readRequestPromise;
-	expect( new URL( readRequest.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
-	await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
-	const bootstrapPageId = await page.evaluate( () => {
-		const init = window.wgLayersEditorInit ||
-			( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
-		return init?.pageOwned?.pageId;
-	} );
-	expect( bootstrapPageId ).toBe( pageId );
-	// The real mw.Api client must preserve JSON booleans before any user changes.
-	expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'backgroundVisible' ) ) ).toBe( true );
-	await page.locator( '.layer-item:not(.background-layer-item)' ).first().click();
-	await page.keyboard.press( 'ArrowRight' );
-	let saveRequests = 0;
-	page.on( 'request', ( request ) => {
-		if ( new URLSearchParams( request.postData() || '' ).get( 'action' ) === 'layerspublish' ) {
-			saveRequests++;
+	const initialSnapshot = JSON.parse( JSON.stringify( before.layersread.snapshot ) );
+	restoreBaselineSnapshot = async () => {
+		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const latestRevision = latestHistory.query.pages[ 0 ].revisions[ 0 ].revid;
+		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
+		if ( JSON.stringify( latestRead.layersread.snapshot ) !== JSON.stringify( initialSnapshot ) ) {
+			const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+			await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
+				data: JSON.stringify( initialSnapshot ), summary: 'Restore baseline snapshot after test 3', token: csrfToken }, true );
 		}
-	} );
-	let capturedPostData = null;
-	const responsePromise = page.waitForResponse( ( response ) => {
-		if ( response.url().includes( 'api.php' ) &&
-			( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
-			capturedPostData = response.request().postData();
-			return true;
+	};
+	try {
+		expect( before.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( true );
+		const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
+			title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
+		} );
+		const readRequestPromise = page.waitForRequest( ( request ) => {
+			const u = new URL( request.url() );
+			return u.searchParams.get( 'action' ) === 'layersread';
+		} );
+		await page.goto( editorUrl );
+		const readRequest = await readRequestPromise;
+		expect( new URL( readRequest.url() ).searchParams.get( 'formatversion' ) ).toBe( '2' );
+		await page.waitForFunction( () => window.layersEditorInstance?.stateManager?.get( 'layers' )?.length > 0 );
+		const bootstrapPageId = await page.evaluate( () => {
+			const init = window.wgLayersEditorInit ||
+				( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersEditorInit' ) );
+			return init?.pageOwned?.pageId;
+		} );
+		expect( bootstrapPageId ).toBe( pageId );
+		// The real mw.Api client must preserve JSON booleans before any user changes.
+		expect( await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'backgroundVisible' ) ) ).toBe( true );
+		await page.locator( '.layer-item:not(.background-layer-item)' ).first().click();
+		await page.keyboard.press( 'ArrowRight' );
+		let saveRequests = 0;
+		page.on( 'request', ( request ) => {
+			if ( new URLSearchParams( request.postData() || '' ).get( 'action' ) === 'layerspublish' ) {
+				saveRequests++;
+			}
+		} );
+		let capturedPostData = null;
+		const responsePromise = page.waitForResponse( ( response ) => {
+			if ( response.url().includes( 'api.php' ) &&
+				( response.request().postData() || '' ).includes( 'action=layerspublish' ) ) {
+				capturedPostData = response.request().postData();
+				return true;
+			}
+			return false;
+		} );
+		await page.locator( '.save-button' ).click();
+		const savedResponse = await responsePromise;
+		const saved = await savedResponse.json();
+		expect( saveRequests ).toBe( 1 );
+		const postParams = new URLSearchParams( capturedPostData );
+		expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
+		expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
+		expect( saved.error ).toBeUndefined();
+		const newRevision = saved.layerspublish.revid;
+		expect( newRevision ).toBeGreaterThan( revision );
+		const old = await api( { action: 'layersread', owner, revid: String( revision ) } );
+		expect( old ).toEqual( before );
+		const current = await api( { action: 'layersread', owner, revid: String( newRevision ) } );
+		expect( current.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x ).toBe(
+			before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x + 1 );
+		const viewer = await context.newPage();
+		await viewer.goto( config.base + '/index.php?' + new URLSearchParams( { title: owner, action: 'history' } ) );
+		await viewer.locator( '.layers-history-view-link[href*="revid=' + revision + '&"][href*="surface=presentation"]' ).click();
+		await expect( viewer.locator( '.ext-layers-historical-canvas' ) ).toBeVisible();
+		expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).surface ) ).toEqual(
+			before.layersread.snapshot.surfaces[ 0 ] );
+		expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).revisionId ) ).toBe( revision );
+		await expect( viewer.locator( '.save-button' ) ).toHaveCount( 0 );
+		expect( saveRequests ).toBe( 1 );
+	} finally {
+		if ( restoreBaselineSnapshot ) {
+			await restoreBaselineSnapshot();
+			restoreBaselineSnapshot = null;
 		}
-		return false;
-	} );
-	await page.locator( '.save-button' ).click();
-	const savedResponse = await responsePromise;
-	const saved = await savedResponse.json();
-	expect( saveRequests ).toBe( 1 );
-	const postParams = new URLSearchParams( capturedPostData );
-	expect( postParams.get( 'pageid' ) ).toBe( String( pageId ) );
-	expect( postParams.get( 'baserevid' ) ).toBe( String( revision ) );
-	expect( saved.error ).toBeUndefined();
-	const newRevision = saved.layerspublish.revid;
-	expect( newRevision ).toBeGreaterThan( revision );
-	const old = await api( { action: 'layersread', owner, revid: String( revision ) } );
-	expect( old ).toEqual( before );
-	const current = await api( { action: 'layersread', owner, revid: String( newRevision ) } );
-	expect( current.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x ).toBe(
-		before.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].x + 1 );
-	const viewer = await context.newPage();
-	await viewer.goto( config.base + '/index.php?' + new URLSearchParams( { title: owner, action: 'history' } ) );
-	await viewer.locator( '.layers-history-view-link[href*="revid=' + revision + '&"][href*="surface=presentation"]' ).click();
-	await expect( viewer.locator( '.ext-layers-historical-canvas' ) ).toBeVisible();
-	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).surface ) ).toEqual(
-		before.layersread.snapshot.surfaces[ 0 ] );
-	expect( await viewer.evaluate( () => mw.config.get( 'wgLayersRevisionView' ).revisionId ) ).toBe( revision );
-	await expect( viewer.locator( '.save-button' ) ).toHaveCount( 0 );
-	expect( saveRequests ).toBe( 1 );
+	}
 } );
 
 test( 'native editor preserves and round-trips false boolean values across save, reopen and historical viewing', async ( { page, context } ) => {
@@ -324,6 +371,7 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	const currentRev = pageRecord.revisions[ 0 ].revid;
 	const currentRead = await api( { action: 'layersread', owner, revid: String( currentRev ) } );
 
+	const initialSnapshot = JSON.parse( JSON.stringify( currentRead.layersread.snapshot ) );
 	// 1. Seed only the dedicated automation owner using the authenticated native publication API,
 	// preserving all unrelated snapshot fields while ensuring visible starting state.
 	const seedSnapshot = JSON.parse( JSON.stringify( currentRead.layersread.snapshot ) );
@@ -342,8 +390,8 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	let lastOwnedRevision = baseRevision;
 	let publicationPending = false;
 
-	restoreVisibility = async () => {
-		// Also restore visibility if a UI assertion or navigation fails after Save.
+	restoreBaselineSnapshot = async () => {
+		// Also restore baseline snapshot if a UI assertion or navigation fails after Save.
 		// Never modify a newer editor's state or guess after an uncertain publication.
 		expect( publicationPending, 'Cleanup blocked by unconfirmed publication' ).toBe( false );
 		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
@@ -352,11 +400,9 @@ test( 'native editor preserves and round-trips false boolean values across save,
 		expect( latestRevision, 'Cleanup must not overwrite an intervening edit' ).toBe( lastOwnedRevision );
 		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
 		const latest = latestRead.layersread.snapshot;
-		if ( latest.surfaces[ 0 ].canvas.backgroundVisible !== true || latest.surfaces[ 0 ].layers[ 0 ].visible !== true ) {
-			latest.surfaces[ 0 ].canvas.backgroundVisible = true;
-			latest.surfaces[ 0 ].layers[ 0 ].visible = true;
+		if ( JSON.stringify( latest ) !== JSON.stringify( initialSnapshot ) ) {
 			const restored = await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
-				data: JSON.stringify( latest ), summary: 'Restore browser test visibility after failure', token: csrfToken }, true );
+				data: JSON.stringify( initialSnapshot ), summary: 'Restore browser test baseline snapshot after failure', token: csrfToken }, true );
 			expect( restored.error ).toBeUndefined();
 		}
 	};
@@ -453,9 +499,7 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	expect( readHidden.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( false );
 	expect( readHidden.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].visible ).toBe( false );
 
-	const restoreSnapshot = JSON.parse( JSON.stringify( readHidden.layersread.snapshot ) );
-	restoreSnapshot.surfaces[ 0 ].canvas.backgroundVisible = true;
-	restoreSnapshot.surfaces[ 0 ].layers[ 0 ].visible = true;
+	const restoreSnapshot = JSON.parse( JSON.stringify( initialSnapshot ) );
 
 	publicationPending = true;
 	const cleanupResult = await api( {
@@ -493,6 +537,7 @@ test( 'native editor preserves and round-trips false boolean values across save,
 	expect( verifiedLatest.layersread.snapshot.surfaces[ 0 ].canvas.backgroundVisible ).toBe( true );
 	expect( verifiedLatest.layersread.snapshot.surfaces[ 0 ].layers[ 0 ].visible ).toBe( true );
 	expect( editorSaveRequests ).toBe( 1 );
+	restoreBaselineSnapshot = null;
 
 } );
 
@@ -526,6 +571,17 @@ test( 'lost publication response enters uncertain phase and continues editing af
 	expect( pageId ).toBeGreaterThanOrEqual( 1 );
 	const revision = pageRecord.revisions[ 0 ].revid;
 	const before = await api( { action: 'layersread', owner, revid: String( revision ) } );
+	const initialSnapshot = JSON.parse( JSON.stringify( before.layersread.snapshot ) );
+	restoreBaselineSnapshot = async () => {
+		const latestHistory = await api( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
+		const latestRevision = latestHistory.query.pages[ 0 ].revisions[ 0 ].revid;
+		const latestRead = await api( { action: 'layersread', owner, revid: String( latestRevision ) } );
+		if ( JSON.stringify( latestRead.layersread.snapshot ) !== JSON.stringify( initialSnapshot ) ) {
+			const csrfToken = ( await api( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
+			await api( { action: 'layerspublish', owner, pageid: String( pageId ), baserevid: String( latestRevision ),
+				data: JSON.stringify( initialSnapshot ), summary: 'Restore baseline snapshot after test 5', token: csrfToken }, true );
+		}
+	};
 
 	const editorUrl = config.base + '/index.php?' + new URLSearchParams( {
 		title: 'Special:EditLayersPage', owner, revid: String( revision ), surface: 'presentation'
@@ -701,5 +757,9 @@ test( 'lost publication response enters uncertain phase and continues editing af
 		expect( revisionIds ).toContain( revision );
 	} finally {
 		await page.unroute( routePattern ).catch( () => {} );
+		if ( restoreBaselineSnapshot ) {
+			await restoreBaselineSnapshot();
+			restoreBaselineSnapshot = null;
+		}
 	}
 } );

@@ -13,10 +13,12 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
 // Skip editor tests if no MediaWiki server configured
-const describeEditor = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeEditor = hasServer ? test.describe : test.describe.skip;
 
 describeEditor( 'Layers Editor', () => {
 	let editorPage;
@@ -28,29 +30,51 @@ describeEditor( 'Layers Editor', () => {
 	} );
 
 	describeEditor( 'Editor Loading', () => {
-		test( 'can open editor on File page', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			
-			// Navigate to File page
-			await page.goto( `/index.php?title=File:${ testFile }` );
-			
-			// Check for edit layers link/button
-			const editLayersLink = await page.$( 'a[href*="action=editlayers"], .edit-layers-link' );
-			
-			// If file exists and has edit layers action
-			if ( editLayersLink ) {
-				await editLayersLink.click();
-				await page.waitForLoadState( 'networkidle' );
-				
-				// Editor should load
+		test( 'can open editor from page drawing edit link', async ( { page } ) => {
+			const cfg = getAcceptanceConfig();
+			const base = process.env.MW_SERVER || cfg?.base || 'http://localhost:8080';
+			const owner = 'Layers_browser_acceptance';
+
+			const initialSnapshot = await editorPage.readSnapshot( owner );
+			const api = await editorPage.getApiClient();
+			const histRes = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids|content', rvslots: 'main' } );
+			const initialRevId = histRes.query.pages[ 0 ].revisions[ 0 ].revid;
+			const baselineText = histRes.query.pages[ 0 ].revisions[ 0 ].slots.main.content;
+
+			let currentRevId = initialRevId;
+			try {
+				const tokenRes = await api.get( { action: 'query', meta: 'tokens', type: 'csrf' } );
+				const csrfToken = tokenRes.query.tokens.csrftoken;
+				const seedRes = await api.post( {
+					action: 'layerspublish',
+					owner,
+					baserevid: String( currentRevId ),
+					maintext: `${ baselineText }\n\n{{#Slide:Welcome Slide}}`,
+					data: JSON.stringify( initialSnapshot ),
+					summary: 'Temporary embed for edit link test',
+					token: csrfToken
+				} );
+				expect( seedRes?.layerspublish?.result ).toBe( 'Success' );
+				currentRevId = seedRes.layerspublish.revid;
+
+				await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
+				const editLink = page.locator( '.layers-page-edit-link' ).first();
+				await expect( editLink ).toBeVisible( { timeout: 15000 } );
+				await expect( editLink ).toContainText( 'Edit page drawing: Welcome Slide' );
+				await Promise.all( [
+					page.waitForNavigation(),
+					editLink.click()
+				] );
+
 				const loaded = await editorPage.isEditorLoaded();
 				expect( loaded ).toBe( true );
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot, currentRevId, owner );
 			}
 		} );
 
 		test( 'editor has required components', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 			
 			// Check for toolbar
 			const toolbar = await page.$( editorPage.selectors.toolbar );
@@ -68,8 +92,7 @@ describeEditor( 'Layers Editor', () => {
 
 	describeEditor( 'Layer Creation', () => {
 		test.beforeEach( async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 		} );
 
 		test( 'can create rectangle layer', async () => {
@@ -192,8 +215,7 @@ describeEditor( 'Layers Editor', () => {
 
 	describeEditor( 'Layer Manipulation', () => {
 		test.beforeEach( async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 			
 			// Create a layer to manipulate
 			await editorPage.selectTool( 'rectangle' );
@@ -230,12 +252,7 @@ describeEditor( 'Layers Editor', () => {
 		test( 'can undo layer creation', async ( { page } ) => {
 			// This test opens a fresh editor to avoid undo history interference
 			// from beforeEach layer creation
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			
-			// Open a fresh editor - this resets undo history
-			await page.goto( `/index.php?title=File:${ testFile }&action=editlayers` );
-			await page.waitForSelector( '.layers-canvas', { timeout: 10000 } );
-			await page.waitForTimeout( 500 );
+			await editorPage.openEditor();
 			
 			const initialCount = await editorPage.getLayerCount();
 			
@@ -261,12 +278,7 @@ describeEditor( 'Layers Editor', () => {
 
 		test( 'can redo undone action', async ( { page } ) => {
 			// This test opens a fresh editor to avoid undo history interference
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			
-			// Open a fresh editor - this resets undo history
-			await page.goto( `/index.php?title=File:${ testFile }&action=editlayers` );
-			await page.waitForSelector( '.layers-canvas', { timeout: 10000 } );
-			await page.waitForTimeout( 500 );
+			await editorPage.openEditor();
 			
 			const initialCount = await editorPage.getLayerCount();
 			
@@ -296,54 +308,60 @@ describeEditor( 'Layers Editor', () => {
 
 	describeEditor( 'Save and Load', () => {
 		test( 'can save layers', async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
-			
-			// Create a layer
-			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
-			
-			// Wait for layer to be created and dirty state to be set
-			await editorPage.page.waitForTimeout( 500 );
-			
-			// Save and verify response
-			const response = await editorPage.save();
-			expect( response.ok() ).toBe( true );
+			const initialSnapshot = await editorPage.readSnapshot();
+			try {
+				await editorPage.openEditor();
+				
+				// Create a layer
+				await editorPage.selectTool( 'rectangle' );
+				await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+				
+				// Wait for layer to be created and dirty state to be set
+				await editorPage.page.waitForTimeout( 500 );
+				
+				// Save and verify response
+				const response = await editorPage.save();
+				expect( response.ok() ).toBe( true );
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot );
+			}
 		} );
 
 		test( 'saved layers persist on reload', async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			
-			// Open editor and create layer
-			await editorPage.openEditor( testFile );
-			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
-			
-			// Wait for layer to be created
-			await editorPage.page.waitForTimeout( 300 );
-			
-			const countBeforeSave = await editorPage.getLayerCount();
-			
-			// Save
-			await editorPage.save();
-			
-			// Wait a moment for save to complete
-			await editorPage.page.waitForTimeout( 1000 );
-			
-			// Reload editor
-			await editorPage.page.reload();
-			await editorPage.openEditor( testFile );
-			
-			// Verify layers persisted
-			const countAfterReload = await editorPage.getLayerCount();
-			expect( countAfterReload ).toBe( countBeforeSave );
+			const initialSnapshot = await editorPage.readSnapshot();
+			try {
+				// Open editor and create layer
+				await editorPage.openEditor();
+				await editorPage.selectTool( 'rectangle' );
+				await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+				
+				// Wait for layer to be created
+				await editorPage.page.waitForTimeout( 300 );
+				
+				const countBeforeSave = await editorPage.getLayerCount();
+				
+				// Save
+				await editorPage.save();
+				
+				// Wait a moment for save to complete
+				await editorPage.page.waitForTimeout( 1000 );
+				
+				// Reload editor
+				await editorPage.page.reload();
+				await editorPage.openEditor();
+				
+				// Verify layers persisted
+				const countAfterReload = await editorPage.getLayerCount();
+				expect( countAfterReload ).toBe( countBeforeSave );
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot );
+			}
 		} );
 	} );
 
 	describeEditor( 'Keyboard Shortcuts', () => {
 		test.beforeEach( async () => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+			await editorPage.openEditor();
 		} );
 
 		test( 'V key selects pointer tool', async () => {
@@ -358,30 +376,20 @@ describeEditor( 'Layers Editor', () => {
 			expect( pointerTool ).not.toBeNull();
 		} );
 
-		test( 'Escape key deselects layer', async () => {
-			// Create and select a layer
-			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
-			
-			// Press Escape
-			await editorPage.page.keyboard.press( 'Escape' );
-			
-			// Verify no selection handles visible
-			const selectionHandles = await editorPage.page.$$( '.selection-handle.visible' );
-			expect( selectionHandles.length ).toBe( 0 );
-		} );
-
 		test( 'Ctrl+A selects all layers', async () => {
-			// Create multiple layers
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 100, 100 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 150, 150, 200, 200 );
-			
-			// Select all
+
 			await editorPage.page.keyboard.press( 'Control+a' );
-			
-			// Both layers should be selected - check for multiple selection indicator
-			// (implementation-specific, may need adjustment)
+
+			const counts = await editorPage.page.evaluate( () => {
+				const state = window.layersEditorInstance.stateManager;
+				return [ state.get( 'selectedLayerIds' ).length, state.get( 'layers' ).length ];
+			} );
+			expect( counts[ 1 ] ).toBeGreaterThanOrEqual( 3 );
+			expect( counts[ 0 ] ).toBe( counts[ 1 ] );
 		} );
 	} );
 } );

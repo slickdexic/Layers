@@ -13,18 +13,19 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
-const describeEditor = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeEditor = hasServer ? test.describe : test.describe.skip;
 
 describeEditor( 'Transform Operations', () => {
 	let editorPage;
-	const testFile = process.env.TEST_FILE || 'Test.png';
 
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	describeEditor( 'Layer Drag-Move', () => {
@@ -189,16 +190,13 @@ describeEditor( 'Transform Operations', () => {
 			await page.waitForTimeout( 200 );
 
 			// Select first layer
-			await editorPage.selectTool( 'pointer' );
-			await editorPage.clickCanvas( 100, 100 );
+			const rectItem = page.locator( '.layer-item:has-text("Rectangle")' ).first();
+			await rectItem.click();
 			await page.waitForTimeout( 200 );
 
 			// Ctrl+click second layer
-			const canvas = await page.$( editorPage.selectors.canvas );
-			const box = await canvas.boundingBox();
-			await page.keyboard.down( 'Control' );
-			await page.mouse.click( box.x + 300, box.y + 300 );
-			await page.keyboard.up( 'Control' );
+			const circleItem = page.locator( '.layer-item:has-text("Circle")' ).first();
+			await circleItem.click( { modifiers: [ 'Control' ] } );
 			await page.waitForTimeout( 300 );
 
 			// Both should be selected

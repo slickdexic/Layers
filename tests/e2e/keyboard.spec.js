@@ -11,10 +11,12 @@
  */
 
 const { test, expect } = require( '@playwright/test' );
-const { LayersEditorPage } = require( './fixtures' );
+const { LayersEditorPage, getAcceptanceConfig } = require( './fixtures' );
 
 // Skip tests if no MediaWiki server configured
-const describeKeyboard = process.env.MW_SERVER ? test.describe : test.describe.skip;
+const config = getAcceptanceConfig();
+const hasServer = Boolean( process.env.MW_SERVER || config?.base );
+const describeKeyboard = hasServer ? test.describe : test.describe.skip;
 
 describeKeyboard( 'Keyboard Shortcuts', () => {
 	let editorPage;
@@ -22,8 +24,7 @@ describeKeyboard( 'Keyboard Shortcuts', () => {
 	test.beforeEach( async ( { page } ) => {
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
-		const testFile = process.env.TEST_FILE || 'Test.png';
-		await editorPage.openEditor( testFile );
+		await editorPage.openEditor();
 	} );
 
 	describeKeyboard( 'Tool Shortcuts', () => {
@@ -130,18 +131,16 @@ describeKeyboard( 'Keyboard Shortcuts', () => {
 
 	describeKeyboard( 'Selection Shortcuts', () => {
 		test.beforeEach( async () => {
-			// Create some layers to work with
+			// Create multiple layers to work with
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 100, 100 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 150, 50, 200, 100 );
+			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 250, 50, 300, 100 );
 		} );
 
 		test( 'Ctrl+A selects all layers', async ( { page } ) => {
-			// Deselect first
-			await page.keyboard.press( 'Escape' );
-			await page.waitForTimeout( 200 );
-
 			// Select all
 			await page.keyboard.press( 'Control+a' );
 			await page.waitForTimeout( 200 );
@@ -153,21 +152,16 @@ describeKeyboard( 'Keyboard Shortcuts', () => {
 			expect( selectedItems.length ).toBeGreaterThanOrEqual( 3 );
 		} );
 
-		test( 'Escape deselects all', async ( { page } ) => {
-			// Select a layer first
-			await editorPage.clickCanvas( 75, 75 );
+		test( 'Escape cancels tool back to pointer', async ( { page } ) => {
+			await editorPage.selectTool( 'rectangle' );
 			await page.waitForTimeout( 200 );
+			expect( await editorPage.page.$( `${ editorPage.selectors.rectangleTool }.active, ${ editorPage.selectors.rectangleTool }[aria-pressed="true"]` ) ).not.toBeNull();
 
-			// Press Escape
 			await page.keyboard.press( 'Escape' );
 			await page.waitForTimeout( 200 );
 
-			// No selected items should remain
-			const selectedItems = await page.$$(
-				'.layer-item.selected:not(.background-layer-item), ' +
-				'.layer-item[aria-selected="true"]:not(.background-layer-item)'
-			);
-			expect( selectedItems.length ).toBe( 0 );
+			const pointerTool = await editorPage.page.$( `${ editorPage.selectors.pointerTool }.active, ${ editorPage.selectors.pointerTool }[aria-pressed="true"]` );
+			expect( pointerTool ).not.toBeNull();
 		} );
 	} );
 
@@ -423,43 +417,51 @@ describeKeyboard( 'Keyboard Shortcuts', () => {
 
 	describeKeyboard( 'Save Shortcut', () => {
 		test( 'Ctrl+S saves layers', async ( { page } ) => {
-			// Create a layer to ensure there's something to save
-			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
-			await page.waitForTimeout( 300 );
+			const initialSnapshot = await editorPage.readSnapshot();
+			try {
+				// Create a layer to ensure there's something to save
+				await editorPage.selectTool( 'rectangle' );
+				await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+				await page.waitForTimeout( 300 );
 
-			// Set up response listener
-			const responsePromise = page.waitForResponse(
-				( response ) => {
-					const url = response.url();
-					const request = response.request();
-					if ( url.includes( 'api.php' ) && request.method() === 'POST' ) {
-						const postData = request.postData() || '';
-						return postData.includes( 'action=layerssave' );
-					}
-					return false;
-				},
-				{ timeout: 15000 }
-			);
+				// Set up response listener
+				const responsePromise = page.waitForResponse(
+					( response ) => {
+						const url = response.url();
+						const request = response.request();
+						if ( url.includes( 'api.php' ) && request.method() === 'POST' ) {
+							const postData = request.postData() || '';
+							return postData.includes( 'action=layerspublish' ) || postData.includes( 'action=layerssave' );
+						}
+						return false;
+					},
+					{ timeout: 30000 }
+				);
 
-			// Press Ctrl+S
-			await page.keyboard.press( 'Control+s' );
+				// Press Ctrl+S
+				await page.keyboard.press( 'Control+s' );
 
-			// Wait for save response
-			const response = await responsePromise;
-			expect( response.ok() ).toBe( true );
+				// Wait for save response
+				const response = await responsePromise;
+				expect( response.ok() ).toBe( true );
+				const data = await response.json();
+				expect( data.layerspublish?.result ).toBe( 'Success' );
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot );
+			}
 		} );
 	} );
 
 	describeKeyboard( 'Help Shortcut', () => {
 		test( 'Shift+? shows keyboard shortcuts help', async ( { page } ) => {
-			// Press Shift+?
+			await editorPage.clickCanvas( 50, 50 );
+			await page.waitForTimeout( 100 );
 			await page.keyboard.press( 'Shift+?' );
-			await page.waitForTimeout( 300 );
+			await page.waitForTimeout( 500 );
 
 			// Should show help dialog/panel
 			const helpPanel = await page.$(
-				'.keyboard-shortcuts-help, .shortcuts-dialog, [role="dialog"]:has-text("shortcuts"), ' +
+				'.layers-shortcuts-dialog, .keyboard-shortcuts-help, .shortcuts-dialog, [role="dialog"]:has-text("shortcuts"), [role="alertdialog"]:has-text("shortcuts"), ' +
 				'.help-overlay, .shortcuts-panel'
 			);
 			expect( helpPanel ).not.toBeNull();

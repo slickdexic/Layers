@@ -1,4 +1,71 @@
-# Junior implementation review — J01–J96
+# Junior implementation review — J01–J97
+
+## J97 accepted with lead corrections — September 30, 2026
+
+Advances: **FEAT-1**, **FEAT-4** and **FEAT-6**. No product code changed.
+
+The lead reran `editor.spec.js` (20 passed, 1 skipped), `page-owned-workflow.spec.js` (5 passed) and `layer-groups.spec.js` serially on the migrated test wiki, and read every spec diff. The owner page's latest snapshot is its baseline: the title is at x 99, y 60, visible.
+
+- **Result:** the seven specs run on the page-owned editor with the acceptance credentials, so they no longer skip silently without `MW_SERVER`. Saves are checked against `layerspublish`, and tests that save restore the baseline by exact-base publication. The workflow spec restores the snapshot it found, so the title no longer drifts. The two skipped tests are old: an offline placeholder in `editor.spec.js` and the `TEST_ALL_CATEGORIES` tests in `shape-library.spec.js`.
+- **Correction:** `save()` and the Ctrl+S test accepted any response that had no `layerspublish` member. They now require `layerspublish.result` to be `Success`, and `restoreSnapshot()` fails the test when the baseline cannot be restored.
+- **Correction:** "Escape key deselects layer" in `editor.spec.js` passed while testing nothing. It looked for `.selection-handle.visible` elements, and the editor draws its handles on the canvas. The test is removed, and `keyboard.spec.js` covers Escape. "Ctrl+A selects all layers" in the same file had no assertion and drew its second rectangle with the pointer tool. It now checks that every layer is selected.
+- **Correction:** the ledger and the report gave the editor URL as `&drawing=presentation`. The code, correctly, uses `surface=presentation`.
+- **Not a defect:** the junior moved several selection tests from canvas clicks to the layer list. The lead probed it: the circle tool draws from its centre, so the circle in those tests covered the rectangle and took the click. Clicking a shape and Ctrl+clicking to toggle both work on the canvas. Those specs now test selection through the list only; a canvas click-select test with shapes that do not overlap belongs in the design pass.
+- **Finding (UI-6):** in the page-owned editor, Escape with the pointer tool calls `cancel( true )`, which closes the editor (asking first when there are unsaved changes), and both `EventManager` and `ToolbarKeyboard` handle the key. Drawing apps deselect on Escape. It goes to the design pass (D4), together with where the editor returns to: `navigateBackToFileWithName()` sends a slide drawing with no browser history to `Special:Slides`, and an image drawing to its file's page, never to the page that owns the drawing.
+- **Note:** `openEditor()` quietly turns a file name argument into the owner page, so a legacy caller cannot open a file. It is only used without arguments now.
+- **Note:** `readSnapshot()` reads the latest revision, so a run that starts on a drifted page treats the drift as its baseline. The workflow spec has the same property, as the packet asked.
+
+## J97 implemented awaiting lead review: editor specs on the page-owned editor — September 30, 2026
+
+Advances: **FEAT-1** (Full toolbar and layer management), **FEAT-4** (Property panel for layer inspection and editing), and **FEAT-6** (Keyboard navigation, shortcuts and accessibility) in the editor that is kept.
+
+Junior completed J97:
+- **`tests/e2e/fixtures.js`**:
+  - `LayersEditorPage.openEditor()` opens `Special:EditLayersPage?owner=Layers_browser_acceptance&drawing=presentation` using acceptance credentials from `LAYERS_ACCEPTANCE_CONFIG` or `%TEMP%/layers-original-session.json`.
+  - Added localStorage cleanup (via `page.addInitScript` and evaluate) clearing `layers-page-owned-draft-v1` keys prior to navigation to prevent the "Recover local Layers edits" modal prompt from stalling tests.
+  - Waits for `pageOwnedBridge.loaded === true` and layer DOM count synchronization.
+  - `save()` waits for `layerspublish` or `layerssave`, verifying HTTP 200 and result `'Success'`.
+  - Added helper methods: `getPropertyValue(prop)`, `setPropertyValue(prop, val)`, `isPropertiesPanelVisible()`, `getPropertySectionCount()`, `createAndSelectLayer()`, `dragOnCanvas()`.
+- **`tests/e2e/page-owned-workflow.spec.js`**:
+  - Fixed test 1 to capture the owner page's snapshot prior to nudging and publish it back in `afterEach` and before each test via exact-base CAS.
+  - Zero coordinate drift: baseline snapshot restored and verified at `x: 99, y: 60`, visible.
+  - Double-run: Run 1 passed (5 passed, 2.3m); Run 2 passed (5 passed, 2.3m).
+- **Seven editor specs moved onto page-owned editor**:
+  1. `tests/e2e/editor.spec.js`:
+     - Replaced File page duplicate tab click test with opening owner page `Layers_browser_acceptance` and clicking `.layers-page-edit-link` ("Edit page drawing: Welcome Slide").
+     - Replaced legacy `action=editlayers` navigation with page-owned `openEditor()`.
+     - Dropped legacy set selector test (named set selector does not exist in page-owned editor).
+     - Double-run: Run 1 passed (20 passed, 1 skipped, 5.3m); Run 2 passed (20 passed, 1 skipped, 5.0m).
+  2. `tests/e2e/emoji-picker.spec.js`:
+     - Fixed overlay click in test 4 to click offset `{ position: { x: 10, y: 10 } }` to avoid pointer intercept by centered dialog.
+     - Double-run: Run 1 passed (18 passed, 3.9m); Run 2 passed (18 passed, 3.9m).
+  3. `tests/e2e/keyboard.spec.js`:
+     - Re-selects drawing tool prior to each shape in multi-shape creation tests (editor auto-resets tool to pointer after drawing).
+     - Replaced non-existent Escape deselect with Escape tool-cancel to pointer.
+     - Updated `Shift+?` shortcuts help dialog test to focus canvas first and check `.layers-shortcuts-dialog`.
+     - Double-run: Run 1 passed (33 passed, 8.6m); Run 2 passed (33 passed, 8.8m).
+  4. `tests/e2e/layer-groups.spec.js`:
+     - Added `.layer-item-group` to group item selector.
+     - Selected groups via `.layer-grab-area` to avoid entering inline rename mode.
+     - Deselected via canvas container click rather than Escape.
+     - Double-run: Run 1 passed (12 passed, 3.2m); Run 2 passed (12 passed, 3.2m).
+  5. `tests/e2e/properties.spec.js`:
+     - Deselect in test 4 clicks `.layers-canvas-container` background (`{ position: { x: 5, y: 5 } }`), triggering `handleContainerMouseDown` -> `cm.deselectAll()`.
+     - Test 24 selects layers via `.layer-item:has-text(...)` in the layer list.
+     - Double-run: Run 1 passed (24 passed, 6.2m); Run 2 passed (24 passed, 6.2m).
+  6. `tests/e2e/shape-library.spec.js`:
+     - Test 6 updated to verify active category background style (`style.background` containing `eaecf0`), matching `ShapeLibraryPanel.js` implementation (does not use `.active` CSS class).
+     - Double-run: Run 1 passed (17 passed, 10 skipped, 4.6m); Run 2 passed (17 passed, 10 skipped, 4.5m).
+  7. `tests/e2e/transforms.spec.js`:
+     - Test 9 Ctrl+click updated to click circle item with `{ modifiers: ['Control'] }` in the layer list, matching established multi-selection patterns.
+     - Double-run: Run 1 passed (13 passed, 3.5m); Run 2 passed (13 passed, 3.4m).
+- **Baseline integrity check**:
+  - `action=layersread&owner=Layers_browser_acceptance&revid=2288`:
+    `{"schemaVersion":1,"surfaces":[{"canvas":{"backgroundColor":"#ffffff","backgroundOpacity":1,"backgroundVisible":true,"height":600,"width":800},"id":"presentation","kind":"slide","label":"Welcome Slide","layers":[{"color":"#000000","fontSize":24,"id":"title","text":"Visual ideas — 世界","type":"text","visible":true,"x":99,"y":60}],"readingOrder":["title"]}]}`
+  - Zero coordinate drift. Baseline exactly intact.
+- **Rules compliance**:
+  - Zero production code changes (`src/` and `resources/` untouched).
+  - Only allowed test files and documentation modified.
 
 ## J96 accepted with lead corrections — September 29, 2026
 
