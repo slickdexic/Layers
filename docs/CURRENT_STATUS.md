@@ -1,5 +1,17 @@
 # Current status and limitations
 
+## Galleries follow the migration — September 29, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criterion HIST-8. Images in `<gallery>` blocks, in Cargo `format=gallery` results and those named by `{{#layers_hint:}}` now follow the same rules as file embeds.
+
+- **Before the migration** a gallery image shows a shared set as before. The page now records that set in `layers-shown-sets`, as file embeds do: a named set always, the latest set only when there was one. So search finds the page by the set's text, a change to the set refreshes the page, and the migration copies it.
+- **The migration** copies a set shown in a gallery under its own name, like a set shown through a template. A latest set shown without a name (a gallery image without `layerset=`, or `layerset=on` in a template) is now copied when it will be the page's only drawing of that file; otherwise it is still listed as `template-latest-set`. Gallery lines keep their text.
+- **After the migration** a gallery image with `layerset=<name>` shows the page's drawing of that name, and one without shows the page's only drawing of that file, as `layerset=on` does. `layerset=<pageId>:<name>` works in galleries before the migration too. Shared sets are never shown, and images rendered outside a page parse (category pages, special pages) show none.
+- **How a gallery image finds its page.** Core's and Cargo's galleries announce each image through `BeforeParserFetchFileAndTitle` just before rendering it, which gives the thumbnail hook the parse it belongs to.
+- **Upgrading.** Pages parsed by an older Layers have no record of what their galleries showed. Run `refreshLinks.php` before the migration, so that it copies those sets and purges those pages when it finishes.
+
+Fresh verification: `BareNamesAfterMigrationTest` adds two cases. A gallery with a named set, an unnamed image of a file with a latest set, and a file with no set is followed from the shared sets through the migration to the page's own drawings, with no shared data left in the output. An image rendered outside a parse shows the latest set before the migration and nothing after it. Full native configuration **434 tests passed, 1 skipped**; standalone PHPUnit **1,314**; PHP style clean. A browser check of galleries on the migrated test wiki is queued as J98.
+
 ## The test wiki is migrated — September 29, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criteria HIST-4 and HIST-8. With the owner's approval, `migrateLayersToPageHistory.php --commit` ran on the whole test wiki.
@@ -1140,8 +1152,8 @@ Drawings in page history are on by default since September 29 (D2) for pages in 
 | Layer revisions | Separate Layers database revisions; default retention is 50 per named set and document page |
 | Owning article history | Ordinary saves: **not implemented**; they do not create a revision of the embedding page. *Pilot:* page-owned drawings are saved as page revisions, with history, diffs, rollback and per-drawing restore |
 | History tracking configuration | `LayersTrackChangesInRecentChanges` attempts unchanged-content saves; it is **not a reliable audit trail** |
-| MediaWiki text search | Shared layer sets and slides: indexed with their file's `File:` page (no result snippet there) and with every page that shows them; `<gallery>` and Cargo gallery embeds are not. *Pilot:* page-owned drawing text is indexed with the page and shown in result snippets |
-| Cargo | Gallery integration can choose a named layer set from query results |
+| MediaWiki text search | Shared layer sets and slides: indexed with their file's `File:` page (no result snippet there) and with every page that shows them, including through `<gallery>`, Cargo galleries and `{{#layers_hint:}}` once the page is parsed again. *Pilot:* page-owned drawing text is indexed with the page and shown in result snippets |
+| Cargo | Gallery integration can choose a named layer set from query results; after the migration the name means the page's own drawing |
 | Cargo annotation rows / field bindings | *Pilot:* one row per page-owned drawing through `{{#layers_cargo_store:}}`, and `{{#layers_fields:}}` fills `{{name}}` tokens with values the page gives, such as Cargo query results, in page-owned drawings and (on any wiki) in shared layer sets and slides the page shows. Rows for shared sets: **planned** |
 | Server export fidelity | Some saved properties and failure cases remain unsupported; inspect important exports |
 

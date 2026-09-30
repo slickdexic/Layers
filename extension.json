@@ -244,6 +244,7 @@
 		"LinkerMakeMediaLinkFile": "LayersWikitextHooks",
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
+		"BeforeParserFetchFileAndTitle": "LayersWikitextHooks",
 		"ParserMakeImageParams": "LayersWikitextHooks",
 		"SearchDataForIndex2": "LayersSearchHooks",
 		"ShowSearchHit": "LayersSearchHooks",

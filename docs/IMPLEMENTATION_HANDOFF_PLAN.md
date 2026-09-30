@@ -20,9 +20,9 @@
 
 Record findings, then return for lead review.
 
-### J98 — Search and PDF pages after the migration (queued)
+### J98 — Search, PDF pages and galleries after the migration (queued)
 
-**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. The lead writes this packet after reviewing J97.
+**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. Gallery images showing the page's own drawings are covered by native tests only. The lead writes this packet after reviewing J97.
 
 ## Test wiki migrated; J96 accepted — September 29, 2026
 

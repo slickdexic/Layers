@@ -165,6 +165,7 @@ class PageCopyMigration {
 			$copies[$source['key']] ??= $source;
 			$rewrites[] = [ $candidate, $source['key'] ];
 		}
+		$latest = [];
 		foreach ( $shown as [ $kind, $name, $set ] ) {
 			if ( $kind === ShownLayerSets::SLIDE && self::validSlide( $name ) ) {
 				$plan['slides'][] = str_replace( ' ', '_', $name );
@@ -187,13 +188,27 @@ class PageCopyMigration {
 			if ( isset( $copies[$source['key']] ) ) {
 				continue;
 			}
-			// Shown through a template: after the migration the template's bare name must find the copy.
+			// Shown through a template or gallery: after the migration the bare name must find the copy.
 			if ( $set === '' && $kind === ShownLayerSets::FILE ) {
-				$plan['notMoved'][] = [ 'what' => $what, 'reason' => 'template-latest-set' ];
+				// "The latest set" becomes the page's only drawing of the file; decided once the others are known.
+				$latest[] = [ $what, $source, 'File:' . str_replace( ' ', '_', $name ) ];
 				continue;
 			}
 			$source['template'] = true;
 			$source['wanted'] = $kind === ShownLayerSets::FILE ? $set : $name;
+			$copies[$source['key']] = $source;
+		}
+		foreach ( $latest as [ $what, $source, $fileTitle ] ) {
+			if ( isset( $copies[$source['key']] ) ) {
+				continue;
+			}
+			if ( !isset( $labels[FilePageMigration::surfaceId( $source['legacyId'], $pageId )] ) &&
+				self::drawingsOf( $fileTitle, $document->surfaces, $copies ) > 0
+			) {
+				$plan['notMoved'][] = [ 'what' => $what, 'reason' => 'template-latest-set' ];
+				continue;
+			}
+			$source['template'] = true;
 			$copies[$source['key']] = $source;
 		}
 		$plan['slides'] = array_values( array_unique( $plan['slides'] ) );
@@ -423,6 +438,18 @@ class PageCopyMigration {
 		$name = str_replace( ' ', '_', preg_replace( '/^File:/', '', trim( $name ) ) );
 		$set = $selector === null || SetNameResolver::isShowIntent( $selector ) ? '' : trim( $selector );
 		return $kind . "\n" . $name . "\n" . $set;
+	}
+
+	/**
+	 * @param string $fileTitle 'File:<DB key>'
+	 * @param \stdClass[] $surfaces The page's drawings
+	 * @param array[] $copies Planned copies
+	 * @return int How many of them are drawings of that file
+	 */
+	private static function drawingsOf( string $fileTitle, array $surfaces, array $copies ): int {
+		$all = array_merge( $surfaces, array_column( $copies, 'surface' ) );
+		return count( array_filter( $all, static fn ( $surface ) =>
+			( $surface->source->fileTitle ?? null ) === $fileTitle ) );
 	}
 
 	/**

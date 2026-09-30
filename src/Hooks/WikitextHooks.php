@@ -220,6 +220,14 @@ class WikitextHooks {
 	private static array $galleryHints = [];
 
 	/**
+	 * The parse that is fetching each file, by DB key. Core's galleries (native and Cargo's) run
+	 * BeforeParserFetchFileAndTitle just before rendering each image, so a gallery thumbnail can find the page
+	 * it belongs to. Renders outside a parse (category galleries, special pages) find none.
+	 * @var array<string, Parser>
+	 */
+	private static array $fetchingParsers = [];
+
+	/**
 	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
 	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
 	 * @var array<string, array<string|null>>
@@ -287,6 +295,49 @@ class WikitextHooks {
 		self::$fileParseCount = [];
 		self::$pendingRender = [];
 		self::$galleryHints = [];
+		self::$fetchingParsers = [];
+	}
+
+	/**
+	 * Hook: BeforeParserFetchFileAndTitle. Remembers which parse is about to render the file.
+	 * @param mixed $parser
+	 * @param mixed $title
+	 * @param array &$options
+	 * @param mixed &$descQuery
+	 * @return bool
+	 */
+	public static function onBeforeParserFetchFileAndTitle( $parser, $title, &$options, &$descQuery ): bool {
+		if ( $parser instanceof Parser && $title instanceof \MediaWiki\Linker\LinkTarget &&
+			$title->getNamespace() === NS_FILE
+		) {
+			self::$fetchingParsers[$title->getDBkey()] = $parser;
+		}
+		return true;
+	}
+
+	/**
+	 * A gallery image that shows the page's own drawing: after the migration for any name, and before it
+	 * for `<pageId>:<name>`. Never a shared set.
+	 * @param Parser $parser
+	 * @param string $filename DB key
+	 * @param string|null $hint The image's layerset= value, if any
+	 * @param array &$attribs
+	 */
+	private static function markGalleryDrawing( Parser $parser, string $filename, ?string $hint,
+		array &$attribs
+	): void {
+		// Without a name a gallery image showed the file's latest set, except on the file's own page.
+		$value = $hint ?? ( self::isFilePageContext() ? null : 'on' );
+		if ( $value === null || SetNameResolver::isHideIntent( $value ) ) {
+			return;
+		}
+		$own = preg_match( '/\A\s*[0-9]+:/', $value ) ? trim( $value ) :
+			self::ownDrawingReference( $parser, $filename, $value );
+		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename );
+		if ( $bound !== false ) {
+			BoundFileHooks::markImage( $attribs, $bound );
+			self::$pageHasLayers = true;
+		}
 	}
 
 	/**
@@ -517,6 +568,10 @@ class WikitextHooks {
 		// We consume one queued count here so it cannot accidentally match a later
 		// non-wikitext render of the same filename.
 		$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
+		$parser = $filename ? ( self::$fetchingParsers[$filename] ?? null ) : null;
+		if ( $filename ) {
+			unset( self::$fetchingParsers[$filename] );
+		}
 		if ( $isWikitextRender ) {
 			self::$pendingRender[$filename]--;
 			if ( self::$pendingRender[$filename] <= 0 ) {
@@ -539,10 +594,19 @@ class WikitextHooks {
 				return true;
 			}
 		} else {
+			$hint = $filename ? ( self::$galleryHints[$filename] ?? null ) : null;
+			if ( $parser && ( MigrationState::forParser( $parser ) ||
+				( $hint !== null && preg_match( '/\A\s*[0-9]+:/', $hint ) ) )
+			) {
+				self::markGalleryDrawing( $parser, $filename, $hint, $attribs );
+				return true;
+			}
+			if ( !$parser && MigrationState::isCompleteNow() ) {
+				// After the migration shared sets are never shown, and outside a parse no page owns a drawing.
+				return true;
+			}
 			$defaultFallback = self::isFilePageContext() ? null : 'on';
-			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
-				? self::$galleryHints[$filename]
-				: $defaultFallback;
+			$hintedSetName = $hint ?? $defaultFallback;
 			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
 		}
 
@@ -574,7 +638,33 @@ class WikitextHooks {
 		if ( $processor->pageHasLayers() ) {
 			self::$pageHasLayers = true;
 		}
+		if ( !$isWikitextRender && $parser && $filename ) {
+			self::noteGallerySet( $parser, $filename, $fileParams['setName'], $attribs );
+		}
 		return $result;
+	}
+
+	/**
+	 * Record a set a gallery image showed, as file embeds do, so that search indexes its text with the page
+	 * and the migration copies it into the page.
+	 * @param Parser $parser
+	 * @param string $filename DB key
+	 * @param string|null $setName The image's layerset= value, or 'on' for the latest set
+	 * @param array $attribs
+	 */
+	private static function noteGallerySet( Parser $parser, string $filename, ?string $setName,
+		array $attribs
+	): void {
+		$named = $setName !== null && SetNameResolver::isSpecificName( $setName );
+		// A named set is noted even when missing, as for file embeds; the latest set only when there was one.
+		if ( $setName === null || SetNameResolver::isHideIntent( $setName ) || str_starts_with( $setName, 'id:' ) ||
+			( !$named && !isset( $attribs['data-layer-data'] ) && !isset( $attribs['data-layers-large'] ) )
+		) {
+			return;
+		}
+		$set = (string)preg_replace( '/^name:/', '', $setName );
+		ShownLayerSets::note( $parser, ShownLayerSets::FILE, $filename,
+			SetNameResolver::isSpecificName( $set ) ? $set : '' );
 	}
 
 	/**

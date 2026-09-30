@@ -176,4 +176,67 @@ class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->doApiRequestWithToken( [ 'action' => 'layerssave', 'filename' => $image->getName(),
 			'data' => '[]', 'setname' => 'anatomy' ], null, $this->actor );
 	}
+
+	public function testGalleriesAreMigratedAndThenShowThePagesOwnDrawings(): void {
+		$files = $this->pilot->newFilePageMigration();
+		$one = $this->upload( 'Gallery_one.png' );
+		$this->saveSet( $one, 'anatomy', 1, 'Heart' );
+		$two = $this->upload( 'Gallery_two.png' );
+		$this->saveSet( $two, 'labels', 1, 'Latest' );
+		$this->upload( 'Gallery_three.png' );
+		foreach ( [ $one, $two ] as $file ) {
+			$files->commit( $files->plan( $file->getName(), $this->actor ), $this->actor );
+		}
+		$page = Title::newFromText( 'Gallery page' );
+		$this->editPage( $page, "<gallery>\nFile:Gallery_one.png|layerset=anatomy|One\n" .
+			"File:Gallery_two.png|Two\nFile:Gallery_three.png|Three\n</gallery>", '', NS_MAIN, $this->actor );
+
+		// Before the migration a gallery shows shared sets, and the page records them as file embeds do.
+		$before = $this->parse( $page );
+		$this->assertSame( 2, substr_count( $before->getRawText(), 'data-layer-data=' ) );
+		$this->assertStringNotContainsString( '|layerset=', $before->getRawText() );
+		$shown = $before->getPageProperty( ShownLayerSets::PROPERTY );
+		$this->assertSame( [ [ 'file', 'Gallery_one.png', 'anatomy' ], [ 'file', 'Gallery_two.png', '' ] ],
+			ShownLayerSets::decode( $shown ) );
+		$this->getDb()->newDeleteQueryBuilder()->deleteFrom( 'page_props' )
+			->where( [ 'pp_page' => $page->getArticleID(), 'pp_propname' => ShownLayerSets::PROPERTY ] )
+			->caller( __METHOD__ )->execute();
+		$this->getDb()->newInsertQueryBuilder()->insertInto( 'page_props' )->row( [
+			'pp_page' => $page->getArticleID(), 'pp_propname' => ShownLayerSets::PROPERTY, 'pp_value' => $shown
+		] )->caller( __METHOD__ )->execute();
+
+		// The latest set becomes the page's only drawing of that file, so the unnamed gallery image finds it.
+		$copies = $this->pilot->newPageCopyMigration();
+		$plan = $copies->plan( $page->getArticleID(), $this->actor );
+		$this->assertSame( [ [ 'anatomy', true ], [ 'labels', true ] ],
+			array_map( static fn ( $c ) => [ $c['name'], $c['template'] ], $plan['copies'] ) );
+		$this->assertSame( [], $plan['notMoved'] );
+		$this->assertNull( $plan['main'], 'gallery lines keep their text' );
+		$copies->commit( $plan, $this->actor );
+
+		MigrationState::markComplete( $this->getDb() );
+		$after = $this->parse( $page );
+		$ids = array_column( $this->surfaces(
+			$this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page ) ), 'id', 'label' );
+		$this->assertEqualsCanonicalizing( [ 'v1:' . $page->getArticleID() . ':' . $ids['anatomy'],
+			'v1:' . $page->getArticleID() . ':' . $ids['labels'] ],
+			array_keys( $after->getExtensionData( BoundSlideHooks::DATA_KEY ) ?? [] ) );
+		$this->assertSame( 2, substr_count( $after->getRawText(), 'data-layers-binding=' ) );
+		$this->assertStringNotContainsString( 'data-layer-data=', $after->getRawText(), 'never a shared set' );
+	}
+
+	public function testImagesOutsideAParseShowNoSharedSetAfterTheMigration(): void {
+		$image = $this->upload( 'Category_photo.png' );
+		$this->saveSet( $image, 'anatomy', 1, 'Heart' );
+		$thumb = $image->transform( [ 'width' => 100 ] );
+		$render = static function () use ( $thumb ): array {
+			$attribs = [];
+			$link = [];
+			\MediaWiki\Extension\Layers\Hooks\WikitextHooks::onThumbnailBeforeProduceHTML( $thumb, $attribs, $link );
+			return $attribs;
+		};
+		$this->assertArrayHasKey( 'data-layer-data', $render(), 'a category gallery shows the latest set' );
+		MigrationState::markComplete( $this->getDb() );
+		$this->assertSame( [], $render() );
+	}
 }
