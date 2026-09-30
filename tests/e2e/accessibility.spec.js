@@ -21,6 +21,7 @@
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
 const path = require( 'path' );
+const { isWikiMigrated } = require( './helpers/migration' );
 
 test.describe.configure( { mode: 'serial' } );
 
@@ -30,6 +31,8 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	// After the migration shared slides are read-only: the adoption notice and screen 6 do not exist.
+	const migrated = await isWikiMigrated( { request: context.request } );
 
 	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
@@ -194,22 +197,24 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 		// Setup: Seed Revision A with slide drawing, photo drawing, and shared slide embed
 		// =========================================================================
 		// 1. Seed shared slide so adoption notice/link is present
-		const savedShared = await api( {
-			action: 'layerssave',
-			slidename: sharedSlideName,
-			token: csrfToken,
-			data: JSON.stringify( {
-				canvasWidth: 800,
-				canvasHeight: 600,
-				backgroundColor: '#ffffff',
-				layers: [ { id: 'shared_box', type: 'rectangle', x: 30, y: 30, width: 150, height: 100, fill: '#ffcc00' } ]
-			} )
-		}, true );
-		expect( savedShared.layerssave?.success ).toBeTruthy();
-		sharedSlideSaved = true;
-		// Never assume a set name: read the slide's from the wiki.
-		sharedSlideSet = ( await api( { action: 'layersinfo', filename: 'Slide:' + sharedSlideName } ) )
-			.layersinfo.layerset.name;
+		if ( !migrated ) {
+			const savedShared = await api( {
+				action: 'layerssave',
+				slidename: sharedSlideName,
+				token: csrfToken,
+				data: JSON.stringify( {
+					canvasWidth: 800,
+					canvasHeight: 600,
+					backgroundColor: '#ffffff',
+					layers: [ { id: 'shared_box', type: 'rectangle', x: 30, y: 30, width: 150, height: 100, fill: '#ffcc00' } ]
+				} )
+			}, true );
+			expect( savedShared.layerssave?.success ).toBeTruthy();
+			sharedSlideSaved = true;
+			// Never assume a set name: read the slide's from the wiki.
+			sharedSlideSet = ( await api( { action: 'layersinfo', filename: 'Slide:' + sharedSlideName } ) )
+				.layersinfo.layerset.name;
+		}
 
 		const slideSurfaceA = {
 			id: 'a11y_slide',
@@ -242,7 +247,8 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 			surfaces: [ ...( initialSnapshot.surfaces || [] ), slideSurfaceA, fileSurfaceA ]
 		};
 
-		const wikitextA = `${ initialMainText }\n\n== Accessibility Acceptance ==\n{{#Slide:${ pageId }:a11y_slide}}\n\n[[File:${ file.name }|200px|layerset=${ pageId }:a11y_photo]]\n\n{{#Slide:${ sharedSlideName }|width=300}}`;
+		const wikitextA = `${ initialMainText }\n\n== Accessibility Acceptance ==\n{{#Slide:${ pageId }:a11y_slide}}\n\n[[File:${ file.name }|200px|layerset=${ pageId }:a11y_photo]]` +
+			( migrated ? '' : `\n\n{{#Slide:${ sharedSlideName }|width=300}}` );
 
 		const pubA = await api( {
 			action: 'layerspublish',
@@ -295,7 +301,7 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 			'.layers-bound-file-view',
 			'.layers-page-edit-controls',
 			'.layers-page-edit-link',
-			'.layers-page-adopt-link',
+			...( migrated ? [] : [ '.layers-page-adopt-link' ] ),
 			'.layers-page-edit-controls__notice'
 		] );
 
@@ -364,21 +370,23 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 		// =========================================================================
 		// Screen 6: Adoption confirmation page for a shared slide
 		// =========================================================================
-		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
-		const adoptLink = page.locator( '.layers-page-adopt-link' );
-		await expect( adoptLink ).toBeVisible();
-		await Promise.all( [
-			page.waitForNavigation(),
-			adoptLink.click()
-		] );
-		await page.waitForLoadState( 'networkidle' );
-		expect( page.url() ).toContain( 'Special:AdoptLayersDrawing' );
+		if ( !migrated ) {
+			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
+			const adoptLink = page.locator( '.layers-page-adopt-link' );
+			await expect( adoptLink ).toBeVisible();
+			await Promise.all( [
+				page.waitForNavigation(),
+				adoptLink.click()
+			] );
+			await page.waitForLoadState( 'networkidle' );
+			expect( page.url() ).toContain( 'Special:AdoptLayersDrawing' );
 
-		await auditScreen( '6. Shared Slide Adoption Confirmation Page', [
-			'#mw-content-text form',
-			'form.mw-htmlform',
-			'.mw-htmlform'
-		] );
+			await auditScreen( '6. Shared Slide Adoption Confirmation Page', [
+				'#mw-content-text form',
+				'form.mw-htmlform',
+				'.mw-htmlform'
+			] );
+		}
 
 		// =========================================================================
 		// Screen 7: Diff page with drawing change

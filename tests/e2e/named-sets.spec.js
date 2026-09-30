@@ -24,6 +24,7 @@
 const { test, expect } = require( '@playwright/test' );
 const { LayersEditorPage } = require( './fixtures' );
 const { recordInterruptedRun, executeCleanupWithApi } = require( './cleanupHelper' );
+const { isWikiMigrated } = require( './helpers/migration' );
 
 // Unique per-run prefix to guarantee isolation across runs
 const RUN_ID = Date.now().toString( 36 ) + '_' + Math.random().toString( 36 ).slice( 2, 6 );
@@ -59,6 +60,9 @@ test.describe( 'Named Layer Sets (J21)', () => {
 	let initialSetNames = [];
 
 	test.beforeAll( async ( { browser } ) => {
+		if ( await isWikiMigrated() ) {
+			return;
+		}
 		// Strict prerequisite validation: must not write to an implicit default image
 		if ( !process.env.MW_SERVER ) {
 			throw new Error( 'Blocked: MW_SERVER must be set (e.g. http://localhost:8080) to run named-set browser acceptance tests.' );
@@ -87,6 +91,9 @@ test.describe( 'Named Layer Sets (J21)', () => {
 	} );
 
 	test.afterAll( async ( { browser } ) => {
+		if ( await isWikiMigrated() ) {
+			return;
+		}
 		// Failure-safe post-run teardown: clean up all sets created in this run
 		const context = await browser.newContext();
 		const page = await context.newPage();
@@ -141,6 +148,7 @@ test.describe( 'Named Layer Sets (J21)', () => {
 
 	test.beforeEach( async ( { page } ) => {
 		test.setTimeout( 60000 );
+		test.skip( await isWikiMigrated( { page } ), 'shared sets are read-only after the migration' );
 		editorPage = new LayersEditorPage( page );
 		await editorPage.login();
 	} );

@@ -7,6 +7,7 @@
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
 const path = require( 'path' );
+const { isWikiMigrated } = require( './helpers/migration' );
 
 test.describe.configure( { mode: 'serial' } );
 
@@ -14,6 +15,7 @@ test( 'an editor makes a shared file drawing owned by the page, pinned to the fi
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	test.skip( await isWikiMigrated( { request: context.request } ), 'shared sets are read-only after the migration' );
 	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );
 	expect( [ 'localhost', '127.0.0.1' ] ).toContain( url.hostname );

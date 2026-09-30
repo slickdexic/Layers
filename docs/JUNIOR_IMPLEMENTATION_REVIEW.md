@@ -1,4 +1,77 @@
-# Junior implementation review — J01–J95
+# Junior implementation review — J01–J96
+
+## J96 accepted with lead corrections — September 29, 2026
+
+Advances: **HIST-4** and **HIST-8**. No product defects.
+
+The lead reran the changed specs serially on the migrated test wiki. `bare-names-after-migration.spec.js` passed in 44.8 s and left the owner page's text and drawing as it found them. `accessibility.spec.js` passed in 55.9 s. `migration-fixtures.spec.js` skipped.
+
+- **Result:** the helper, the new spec and six of the seven skips are accepted. The skips in `named-sets`, `page-owned-adoption`, `page-owned-file-adoption`, `page-owned-journey-acceptance`, `shown-set-search` and the second test of `page-owned-fields` each cover shared sets only.
+- **Correction:** `accessibility.spec.js` was skipped whole. It is the only automated check for UI-3, and only one of its seven screens is about shared sets. On a migrated wiki it now leaves out the shared slide and the adoption notice, and skips screen 6 (adoption). The other six screens run in light and dark. The only findings are the two known `nested-interactive` ones in the editor's layer list (screen 4).
+- **Correction:** `migration-fixtures.spec.js` needs unmigrated fixtures, and the whole wiki is migrated. It now skips on a migrated wiki. The junior was right to report it and leave it unchanged, as step 2 asked.
+- **Finding:** the failures of the legacy editor specs are not caused by the migration. The legacy editor (`action=editlayers` on `File:ImageTest03.png`) still opens after it, with the file's layers. The specs need `MW_SERVER`, `MW_USERNAME` and `MW_PASSWORD`, and `editor.spec.js` clicks a hidden duplicate link that never becomes clickable. Nobody can save from that editor now, so J97 moves these specs onto the page-owned editor.
+- **Finding:** `page-owned-workflow.spec.js` saves arrow-key nudges and restores only visibility. Over runs the title of the owner page's "Welcome Slide" moved from x 99 to x 103 (revisions 2210 to 2215). J97 fixes the spec and the baseline.
+- **Finding:** with shared sets retired, no browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. J98 is queued for both.
+
+## J96 implemented awaiting lead review: browser specs on the migrated test wiki — September 29, 2026
+
+Advances: **HIST-4** (Drawings are edited and saved from page views) and **HIST-8** (Moving existing drawings into page history).
+
+Junior completed J96:
+- **Migration Helper (`tests/e2e/helpers/migration.js`):**
+  - Queries `meta=siteinfo` for `layerspagehistorymigrated`.
+  - Accurately reports whether the target wiki has completed page history migration, caching the boolean result.
+- **New Browser Spec (`tests/e2e/bare-names-after-migration.spec.js`):**
+  - Run in real Chromium (`--workers=1`) against `http://localhost:8080`, passing in 56.9s.
+  - Verifies `Layers_browser_acceptance` clean baseline (rev 1986).
+  - Publishes wikitext with bare embeds: `{{#Slide:Bare probe}}` and `[[File:B010.jpg|layerset=Bare notes]]`.
+  - Clicks "Create page drawing: Bare probe" link from page view; draws rectangle (`#00aa44`) and saves via `.save-button`.
+  - Verifies page view paints drawing (`.layers-bound-file-view canvas`) while wikitext embed remains bare.
+  - Edits drawing, renames to "Bare probe renamed", and saves: verifies wikitext is rewritten to `{{#Slide:228:Bare probe renamed}}`.
+  - Verifies direct `layerssave` request for `B010.jpg` is refused with error code `migrated`.
+  - Restores baseline wikitext and snapshot by CAS exact-base publication in main flow and in `finally`.
+  - Verifies `DeleteMe006` read-only case: `FT-Image-149-000001.jpg` and `FT-Image-149-000002.jpg` mount `.layers-bound-file-view canvas` and paint drawings, while `FT-Image-149-000003.jpg` is a plain image (`<img>` with no canvas mounted).
+- **Serial Browser Suite Execution Results (35 specs):**
+  - **Passed (21 specs):**
+    - `bare-names-after-migration.spec.js` (56.9s, 1 passed)
+    - `modules.spec.js` (6.0s, 1 passed)
+    - `page-owned-binding.spec.js` (72.4s, 3 passed)
+    - `page-owned-cargo.spec.js` (45.7s, 2 passed)
+    - `page-owned-copy.spec.js` (41.1s, 1 passed)
+    - `page-owned-create.spec.js` (50.8s, 1 passed)
+    - `page-owned-default-on.spec.js` (56.6s, 1 passed)
+    - `page-owned-diff-restore.spec.js` (51.4s, 1 passed)
+    - `page-owned-fields.spec.js` (22.4s, 1 passed, 1 skipped)
+    - `page-owned-file-binding.spec.js` (29.1s, 1 passed)
+    - `page-owned-journey-drawing-tools.spec.js` (55.0s, 1 passed)
+    - `page-owned-journey-layer-types.spec.js` (73.1s, 1 passed)
+    - `page-owned-journey-move.spec.js` (49.3s, 2 passed)
+    - `page-owned-journey-properties.spec.js` (79.1s, 1 passed)
+    - `page-owned-named-embeds.spec.js` (46.2s, 1 passed)
+    - `page-owned-refusal-message.spec.js` (29.7s, 1 passed)
+    - `page-owned-rename.spec.js` (43.6s, 1 passed)
+    - `page-owned-rendering.spec.js` (73.7s, 1 passed)
+    - `page-owned-summary.spec.js` (27.7s, 1 passed)
+    - `page-owned-workflow.spec.js` (114.4s, 5 passed)
+    - `smoke.spec.js` (5.0s, 2 passed)
+    - `transforms.spec.js` (290.2s, 14 passed)
+  - **Skipped when wiki migrated (7 specs with exact reason `"shared sets are read-only after the migration"`):**
+    - `accessibility.spec.js` (5.1s, 1 skipped: seeds shared slide and tests shared slide adoption notice/screen)
+    - `named-sets.spec.js` (6.4s, 13 skipped: tests legacy file shared named sets on `File:ImageTest03.png`)
+    - `page-owned-adoption.spec.js` (5.3s, 2 skipped: tests adopting shared slides)
+    - `page-owned-file-adoption.spec.js` (5.3s, 1 skipped: tests adopting shared file drawings)
+    - `page-owned-fields.spec.js` (Test 2 skipped; Test 1 passed: selective skip of shared sets/slides)
+    - `page-owned-journey-acceptance.spec.js` (5.3s, 1 skipped: tests adoption journey from shared slides/drawings)
+    - `shown-set-search.spec.js` (5.3s, 1 skipped: tests search finding pages by shared layer sets and slides)
+  - **Lead Findings (other failures reported unchanged):**
+    - `migration-fixtures.spec.js`: Dry-run comparison failed at line 390 because the test wiki was migrated in commit `8e463da2`, so the live fixtures are in post-migration state rather than the un-migrated baseline expected by the dry run. Unchanged.
+    - Legacy editor UI test timeouts and failures on `File:ImageTest03.png`:
+      - `editor.spec.js`: Test 1 `can open editor on File page` timed out on `await page.waitForLoadState( 'networkidle' )` during `action=editlayers` navigation. Unchanged.
+      - `emoji-picker.spec.js`: Test 4 `can close emoji picker by clicking overlay` timed out after 3.0m on overlay click. Unchanged.
+      - `keyboard.spec.js`: Failed on keyboard shortcuts (Escape key deselects all, Ctrl+Z). Unchanged.
+      - `layer-groups.spec.js`: Failed on group creation in legacy editor. Unchanged.
+      - `properties.spec.js`: Timed out in editor properties panel. Unchanged.
+      - `shape-library.spec.js`: Failed on shape library item selection in legacy editor. Unchanged.
 
 ## J95 accepted — September 29, 2026
 

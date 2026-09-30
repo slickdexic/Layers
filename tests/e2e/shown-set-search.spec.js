@@ -14,6 +14,7 @@
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
 const path = require( 'path' );
+const { isWikiMigrated } = require( './helpers/migration' );
 
 test.describe.configure( { mode: 'serial' } );
 
@@ -22,6 +23,7 @@ test( 'search finds a page by words in a shared layer set and slide it shows, an
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
+	test.skip( await isWikiMigrated( { request: context.request } ), 'shared sets are read-only after the migration' );
 
 	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
 	const url = new URL( config.base );

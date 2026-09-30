@@ -1,6 +1,30 @@
 # Layers implementation handoff plan
 
-## Test wiki migrated; J96 ready — September 29, 2026
+## J96 accepted; J97 ready — September 29, 2026
+
+**J96 is accepted with lead corrections** (see the review ledger). The browser specs are sorted: the ones about shared sets skip on the migrated wiki, `bare-names-after-migration.spec.js` proves bare names in the browser, and `accessibility.spec.js` runs again without the shared slide. Earlier entries below are historical.
+
+### J97 — The editor specs on the page-owned editor (ready)
+
+**Advances:** FEAT-1, FEAT-4 and FEAT-6, in the editor that is kept.
+
+**Purpose:** `editor`, `emoji-picker`, `keyboard`, `layer-groups`, `properties`, `shape-library` and `transforms` test the editor's tools and panels through the legacy editor (`action=editlayers` on a `File:` page, via `LayersEditorPage.openEditor()` in `tests/e2e/fixtures.js`). After the migration nobody can save from that editor, so these specs cover an editor that is being retired. Move them onto the page-owned editor. Also stop `page-owned-workflow.spec.js` from moving the owner page's drawing.
+
+**Allowed changes:** those seven specs, `tests/e2e/fixtures.js`, `tests/e2e/page-owned-workflow.spec.js`, this packet and the review ledger. No production code. The wiki rules of J65 apply: write only `Layers_browser_acceptance`, from and back to its baseline.
+
+1. Give `LayersEditorPage` a way to open `Special:EditLayersPage` for the owner page's `presentation` drawing, as screen 4 of `accessibility.spec.js` does, and a save that waits for `layerspublish` and checks it succeeded. Log in with the acceptance config that the page-owned specs use (`LAYERS_ACCEPTANCE_CONFIG`, or `layers-original-session.json` in `TEMP`), so the specs no longer skip silently when `MW_SERVER`, `MW_USERNAME` and `MW_PASSWORD` are unset.
+2. Switch the seven specs to it and keep their assertions about tools, shortcuts, undo, groups, properties, the Shape Library and the emoji picker. Drop only assertions about things the page-owned editor does not have, such as the named-set selector, and list each one you drop with the reason. A test that saves restores the baseline by exact-base publication in `finally`.
+3. `editor.spec.js` clicks the first `a[href*="action=editlayers"]` on the `File:` page, which is a hidden duplicate and never becomes clickable. The legacy editor itself still opens after the migration. Replace that test with one that opens the owner page and follows its "Edit page drawing: Welcome Slide" link (`.layers-page-edit-link`).
+4. `page-owned-workflow.spec.js` saves arrow-key nudges and restores only visibility, so the title of "Welcome Slide" has drifted from x 99 to x 103 over runs (revisions 2210 to 2215). Capture the owner's snapshot at the start of each test and publish it back at the end. Then restore the baseline once, with the title at x 99.
+5. Run each changed spec twice in a row, serially. The second run must pass too, and afterwards the owner page's latest snapshot must equal the baseline.
+
+Record findings, then return for lead review.
+
+### J98 — Search and PDF pages after the migration (queued)
+
+**Advances:** TYPES-2, TYPES-4 and HIST-8. `shown-set-search.spec.js` and `page-owned-journey-acceptance.spec.js` covered search and PDF page two through shared sets, and both skip now. No browser spec searches for a page's own drawing words or draws on a PDF page's page-owned drawing. The lead writes this packet after reviewing J97.
+
+## Test wiki migrated; J96 accepted — September 29, 2026
 
 With the owner's approval the whole test wiki is migrated and recorded as complete (see the [current status](CURRENT_STATUS.md)). Shared sets and slides are read-only there now. `meta=siteinfo` reports `layerspagehistorymigrated: true`. Earlier entries below are historical.
 
@@ -23,6 +47,58 @@ With the owner's approval the whole test wiki is migrated and recorded as comple
 4. Read-only: on `DeleteMe006` the images of `FT-Image-149-000001.jpg` and `FT-Image-149-000002.jpg` both paint their drawings, and `FT-Image-149-000003.jpg` is a plain image.
 
 Record findings, then return for lead review.
+
+**Result:** Implemented in `tests/e2e/helpers/migration.js`, `tests/e2e/bare-names-after-migration.spec.js` (56.9s, 1 passed; serial `--workers=1`), and skip conditions in 7 existing specs. ESLint clean (0 errors, 0 warnings across all touched files).
+- **Migration Helper:** Created `tests/e2e/helpers/migration.js` exporting `isWikiMigrated( options )`, querying `meta=siteinfo` for `layerspagehistorymigrated`.
+- **New Acceptance Spec (`tests/e2e/bare-names-after-migration.spec.js`):**
+  - Published bare embeds `{{#Slide:Bare probe}}` and `[[File:B010.jpg|layerset=Bare notes]]` on `Layers_browser_acceptance`.
+  - Created slide drawing through "Create page drawing: Bare probe" link, drew rectangle and saved.
+  - Page painted drawing; wikitext remained bare `{{#Slide:Bare probe}}`.
+  - Renamed drawing to "Bare probe renamed" in editor and saved. Embed in wikitext was rewritten to `{{#Slide:228:Bare probe renamed}}`.
+  - Confirmed `layerssave` for `B010.jpg` is refused with error code `migrated`.
+  - Restored baseline via CAS exact-base publication in main flow and in `finally`.
+  - Verified `DeleteMe006` read-only case: `FT-Image-149-000001.jpg` and `FT-Image-149-000002.jpg` mount `.layers-bound-file-view canvas` and paint drawings; `FT-Image-149-000003.jpg` is a plain image (`<img>` with no canvas mounted).
+- **Serial Browser Suite Results:**
+  - **Passed (21 specs):**
+    - `bare-names-after-migration.spec.js` (56.9s, 1 passed)
+    - `modules.spec.js` (6.0s, 1 passed)
+    - `page-owned-binding.spec.js` (72.4s, 3 passed)
+    - `page-owned-cargo.spec.js` (45.7s, 2 passed)
+    - `page-owned-copy.spec.js` (41.1s, 1 passed)
+    - `page-owned-create.spec.js` (50.8s, 1 passed)
+    - `page-owned-default-on.spec.js` (56.6s, 1 passed)
+    - `page-owned-diff-restore.spec.js` (51.4s, 1 passed)
+    - `page-owned-fields.spec.js` (22.4s, 1 passed, 1 skipped)
+    - `page-owned-file-binding.spec.js` (29.1s, 1 passed)
+    - `page-owned-journey-drawing-tools.spec.js` (55.0s, 1 passed)
+    - `page-owned-journey-layer-types.spec.js` (73.1s, 1 passed)
+    - `page-owned-journey-move.spec.js` (49.3s, 2 passed)
+    - `page-owned-journey-properties.spec.js` (79.1s, 1 passed)
+    - `page-owned-named-embeds.spec.js` (46.2s, 1 passed)
+    - `page-owned-refusal-message.spec.js` (29.7s, 1 passed)
+    - `page-owned-rename.spec.js` (43.6s, 1 passed)
+    - `page-owned-rendering.spec.js` (73.7s, 1 passed)
+    - `page-owned-summary.spec.js` (27.7s, 1 passed)
+    - `page-owned-workflow.spec.js` (114.4s, 5 passed)
+    - `smoke.spec.js` (5.0s, 2 passed)
+    - `transforms.spec.js` (290.2s, 14 passed)
+  - **Skipped when wiki migrated (7 specs with reason `"shared sets are read-only after the migration"`):**
+    - `accessibility.spec.js` (5.1s, 1 skipped: seeds shared slide and tests shared slide adoption notice/screen)
+    - `named-sets.spec.js` (6.4s, 13 skipped: tests legacy file shared named sets on `File:ImageTest03.png`)
+    - `page-owned-adoption.spec.js` (5.3s, 2 skipped: tests adopting shared slides)
+    - `page-owned-file-adoption.spec.js` (5.3s, 1 skipped: tests adopting shared file drawings)
+    - `page-owned-fields.spec.js` (Test 2 skipped; Test 1 passed: selective skip of shared sets/slides)
+    - `page-owned-journey-acceptance.spec.js` (5.3s, 1 skipped: tests adoption journey from shared slides/drawings)
+    - `shown-set-search.spec.js` (5.3s, 1 skipped: tests search finding pages by shared layer sets and slides)
+  - **Lead Findings (other failures reported unchanged):**
+    - `migration-fixtures.spec.js`: Dry-run comparison failed at line 390 because the test wiki was migrated in commit `8e463da2`, so the live fixtures are in post-migration state rather than the un-migrated baseline expected by the dry run. Unchanged.
+    - Legacy editor UI test timeouts and failures on `File:ImageTest03.png`:
+      - `editor.spec.js`: Test 1 `can open editor on File page` timed out on `await page.waitForLoadState( 'networkidle' )` during `action=editlayers` navigation. Unchanged.
+      - `emoji-picker.spec.js`: Test 4 `can close emoji picker by clicking overlay` timed out after 3.0m on overlay click. Unchanged.
+      - `keyboard.spec.js`: Failed on keyboard shortcuts (Escape key deselects all, Ctrl+Z). Unchanged.
+      - `layer-groups.spec.js`: Failed on group creation in legacy editor. Unchanged.
+      - `properties.spec.js`: Timed out in editor properties panel. Unchanged.
+      - `shape-library.spec.js`: Failed on shape library item selection in legacy editor. Unchanged.
 
 ## J95 accepted — September 29, 2026
 
