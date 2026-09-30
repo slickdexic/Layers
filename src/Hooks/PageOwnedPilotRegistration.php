@@ -57,6 +57,11 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 					$services->getLinkRenderer() ) )->onPageHistoryLineEnding(
 						$pager, $row, $html, $classes, $attributes );
 			} );
+		$hooks->register( 'HistoryTools',
+			static function ( $revRecord, &$links, $prevRevRecord, $user ) use ( $services ) {
+				return ( new PageOwnedHistoryHooks( $services->getService( 'LayersPageOwnedPilot' ),
+					$services->getLinkRenderer() ) )->onHistoryTools( $revRecord, $links, $prevRevRecord, $user );
+			} );
 		$hooks->register( 'DifferenceEngineShowDiff', static function ( $differenceEngine ) use ( $services ) {
 			( new PageOwnedDiffHooks( $services->getService( 'LayersPageOwnedPilot' ) ) )
 				->onDifferenceEngineShowDiff( $differenceEngine );

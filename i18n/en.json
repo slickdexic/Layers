@@ -84,6 +84,7 @@
 	"layers-page-revision-check-conflict": "This content changed on the server; keep your draft and resolve differences before saving.",
 	"layers-page-revision-check-failed": "Could not check the saved page; the local draft remains available.",
 	"layers-page-history-link": "View Layers: $1",
+	"layers-page-history-undo": "undo drawing: $1",
 	"layers-page-history-title": "Layers revision view",
 	"layers-page-diff-heading": "Drawing changes",
 	"layers-page-diff-added": "“$1” was added in this revision.",

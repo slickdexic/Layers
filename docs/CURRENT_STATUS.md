@@ -1,5 +1,14 @@
 # Current status and limitations
 
+## Undoing a drawing edit from the history — September 30, 2026
+
+[Charter](../docs/PROJECT_CHARTER.md) criterion HIST-2. A probe on the test wiki showed that Recent Changes, contributions, the watchlist and the page history all list a drawing edit with its summary and the `layers-page-drawing` tag, and that core's **undo** does nothing for one: `action=edit&undo=` answered "Success" with `nochange`, because core's undo restores only the page text.
+
+- **Fix.** On an edit that changed drawings, the history tools no longer show core's undo. Each drawing the edit changed, and that existed before it, gets an "undo drawing: <name>" link that opens the drawing as it was before the edit, where an editor can make it current again (the restore of September 28). The links appear only for people who may edit the page and have `editlayers`. An edit of the text alone keeps core's undo. Rollback is unchanged.
+- **Not covered.** An edit that only *added* a drawing has no undo link, because nothing of it existed before; delete the drawing in the editor. A direct `action=edit&undo=` URL still undoes only the text. Notifications are unverified.
+
+Fresh verification: native `HistoryUndoToolsTest` (a changed drawing gets one link to the version before the edit and loses core's undo, a text-only edit keeps it, an added drawing and a reader without edit rights get none), and the owner page's history in Chromium lists "undo drawing: Welcome Slide" on the probe edits. Full native configuration and gates below.
+
 ## The editor lists other pages' drawings and copies one — September 30, 2026
 
 [Charter](../docs/PROJECT_CHARTER.md) criteria HIST-5 and TYPES-3 (decision D1, scenario S4). From the page-owned editor an author can now pick a drawing of another page and copy it into this page as a new drawing, without an embed that names it first.
