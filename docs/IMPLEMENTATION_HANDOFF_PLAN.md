@@ -1,10 +1,10 @@
 # Layers implementation handoff plan
 
-## J100 ready — September 30, 2026
+## J100 and J101 accepted — September 30, 2026
 
-**J99 is accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. J101 is queued for browser acceptance of history tools (HIST-2). The lead designed Charter Item 5 (Links from layers: FEAT-8, SEC-5, SRCH-3, CARGO-1) as a unified piece in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md). Earlier entries below are historical.
+**J100 and J101 are accepted** (see the review ledger). The lead reviewed the charter (section 11 of it) and built the editor's list of other pages' drawings. The lead designed Charter Item 5 (Links from layers: FEAT-8, SEC-5, SRCH-3, CARGO-1) as a unified piece in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md). Earlier entries below are historical.
 
-### J100 — Browser acceptance of copying from the editor's list (ready)
+### J100 — Browser acceptance of copying from the editor's list (accepted)
 
 **Advances:** HIST-5, TYPES-3 and scenario S4.
 
@@ -21,7 +21,7 @@
 
 Record findings, then return for lead review.
 
-### J101 — Browser acceptance of history tools (queued)
+### J101 — Browser acceptance of history tools (accepted)
 
 **Advances:** HIST-2.
 

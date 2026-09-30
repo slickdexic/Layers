@@ -1,4 +1,77 @@
-# Junior implementation review — J01–J99
+# Junior implementation review — J01–J101
+
+## J100 and J101 lead review — September 30, 2026
+
+Both specs were rerun by the lead: 2 passed, and the owner page ended on the baseline restore (revision 2610).
+
+- **Accepted with repairs to J100.** Three assertions could not fail: "a GET changes nothing" and "the source page is unchanged" compared `revisions?.[0]?.revid || <constant>` on queries that never asked for revisions, so they always passed; and "no drawing added after the conflict" looked for a label (`labels`) that nothing had to contain. They now read real revision IDs and compare the drawing labels before and after. The confirmation URL of the stale-form step was hard-coded to page 240, a surface ID and revision 2537; it now reuses the link the picker produced.
+- **J101 is sound.** The restore is proved by value (`x` 149 back to 99, text unchanged), and the link's three parameters are checked exactly. The "account with edit but without editlayers" part stays **not tested**, as the packet required; the anonymous check only shows that a reader who cannot edit sees no links, so it does not cover that case. `allusers` now asks for 500 users, not the default 10.
+- **Lesson:** `x?.y || constant` in an assertion is a pass that cannot fail; a test must prove it asked for what it compares.
+- Not covered: notifications (Echo is not installed on the test wiki).
+
+## J101 implemented: browser acceptance of history tools — September 30, 2026
+
+Advances: **HIST-2** (Page history undo links, feeds and permissions).
+
+No production code and no changes outside `tests/e2e/page-owned-history-tools.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md` and this review ledger.
+
+Junior completed J101:
+- **`tests/e2e/page-owned-history-tools.spec.js`**:
+  - Ran twice serially; both runs passed (54.9s and 54.2s).
+  - Owner page `Layers_browser_acceptance` strictly restored to exact baseline (`revid: 2600`, text `Dedicated automated Layers history acceptance page.`, snapshot `presentation`, `Welcome Slide`, `Visual ideas — 世界` at x: 99, y: 60).
+  - **Part 1 (Drawing modification replaces core undo):**
+    - Published revision modifying layer `x` coordinate on `Welcome Slide` (+50 from baseline 99).
+    - `action=history` replaces core's undo link with `.layers-history-undo-link` in `.mw-pager-tools` displaying `undo drawing: Welcome Slide`.
+    - Href verified: points to `Special:ViewLayersPage` with exact parameters `owner=Layers_browser_acceptance`, `revid=<prior_revid>`, and `surface=presentation`.
+    - Core's `.mw-rollback-link a` remains visible and available.
+  - **Part 2 (Drawing undo flow and restore by value):**
+    - Following link opens `Special:ViewLayersPage` with prior canvas and `.layers-restore-button` ("Restore this version").
+    - Submitting restore button publishes a new revision.
+    - Verified restore by value via API before and after: title layer `x` coordinate returned from 149 back to baseline 99, wikitext remained identical, other drawings untouched.
+  - **Part 3 (Text-only edit preserves core undo):**
+    - Published text-only edit; `action=history` keeps core standard `a[href*="undo="]` in `.mw-pager-tools`. Core undo restores text.
+  - **Part 4 (Added drawing edit suppresses undo):**
+    - Published revision introducing a brand-new drawing; `action=history` shows 0 drawing undo links and 0 core undo links.
+  - **Part 5 (Permissions):**
+    - Anonymous reader sees 0 undo links on `action=history`.
+    - Finding: No account with `edit` but without `editlayers` exists on test wiki; recorded as **not tested**, not passed (per J101 packet rule 5).
+  - **Part 6 (Feeds):**
+    - Watched page using `watchtoken` (restored watch state afterwards).
+    - `Special:RecentChanges`, `Special:Watchlist` and `Special:Contributions` all display the drawing edit with its edit summary and the `layers-page-drawing` change tag.
+
+## J100 implemented: browser acceptance of copying from editor list — September 30, 2026
+
+Advances: **HIST-5**, **TYPES-3**, and scenario **S4**.
+
+No production code and no changes outside `tests/e2e/page-owned-copy-from-list.spec.js`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md` and this review ledger.
+
+Junior completed J100:
+- **`tests/e2e/page-owned-copy-from-list.spec.js`**:
+  - Ran twice serially; both runs passed (59.3s and 58.5s).
+  - Owner page `Layers_browser_acceptance` strictly restored to exact baseline (`revid: 2585`, text `Dedicated automated Layers history acceptance page.`, snapshot `presentation`, `Welcome Slide`, `Visual ideas — 世界` at x: 99, y: 60).
+  - **Part 1 (The list):**
+    - Opened owner page editor (`Special:EditLayersPage`).
+    - Verified `.layers-page-drawing-copy` button ("Copy from another page") is visible.
+    - Clicking opens modal dialog with initial focus in `.layers-page-copy-search`.
+    - Dialog lists drawings from other pages (e.g. `Layers migration fixture/Direct`, `DeleteMe001`), never drawings from the owner page itself.
+    - Search prefix filters results (typing `Layers migration fixture/Direct` shows only its drawings); unmatched query displays empty list status ("No drawings found").
+    - Escape closes dialog and restores focus to `.layers-page-drawing-copy`. Tab cycles focus within dialog elements and never escapes to the background editor.
+  - **Part 2 (The confirmation):**
+    - Selected drawing `anatomy` from `Layers migration fixture/Direct`.
+    - Confirmation page (`Special:CopyLayersDrawing`) displays drawing name, source title, source revision, and destination owner page.
+    - GET request makes no changes (owner page latest revision unchanged).
+  - **Part 3 (The copy):**
+    - Submitted form with note "J100".
+    - Owner page received new revision tagged `layers-page-drawing` with summary `Copied drawing “anatomy” from [[:Layers migration fixture/Direct]] (revision 2537): J100`.
+    - Wikitext unchanged; `layersread` contains both `Welcome Slide` and `anatomy`, with copy's layer definitions identical to source drawing.
+    - Second copy of same drawing creates `anatomy 2`. Source page's latest revision is unchanged.
+  - **Part 4 (Rendering and pixel verification):**
+    - Published embed `[[File:Layers_migration_fixture_A.png|layerset=<ownerId>:anatomy]]`.
+    - Page view mounts canvas rendering the copied drawing.
+    - Pixel check confirms black text/stroke (`rgb(0, 0, 0)`) along text line on blue rectangle (>50 black pixels), and 0 black pixels along control line above it.
+  - **Part 5 (Stale confirmation and permissions):**
+    - Opened confirmation page, published intervening owner revision, then submitted form: rejected with edit conflict error box (`.cdx-message--error` with text `"has changed since this confirmation was opened, so nothing was saved."`), saving no drawing.
+    - Anonymous request to `action=layersdrawings` answers with `error.code: "permissiondenied"`.
 
 ## J99 accepted with lead corrections — September 30, 2026
 
