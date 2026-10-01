@@ -725,6 +725,7 @@
 	"layers-validation-richtext-not-array": "Validation: rich text property must be an array of styled text runs",
 	"layers-validation-richtext-too-many-runs": "Validation: too many text formatting runs in rich text; $1 is the maximum allowed",
 	"layers-validation-richtext-too-long": "Validation: total text content in rich text exceeds maximum length",
+	"layers-link-page-drawings-only": "Error message when attempting to save a drawing with links to legacy layer sets instead of page-owned drawings",
 	"layers-validation-failed": "Validation: shown when layer validation fails with a specific error message. $1 is the detailed error text.",
 	"layers-presets": "Label for the presets dropdown button in the toolbar",
 	"layers-presets-tooltip": "Tooltip shown when hovering over the presets button",

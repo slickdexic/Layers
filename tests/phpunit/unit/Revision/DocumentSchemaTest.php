@@ -329,6 +329,37 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		}
 	}
 
+	public function testDocumentWithGoodLinksCanonicalizesUnchanged(): void {
+		$schema = new DocumentSchema();
+		$doc = self::fixture();
+		$goodInternal = 'Operations/Intake#Procedure';
+		$goodExternal = 'https://example.org/a?b=c#d';
+		$doc->surfaces[0]->layers[] = (object)[
+			'id' => 'internal-link-box',
+			'type' => 'rectangle',
+			'x' => 10,
+			'y' => 10,
+			'width' => 100,
+			'height' => 50,
+			'link' => $goodInternal
+		];
+		$doc->surfaces[0]->layers[] = (object)[
+			'id' => 'external-link-box',
+			'type' => 'rectangle',
+			'x' => 20,
+			'y' => 20,
+			'width' => 100,
+			'height' => 50,
+			'link' => $goodExternal
+		];
+		$canonical = $schema->canonicalize( json_encode( $doc ) );
+		$decoded = json_decode( $canonical, true );
+		$layers = $decoded['surfaces'][0]['layers'];
+		$lastTwo = array_slice( $layers, -2 );
+		$this->assertSame( $goodInternal, $lastTwo[0]['link'] );
+		$this->assertSame( $goodExternal, $lastTwo[1]['link'] );
+	}
+
 	public static function provideRefusedLayers(): array {
 		$box = [ 'id' => 'box', 'type' => 'rectangle', 'x' => 1, 'y' => 1, 'width' => 5, 'height' => 5 ];
 		return [
@@ -336,6 +367,10 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 			'rewritten value, unnamed layer' => [ $box + [ 'fill' => 'rgba(0,0,0,0.5)' ], 'box', 'fill' ],
 			'refused layer' => [ [ 'id' => 'caption', 'type' => 'text', 'x' => 1, 'y' => 1, 'text' => '' ],
 				'caption', null ],
+			'refused layer with invalid link' => [ $box + [ 'name' => 'BadLinkBox', 'link' => 'javascript:alert(1)' ],
+				'BadLinkBox', null ],
+			'refused layer with control chars in link' => [ $box + [ 'name' => 'CtrlBox', 'link' => "a\x00b" ],
+				'CtrlBox', null ],
 		];
 	}
 }

@@ -273,6 +273,117 @@ class ApiLayersPublishTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
+	public function testPublishWithGoodLinksPreservesExactLinkValues(): void {
+		$params = $this->request();
+		$actor = $this->actor();
+		$goodInternal = 'Operations/Intake#Procedure';
+		$goodExternal = 'https://example.org/a?b=c#d';
+		$params['data'] = json_encode( [
+			'schemaVersion' => 1,
+			'surfaces' => [ [
+				'id' => 'slide1',
+				'kind' => 'slide',
+				'label' => 'Slide 1',
+				'canvas' => [
+					'width' => 800,
+					'height' => 600,
+					'backgroundColor' => '#ffffff',
+					'backgroundVisible' => true,
+					'backgroundOpacity' => 1
+				],
+				'layers' => [
+					[
+						'id' => 'link-internal',
+						'type' => 'rectangle',
+						'name' => 'Internal Link Box',
+						'x' => 10,
+						'y' => 10,
+						'width' => 100,
+						'height' => 50,
+						'link' => $goodInternal
+					],
+					[
+						'id' => 'link-external',
+						'type' => 'rectangle',
+						'name' => 'External Link Box',
+						'x' => 120,
+						'y' => 10,
+						'width' => 100,
+						'height' => 50,
+						'link' => $goodExternal
+					]
+				]
+			] ]
+		] );
+
+		$response = $this->doApiRequestWithToken( $params, null, $actor )[0]['layerspublish'];
+		$this->assertSame( 'Success', $response['result'] );
+		$this->assertGreaterThan( $params['baserevid'], $response['revid'] );
+
+		// Read the slot back and compare the link value exactly
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $response['revid'] );
+		$this->assertNotNull( $revision );
+		$slotContent = $revision->getContent( PageRevisionWriter::SLOT );
+		$this->assertInstanceOf( LayersDocumentContent::class, $slotContent );
+
+		$doc = json_decode( $slotContent->getText(), true );
+		$this->assertSame( $goodInternal, $doc['surfaces'][0]['layers'][0]['link'] );
+		$this->assertSame( $goodExternal, $doc['surfaces'][0]['layers'][1]['link'] );
+	}
+
+	/**
+	 * @dataProvider provideBadLinksForPublication
+	 */
+	public function testPublishWithBadLinkFailsWithInvalidOrLossyLayerData( string $badLink ): void {
+		$params = $this->request();
+		$actor = $this->actor();
+		$params['data'] = json_encode( [
+			'schemaVersion' => 1,
+			'surfaces' => [ [
+				'id' => 'slide1',
+				'kind' => 'slide',
+				'label' => 'Slide 1',
+				'canvas' => [
+					'width' => 800,
+					'height' => 600,
+					'backgroundColor' => '#ffffff',
+					'backgroundVisible' => true,
+					'backgroundOpacity' => 1
+				],
+				'layers' => [
+					[
+						'id' => 'bad-link-box',
+						'type' => 'rectangle',
+						'name' => 'Bad link box',
+						'x' => 10,
+						'y' => 10,
+						'width' => 100,
+						'height' => 50,
+						'link' => $badLink
+					]
+				]
+			] ]
+		] );
+
+		try {
+			$this->doApiRequestWithToken( $params, null, $actor );
+			$this->fail( 'Expected publication with bad link to fail' );
+		} catch ( ApiUsageException $e ) {
+			$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-invalid-snapshot' ) );
+			$message = $e->getStatusValue()->getMessages()[0];
+			$this->assertSame( 'layers-invalid-snapshot-layer', $message->getKey() );
+			$this->assertSame( [ 'Bad link box' ], $message->getParams() );
+		}
+	}
+
+	public static function provideBadLinksForPublication(): array {
+		return [
+			'forbidden protocol javascript' => [ 'javascript:alert(1)' ],
+			'control character' => [ "page\x00title" ],
+			'empty link' => [ '' ],
+		];
+	}
+
 	public function testDrawingsAreKeptInPageHistoryByDefault(): void {
 		$manifest = json_decode( file_get_contents( __DIR__ . '/../../../extension.json' ), true );
 		// null: the content namespaces and File:, with no pilot switch or owner list (D2).

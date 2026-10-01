@@ -20,6 +20,9 @@ class ServerSideLayerValidator {
 	/** @var ColorValidator */
 	private $colorValidator;
 
+	/** @var LayerLinkValidator */
+	private $linkValidator;
+
 	/** @var array Configuration cache */
 	private $config;
 
@@ -48,6 +51,7 @@ class ServerSideLayerValidator {
 		'y2' => 'numeric',
 		'rotation' => 'numeric',
 		'text' => 'string',
+		'link' => 'string',
 		'fontSize' => 'numeric',
 		'fontFamily' => 'string',
 		'color' => 'string',
@@ -286,10 +290,16 @@ class ServerSideLayerValidator {
 	/**
 	 * @param int|null $maxLayers Fixed profile limit, or null for wiki configuration
 	 * @param int|null $maxImageBytes Fixed profile limit, or null for wiki configuration
+	 * @param LayerLinkValidator|null $linkValidator Injected link validator
 	 */
-	public function __construct( ?int $maxLayers = null, ?int $maxImageBytes = null ) {
+	public function __construct(
+		?int $maxLayers = null,
+		?int $maxImageBytes = null,
+		?LayerLinkValidator $linkValidator = null
+	) {
 		$this->textSanitizer = new TextSanitizer();
 		$this->colorValidator = new ColorValidator();
+		$this->linkValidator = $linkValidator ?? new LayerLinkValidator();
 		$this->loadConfig();
 		foreach ( [ 'maxLayers' => $maxLayers, 'maxImageBytes' => $maxImageBytes ] as $key => $limit ) {
 			if ( $limit !== null ) {
@@ -428,10 +438,14 @@ class ServerSideLayerValidator {
 		// Validate each property
 		foreach ( self::ALLOWED_PROPERTIES as $property => $expectedType ) {
 			if ( !isset( $layer[$property] ) ) {
-				continue;
+				if ( $property === 'link' && array_key_exists( 'link', $layer ) ) {
+					$value = null;
+				} else {
+					continue;
+				}
+			} else {
+				$value = $layer[$property];
 			}
-
-			$value = $layer[$property];
 
 			// Allow star layers to persist numeric point counts without forcing array structures
 			if ( $property === 'points' && $type === 'star' && !is_array( $value ) && is_numeric( $value ) ) {
@@ -482,6 +496,10 @@ class ServerSideLayerValidator {
 	 * @return array Validation result with 'valid', 'value', and optionally 'error'
 	 */
 	private function validateProperty( string $property, $value, string $expectedType ): array {
+		if ( $property === 'link' ) {
+			return $this->linkValidator->validate( $value );
+		}
+
 		switch ( $expectedType ) {
 			case 'string':
 				return $this->validateStringProperty( $property, $value );
@@ -933,6 +951,7 @@ class ServerSideLayerValidator {
 	 * while the API still reports `success: 1`.
 	 */
 	private const STRICT_PROPERTIES = [
+		'link',
 		'richText',
 		'gradient',
 		'points',
@@ -1364,6 +1383,9 @@ class ServerSideLayerValidator {
 				}
 				if ( !is_array( $layer['children'] ) ) {
 					return [ 'valid' => false, 'error' => 'Group children must be an array' ];
+				}
+				if ( array_key_exists( 'link', $layer ) ) {
+					return [ 'valid' => false, 'error' => 'Group layers cannot have a link' ];
 				}
 				break;
 

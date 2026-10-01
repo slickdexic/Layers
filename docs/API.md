@@ -21,7 +21,7 @@ npm run docs
 | Delete/rename | [ApiLayersDelete.php](../src/Api/ApiLayersDelete.php) · [ApiLayersRename.php](../src/Api/ApiLayersRename.php) |
 | Slide listing | [ApiLayersList.php](../src/Api/ApiLayersList.php) |
 | Server export | [ApiLayersExport.php](../src/Api/ApiLayersExport.php) |
-| Validation | [ServerSideLayerValidator.php](../src/Validation/ServerSideLayerValidator.php) |
+| Validation | [ServerSideLayerValidator.php](../src/Validation/ServerSideLayerValidator.php) · [LayerLinkValidator.php](../src/Validation/LayerLinkValidator.php) |
 | Persistence | [LayersDatabase.php](../src/Database/LayersDatabase.php) |
 | Viewer | [LayersViewer.js](../resources/ext.layers/LayersViewer.js) · [LayersLightbox.js](../resources/ext.layers/viewer/LayersLightbox.js) |
 | Editor | [LayersEditor.js](../resources/ext.layers.editor/LayersEditor.js) · [APIManager.js](../resources/ext.layers.editor/APIManager.js) |

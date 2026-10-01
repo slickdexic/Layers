@@ -185,6 +185,13 @@ class ApiLayersSave extends ApiBase {
 			$layersData = $rawData;
 		}
 
+		// Legacy layer sets must refuse any layer carrying link (links are for page-owned drawings only)
+		foreach ( $layersData as $layer ) {
+			if ( is_array( $layer ) && array_key_exists( 'link', $layer ) ) {
+				$this->dieWithError( 'layers-link-page-drawings-only', 'link-page-drawings-only' );
+			}
+		}
+
 		// Validate layers
 		$validator = new ServerSideLayerValidator();
 		$validationResult = $validator->validateLayers( $layersData );

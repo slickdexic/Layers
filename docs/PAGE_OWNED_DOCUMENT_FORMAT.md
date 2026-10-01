@@ -74,6 +74,8 @@ Every layer requires a stable ID and a supported type. Validation compares the o
 
 Group children must exist, occur once in the group graph, have exactly one parent, and reciprocate their `parentGroup` reference. Only groups can have children. Self-reference and cycles are rejected. These checks prevent ambiguous or broken references in stored revisions.
 
+Any renderable layer type may carry an optional `link` property (a UTF-8 string up to 2048 bytes). Groups cannot carry a link. Link values are never silently repaired, normalized, or coerced: empty strings, control characters (`\x00`–`\x1F`, `\x7F`), leading or trailing whitespace, values exceeding 2048 bytes, and non-strings are refused. External URLs matching allowed protocols (`MediaWikiServices::getUrlUtils()->validProtocols()`) must parse via `parse_url()` and provide a host (except `mailto:`). Pseudo-protocols `javascript:`, `data:`, `vbscript:`, `file:`, and `blob:` are rejected by name. Internal links must validate as a MediaWiki title in the default (main) namespace and/or a section anchor (`#Section`). Links are supported only on page-owned drawings via `layerspublish`; legacy `ApiLayersSave` refuses layers with a `link` property.
+
 The shared validator is an implementation dependency, not an immutable public schema specification. Changes to its accepted properties or normalization must run the snapshot compatibility tests and explicitly decide whether a schema migration/version change is required. Security fixes may make unsafe old data unavailable; they must fail visibly, never substitute newer content. Before public rollout, representative legacy documents for all supported drawing types must have explicit import coverage.
 
 ## Bounds and serialization

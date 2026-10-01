@@ -1,10 +1,41 @@
 # Layers implementation handoff plan
 
-## J102 to J105 ready — September 30, 2026
+## J102 accepted; J103 to J107 ready — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
-### J102 — Links, part 1: the `link` property and its server validation (ready)
+### J106 — Authors never see a page ID (HIST-9) (ready, **first priority**)
+
+**Advances:** HIST-9 (owner finding, September 30). The owner opened a migrated page and found `[[File:ImageTest02.jpg|layerset=8:002]]`. A page ID is machinery; an author must be able to read, type and copy `layerset=002` and `{{#Slide:name}}`. Bare names already work as input after the migration. The writers still produce the ID form: the migration (`PageCopyMigration` through `DirectEmbeddingRewriter::rewrite()`), rename (`renameReferences()`, called from `PagePublicationService`), copy (`PageDrawingCopy`) and pre-migration adoption.
+
+**Rules (decided by the lead).**
+1. **After the migration is recorded** (`MigrationState`), every writer emits the bare name: `layerset=<name>` and `{{#Slide:<name>}}`. Add a `bool $bareNames` option to `rewrite()` and `renameReferences()` (the latter already has one for reading); callers pass whether the migration is recorded.
+2. **The migration itself** (which runs before the record exists, when a bare name still means the shared set) writes the bare name **only when it means the same thing before and after**: when the drawing's final name equals the set or slide name the embed resolved to, so the text is unchanged byte for byte. Where the name differs (a numbered name because the name was taken, "<set> (page N)", "<slide> (<set>)", or `layerset=on` resolving to the latest set under a different name) it keeps the explicit `<pageId>:<name>` form. `layerset=on` that resolves to a set of the same name becomes `layerset=<name>`.
+3. **Existing pages.** Add `--tidy-names` to `maintenance/migrateLayersToPageHistory.php`: once the migration is recorded, it rewrites every direct embed of the page's own drawings from `<ownPageId>:<name>` to the bare name, one bot edit per page (tag `layers-migration`), dry run without `--commit`, resumable, skipping a page whose text changed since planning. It must refuse to run before the record exists, and it must not touch `<otherPageId>:<name>` (another page's drawing: that embed shows nothing anyway), `layersbinding=`, or an embed where the bare name would resolve to a different drawing (two drawings that differ only by case or underscores resolve to one name; check with the same resolver the reader uses).
+4. **Input stays liberal.** `<pageId>:<name>` must still be read everywhere it is read today.
+5. **Docs.** `docs/WIKITEXT_USAGE.md` and the upgrade guide: authors write names; the ID form is described only as an accepted input. Update the status page, changelog (and mirrors) and the charter row HIST-9.
+
+**Tests that can fail.** Native: a bare-name page migrates with its text byte-identical; a renamed-because-taken case keeps the explicit form; after the record, rename and copy write bare names and the result shows the right drawing (read it through the page's rendered output, not only the text); `--tidy-names` dry run lists, commit rewrites, a second run does nothing, a page changed meanwhile is skipped and reported; undo of the migration still works on a bare-name page. Update every existing test that asserted the ID form where it is no longer written; do not delete one without saying why. Browser: run `page-owned-named-embeds.spec.js` and the migration specs serially; for each, state what the page text is after the step.
+
+**Gates.** Standalone and native suites, `npm test`, phpcs, `check:phprefs`, `node scripts/verify-docs.js`. Do not run `--tidy-names --commit` on the test wiki; report its dry run output, and the lead will run it.
+
+### J107 — Edit and View-full-size buttons on page-owned drawings (UI-10) (ready)
+
+**Advances:** UI-10 (owner finding, September 30): page-owned images show no hover buttons; only the list "Drawings on this page" leads to the editor. The old viewer (`ViewerManager`, `ViewerOverlay`) had them; the page-owned bootstraps (`resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js` for bound files and the slide equivalent) do not use `ViewerOverlay` at all.
+
+**Purpose:** a reader hovering (or keyboard-focusing) a page-owned image or slide drawing gets **View full size** (always) and **Edit** (only for those who may edit this page and have `editlayers`), like the old viewer.
+
+**Allowed changes:** the viewer scripts and styles under `resources/ext.layers/`, `extension.json` module declarations and messages, their Jest tests, the Playwright spec `tests/e2e/page-owned-overlay-buttons.spec.js`, this packet and the review ledger. Server code only if no other way exists, and then say why.
+
+1. **Read first:** `ViewerOverlay.js`, the way `ViewerManager._initializeOverlay()` builds it, and how `PageOwnedHeaderControls`/the "Drawings on this page" list gets its edit links for the current user (the parser output is cached across readers, so permission must **not** be baked into it). Report what you find before building.
+2. **Build:** reuse `ViewerOverlay` for page-owned drawings. **View full size** opens what the page-owned lightbox or `Special:ViewLayersPage` opens today for that drawing (find it; do not invent a new viewer). **Edit** goes to the same `Special:EditLayersPage` link the list uses for that drawing, and appears only when the list would offer it. Keyboard: the buttons are reachable by Tab, visible on focus, and activate with Enter.
+3. **Do not** show Edit on a drawing the page does not own, on an old revision, or to anonymous readers; do not add buttons to the history viewer.
+4. **Tests that can fail.** Jest: buttons exist for a bound image and a slide; Edit absent without permission; no overlay on historical views. Playwright, serially, on the owner page with the usual baseline rules: hover shows both buttons for an editor; View full size lands on the viewer of **that** drawing (check the drawing's name there); Edit opens the editor on **that** drawing; an anonymous context sees only View full size (or none if the old viewer shows none to anonymous readers: say which and why); Tab reaches the buttons. Run twice.
+5. **Gates.** `npm test`, `npm run check:bundlesize` (PERF-1: still under 150 KB gzip and nothing loads on a page without drawings), the existing page-owned viewer specs, serially.
+
+Record findings, then return for lead review. J106 and J107 are independent; do J106 first.
+
+### J102 — Links, part 1: the `link` property and its server validation (accepted)
 
 **Advances:** FEAT-8, SEC-3, SEC-5 (design PR 1).
 
@@ -19,7 +50,7 @@ Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](
 5. **Tests that can fail.** Standalone unit tests for every refusal above and for acceptance of: `Operations/Intake#Procedure`, `#Section`, `https://example.org/a?b=c#d`, `mailto:a@example.org`, `//example.org/x` (only when the injected protocol list includes `//`), a title with an accent and one with a space. Each refusal test must fail if the rule is deleted: check at least three by temporarily removing the rule. Verify that the stored value is identical to the input (`assertSame`).
 6. **Gates.** Standalone `phpunit.xml`, the native suite in the container, phpcs (lines up to 120), `check:i18n`, `check:phprefs`, `check:parallel`, `npm test`, `node scripts/verify-docs.js`. Note the Jest count is unchanged.
 
-Record findings, then return for lead review. If a rule above conflicts with existing code, report it; do not guess.
+**Result:** Implemented in `src/Validation/LayerLinkValidator.php`, `ServerSideLayerValidator.php`, `ApiLayersSave.php`, `i18n/en.json`, `i18n/qqq.json`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, `docs/API.md`, `tests/phpunit/unit/Validation/LayerLinkValidatorTest.php` (54 tests), `tests/phpunit/unit/Api/ApiLayersSavePayloadTest.php`, `tests/phpunit/unit/Revision/DocumentSchemaTest.php`, and `tests/phpunit/core/ApiLayersPublishTest.php`. All gates passed; Jest count unchanged (15,081 passed across 205 suites). Rule removal tests verified (control characters, forbidden protocols, max length). Native publication test verified exact byte-for-byte link preservation and refusal with `invalid-or-lossy-layer-data`.
 
 ### J103 — Links, part 2: one shared layer-bounds function (ready)
 

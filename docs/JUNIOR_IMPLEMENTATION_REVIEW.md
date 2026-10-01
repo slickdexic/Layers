@@ -1,4 +1,64 @@
-# Junior implementation review — J01–J101
+# Junior implementation review — J01–J102
+
+## J102 lead review — September 30, 2026
+
+Accepted with repairs. The lead reran the standalone suite (1,378 tests), the full native suite (449) and the checks; all pass. Three defects, all in the packet's own rules or the junior's reading of them:
+
+- **`File:` and `Data:` links were refused.** The rule "refuse `file:`, `data:` by name" (the lead's packet) also matched the `File:` and `Data:` **namespaces**, so a link to `File:Example.png` failed. The refusal is now for URL forms only (`file:/`, `data:` followed by a media type, `;` or `,`; `javascript:`, `vbscript:` and `blob:` always), and tests accept `File:Example.png`, `File:Foo/bar.png#Summary` and `Data:Population.tab`.
+- **Spaces inside an external URL were accepted** (`parse_url` tolerates them; core's link detection stops at a space, so the stored link would differ from what a reader gets). Whitespace, `<`, `>` and `"` inside an external URL are now refused, with tests.
+- **Nine `layers-validation-link-*` messages were declared and used nowhere** (the server returns English strings, like the validator's other errors). Removed; the editor's validator adds the ones it uses.
+- Good: the legacy refusal runs before anything is written and its test asserts `saveLayerSet` is never called; the publication test reads the slot back and compares both links exactly; `javascript:alert(1)` through publication would pass if the rule were removed, so that test can fail.
+- **Lesson:** a refusal rule by name must be tested against legitimate values that share the name.
+
+## J102 implemented: Links part 1 (the `link` property and server validation) — September 30, 2026
+
+Advances: **FEAT-8**, **SEC-3**, **SEC-5** (design PR 1).
+
+No JavaScript changed. All modifications strictly within allowed files: `src/Validation/LayerLinkValidator.php`, `src/Validation/ServerSideLayerValidator.php`, `src/Api/ApiLayersSave.php`, `i18n/en.json`, `i18n/qqq.json`, `docs/API.md`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, `tests/phpunit/`, `docs/IMPLEMENTATION_HANDOFF_PLAN.md` and this review ledger.
+
+Junior completed J102:
+- **`src/Validation/LayerLinkValidator.php`**:
+  - Implements `LayerLinkValidator` validating layer `link` property.
+  - Links are stored byte-for-byte or refused completely; no silent repair, trimming, or coercion.
+  - Refuses: non-string types, empty string, >2048 bytes, leading/trailing whitespace, and ASCII control characters (`\x00`–`\x1F`, `\x7F`).
+  - Refuses forbidden pseudo-protocols by name even if permitted by wiki configuration: `javascript:`, `data:`, `vbscript:`, `file:`, `blob:`.
+  - External URLs matching `/^(?:' . $protocols . ')/i'` must parse via `parse_url()` and have a host (except `mailto:`). The protocol pattern is injected via constructor (defaulting to `MediaWikiServices::getInstance()->getUrlUtils()->validProtocols()`).
+  - Internal links must validate as a MediaWiki title in the default (main) namespace via injectable `$titleValidator` callable (defaulting to `Title::newFromText()`, with safe fallback title validator for unit test environments where services are disabled). An anchor `#Section` with empty title is accepted if followed by at least one character.
+- **`src/Validation/ServerSideLayerValidator.php`**:
+  - Added `'link' => 'string'` to `ALLOWED_PROPERTIES` and `STRICT_PROPERTIES`.
+  - Injected `LayerLinkValidator` via constructor.
+  - Routes `link` directly to `LayerLinkValidator` instead of `validateStringProperty()` (which strips tags and truncates).
+  - Explicit `null` value for `link` fails validation under `STRICT_PROPERTIES`.
+  - Groups carrying a `link` are explicitly refused.
+- **`src/Api/ApiLayersSave.php`**:
+  - In `prepareSaveContext()`, checks all layers before saving and refuses any layer carrying a `link` property with `layers-link-page-drawings-only` (`link-page-drawings-only`). Nothing is written to the database.
+- **`i18n/en.json` & `i18n/qqq.json`**:
+  - Added 10 keys textually (never JSON.stringify): `layers-validation-link-type`, `layers-validation-link-empty`, `layers-validation-link-too-long`, `layers-validation-link-control-chars`, `layers-validation-link-whitespace`, `layers-validation-link-bad-protocol`, `layers-validation-link-url-invalid`, `layers-validation-link-title-invalid`, `layers-validation-link-empty-anchor`, and `layers-link-page-drawings-only`.
+  - All verified via `verify-metrics.js` (992 messages, 0 orphaned, 0 undocumented) and `verify-i18n-wiring.js`.
+- **`docs/PAGE_OWNED_DOCUMENT_FORMAT.md` & `docs/API.md`**:
+  - Documented `link` property format, validation rules, strictness, and page-owned publication scope in `PAGE_OWNED_DOCUMENT_FORMAT.md`.
+  - Added `LayerLinkValidator.php` entry and notes to `docs/API.md`.
+- **Tests & Rule Removal Verification (item 5 requirement)**:
+  - Created `tests/phpunit/unit/Validation/LayerLinkValidatorTest.php` (54 tests): tests all acceptance cases (`Operations/Intake#Procedure`, `#Section`, `https://example.org/a?b=c#d`, `mailto:a@example.org`, `//example.org/x`, titles with accents and spaces, byte-for-byte exact equality via `assertSame`), all refusal cases, strictness, and group refusal.
+  - Added `testRefusesLayersCarryingLinkWithoutSaving()` to `tests/phpunit/unit/Api/ApiLayersSavePayloadTest.php`: verifies that `ApiLayersSave` rejects layers carrying `link` and `saveLayerSet` is never called.
+  - Updated `tests/phpunit/unit/Revision/DocumentSchemaTest.php`: verified good links canonicalize unchanged and bad links are refused.
+  - **Rule removal checks performed and verified**:
+    1. Temporarily removed control character check (`\x00-\x1f\x7f`): `testRefusesControlCharacters` failed with 6 failures. Restored.
+    2. Temporarily removed forbidden pseudo-protocol check (`javascript|data|vbscript|file|blob`): failed with 10 failures (`testRefusesForbiddenProtocolsByName` and strict validator check). Restored.
+    3. Temporarily removed max length check (`> 2048 bytes`): `testRefusesOverLongLink` failed with 1 failure. Restored.
+- **Native Publication Test (item 3 requirement)**:
+  - Added `testPublishWithGoodLinksPreservesExactLinkValues()` to `tests/phpunit/core/ApiLayersPublishTest.php`: publishes internal (`Operations/Intake#Procedure`) and external (`https://example.org/a?b=c#d`) links through `layerspublish`, reads slot back from saved revision, and asserts exact byte-for-byte equality with `assertSame`.
+  - Added `testPublishWithBadLinkFailsWithInvalidOrLossyLayerData()`: tests publication rejection for forbidden protocol (`javascript:alert(1)`), control characters, and empty link; verifies publication fails with `ApiUsageException` (`layers-invalid-snapshot`, `layers-invalid-snapshot-layer: Bad link box`), backed by `LossyLayerException` (`invalid-or-lossy-layer-data`).
+- **Gates Verified**:
+  - Standalone `phpunit.xml`: 1,372 tests, 3,227 assertions, all passed.
+  - Native container test suite: `ApiLayersPublishTest.php` (32 tests, 96 assertions passed), `DocumentSchemaTest.php` (76 tests passed), `HistoryUndoToolsTest.php` (3 tests passed).
+  - PHPCS: 0 errors, 0 warnings (lines <= 120).
+  - `check:i18n` & `verify-metrics.js`: passed (992 messages, 0 orphaned, 0 undocumented).
+  - `check:mw-compat`: 0 errors, 0 warnings.
+  - `check:phprefs`: passed (121 files, 121 extension classes).
+  - `check:parallel`: passed.
+  - `npm test`: all 205 test suites passed, 15,081 tests passed (Jest count unchanged).
+  - `check:docs`: passed.
 
 ## J100 and J101 lead review — September 30, 2026
 

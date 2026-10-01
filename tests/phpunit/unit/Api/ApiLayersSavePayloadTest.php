@@ -105,4 +105,42 @@ class ApiLayersSavePayloadTest extends \MediaWikiUnitTestCase {
 		return $cases;
 	}
 
+	public function testRefusesLayersCarryingLinkWithoutSaving(): void {
+		$db = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
+		$db->method( 'isSchemaReady' )->willReturn( true );
+		$db->expects( $this->never() )->method( 'saveLayerSet' );
+		$api = $this->getMockBuilder( ApiLayersSave::class )->disableOriginalConstructor()->onlyMethods( [
+			'getUser', 'extractRequestParams', 'checkUserRightsAny', 'getLayersDatabase',
+			'getConfig', 'requireTitleEditPermission', 'dieWithError', 'getResult', 'createRateLimiter'
+		] )->getMock();
+		$api->method( 'getLayersDatabase' )->willReturn( $db );
+		$api->method( 'getConfig' )->willReturn( new \HashConfig( [ 'LayersMaxBytes' => 2097152 ] ) );
+		$api->method( 'extractRequestParams' )->willReturn( [
+			'filename' => 'Example.png',
+			'slidename' => null,
+			'setname' => 'notes',
+			'data' => json_encode( [
+				[
+					'id' => 'box1',
+					'type' => 'rectangle',
+					'x' => 10,
+					'y' => 10,
+					'width' => 100,
+					'height' => 50,
+					'link' => 'https://example.org'
+				]
+			] ),
+			'page' => 1
+		] );
+		$api->expects( $this->once() )->method( 'checkUserRightsAny' )->with( 'editlayers' );
+		$api->expects( $this->never() )->method( 'createRateLimiter' );
+		$api->expects( $this->never() )->method( 'getResult' );
+		$api->method( 'dieWithError' )->willReturnCallback( static function ( $message, $code ) {
+			throw new \MediaWiki\Api\ApiUsageException( $message . '|' . $code );
+		} );
+		$this->expectException( \MediaWiki\Api\ApiUsageException::class );
+		$this->expectExceptionMessage( 'layers-link-page-drawings-only|link-page-drawings-only' );
+		$api->execute();
+	}
+
 }
