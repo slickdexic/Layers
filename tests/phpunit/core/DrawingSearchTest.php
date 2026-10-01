@@ -19,7 +19,7 @@ use SearchResult;
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
 
 /**
- * Text inside a page's own drawings, and in a file's layer sets, is found by the wiki's search.
+ * Text inside a page's own layer sets, and in a file's layer sets, is found by the wiki's search.
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchIngress
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchHooks
  * @covers \MediaWiki\Extension\Layers\Search\DrawingSearchText
@@ -153,11 +153,86 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$text = PageDrawingSearchText::extract( new LayersDocumentContent( $this->document( 'visible', [
 			[ 'id' => 'rich', 'type' => 'textbox', 'text' => 'ignored plain', 'richText' => [
 				[ 'text' => 'Rich ' ], [ 'text' => 'words', 'style' => [ 'fontWeight' => 'bold' ] ] ] ],
-			[ 'id' => 'hidden', 'type' => 'text', 'text' => 'hiddenword', 'visible' => false ],
-			[ 'id' => 'box', 'type' => 'rectangle' ]
+			[ 'id' => 'hidden', 'type' => 'text', 'text' => 'hiddenword', 'visible' => false,
+				'link' => 'Hidden_Target#DoNotIndex' ],
+			[ 'id' => 'box', 'type' => 'rectangle', 'name' => 'notindexlayername',
+				'link' => 'Valve_Stem#Align' ]
 		] ) ) );
-		$this->assertSame( "Welcome Slide\nChecklist visible\nRich words", $text );
+		$this->assertSame( "Welcome Slide\nChecklist visible\nRich words\nHidden_Target#DoNotIndex\n" .
+			"Hidden Target DoNotIndex\nValve_Stem#Align\nValve Stem Align", $text );
+		$this->assertStringNotContainsString( 'notindexlayername', $text );
+		$this->assertStringNotContainsString( 'hiddenword', $text );
 		$this->assertSame( '', PageDrawingSearchText::extract( new LayersDocumentContent( 'not json' ) ) );
+	}
+
+	public function testLinkOnlyLayerTargetsAreSearchableButNamesAreNotAndSnippetIsShown(): void {
+		$this->overrideConfigValues( [
+			'DisableSearchUpdate' => false,
+			'SearchType' => null,
+			'LayersPageDrawingNamespaces' => null
+		] );
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$editor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$fixture = file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' );
+		$document = json_decode( $fixture, true );
+		$document['surfaces'][0]['layers'] = [ [
+			'id' => 'link-only', 'type' => 'rectangle', 'name' => 'zebralayernameonly',
+			'x' => 30, 'y' => 40, 'width' => 100, 'height' => 30,
+			'visible' => false, 'text' => 'zebrahiddentext', 'link' => 'Safety_Checklist#Preflight_Alpha'
+		] ];
+		$document['surfaces'][0]['readingOrder'] = [ 'link-only' ];
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
+			json_encode( $document ), 'Link-only layer set', new WikitextContent( 'Ordinary page content.' ) );
+		$this->runDeferredUpdates();
+
+		$key = $title->getPrefixedDBkey();
+		$auxiliaryText = implode( "\n", $this->documentFields( $title )['auxiliary_text'] );
+		$this->assertStringContainsString( 'Safety_Checklist#Preflight_Alpha', $auxiliaryText );
+		$this->assertStringContainsString( 'Safety Checklist Preflight Alpha', $auxiliaryText );
+		$this->assertStringNotContainsString( 'zebralayernameonly', $auxiliaryText );
+		$this->assertContains( $key, $this->search( 'Preflight' ),
+			'A link target is searchable even when its layer contains no text.' );
+		$this->assertNotContains( $key, $this->search( 'zebralayernameonly' ),
+			'Layer names are not included in the search document.' );
+		$this->assertNotContains( $key, $this->search( 'zebrahiddentext' ),
+			'Hidden layer text is not included in the search document.' );
+
+		$snippet = $this->extract( $title, [ 'Preflight' ] );
+		$this->assertNotSame( '', $snippet, 'A link-only search match must not have a blank snippet.' );
+		$this->assertStringContainsString( 'searchmatch', $snippet,
+			'The link-only snippet should highlight the matching target word.' );
+	}
+
+	public function testMaintenanceScriptIndexesLinkOnlyPageOwnedTarget(): void {
+		$this->overrideConfigValues( [
+			'DisableSearchUpdate' => true,
+			'SearchType' => null,
+			'LayersPageDrawingNamespaces' => null
+		] );
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$editor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $editor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$fixture = file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' );
+		$document = json_decode( $fixture, true );
+		$document['surfaces'][0]['layers'] = [ [
+			'id' => 'reindex-link-only', 'type' => 'rectangle', 'name' => 'zebrareindexlayername',
+			'x' => 30, 'y' => 40, 'width' => 100, 'height' => 30,
+			'link' => 'Safety_Checklist#ReindexTarget'
+		] ];
+		$document['surfaces'][0]['readingOrder'] = [ 'reindex-link-only' ];
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $editor, 0,
+			json_encode( $document ), 'Link-only search reindex', new WikitextContent( 'Ordinary page content.' ) );
+		$this->runDeferredUpdates();
+
+		$key = $title->getPrefixedDBkey();
+		$this->assertNotContains( $key, $this->search( 'ReindexTarget' ) );
+		$this->overrideConfigValue( 'DisableSearchUpdate', false );
+		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
+		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		( new \ReindexPageDrawings() )->execute();
+		$this->assertContains( $key, $this->search( 'ReindexTarget' ) );
+		$this->assertNotContains( $key, $this->search( 'zebrareindexlayername' ) );
 	}
 
 	/** @return string Name of a newly uploaded file whose page text is $pageText */

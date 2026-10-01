@@ -248,6 +248,7 @@
 		"ParserMakeImageParams": "LayersWikitextHooks",
 		"SearchDataForIndex2": "LayersSearchHooks",
 		"ShowSearchHit": "LayersSearchHooks",
+		"LinksUpdate": "MediaWiki\\Extension\\Layers\\Revision\\PageOwnedLinksUpdateHook::onLinksUpdate",
 		"LinksUpdateComplete": "LayersSearchHooks",
 		"SkinTemplateNavigation::Universal": "LayersUIHooks",
 		"CargoSetFormatClasses": "LayersCargoHooks"

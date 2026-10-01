@@ -10,7 +10,7 @@ use MediaWiki\Page\Event\PageLatestRevisionChangedEvent;
 use MediaWiki\Page\Event\PageLatestRevisionChangedListener;
 use MediaWiki\Revision\SlotRecord;
 
-/** Keeps drawing text in the search index; registered after core's ingress, so its update is the one that stays. */
+/** Keeps layer-set text in the search index; registered after core's ingress, so its update is the one that stays. */
 class DrawingSearchIngress extends DomainEventIngress implements PageLatestRevisionChangedListener {
 	private DrawingSearchText $text;
 
@@ -34,7 +34,7 @@ class DrawingSearchIngress extends DomainEventIngress implements PageLatestRevis
 		$page = $event->getPageRecordAfter();
 		$revision = $event->getLatestRevisionAfter();
 		$drawingText = $this->text->get( $page, $revision );
-		// Core has indexed the page text alone. Add drawing words, or drop those a changed drawing no longer has.
+		// Core has indexed the page text alone. Add layer-set words, or drop those a changed layer set no longer has.
 		if ( $drawingText !== '' || $drawingChanged ) {
 			$this->text->index( $event->getPageId(), $page, $revision, $drawingText );
 		}

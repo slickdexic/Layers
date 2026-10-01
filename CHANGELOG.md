@@ -4,6 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+- Page-owned layer links reach MediaWiki link tables and search (October 1): internal links from the Layers slot appear in **What links here** and missing pages are tracked; external URLs appear in `Special:LinkSearch`. A `LinksUpdate` hook restores current slot metadata when MediaWiki 1.45's Parsoid combined output omits secondary slots, without rendering the JSON slot. Search indexes each link target in raw and spaced form, including targets on hidden layers, while hidden text and layer names stay out. Existing pages need a core links refresh and the Layers search reindex script. Viewer links and authoring controls are still not implemented.
 - Undo of a drawing edit (September 30): on a page history line whose edit changed drawings, core's undo (which restores only the text and did nothing) is replaced by "undo drawing: <name>" links to the drawings' earlier versions.
 - The editor lists other pages' drawings and copies one (September 30): "Copy from another page" in the page-owned editor searches pages by title (`action=layersdrawings`) and opens `Special:CopyLayersDrawing` for the chosen drawing, which becomes a new drawing of this page with its source in the revision summary.
 - Upgrade guide rehearsed (September 30): undoing the migration and migrating again needs a links refresh in between, and a refresh after the migration is recorded erases what the migration needs; the shared-set and adoption browser specs were repaired for the unmigrated state.

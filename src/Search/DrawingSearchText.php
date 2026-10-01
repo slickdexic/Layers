@@ -23,7 +23,7 @@ use Wikimedia\Rdbms\IExpression;
 use Wikimedia\Rdbms\LikeValue;
 
 /**
- * Words readers can see in drawings, for search: a page's own drawings at the revision indexed, the shared
+ * Words readers can see in layer sets, for search: a page's own layer sets at the revision indexed, the shared
  * layer sets and slides it shows, and on a file description page the text of the file's layer sets.
  * Core indexes only the main slot.
  */
@@ -104,7 +104,7 @@ class DrawingSearchText {
 	}
 
 	/**
-	 * Reindex the current revision of a page after drawings it shows changed, which is not a page edit.
+	 * Reindex the current revision of a page after a shared layer set it shows changes, which is not a page edit.
 	 *
 	 * @param PageReference $page
 	 * @param array|null $shown As for get()

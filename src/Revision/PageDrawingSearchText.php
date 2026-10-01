@@ -6,17 +6,29 @@ namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Content\Content;
 
-/** Words a reader can see in a page's drawings, for search and Cargo. */
+/** Search terms projected from page-owned layer sets. */
 final class PageDrawingSearchText {
 	/**
-	 * @param Content $content Drawings of one revision
-	 * @return string Drawing labels and layer text, one entry per line; empty when unreadable
+	 * @param Content $content Layer sets of one revision
+	 * @return string Layer-set labels, visible layer text, and every link target,
+	 *   one per line; empty when unreadable
 	 */
 	public static function extract( Content $content ): string {
 		$lines = [];
 		foreach ( self::surfaces( $content ) as $surface ) {
 			$lines[] = is_string( $surface['label'] ?? null ) ? $surface['label'] : '';
 			$lines[] = self::layerText( $surface );
+			foreach ( is_array( $surface['layers'] ?? null ) ? $surface['layers'] : [] as $layer ) {
+				if ( !is_array( $layer ) || !is_string( $layer['link'] ?? null )
+				) {
+					continue;
+				}
+				$lines[] = $layer['link'];
+				$normalizedLink = strtr( $layer['link'], [ '_' => ' ', '#' => ' ' ] );
+				if ( $normalizedLink !== $layer['link'] ) {
+					$lines[] = $normalizedLink;
+				}
+			}
 		}
 		return implode( "\n", array_filter( array_map( 'trim', $lines ), 'strlen' ) );
 	}
@@ -37,7 +49,8 @@ final class PageDrawingSearchText {
 
 	/**
 	 * @param array $surface
-	 * @return string Text of the surface's visible text-bearing layers, one per line
+	 * @return string Visible text from the surface's text-bearing layers, one per line.
+	 *   This does not add link targets.
 	 */
 	public static function layerText( array $surface ): string {
 		$lines = [];

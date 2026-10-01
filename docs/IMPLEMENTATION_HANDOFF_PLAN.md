@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J102–J105 accepted; J108 next; J109–J110 follow; J106 held, J107 withdrawn — September 30, 2026
+## J102–J108 accepted; J109–J110 follow; J106 held, J107 withdrawn — October 1, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105 are accepted. Continue the requested batch with J108, then J109 and J110 one at a time, returning each for lead review before starting another. J111 remains a separate ready packet outside this batch. J106 is held and J107 is withdrawn.
 
@@ -35,11 +35,11 @@ Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](
 
 Record findings, then return for lead review. J106 and J107 are independent; do J106 first.
 
-### J108 — Links, part 3: links reach the wiki's link tables and search (ready)
+### J108 — Links, part 3: links reach the wiki's link tables and search (accepted October 1, 2026)
 
 **Advances:** FEAT-8 ("What links here", `Special:LinkSearch`), SRCH-3 (design PR 2). Follows J102 (the `link` property), which is accepted. Nothing visible changes for readers or editors, so no behaviour brief is needed; **wording in any text a person reads says "layer set", never "drawing"**.
 
-**Allowed changes:** `src/Content/LayersDocumentContentHandler.php`, `src/Revision/PageDrawingSearchText.php` (and the search classes that call it), tests under `tests/phpunit/`, `docs/CURRENT_STATUS.md` and its wiki mirror, the changelog and its mirror, this packet and the review ledger. No JavaScript, no change to what any page displays.
+**Allowed changes:** `src/Content/LayersDocumentContentHandler.php`, `src/Revision/PageOwnedLinksUpdateHook.php` and `src/Revision/PageDrawingSearchText.php` (and the search classes that call it), the `LinksUpdate` hook registration in `extension.json`, tests under `tests/phpunit/`, `docs/CURRENT_STATUS.md` and its wiki mirror, the changelog and its mirror, this packet and the review ledger. The hook and manifest addition are the lead-approved scope extension required after the native Parsoid test reproduced core's omission of secondary-slot link metadata. No JavaScript, no change to what any page displays.
 
 Read the design first: [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md), section 1a and sections 4 and 5.
 
@@ -50,6 +50,12 @@ Read the design first: [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md
 5. **Gates.** Standalone and native suites, phpcs, `check:phprefs`, `node scripts/verify-docs.js`, `npm test`. Say in your report what the first draft of each test would have done if the implementation were wrong (every assertion must be able to fail).
 
 Record findings, then return for lead review.
+
+**J108 implementation report — October 1, 2026:** Implemented the production content-handler link projection and page-owned link-target search, with native core propagation, real `layerspublish`, search, link-only reindex, and refresh guidance coverage. Focused native group: **20 tests / 210 assertions**; full native suite: **456 / 3,612 / 1 skip**; standalone suite: **1,378 / 3,239 / 1 skip**; `npm test`, docs/reference/parallel checks, and targeted PHPCS passed. `npm run test:php` remains blocked by PHPCS errors in pre-existing ignored `tmp/` probe files outside J108.
+
+**J108 Parsoid follow-up — October 1, 2026:** A forced-Parsoid native `RevisionRenderer` output contains only main-slot metadata in MediaWiki 1.45.3 (core T351026); a core `LinksUpdate` using it removed current page-owned layer targets from `pagelinks` and `externallinks`. Added a MediaWiki-native `LinksUpdate` hook that fills missing tracking metadata from the exact current, publicly readable Layers slot; non-current or suppressed revisions are ignored. Normal slot output carries an internal marker, avoiding a second parse when legacy combined output already includes the slot. Native tests verify link tables, What links here, LinkSearch, the ordinary `refreshLinks` job, stale hidden revision rejection, and that generated Layers-slot HTML is empty. Search indexes link targets from every layer, including `visible:false`; hidden layer text and layer names remain excluded. `layerText()` and Cargo's existing projection are unchanged. The allowed-files list above records the necessary production scope extension. Lead acceptance and the complete gate evidence are in the review ledger. J109 may proceed after its Cargo field-name contract is reconciled with the approved design.
+
+**Lead acceptance — October 1, 2026:** Accepted after review of the Parsoid-specific hook, stale/suppressed revision guards, target-only search behavior, documentation, and focused native tests (**21 tests / 262 assertions**). Full native core PHPUnit completed **457 tests / 3,658 assertions / 1 skip with 1 unrelated file-backend collision** in `PageOwnedAdoptionFlowTest::testFileAdoptionOpenedBeforeAReuploadIsRefused`; that method passed when rerun alone (**1 test / 6 assertions**). `npm test`, standalone PHPUnit, targeted PHPCS, docs, and reference checks passed. `npm run test:php` remains blocked by existing ignored `tmp/` PHPCS probes. The accepted follow-up was tested on MediaWiki 1.45.3 only. J110 may proceed independently.
 
 ### J109 — Links, part 4: Cargo rows per layer (ready)
 

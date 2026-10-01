@@ -13,9 +13,9 @@ use MediaWiki\Search\Hook\ShowSearchHitHook;
 use SearchHighlighter;
 
 /**
- * Search engines that build documents from ContentHandler data, such as CirrusSearch, get drawing text too,
- * a page is reindexed when the shared sets it shows change, and a result found only through a drawing
- * shows the matching drawing text as its snippet.
+ * Search engines that build documents from ContentHandler data, such as CirrusSearch, get layer-set text too,
+ * a page is reindexed when the shared sets it shows change, and a result found only through a layer set
+ * shows the matching layer-set text as its snippet.
  */
 class DrawingSearchHooks implements SearchDataForIndex2Hook, ShowSearchHitHook, LinksUpdateCompleteHook {
 	private DrawingSearchText $text;

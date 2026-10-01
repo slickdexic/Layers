@@ -6,13 +6,18 @@ namespace MediaWiki\Extension\Layers\Content;
 
 use MediaWiki\Content\Content;
 use MediaWiki\Content\JsonContentHandler;
+use MediaWiki\Content\Renderer\ContentParseParams;
 use MediaWiki\Content\Transform\PreSaveTransformParams;
 use MediaWiki\Content\ValidationParams;
 use MediaWiki\Context\IContextSource;
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 
 /** Core saves validate the snapshot via Content::isValid, including non-API writes. */
 class LayersDocumentContentHandler extends JsonContentHandler {
+	public const LINKS_TRACKING_MARKER = 'layers-page-owned-link-targets';
+
 	public function __construct() {
 		parent::__construct( LayersDocumentContent::MODEL );
 	}
@@ -53,6 +58,54 @@ class LayersDocumentContentHandler extends JsonContentHandler {
 	 */
 	public function canBeUsedOn( Title $title ) {
 		return false;
+	}
+
+	/**
+	 * Register layer links for core's link tables and special pages. Layers JSON is metadata,
+	 * not page content, so never expose JsonContentHandler's JSON table as rendered HTML.
+	 *
+	 * @param Content $content
+	 * @param ContentParseParams $cpoParams
+	 * @param ParserOutput &$parserOutput
+	 */
+	protected function fillParserOutput(
+		Content $content,
+		ContentParseParams $cpoParams,
+		ParserOutput &$parserOutput
+	): void {
+		if ( $content instanceof LayersDocumentContent && $content->isReadable() ) {
+			$document = json_decode( $content->getText(), true );
+			$surfaces = is_array( $document['surfaces'] ?? null ) ? $document['surfaces'] : [];
+			$urlUtils = MediaWikiServices::getInstance()->getUrlUtils();
+			$externalProtocol = '/^(?:' . $urlUtils->validProtocols() . ')/i';
+
+			foreach ( $surfaces as $surface ) {
+				if ( !is_array( $surface ) || !is_array( $surface['layers'] ?? null ) ) {
+					continue;
+				}
+				foreach ( $surface['layers'] as $layer ) {
+					$link = is_array( $layer ) && is_string( $layer['link'] ?? null ) ? $layer['link'] : '';
+					if ( $link === '' ) {
+						continue;
+					}
+
+					if ( preg_match( $externalProtocol, $link ) ) {
+						$parserOutput->addExternalLink( $link );
+						continue;
+					}
+
+					$target = Title::newFromText( $link );
+					if ( $target && $target->getDBkey() !== '' ) {
+						$parserOutput->addLink( $target );
+					}
+				}
+			}
+			// Let LinksUpdate distinguish a combined legacy output that already contains
+			// this slot's metadata from Parsoid output, which intentionally omits it.
+			$parserOutput->setExtensionData( self::LINKS_TRACKING_MARKER, true );
+		}
+
+		$parserOutput->setRawText( $cpoParams->getGenerateHtml() ? '' : null );
 	}
 
 	/**
