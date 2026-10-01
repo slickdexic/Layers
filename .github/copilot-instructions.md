@@ -1,5 +1,7 @@
 # MediaWiki Layers Extension - Copilot Instructions
 
+> **Owner rules (September 30, 2026):** read the charter section "Read this first" before any task. Never remove, replace or move anything users have without the owner's approval of a behaviour brief; say "layer" and "layer set", never "drawing" for them ("drawing tools" is fine); decide wording by meaning, never by search and replace.
+>
 > **Current guidance — September 6, 2026:** September 6 documentation checkpoint: consult [current status](../docs/CURRENT_STATUS.md) for implemented features and validation. Use `layers-admin` for the owner override, never generic `delete`. Do not claim null edits provide revision history, that canvas text is searchable beyond page-owned drawings and file pages (shared sets and slides are indexed with their `File:` page and with pages that show them, galleries included; CirrusSearch support is untested on a real Cirrus install), or that Cargo field bindings go beyond `{{#layers_fields:}}` (page values fill `{{name}}` tokens where the page shows a page-owned drawing, a file's shared set or a slide) and `{{#layers_cargo_store:}}` (page-owned drawing text as Cargo rows). Preserve coverage dates; never rewrite historical audits to look current.
 
 This guide is for contributors (human and AI) working on the Layers extension. It explains the architecture, API/data contracts, configuration, testing/build workflow, and security/i18n conventions you must follow.
