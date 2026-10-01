@@ -56,10 +56,14 @@ Each old shared set becomes a layer set of the page that shows it, with the **sa
 
 Existing overlay words stay: "Edit layers", "View full size", "Print", "Download", "Fit". New: the badge, banners, Import message, Update button and page labels in sections 4 and 5. **Edit summaries** (new ones only; old history entries cannot change) say "layer set", for example "Copied the layer set “002” from [[:File:X.jpg]] (revision 2523)", "Restored the layer set “002” from revision 2523", "Created the layer set “002”". Every remaining message that says "drawing" (about 77) becomes "layer set" or "layers". The internal change tag keeps its name; its visible label says "Layer set edit".
 
-## 9. For the owner to decide
+## 9. Slides and `layerset=on` (owner's answers, September 30)
 
-1. **`layerset=on`** (an embed with no name): after the migration it means "this page's only layer set of this file". With none, I propose that Edit opens an empty layer set named after the file. With several, the editor asks which. Agreed?
-2. **Slides:** this brief changes none of the slide entry points (`Special:Slides`, `Special:EditSlide`, `{{#Slide:name}}`) except the removal of page IDs. Agreed?
-3. **Existing test wiki:** may I run the tidy step to remove `8:` from the existing embeds, after the dry run?
+- **`layerset=on`** means the layer set called "Default" of that file on this page. If the page has none, Edit opens an empty one named "Default" and the first save creates it, like any other. It is kept as a deprecated shortcut for `layerset=Default`; the documentation recommends writing the name. (Old meaning, "the file's most recently saved set", ends with the migration: an embed that used it is rewritten to the name of the set it showed, unless that name is "Default".)
+- **Slides** have no separate file, so a slide is identified by the page and its name: `{{#Slide:Name}}` on a page is that page's slide "Name". Another page's slide "Name" is a different slide, with its own canvas size and layers, and nothing links them. The editor can offer to **Import** from other pages' slides of the same name (the list shows each one's canvas size); Import copies the whole slide, canvas and background included, into a slide that is still empty, and never follows the original. `Slide:Name` pages made by the migration are ordinary pages that own a slide of that name.
+
+## 10. For the owner to decide
+
+1. **The test wiki:** may I run the step that removes `8:` from existing embeds, after a dry run you can look at?
+2. **Import into a layer set that already has layers:** I propose it is not offered (nothing is overwritten); the editor's copy and paste of layers covers adding some. Agreed?
 
 After approval: one build packet per section (overlays and viewer; the model and the migration; the editor cases; file updates; wording), each reviewed by the owner on screen before it is called done.
