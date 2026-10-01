@@ -111,7 +111,7 @@ Every criterion is required for 2.0. Status values: **Met** (done and verified),
 | SEC-2 | Every read rechecks read permission. Hidden or suppressed revisions and deleted files never leak through Layers APIs, thumbnails, exports, search or Cargo. | Partial: APIs and exports are checked; search and Cargo with revision deletion are untested |
 | SEC-3 | All user content (text, colours, URLs, SVG, images) is validated on the server against a whitelist. No stored script injection through any viewer, export or special page. | Met for today's fields; links (FEAT-8) need URL validation |
 | SEC-4 | Every write or expensive action has a rate limit that ships with defaults. | Met (`check:ratelimits`) |
-| SEC-5 | Links from layers obey `$wgUrlProtocols` and `$wgNoFollowLinks`, and pass through spam blacklist and abuse filter checks. | Open |
+| SEC-5 | Links from layers obey `$wgUrlProtocols` and `$wgNoFollowLinks`, and pass through spam blacklist and abuse filter checks. | Partial (October 1, 2026): `LayerLinkValidator` checks `$wgUrlProtocols` and rejects dangerous schemes. Clickable anchors and nofollow behavior are not implemented; SpamBlacklist/AbuseFilter behavior for the secondary slot is unverified. See J108 and [known issues](KNOWN_ISSUES.md). |
 | SEC-6 | A full review of the 2.0 candidate (OWASP Top 10 plus MediaWiki-specific risks) leaves no open high or critical finding, and every fix is retested. | Open: the last full audit (June 2025) predates page history |
 | SEC-7 | Shipped assets, including vendored pdf.js, are checked for known vulnerabilities. | Partial |
 
@@ -169,7 +169,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | FEAT-5 | Copy, cut, paste and duplicate within a layer set, between layer sets and pages, and paste text and images from other applications. On a multi-page PDF, a layer or selection can be copied or moved to another page from its right-click menu. | Partial: within one editor session only |
 | FEAT-6 | Selecting and arranging: multi-select, folders, align and distribute, smart guides, snapping, lock and hide, and layer order. | Met |
 | FEAT-7 | Several named layer sets per page, including several for one file. | Met |
-| FEAT-8 | **Links from layers.** Any shape, text or image layer can link to a wiki page (optionally a section) or an external URL. Readers follow it by click or keyboard, and hovering shows the target. Internal links count in "What links here", and links to missing pages show as missing. External links appear in `Special:LinkSearch`. Link changes show in diffs, and exported PDFs keep the links clickable. | Open |
+| FEAT-8 | **Links from layers.** Any shape, text or image layer can link to a wiki page (optionally a section) or an external URL. Readers follow it by click or keyboard, and hovering shows the target. Internal links count in "What links here", and links to missing pages show as missing. External links appear in `Special:LinkSearch`. Link changes show in diffs, and exported PDFs keep the links clickable. | Partial (October 1, 2026, J108): page-owned link targets reach native link tables, `Special:LinkSearch` and search. Clickable/focusable viewer and editor behavior, hover target display, link diffs and clickable PDF export remain open. See [current status](CURRENT_STATUS.md#page-owned-layer-links-reach-mediawiki-link-tables-and-search). |
 | FEAT-9 | Page values fill `{{name}}` tokens in layer sets (`{{#layers_fields:}}`). | Met |
 
 ### 5.6 Images, PDFs and slides (TYPES)
@@ -201,7 +201,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | --- | --- | --- |
 | SRCH-1 | Database search finds a page by the text of its layer sets, and a `File:` page by the text of its own layer sets. Results show the layer text as the snippet. | Met (J80); after the migration a word in a page's own layer set is found about 2 seconds after the save and gone about 2 seconds after the restore (browser acceptance J98). `File:` results have no snippet, a core limit |
 | SRCH-2 | The index follows every change (save, delete, rename, restore, revision deletion, page deletion) without manual steps, and a maintenance script rebuilds everything. | Partial: revision deletion and suppression untested |
-| SRCH-3 | Link text and link targets from layers are searchable. | Open (needs FEAT-8) |
+| SRCH-3 | Link text and link targets from layers are searchable. | Partial (October 1, 2026, J108): page-owned link targets are indexed and a link-only match is verified; visible layer text remains in the existing search projection. Interactive link authoring is not yet available in the editor, and legacy shared sets cannot store links. See [current status](CURRENT_STATUS.md#page-owned-layer-links-reach-mediawiki-link-tables-and-search). |
 
 ### 5.9 Cargo (CARGO)
 
@@ -339,7 +339,7 @@ Reviewed by the lead against section 10, with fresh evidence: 204 Jest suites (1
 | 2. On by default | Done (HIST-3) |
 | 3. Migration and upgrade guide | Done on the test wiki (HIST-8, OPS-1). Left: the owner's wiki (S7) |
 | 4. History checks | Done and browser-accepted (J101). Not covered: notifications (Echo is not installed) and the account with `edit` but without `editlayers` (none exists): recent changes, contributions and watchlist verified, and undo of a drawing edit fixed (September 30, after this review) |
-| 5. Links from layers | Designed in one piece (September 30, [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md)), not built. The largest unbuilt feature (FEAT-8, SEC-5, SRCH-3, CARGO-1) |
+| 5. Links from layers | Designed in one piece (September 30, [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md)); partially implemented October 1 (J108: native link tracking and searchable targets). Viewer/editor link behavior, export clickability and Cargo link rows remain open (FEAT-8, CARGO-1); SEC-5 is partial and SRCH-3 is partial. |
 | 6. Images and clipboard | Not started (FEAT-3a to FEAT-3c, FEAT-5, PERF-7) |
 | 7. Design pass | Not started (D4, UI-1, UI-2, UI-4 to UI-9) |
 | 8. Performance fixes | Not started. PERF-2, PERF-5 and PERF-7 are not met |

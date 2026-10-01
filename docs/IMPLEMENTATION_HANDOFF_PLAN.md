@@ -1,8 +1,8 @@
 # Layers implementation handoff plan
 
-## J102–J108 accepted; J109–J110 follow; J106 held, J107 withdrawn — October 1, 2026
+## J108 and J110 accepted; J109 held — October 1, 2026
 
-Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105 are accepted. Continue the requested batch with J108, then J109 and J110 one at a time, returning each for lead review before starting another. J111 remains a separate ready packet outside this batch. J106 is held and J107 is withdrawn.
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105, J108 and J110 are accepted. J109 is held and not started until the owner resolves the field-name mismatch between the approved Cargo design (`drawing`) and the packet (`layer_set`). J111 remains a separate ready packet outside this batch. J106 is replaced by J113 and J107 is withdrawn.
 
 ### J106 — Authors never see a page ID (HIST-9) (**replaced by J113 on September 30**; do not start)
 
@@ -55,9 +55,11 @@ Record findings, then return for lead review.
 
 **J108 Parsoid follow-up — October 1, 2026:** A forced-Parsoid native `RevisionRenderer` output contains only main-slot metadata in MediaWiki 1.45.3 (core T351026); a core `LinksUpdate` using it removed current page-owned layer targets from `pagelinks` and `externallinks`. Added a MediaWiki-native `LinksUpdate` hook that fills missing tracking metadata from the exact current, publicly readable Layers slot; non-current or suppressed revisions are ignored. Normal slot output carries an internal marker, avoiding a second parse when legacy combined output already includes the slot. Native tests verify link tables, What links here, LinkSearch, the ordinary `refreshLinks` job, stale hidden revision rejection, and that generated Layers-slot HTML is empty. Search indexes link targets from every layer, including `visible:false`; hidden layer text and layer names remain excluded. `layerText()` and Cargo's existing projection are unchanged. The allowed-files list above records the necessary production scope extension. Lead acceptance and the complete gate evidence are in the review ledger. J109 may proceed after its Cargo field-name contract is reconciled with the approved design.
 
-**Lead acceptance — October 1, 2026:** Accepted after review of the Parsoid-specific hook, stale/suppressed revision guards, target-only search behavior, documentation, and focused native tests (**21 tests / 262 assertions**). Full native core PHPUnit completed **457 tests / 3,658 assertions / 1 skip with 1 unrelated file-backend collision** in `PageOwnedAdoptionFlowTest::testFileAdoptionOpenedBeforeAReuploadIsRefused`; that method passed when rerun alone (**1 test / 6 assertions**). `npm test`, standalone PHPUnit, targeted PHPCS, docs, and reference checks passed. `npm run test:php` remains blocked by existing ignored `tmp/` PHPCS probes. The accepted follow-up was tested on MediaWiki 1.45.3 only. J110 may proceed independently.
+**Lead acceptance — October 1, 2026:** Accepted after review of the Parsoid-specific hook, stale/suppressed revision guards, target-only search behavior, documentation, and focused native tests (**21 tests / 262 assertions**). Full native core PHPUnit completed **457 tests / 3,658 assertions / 1 skip with 1 unrelated file-backend collision** in `PageOwnedAdoptionFlowTest::testFileAdoptionOpenedBeforeAReuploadIsRefused`; that method passed when rerun alone (**1 test / 6 assertions**). `npm test`, standalone PHPUnit, targeted PHPCS, docs, and reference checks passed. `npm run test:php` remains blocked by existing ignored `tmp/` PHPCS probes. The accepted follow-up was tested on MediaWiki 1.45.3 only. J110's documentation refresh is now accepted.
 
-### J109 — Links, part 4: Cargo rows per layer (ready)
+### J109 — Links, part 4: Cargo rows per layer (held; not started)
+
+**Gate:** The project owner must resolve the mismatch between the approved Cargo design's `drawing` field and the packet's `layer_set` field before implementation. Do not start or infer a compatibility alias; preserve the existing per-layer-set storage contract until the decision is recorded.
 
 **Advances:** CARGO-1 (design PR 3, section 1a item 4). Independent of J108. No visible change for readers or editors; text a person reads says "layer set".
 
@@ -71,7 +73,7 @@ Record findings, then return for lead review.
 
 Record findings, then return for lead review.
 
-### J110 — Make KNOWN_ISSUES.md true (OPS, documentation only) (ready)
+### J110 — Make KNOWN_ISSUES.md true (OPS, documentation only) (accepted October 1, 2026)
 
 **Advances:** the charter's documentation refresh (section 10, item 10). **No production code, no wording change to any feature name.**
 
@@ -83,6 +85,10 @@ Record findings, then return for lead review.
 4. Gates: `node scripts/verify-docs.js`. List what you could not verify and why.
 
 Record findings, then return for lead review.
+
+**J110 implementation report — October 1, 2026:** Reconciled every entry previously in `KNOWN_ISSUES.md` against the charter, `CURRENT_STATUS.md`, and relevant current source/tests. The refreshed register records all R6.01–R6.19 findings individually as fixed, partly fixed, or still open, with evidence references and residual limits. It also adds the charter's Partial/Open gaps, including the protected hover/full-size viewer behavior, revision-deletion coverage, XML import refusal, page-owned editor navigation behavior, incomplete server export, and J108's partial link/search delivery. Stale J108 status wording is called out as superseded by the accepted implementation. J109 is explicitly held pending the owner's Cargo field-name decision. No claims are made about unrun production-wiki acceptance or unverified MediaWiki 1.44 behavior. `node scripts/verify-docs.js` passed: **73 maintained/policy documents and 53 historical records**, with mirrors/references/source checks agreeing; `git diff --check` passed. No production code, test, manifest, or wiki setting was changed.
+
+**Lead acceptance — October 1, 2026:** Accepted after reviewing the R6 reconciliation, charter gaps, evidence paths, vocabulary, and documentation checks. Lead clarified that the J108 tracking test does not verify SpamBlacklist or AbuseFilter behavior; the register now states that explicitly. The lead also added the omitted UI-9 screenshot sign-off and the missing/clashing embed creation gap, and updated the charter's SEC-5, FEAT-8 and SRCH-3 milestone statuses after J108. J109 remains held for the owner's Cargo field-name decision.
 
 ### J111 — Hover overlay and full-size viewer on page-owned layer sets (UI-10) (ready)
 
