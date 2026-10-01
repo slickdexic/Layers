@@ -27,6 +27,8 @@ In Layers 2.0, any shape, text, or image layer can link to a wiki page (with an 
 
 ## 1a. Corrections after the lead's review (binding)
 
+**Vocabulary (September 30, owner rule):** this document was written before the vocabulary rule, and "drawing" in it means **layer set**. The Cargo column is `layer_set` (settled October 1: Cargo field names are written by authors in templates, so they use the owner's word).
+
 The first draft had defects that would have shipped silent failures. Each is fixed below or overridden here.
 
 1. **Classification.** `UrlUtils::validProtocols()` returns a *partial* pattern (`https:\/\/|http:\/\/`), not a regex; build `'/^(?:' . $protocols . ')/i'`. Internal links resolve in the **main namespace** by default, exactly like `[[Foo]]`, never in the owning page's namespace (a drawing on a `File:` page linking "Foo" means `Foo`). A bare `#Section` targets the page itself and is never recorded in `pagelinks` (an empty DB key would be).
@@ -284,7 +286,7 @@ public static function layerSearchTerms( array $layer ): array {
 ## 6. Cargo table projection (CARGO-1)
 
 `CARGO-1` requires:
-> `{{#layers_cargo_store:}}` stores one row per text layer for every drawing the page owns: page, revision, drawing, kind, layer, type, text and link target.
+> `{{#layers_cargo_store:}}` stores one row per text layer for every layer set the page owns: page, revision, layer set, kind, layer, type, text and link target.
 
 ### 6.1 Expanded field specification
 
@@ -293,8 +295,8 @@ Per-layer rows are an opt-in mode (`_rows=layers`, section 1a item 4); `PageOwne
 | Column | Description | Example |
 | --- | --- | --- |
 | `page` | The owning page's DB key | `Process_Flow` |
-| `revision` | The revision ID storing the drawing | `4521` |
-| `drawing` | Surface label or stable ID | `Intake Flow` |
+| `revision` | The revision ID storing the layer set | `4521` |
+| `layer_set` | The layer set's name (surface label) | `Intake Flow` |
 | `kind` | Surface kind | `slide`, `image`, `pdf` |
 | `layer` | Unique layer ID within the surface | `box-step1` |
 | `type` | Layer type | `textbox`, `rectangle`, `callout` |

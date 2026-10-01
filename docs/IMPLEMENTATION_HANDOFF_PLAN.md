@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J108 and J110 accepted; J109 held — October 1, 2026
+## J108 and J110 accepted; J109 ready — October 1, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105, J108 and J110 are accepted. J109 is held and not started until the owner resolves the field-name mismatch between the approved Cargo design (`drawing`) and the packet (`layer_set`). J111 remains a separate ready packet outside this batch. J106 is replaced by J113 and J107 is withdrawn.
 
@@ -57,9 +57,9 @@ Record findings, then return for lead review.
 
 **Lead acceptance — October 1, 2026:** Accepted after review of the Parsoid-specific hook, stale/suppressed revision guards, target-only search behavior, documentation, and focused native tests (**21 tests / 262 assertions**). Full native core PHPUnit completed **457 tests / 3,658 assertions / 1 skip with 1 unrelated file-backend collision** in `PageOwnedAdoptionFlowTest::testFileAdoptionOpenedBeforeAReuploadIsRefused`; that method passed when rerun alone (**1 test / 6 assertions**). `npm test`, standalone PHPUnit, targeted PHPCS, docs, and reference checks passed. `npm run test:php` remains blocked by existing ignored `tmp/` PHPCS probes. The accepted follow-up was tested on MediaWiki 1.45.3 only. J110's documentation refresh is now accepted.
 
-### J109 — Links, part 4: Cargo rows per layer (held; not started)
+### J109 — Links, part 4: Cargo rows per layer (ready)
 
-**Gate:** The project owner must resolve the mismatch between the approved Cargo design's `drawing` field and the packet's `layer_set` field before implementation. Do not start or infer a compatibility alias; preserve the existing per-layer-set storage contract until the decision is recorded.
+**Gate cleared (lead, October 1):** the field is `layer_set`. The design's `drawing` was written before the vocabulary rule and is corrected. No alias for `drawing`. J109 may start.
 
 **Advances:** CARGO-1 (design PR 3, section 1a item 4). Independent of J108. No visible change for readers or editors; text a person reads says "layer set".
 

@@ -1,5 +1,14 @@
 # Junior implementation review — J01–J110
 
+## Lead re-verification of J103, J104, J105, J108 and J110 — October 1, 2026
+
+The lead reran every gate on the committed tree rather than relying on the reports: standalone PHPUnit 1,378 passed; the full native suite **457 tests, 3,664 assertions, 1 skipped, all passing** (the one failure the junior saw, a file-backend collision in `PageOwnedAdoptionFlowTest`, did not recur and is a flake of the shared test container); `npm test` 15,124 Jest tests in 206 suites, plus every static check; phpcs, `check:phprefs`, `check:parallel` clean. The core fact J108 depends on was checked in the container: `RevisionRenderer` returns only the main slot when Parsoid is requested (T351026), so `PageOwnedLinksUpdateHook` is justified, not speculative.
+
+- **Repository PHP gate repaired.** `npm run test:php` failed on scratch files in the ignored `tmp/` folder (the lead's and juniors' probes). `.phpcs.xml`, `package.json` and `composer.json` now exclude `tmp`; the gate passes.
+- **J109 unblocked.** The Cargo column is `layer_set`: Cargo field names are written by authors in templates, so they use the owner's word. The design's `drawing` predated the vocabulary rule and is corrected.
+- **Disclosure.** Before the lead stopped using `git add -A`, a lead commit (`2654dbbf`) included J103's then-unreviewed `LayerBounds.js` and its test. They are reviewed now (206 Jest suites pass), but the commit message did not say so.
+- Not covered, as the juniors reported: SpamBlacklist and AbuseFilter (not installed), MediaWiki 1.44, the owner's own wiki.
+
 ## J110 — KNOWN_ISSUES.md refresh — accepted — October 1, 2026
 
 Advances **OPS-2** (the known-issues register is current). This was a documentation-only audit. I read every entry that existed in the prior register, checked its meaning against current source/tests and `docs/CURRENT_STATUS.md`, then compared the result with the charter's Partial/Open criteria and its protected register.

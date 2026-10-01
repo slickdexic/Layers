@@ -13,7 +13,7 @@
 		}
 	},
 	"scripts": {
-		"parallel-lint": "php -d error_reporting=8191 vendor/bin/parallel-lint . --exclude vendor --exclude node_modules",
+		"parallel-lint": "php -d error_reporting=8191 vendor/bin/parallel-lint . --exclude vendor --exclude node_modules --exclude tmp",
 		"test": [
 			"@parallel-lint",
 			"@phpcs",
