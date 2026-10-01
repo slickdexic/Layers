@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 to J107 ready — September 30, 2026
+## J102 accepted; J103 to J106 ready, J107 withdrawn — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
@@ -19,7 +19,7 @@ Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](
 
 **Gates.** Standalone and native suites, `npm test`, phpcs, `check:phprefs`, `node scripts/verify-docs.js`. Do not run `--tidy-names --commit` on the test wiki; report its dry run output, and the lead will run it.
 
-### J107 — Edit and View-full-size buttons on page-owned drawings (UI-10) (ready)
+### J107 — Edit and View-full-size buttons on page-owned drawings (UI-10) (**withdrawn September 30**: waits for the owner-approved behaviour brief; do not start)
 
 **Advances:** UI-10 (owner finding, September 30): page-owned images show no hover buttons; only the list "Drawings on this page" leads to the editor. The old viewer (`ViewerManager`, `ViewerOverlay`) had them; the page-owned bootstraps (`resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js` for bound files and the slide equivalent) do not use `ViewerOverlay` at all.
 

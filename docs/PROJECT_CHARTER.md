@@ -43,6 +43,8 @@ These hold for every piece of work and are not traded against features.
 - **One write path per kind of data.** History reads the exact revision asked for and never substitutes the latest content.
 - **Caching stays on.** Drawings never disable the parser cache or page caching.
 - **User content is never silently changed.** Validation refuses content rather than repairing it, and the refusal says what failed.
+- **What readers and editors already have is not taken away.** No end-user behaviour is removed, replaced or moved (hover buttons, the full-size viewer with its zoom, pan, save, download and print, entry points, wording) until the owner has approved a one-page behaviour brief that says what people see and click before and after. A stop-gap is disclosed to the owner the day it is built, never left to be found. (September 30: the page-owned viewer shipped without the hover buttons and the full-size viewer, and a box of text links above the page stood in for them, undisclosed.)
+- **Vocabulary.** Readers and editors see "layers" and "layer set", never "drawing". Page IDs never appear in wikitext that an author reads or types.
 - **Everything the user sees is translatable.** No raw message keys, `$1` placeholders or English-only strings.
 
 ## 5. Pillars and exit criteria
@@ -98,7 +100,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial: the colour picker is the known gap; in the page-owned editor Escape with the pointer tool closes the editor instead of deselecting, and its return target is the file page, not the page that owns the drawing (J97 findings, September 30) |
 | UI-7 | Every error says what failed and what to do next. | Partial: J79 found a raw key and unfilled limits, now fixed; no systematic review yet |
 | UI-8 | Tablets can edit by touch (select, move, resize, draw, type), and phones can view. | Partial: basic touch works |
-| UI-10 | A drawing shown on a page keeps the buttons the old viewer had on hover: **Edit** (for those who may edit) and **View full size**, on every image and slide drawing, with keyboard access. A list of drawings under the page heading is a fallback, not the only way in. | Open (September 30, owner finding): page-owned images and slides show only the list "Drawings on this page"; the hover buttons exist only in the old shared-set viewer |
+| UI-10 | **The hover buttons and the full-size viewer are back, as they were.** Hovering an image, slide or PDF shows one **Edit** button (only to those who may edit) and one **View full size** button. Full size opens the viewer with zoom, pan, save, download and print. There is no list or box of links on the page, and no "Edit Layers" tab on `File:` pages; a layer set named by an embed that does not exist yet, or one that clashes with another, is handled inside the editor. | Open (September 30, owner directive): page-owned images show neither button nor the viewer; a box "Drawings on this page" stands in; behaviour brief to be approved first |
 | UI-9 | The owner signs off a screenshot set of every screen, in light and dark. | Open |
 
 ### 5.5 Feature-complete editor (FEAT)
