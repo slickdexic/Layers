@@ -1088,5 +1088,6 @@
 	"tag-layers-migration-description": "Long description of the layers-migration change tag, shown on [[Special:Tags]]. The tag marks the bot edits of the migration script (maintenance/migrateLayersToPageHistory.php).",
 	"layers-reading-disabled": "Error from the experimental page-owned read API when disabled.",
 	"layers-revision-unavailable": "Generic error for missing, denied, wrong-owner or unavailable historical Layers content. Does not distinguish permission from existence.",
-	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed."
+	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed.",
+	"layers-cargo-invalid-rows": "Error shown on a page when {{#layers_cargo_store:}} receives an unsupported _rows value. Do not reflect the raw value. The suggested _rows=layers mode stores one row per layer; omitting _rows keeps the existing layer-set table format, whose legacy rows are per stored surface. Keep the parameter spelling _rows unchanged."
 }

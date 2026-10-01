@@ -2,8 +2,8 @@
 /**
  * J75 Cargo projection acceptance:
  * Proves on the original test wiki (http://localhost:8080) that page-owned
- * drawing text reaches a real Cargo table and stays current across drawing-only
- * edits, layer visibility changes, drawing version restoration, and template removal.
+	 * layer text reaches real Cargo tables and stays current across layer-only
+	 * edits, layer visibility changes, layer-set restoration, and template removal.
  */
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
@@ -11,7 +11,7 @@ const path = require( 'path' );
 
 test.describe.configure( { mode: 'serial' } );
 
-test( 'page-owned drawing text projects to Cargo table and stays current', async ( { page, context } ) => {
+test( 'page-owned layer-set data projects to both Cargo row modes and stays current', async ( { page, context } ) => {
 	test.setTimeout( 360000 );
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
@@ -34,7 +34,9 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 	const owner = 'Layers_browser_acceptance';
 	const isolationPageTitle = 'Layers_browser_acceptance_isolation';
 	const templateTitle = 'Template:Layers_cargo_acceptance';
+	const layerRowsTemplateTitle = 'Template:Layers_cargo_layer_rows_acceptance';
 	const cargoTable = 'Layers_cargo_acceptance';
+	const layerRowsTable = 'Layers_cargo_layer_rows_acceptance';
 
 	const api = async ( data, post = false ) => {
 		const params = { ...data, format: 'json', formatversion: '2' };
@@ -92,13 +94,15 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 	const initialSnapshot = initialLayers.layersread.snapshot;
 	expect( initialSnapshot.surfaces ).toHaveLength( 1 );
 	expect( initialSnapshot.surfaces[ 0 ].id ).toBe( 'presentation' );
+	let lastOwnedRevision = initialRevId;
+	let ownerWithTemplateText = initialMainText;
 
 	// Isolation page state
 	const initialIsoQuery = await api( {
 		action: 'query',
 		prop: 'info|revisions',
 		titles: isolationPageTitle,
-		rvprop: 'content',
+		rvprop: 'ids|content',
 		rvslots: 'main'
 	} );
 	const initialIsoPage = initialIsoQuery.query.pages[ 0 ];
@@ -106,6 +110,8 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 	const isolationPageId = initialIsoPage.pageid;
 	expect( isolationPageId ).toBe( 230 );
 	const initialIsoText = initialIsoPage.revisions[ 0 ].slots.main.content;
+	let lastIsolationRevision = initialIsoPage.revisions[ 0 ].revid;
+	let isolationWithTemplatesText = initialIsoText;
 
 	const queryCargo = async ( where ) => {
 		const res = await api( {
@@ -125,14 +131,57 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 			drawing_text: item.title.drawing_text
 		} ) );
 	};
+	const queryLayerRows = async ( where ) => {
+		const res = await api( {
+			action: 'cargoquery',
+			tables: layerRowsTable,
+			fields: 'page=page,revision=revision,layer_set=layer_set,kind=kind,layer=layer,type=type,text=text,link_target=link_target',
+			where
+		} );
+		if ( res.error ) {
+			throw new Error( `cargoquery error: ${ JSON.stringify( res.error ) }` );
+		}
+		return ( res.cargoquery || [] ).map( ( item ) => ( {
+			page: item.title.page,
+			revision: item.title.revision,
+			layer_set: item.title.layer_set,
+			kind: item.title.kind,
+			layer: item.title.layer,
+			type: item.title.type,
+			text: item.title.text,
+			link_target: item.title.link_target
+		} ) );
+	};
+	const recreateCargoTable = async ( title ) => {
+		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( title ) }` );
+		const recreateTab = page.locator( 'a[href*="action=recreatedata"]' );
+		if ( await recreateTab.isVisible() ) {
+			await Promise.all( [
+				page.waitForNavigation(),
+				recreateTab.click()
+			] );
+		} else {
+			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( title ) }&action=recreatedata` );
+		}
+
+		await expect( page.locator( '#recreateDataCanvas' ) ).toBeVisible();
+		const replacementCheckbox = page.locator( 'input[name="createReplacement"]' );
+		if ( await replacementCheckbox.count() > 0 && await replacementCheckbox.isChecked() ) {
+			await replacementCheckbox.uncheck();
+		}
+		const submitBtn = page.locator( '#cargoSubmit button, #cargoSubmit input, #cargoSubmit' ).first();
+		await expect( submitBtn ).toBeVisible();
+		await submitBtn.click();
+		await expect( page.locator( '#recreateDataProgress' ) ).toContainText( 'View table', { timeout: 30000 } );
+	};
 
 	let templateAddedToOwner = false;
 	let templateAddedToIsolation = false;
 
 	try {
 		// =========================================================================
-		// Step 1: Create template with #cargo_declare and {{#layers_cargo_store:}}
-		//         and create/recreate Cargo table via template's recreate data action
+		// Step 1: Keep the existing layer-set table and declare a separate opt-in
+		//         layer-row table, then recreate both from their own templates.
 		// =========================================================================
 		const templateWikitext = '<noinclude>{{#cargo_declare:_table=Layers_cargo_acceptance\n' +
 			' |surface_id=String\n' +
@@ -160,46 +209,82 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 			}, true );
 			expect( editRes.edit?.result ).toBe( 'Success' );
 		}
-
-		// Navigate to the template page's recreate data action
-		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( templateTitle ) }` );
-		const recreateTab = page.locator( 'a[href*="action=recreatedata"]' );
-		if ( await recreateTab.isVisible() ) {
-			await Promise.all( [
-				page.waitForNavigation(),
-				recreateTab.click()
-			] );
-		} else {
-			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( templateTitle ) }&action=recreatedata` );
+		const layerRowsTemplateWikitext = '<noinclude>{{#cargo_declare:_table=Layers_cargo_layer_rows_acceptance\n' +
+			' |page=String\n' +
+			' |revision=Integer\n' +
+			' |layer_set=String\n' +
+			' |kind=String\n' +
+			' |layer=String\n' +
+			' |type=String\n' +
+			' |text=Text\n' +
+			' |link_target=Text}}</noinclude><includeonly>{{#layers_cargo_store:_table=Layers_cargo_layer_rows_acceptance|_rows=layers}}</includeonly>';
+		const layerRowsTemplateQuery = ( await api( {
+			action: 'query',
+			prop: 'revisions',
+			titles: layerRowsTemplateTitle,
+			rvprop: 'content',
+			rvslots: 'main'
+		} ) ).query.pages[ 0 ];
+		if ( layerRowsTemplateQuery.missing ||
+			layerRowsTemplateQuery.revisions?.[ 0 ]?.slots?.main?.content !== layerRowsTemplateWikitext ) {
+			const editRes = await api( {
+				action: 'edit',
+				title: layerRowsTemplateTitle,
+				text: layerRowsTemplateWikitext,
+				summary: 'J109: declare per-layer Cargo table',
+				token: csrfToken
+			}, true );
+			expect( editRes.edit?.result ).toBe( 'Success' );
 		}
 
-		await expect( page.locator( '#recreateDataCanvas' ) ).toBeVisible();
-
-		// If createReplacement checkbox exists and is checked, uncheck it to operate directly on the table
-		const replacementCheckbox = page.locator( 'input[name="createReplacement"]' );
-		if ( await replacementCheckbox.count() > 0 && await replacementCheckbox.isChecked() ) {
-			await replacementCheckbox.uncheck();
-		}
-
-		// Click the submit button to create/recreate table
-		const submitBtn = page.locator( '#cargoSubmit button, #cargoSubmit input, #cargoSubmit' ).first();
-		await expect( submitBtn ).toBeVisible();
-		await submitBtn.click();
-
-		// Wait for recreate data job completion
-		await expect( page.locator( '#recreateDataProgress' ) ).toContainText( 'View table', { timeout: 30000 } );
+		await recreateCargoTable( templateTitle );
+		await recreateCargoTable( layerRowsTemplateTitle );
 
 		// Confirm table exists by querying cargo (should be empty for now)
 		const initialCargoCheck = await queryCargo( `_pageID=${ pageId }` );
 		expect( initialCargoCheck ).toEqual( [] );
+		expect( await queryLayerRows( `_pageID=${ pageId }` ) ).toEqual( [] );
+		// Seed a link-only layer with an exact-base page-owned publication. The
+		// original snapshot is retained for exact CAS cleanup below.
+		const seededSnapshot = JSON.parse( JSON.stringify( initialSnapshot ) );
+		const linkLayer = {
+			id: 'cargo-link-only',
+			type: 'rectangle',
+			x: 320,
+			y: 100,
+			width: 120,
+			height: 48,
+			stroke: '#000000',
+			strokeWidth: 1,
+			fill: 'transparent',
+			link: 'Operations/Intake#Procedure'
+		};
+		seededSnapshot.surfaces[ 0 ].layers.push( linkLayer );
+		seededSnapshot.surfaces[ 0 ].readingOrder.push( linkLayer.id );
+		// Arm cleanup before the write: the server could commit even if delivery or
+		// the following assertion fails.
+		templateAddedToOwner = true;
+		const seedRes = await api( {
+			action: 'layerspublish',
+			owner,
+			pageid: String( pageId ),
+			baserevid: String( initialRevId ),
+			data: JSON.stringify( seededSnapshot ),
+			summary: 'J109: seed a linked layer for Cargo acceptance',
+			token: csrfToken
+		}, true );
+		expect( seedRes.layerspublish?.result ).toBe( 'Success' );
+		lastOwnedRevision = seedRes.layerspublish.revid;
+		templateAddedToOwner = true;
 
 		// =========================================================================
 		// Step 2: Add template to owner by an ordinary edit; verify Cargo row
 		// =========================================================================
-		const ownerWithTemplateText = `{{Layers_cargo_acceptance}}\n${ initialMainText }`;
+		ownerWithTemplateText = `{{Layers_cargo_acceptance}}\n{{Layers_cargo_layer_rows_acceptance}}\n${ initialMainText }`;
 		const addTemplateRes = await api( {
 			action: 'edit',
 			title: owner,
+			baserevid: String( lastOwnedRevision ),
 			text: ownerWithTemplateText,
 			summary: 'J75: add cargo template to owner',
 			token: csrfToken
@@ -207,8 +292,9 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		expect( addTemplateRes.edit?.result ).toBe( 'Success' );
 		templateAddedToOwner = true;
 		const postTemplateRevId = addTemplateRes.edit.newrevid;
+		lastOwnedRevision = postTemplateRevId;
 
-		// Verify Cargo row: 1 row per drawing of current revision with expected values
+		// Verify one unchanged row per layer set and one row per text/link layer.
 		await expect.poll( async () => ( await queryCargo( `_pageID=${ pageId }` ) ).length ).toBe( 1 );
 		const step2Rows = await queryCargo( `_pageID=${ pageId }` );
 		expect( step2Rows ).toHaveLength( 1 );
@@ -217,9 +303,35 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		expect( step2Rows[ 0 ].surface_label ).toBe( 'Welcome Slide' );
 		expect( step2Rows[ 0 ].surface_kind ).toBe( 'slide' );
 		expect( step2Rows[ 0 ].drawing_text ).toBe( 'Visual ideas — 世界' );
+		const initialTextLayer = initialSnapshot.surfaces[ 0 ].layers.find( ( layer ) =>
+			layer.text === 'Visual ideas — 世界' );
+		expect( initialTextLayer ).toBeTruthy();
+		const expectedLayerRow = {
+			page: owner,
+			revision: String( postTemplateRevId ),
+			layer_set: 'Welcome Slide',
+			kind: 'slide',
+			layer: initialTextLayer.id,
+			type: initialTextLayer.type,
+			text: 'Visual ideas — 世界',
+			link_target: ''
+		};
+		const expectedLinkRow = {
+			page: owner,
+			revision: String( postTemplateRevId ),
+			layer_set: 'Welcome Slide',
+			kind: 'slide',
+			layer: linkLayer.id,
+			type: linkLayer.type,
+			text: '',
+			link_target: linkLayer.link
+		};
+		const sortedRows = ( rows ) => rows.sort( ( a, b ) => a.layer.localeCompare( b.layer ) );
+		await expect.poll( async () => sortedRows( await queryLayerRows( `_pageID=${ pageId }` ) ) )
+			.toEqual( sortedRows( [ expectedLayerRow, expectedLinkRow ] ) );
 
 		// =========================================================================
-		// Step 3: Change one text layer through the page-owned editor (drawing-only save)
+		// Step 3: Change one text layer through the page-owned editor (layer-only save)
 		// =========================================================================
 		await page.goto( `${ base }/index.php?${ new URLSearchParams( {
 			title: 'Special:EditLayersPage',
@@ -254,6 +366,7 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		expect( step3SaveRes.layerspublish?.result ).toBe( 'Success' );
 		const postEditTextRevId = step3SaveRes.layerspublish.revid;
 		expect( postEditTextRevId ).toBeGreaterThan( postTemplateRevId );
+		lastOwnedRevision = postEditTextRevId;
 		await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );
 
 		// Cargo row must update to new text and omit old text
@@ -263,6 +376,15 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		expect( step3Rows ).toHaveLength( 1 );
 		expect( step3Rows[ 0 ].drawing_text ).toBe( updatedText );
 		expect( step3Rows[ 0 ].drawing_text ).not.toContain( 'Visual ideas — 世界' );
+		await expect.poll( async () => sortedRows( await queryLayerRows( `_pageID=${ pageId }` ) ) )
+			.toEqual( sortedRows( [ {
+				...expectedLayerRow,
+				revision: String( postEditTextRevId ),
+				text: updatedText
+			}, {
+				...expectedLinkRow,
+				revision: String( postEditTextRevId )
+			} ] ) );
 
 		// =========================================================================
 		// Step 4: Hide that layer and save: text must disappear from row
@@ -278,6 +400,7 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		expect( step4SaveRes.layerspublish?.result ).toBe( 'Success' );
 		const postHideRevId = step4SaveRes.layerspublish.revid;
 		expect( postHideRevId ).toBeGreaterThan( postEditTextRevId );
+		lastOwnedRevision = postHideRevId;
 		await page.waitForFunction( () => !window.layersEditorInstance.hasUnsavedChanges() );
 
 		// Cargo row text must disappear
@@ -286,9 +409,13 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		const step4Rows = await queryCargo( `_pageID=${ pageId }` );
 		expect( step4Rows ).toHaveLength( 1 );
 		expect( step4Rows[ 0 ].drawing_text ).toBe( '' );
+		await expect.poll( async () => queryLayerRows( `_pageID=${ pageId }` ) ).toEqual( [ {
+			...expectedLinkRow,
+			revision: String( postHideRevId )
+		} ] );
 
 		// =========================================================================
-		// Step 5: Restore the previous drawing version: Cargo row must follow
+		// Step 5: Restore the previous layer-set version: Cargo rows must follow
 		// =========================================================================
 		await page.goto( `${ base }/index.php?${ new URLSearchParams( {
 			title: 'Special:ViewLayersPage',
@@ -313,25 +440,47 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		const step5Rows = await queryCargo( `_pageID=${ pageId }` );
 		expect( step5Rows ).toHaveLength( 1 );
 		expect( step5Rows[ 0 ].drawing_text ).toBe( updatedText );
+		const restoredOwnerQuery = await api( {
+			action: 'query',
+			prop: 'revisions',
+			titles: owner,
+			rvprop: 'ids'
+		} );
+		const restoredRevisionId = restoredOwnerQuery.query.pages[ 0 ].revisions[ 0 ].revid;
+		lastOwnedRevision = restoredRevisionId;
+		await expect.poll( async () => sortedRows( await queryLayerRows( `_pageID=${ pageId }` ) ) )
+			.toEqual( sortedRows( [ {
+				...expectedLayerRow,
+				revision: String( restoredRevisionId ),
+				text: updatedText
+			}, {
+				...expectedLinkRow,
+				revision: String( restoredRevisionId )
+			} ] ) );
 
 		// =========================================================================
-		// Step 6: Put template on isolation page (owns no drawings): stores no rows
+		// Step 6: Put both templates on the isolation page (owns no layer sets): stores no rows
 		// =========================================================================
-		const isoWithTemplateText = `${ initialIsoText }\n{{Layers_cargo_acceptance}}`;
+		isolationWithTemplatesText = `${ initialIsoText }\n{{Layers_cargo_acceptance}}\n{{Layers_cargo_layer_rows_acceptance}}`;
+		// Arm cleanup before the write so an uncertain response is never ignored.
+		templateAddedToIsolation = true;
 		const isoAddRes = await api( {
 			action: 'edit',
 			title: isolationPageTitle,
-			text: isoWithTemplateText,
+			baserevid: String( lastIsolationRevision ),
+			text: isolationWithTemplatesText,
 			summary: 'J75: add cargo template to isolation page',
 			token: csrfToken
 		}, true );
 		expect( isoAddRes.edit?.result ).toBe( 'Success' );
 		templateAddedToIsolation = true;
+		lastIsolationRevision = isoAddRes.edit.newrevid;
 
-		// Isolation page owns no drawings, so Cargo must store no rows for it
+		// The isolation page owns no layer sets, so Cargo must store no rows for it.
 		await expect.poll( async () => ( await queryCargo( `_pageID=${ isolationPageId }` ) ).length ).toBe( 0 );
 		const step6Rows = await queryCargo( `_pageID=${ isolationPageId }` );
 		expect( step6Rows ).toEqual( [] );
+		expect( await queryLayerRows( `_pageID=${ isolationPageId }` ) ).toEqual( [] );
 
 		// =========================================================================
 		// Step 7: Remove template from both pages: both pages' rows must be gone.
@@ -341,15 +490,18 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 		const isoCleanRes = await api( {
 			action: 'edit',
 			title: isolationPageTitle,
+			baserevid: String( lastIsolationRevision ),
 			text: initialIsoText,
 			summary: 'J75 cleanup: restore isolation page',
 			token: csrfToken
 		}, true );
 		expect( isoCleanRes.edit?.result ).toBe( 'Success' );
 		templateAddedToIsolation = false;
+		lastIsolationRevision = isoCleanRes.edit.newrevid;
 
 		await expect.poll( async () => ( await queryCargo( `_pageID=${ isolationPageId }` ) ).length ).toBe( 0 );
 		expect( await queryCargo( `_pageID=${ isolationPageId }` ) ).toEqual( [] );
+		expect( await queryLayerRows( `_pageID=${ isolationPageId }` ) ).toEqual( [] );
 
 		// 7b. Restore owner via exact-base CAS publication with baseline snapshot and text
 		const latestOwnerQuery = await api( {
@@ -359,6 +511,7 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 			rvprop: 'ids'
 		} );
 		const latestOwnerRevId = latestOwnerQuery.query.pages[ 0 ].revisions[ 0 ].revid;
+		expect( latestOwnerRevId ).toBe( lastOwnedRevision );
 
 		const ownerCleanRes = await api( {
 			action: 'layerspublish',
@@ -371,45 +524,113 @@ test( 'page-owned drawing text projects to Cargo table and stays current', async
 			token: csrfToken
 		}, true );
 		expect( ownerCleanRes.layerspublish?.result ).toBe( 'Success' );
-		templateAddedToOwner = false;
+		lastOwnedRevision = ownerCleanRes.layerspublish.revid;
 
-		// Cargo row for owner must be gone
+		// Both Cargo tables must be empty and the owner must exactly match its baseline.
 		await expect.poll( async () => ( await queryCargo( `_pageID=${ pageId }` ) ).length ).toBe( 0 );
 		expect( await queryCargo( `_pageID=${ pageId }` ) ).toEqual( [] );
+		expect( await queryLayerRows( `_pageID=${ pageId }` ) ).toEqual( [] );
+		const finalOwnerQuery = await api( {
+			action: 'query',
+			prop: 'revisions',
+			titles: owner,
+			rvprop: 'ids|content',
+			rvslots: 'main'
+		} );
+		const finalOwnerRevision = finalOwnerQuery.query.pages[ 0 ].revisions[ 0 ];
+		expect( finalOwnerRevision.revid ).toBe( lastOwnedRevision );
+		expect( finalOwnerRevision.slots.main.content ).toBe( initialMainText );
+		const finalOwnerLayers = await api( {
+			action: 'layersread',
+			owner,
+			revid: String( finalOwnerRevision.revid )
+		} );
+		expect( finalOwnerLayers.layersread.snapshot ).toEqual( initialSnapshot );
+		templateAddedToOwner = false;
 	} finally {
 		// Guaranteed cleanup if test aborted prematurely
 		if ( templateAddedToIsolation ) {
-			await api( {
-				action: 'edit',
-				title: isolationPageTitle,
-				text: initialIsoText,
-				summary: 'J75 cleanup: restore isolation page in finally',
-				token: csrfToken
-			}, true );
+			const isolationState = ( await api( {
+				action: 'query',
+				prop: 'revisions',
+				titles: isolationPageTitle,
+				rvprop: 'ids|content|user',
+				rvslots: 'main'
+			} ) ).query.pages[ 0 ];
+			expect( Boolean( isolationState && isolationState.revisions ),
+				'Isolation page became unavailable during Cargo acceptance cleanup' ).toBe( true );
+			const currentIsolation = isolationState.revisions[ 0 ];
+			const isolationIsUnchanged = Number( currentIsolation.revid ) === Number( initialIsoPage.revisions[ 0 ].revid ) &&
+				currentIsolation.slots.main.content === initialIsoText;
+			if ( !isolationIsUnchanged ) {
+				expect( currentIsolation.user === config.username &&
+					currentIsolation.slots.main.content === isolationWithTemplatesText,
+				'Isolation page changed during Cargo acceptance; cleanup stopped to preserve intervening edits' )
+					.toBe( true );
+				const restoreIsolation = await api( {
+					action: 'edit',
+					title: isolationPageTitle,
+					baserevid: String( currentIsolation.revid ),
+					text: initialIsoText,
+					summary: 'J75 cleanup: restore isolation page in finally',
+					token: csrfToken
+				}, true );
+				expect( restoreIsolation.edit?.result, 'Cargo acceptance could not restore the isolation page' ).toBe( 'Success' );
+			}
 		}
 		if ( templateAddedToOwner ) {
-			const checkCurrent = ( await api( {
+			const ownerState = ( await api( {
+				action: 'query',
+				prop: 'revisions',
+				titles: owner,
+				rvprop: 'ids|content|user',
+				rvslots: 'main'
+			} ) ).query.pages[ 0 ];
+			expect( Boolean( ownerState && !ownerState.missing && ownerState.revisions ),
+				'Owner page became unavailable during Cargo acceptance cleanup' ).toBe( true );
+			const curRev = ownerState.revisions[ 0 ];
+			const currentLayers = await api( {
+				action: 'layersread',
+				owner,
+				revid: String( curRev.revid )
+			} );
+			const ownerIsUnchanged = Number( curRev.revid ) === Number( initialRevId ) &&
+				curRev.slots.main.content === initialMainText &&
+				JSON.stringify( currentLayers.layersread.snapshot ) === JSON.stringify( initialSnapshot );
+			if ( !ownerIsUnchanged ) {
+				expect( Number( curRev.revid ) === Number( lastOwnedRevision ) &&
+					curRev.user === config.username &&
+					( curRev.slots.main.content === initialMainText ||
+						curRev.slots.main.content === ownerWithTemplateText ),
+				'Owner page changed during Cargo acceptance; cleanup stopped to preserve intervening edits' )
+					.toBe( true );
+				const restoreOwner = await api( {
+					action: 'layerspublish',
+					owner,
+					pageid: String( pageId ),
+					baserevid: String( lastOwnedRevision ),
+					data: JSON.stringify( initialSnapshot ),
+					maintext: initialMainText,
+					summary: 'J75 cleanup: restore automated owner state in finally',
+					token: csrfToken
+				}, true );
+				expect( restoreOwner.layerspublish?.result, 'Cargo acceptance could not restore the original owner state' )
+					.toBe( 'Success' );
+			}
+			const restoredOwnerState = ( await api( {
 				action: 'query',
 				prop: 'revisions',
 				titles: owner,
 				rvprop: 'ids|content',
 				rvslots: 'main'
-			} ) ).query.pages[ 0 ];
-			if ( checkCurrent && !checkCurrent.missing && checkCurrent.revisions ) {
-				const curRev = checkCurrent.revisions[ 0 ];
-				if ( curRev.slots.main.content !== initialMainText ) {
-					await api( {
-						action: 'layerspublish',
-						owner,
-						pageid: String( pageId ),
-						baserevid: String( curRev.revid ),
-						data: JSON.stringify( initialSnapshot ),
-						maintext: initialMainText,
-						summary: 'J75 cleanup: restore automated owner state in finally',
-						token: csrfToken
-					}, true );
-				}
-			}
+			} ) ).query.pages[ 0 ].revisions[ 0 ];
+			expect( restoredOwnerState.slots.main.content ).toBe( initialMainText );
+			const restoredSnapshot = await api( {
+				action: 'layersread',
+				owner,
+				revid: String( restoredOwnerState.revid )
+			} );
+			expect( restoredSnapshot.layersread.snapshot ).toEqual( initialSnapshot );
 		}
 	}
 } );

@@ -1,8 +1,8 @@
 # Layers implementation handoff plan
 
-## J108 and J110 accepted; J109 ready — October 1, 2026
+## J108–J110 and J109 accepted; J112 scope clarification pending — October 1, 2026
 
-Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105, J108 and J110 are accepted. J109 is held and not started until the owner resolves the field-name mismatch between the approved Cargo design (`drawing`) and the packet (`layer_set`). J111 remains a separate ready packet outside this batch. J106 is replaced by J113 and J107 is withdrawn.
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105, J108–J110 and J109 are accepted. J112 is next to establish file/page-aware layer-set identity, followed by J111's overlay and full-size viewer; serialize browser acceptance on the original test wiki. Before J112 starts, resolve its internal scope conflict: rule 3 requires name-allocation-only changes in migration/adoption/copy callers, while the overview and allowed-files list exclude those files. J106 is replaced by J113 and J107 is withdrawn.
 
 ### J106 — Authors never see a page ID (HIST-9) (**replaced by J113 on September 30**; do not start)
 
@@ -57,21 +57,31 @@ Record findings, then return for lead review.
 
 **Lead acceptance — October 1, 2026:** Accepted after review of the Parsoid-specific hook, stale/suppressed revision guards, target-only search behavior, documentation, and focused native tests (**21 tests / 262 assertions**). Full native core PHPUnit completed **457 tests / 3,658 assertions / 1 skip with 1 unrelated file-backend collision** in `PageOwnedAdoptionFlowTest::testFileAdoptionOpenedBeforeAReuploadIsRefused`; that method passed when rerun alone (**1 test / 6 assertions**). `npm test`, standalone PHPUnit, targeted PHPCS, docs, and reference checks passed. `npm run test:php` remains blocked by existing ignored `tmp/` PHPCS probes. The accepted follow-up was tested on MediaWiki 1.45.3 only. J110's documentation refresh is now accepted.
 
-### J109 — Links, part 4: Cargo rows per layer (ready)
+### J109 — Links, part 4: Cargo rows per layer (accepted October 1, 2026)
 
 **Gate cleared (lead, October 1):** the field is `layer_set`. The design's `drawing` was written before the vocabulary rule and is corrected. No alias for `drawing`. J109 may start.
 
 **Advances:** CARGO-1 (design PR 3, section 1a item 4). Independent of J108. No visible change for readers or editors; text a person reads says "layer set".
 
-**Allowed changes:** `src/Cargo/PageOwnedCargoStore.php`, its tests, `docs/WIKITEXT_USAGE.md`, the status page and mirror, the changelog and mirror, this packet and the ledger. **The existing one-row-per-layer-set behaviour and its fields stay exactly as they are.**
+**Allowed changes:** `src/Cargo/PageOwnedCargoStore.php`, its tests, `docs/WIKITEXT_USAGE.md`, the status page and mirror, the changelog and mirror, this packet and the ledger. **The existing one-row-per-stored-surface behaviour and its fields stay exactly as they are.**
 
 1. **Opt-in mode.** `{{#layers_cargo_store:_table=X|_rows=layers}}` stores one row per layer that has text or a link, with the fields `page`, `revision`, `layer_set`, `kind`, `layer`, `type`, `text`, `link_target` (the owning page's DB key, the revision ID being stored, the layer set's label, its kind `slide`, `image` or `pdf`, the layer's ID, its type, its plain text as the existing search code extracts it, and its `link`). Without `_rows=layers` (or with an unknown value, which must say so rather than guess) the function behaves exactly as today. Every field is passed, blank ones empty, so Cargo never fills them from the template.
 2. **Same guards as today:** nothing stored outside the page-owned scope, for a page that owns no layer sets, or for a revision whose content is hidden; hidden layers do not store text (use the same visibility rule as the existing text extraction).
-3. **Tests that can fail** (`tests/phpunit/core/PageOwnedCargoStoreTest.php` or a new class, with Cargo installed in the container): the opt-in rows for a layer set with a text layer, a linked shape with no text, a hidden text layer and a layer with neither; the unchanged per-layer-set rows for the same revision; the unknown-value refusal. The existing browser spec `tests/e2e/page-owned-cargo.spec.js` must still pass, run serially; its owner-page baseline rules apply.
+3. **Tests that can fail** (`tests/phpunit/core/PageOwnedCargoStoreTest.php` or a new class, with Cargo installed in the container): the opt-in rows for a layer set with a text layer, a linked shape with no text, a hidden text layer and a layer with neither; the unchanged per-stored-surface rows for the same revision; the unknown-value refusal. The existing browser spec `tests/e2e/page-owned-cargo.spec.js` must still pass, run serially; its owner-page baseline rules apply.
 4. **Docs:** `WIKITEXT_USAGE.md` shows a two-template example (one declaring and storing per-layer rows), and says the two modes can be used in different tables.
 5. **Gates:** standalone and native suites, phpcs, `node scripts/verify-docs.js`, `npm test`.
 
 Record findings, then return for lead review.
+
+**J109 implementation report — October 1, 2026:** Added opt-in `_rows=layers` to `{{#layers_cargo_store:}}`, with eight explicit row fields: `page`, `revision`, `layer_set`, `kind`, `layer`, `type`, `text` and `link_target`. The owning page's DB key and current revision are used; the plain text projection reuses the search code, so hidden text stays out, while a link-only layer is retained with an empty `text`. Rows remain limited to readable current page-owned slot content. The default one-row-per-stored-surface path and its original fields remain unchanged, including the legacy field name `drawing_text`. For PDF content, each stored annotated-page surface has its own row. The owner resolved the design field-name conflict to `layer_set`; the lead aligned `LINKS_FROM_LAYERS_DESIGN.md` section 1a item 4 to that decision. No alternate alias was added.
+
+Unknown or bare `_rows` modes now return the added localized `layers-cargo-invalid-rows` message without echoing the submitted value. This required the lead-authorized narrow addition of `i18n/en.json` and `i18n/qqq.json`; no raw value is reflected. `docs/WIKITEXT_USAGE.md` now documents separate per-layer-set and per-layer templates/tables, and the current status, wiki mirror, changelog and changelog mirror record the opt-in behavior.
+
+The native test `PageOwnedCargoStoreTest` verifies visible text, a link-only row (including a visually hidden layer's link), hidden text exclusion, an empty layer producing no row, unchanged legacy per-surface row projection for the same revision, strict owner scope, and the unknown-mode error. On the original test wiki, the serial Cargo browser spec seeded a second link-only layer on the dedicated automation page with exact-base publication, queried both real Cargo rows, hid the text layer and confirmed only its row disappeared, restored the earlier revision, then cleared both tables and verified exact baseline wikitext and snapshot restoration by CAS. The acceptance leaves its dedicated Cargo template/table definitions on the test wiki; it does not change production wiki configuration or extension runtime requirements.
+
+Verification: focused native Cargo PHPUnit **6 tests / 16 assertions passed**; full native core PHPUnit **459 tests / 3,670 assertions / 1 skip passed**; standalone PHPUnit **1,378 tests / 3,239 assertions / 1 skip passed**; serial browser acceptance **1 test passed** on MediaWiki 1.45.3 / PHP 8.3.31. `npm test`, targeted PHPCS, ESLint, `check:phprefs`, `check:parallel`, `node scripts/verify-docs.js` (**73 maintained/policy documents, 53 historical records**) and `git diff --check` passed. Cargo acceptance on MediaWiki 1.44 and other Cargo versions remains unverified. The junior made no commit or push.
+
+**Lead acceptance — October 1, 2026:** Accepted after review of the opt-in and legacy projections, Cargo parser error handling, owner-page isolation and CAS cleanup. The lead corrected current documentation and code comments to describe the legacy projection accurately as one row per stored surface, including PDF-page surfaces, and armed browser cleanup before write requests so a lost response cannot silently skip cleanup. Focused PHPUnit (**6 tests / 16 assertions**), original-wiki serial browser acceptance (**1 passed**), documentation parity (**73 maintained/policy documents; 53 historical records**), i18n wiring and `git diff --check` passed. No runtime requirement or Docker dependency was introduced.
 
 ### J110 — Make KNOWN_ISSUES.md true (OPS, documentation only) (accepted October 1, 2026)
 
@@ -108,9 +118,11 @@ Record findings, then return for lead review.
 
 Record findings, then return for lead review. The owner looks at the screens before this counts as done.
 
-### J112 — A layer set is identified by page, file (or slide), PDF page and name (HIST-4) (ready)
+### J112 — A layer set is identified by page, file (or slide), PDF page and name (HIST-4) (blocked pending scope clarification)
 
 **Advances:** HIST-4, from the owner-approved [behaviour brief](LAYER_SET_BEHAVIOUR_BRIEF.md) section 1 and charter D1 as amended September 30. **Read the charter's "Read this first" first. In anything a person reads, say "layer set" or "layers".** Server only: no editor, overlay, migration or embed-writing change belongs here (J113 does those).
+
+**Lead hold — October 1, 2026:** Rule 3 requires changing name-allocation inputs in migration, adoption and copy callers, but the scope statement says no migration/adoption change belongs here and the allowed-files list omits those callers. Do not start implementation until the owner chooses whether to allow those narrow name-allocation-only caller edits or defer that rule to J113.
 
 **The rule.** Today a name is unique across a whole page and resolves to the one surface with that label. The owner's model: two images on one page may each have a layer set "ABC"; the same file used twice with `layerset=ABC` is one layer set; a PDF can have several layer sets, each with its own name, and each covers the whole document. Inside a PDF layer set, the layers of each PDF page are stored as one surface per page (`source.page`), and every one of those surfaces carries that layer set's name. The identity key of a surface is: for a slide, its name; for an image, its file and name; for a PDF page, its file, the layer set's name and the page number. The surfaces of one PDF that have the same file and name together are one layer set. (Names compare as today: `DrawingName::key()`, so case, spacing and underscores do not matter.)
 

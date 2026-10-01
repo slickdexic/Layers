@@ -9,6 +9,18 @@ The lead reran every gate on the committed tree rather than relying on the repor
 - **Disclosure.** Before the lead stopped using `git add -A`, a lead commit (`2654dbbf`) included J103's then-unreviewed `LayerBounds.js` and its test. They are reviewed now (206 Jest suites pass), but the commit message did not say so.
 - Not covered, as the juniors reported: SpamBlacklist and AbuseFilter (not installed), MediaWiki 1.44, the owner's own wiki.
 
+## J109 — Cargo rows per layer — accepted — October 1, 2026
+
+Advances **CARGO-1**. The owner resolved the Cargo field name as `layer_set`; the lead aligned section 1a item 4 of `LINKS_FROM_LAYERS_DESIGN.md` to that decision. This adds an opt-in per-layer row mode while preserving the existing per-stored-surface mode and its fields.
+
+- Added `_rows=layers` to `#layers_cargo_store`, emitting `page`, `revision`, `layer_set`, `kind`, `layer`, `type`, `text`, and `link_target`. It uses the current page-owned layer set and revision, with the same scope, visibility, and readable-revision guards. Link-only layers produce a row; layers with neither searchable text nor a link do not. Hidden layer text remains excluded, while link targets follow the accepted all-layer indexing contract.
+- The default one-row-per-stored-surface projection is unchanged, including its existing `drawing_text` Cargo field. For PDF content, each stored annotated-page surface has its own row. No alternate field alias was introduced. Unsupported or bare `_rows` values use a fixed localized error and do not reflect submitted values; adding that message and its translator description was authorized by the lead.
+- `PageOwnedCargoStoreTest` verifies both projections, hidden text, link-only rows, empty layers, owner scope, and invalid row modes. The serial Cargo browser test on the original test wiki checks two actual Cargo rows, text updates, hiding/restoring a text layer, page isolation, and exact owner-page text/snapshot cleanup through compare-and-swap. The test leaves only its dedicated Cargo template/table definitions; it does not change runtime configuration.
+- **Verification:** focused native Cargo suite **6 tests / 16 assertions**; full native core suite **459 tests / 3,670 assertions / 1 skip**; standalone PHPUnit **1,378 tests / 3,239 assertions / 1 skip**; original-wiki Playwright acceptance **1 passed**. `npm test`, `npm run test:php`, targeted PHPCS, ESLint, `check:phprefs` (**122 files / 122 classes**), `check:parallel`, `node scripts/verify-docs.js`, and `git diff --check` passed. The PHP style gate reports two duplicate-class warnings in existing test stubs, with no errors.
+- **Limits:** acceptance was run on MediaWiki 1.45.3 / PHP 8.3.31 with the test wiki's installed Cargo. MediaWiki 1.44 and other Cargo versions were not tested. The junior made no commit or push.
+
+**Lead acceptance:** Accepted after reviewing the opt-in and legacy projections, parser error handling, owner-page isolation and compare-and-swap cleanup. The lead corrected the existing-mode terminology to “one row per stored surface” and armed cleanup before write requests. Focused PHPUnit (**6 tests / 16 assertions**), the original-wiki serial browser acceptance (**1 passed**), docs parity (**73 maintained/policy documents; 53 historical records**), i18n wiring and `git diff --check` passed.
+
 ## J110 — KNOWN_ISSUES.md refresh — accepted — October 1, 2026
 
 Advances **OPS-2** (the known-issues register is current). This was a documentation-only audit. I read every entry that existed in the prior register, checked its meaning against current source/tests and `docs/CURRENT_STATUS.md`, then compared the result with the charter's Partial/Open criteria and its protected register.

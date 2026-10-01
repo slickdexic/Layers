@@ -34,7 +34,7 @@ The first draft had defects that would have shipped silent failures. Each is fix
 1. **Classification.** `UrlUtils::validProtocols()` returns a *partial* pattern (`https:\/\/|http:\/\/`), not a regex; build `'/^(?:' . $protocols . ')/i'`. Internal links resolve in the **main namespace** by default, exactly like `[[Foo]]`, never in the owning page's namespace (a drawing on a `File:` page linking "Foo" means `Foo`). A bare `#Section` targets the page itself and is never recorded in `pagelinks` (an empty DB key would be).
 2. **Raw `link` is never an `href`.** The browser needs a URL and an existence flag for internal targets. It gets them from one batched `action=query&titles=A|B&prop=info&inprop=url` per drawing (`fullurl`, `missing`, `iwurl`). That honours read rights and is never baked into the publicly cached `layersread` response, so a red link turns blue when the page is created without an edit to the drawing. External hrefs are used only after the same protocol test on the client.
 3. **One bounds function.** The draft used `x, y, width, height`, which is wrong for `circle`, `ellipse`, `line`, `arrow`, `path`, `polygon`, `star`, `marker` and for rotation. The overlay and the PDF annotations both take the axis-aligned box from **one** shared function (reuse the editor's hit-test geometry; do not write two). Overlay positions are percentages of the surface canvas (or an SVG `viewBox`), so they follow responsive thumbnails and the lightbox.
-4. **Cargo compatibility.** Shipped rows are **per drawing** with the fields in `PageOwnedCargoStore::FIELDS`. Changing the granularity under existing tables is not compatible, so those rows stay exactly as they are, and per-layer rows are opt-in: `{{#layers_cargo_store:_table=X|_rows=layers}}` stores `page`, `revision`, `drawing`, `kind`, `layer`, `type`, `text`, `link_target` for each layer that has text or a link. The "compatibility aliases on layer rows" of section 6 are dropped.
+4. **Cargo compatibility.** Shipped rows remain one per stored surface with the fields in `PageOwnedCargoStore::FIELDS`. Changing the granularity under existing tables is not compatible, so those rows stay exactly as they are, and per-layer rows are opt-in: `{{#layers_cargo_store:_table=X|_rows=layers}}` stores `page`, `revision`, `layer_set`, `kind`, `layer`, `type`, `text`, `link_target` for each layer that has text or a link. The "compatibility aliases on layer rows" of section 6 are dropped.
 5. **Search.** Index the link target (raw and spaced) and nothing new besides: layer *names* such as "Rectangle 3" are noise. Link text is the layer's existing text.
 6. **SEC-5 honesty.** `$wgSpamRegex` is checked in code (core applies it only to the main text and summary). SpamBlacklist and AbuseFilter are **not installed on the test wiki**, and the draft's claim that they see links from a non-main slot is unverified. Before PR 2, read their code for how they obtain links; if they do not cover other slots, call the same check explicitly at publication. Until tested on an install that has them, SEC-5 is reported **partial**, not met.
 7. **Scope.** The validator accepts `link` (add it to `STRICT_PROPERTIES`: a bad link fails the layer, never dropped). Overlay, link tables and PDF honour it for **page-owned** drawings only. The legacy `layerssave` refuses a layer carrying `link` with its own message rather than storing a link nothing tracks. Copying a drawing keeps its links verbatim.
@@ -290,7 +290,7 @@ public static function layerSearchTerms( array $layer ): array {
 
 ### 6.1 Expanded field specification
 
-Per-layer rows are an opt-in mode (`_rows=layers`, section 1a item 4); `PageOwnedCargoStore::FIELDS` and the per-drawing rows stay as shipped. The layer mode uses these columns:
+Per-layer rows are an opt-in mode (`_rows=layers`, section 1a item 4); `PageOwnedCargoStore::FIELDS` and the existing per-stored-surface rows stay as shipped. The layer mode uses these columns:
 
 | Column | Description | Example |
 | --- | --- | --- |
@@ -303,7 +303,7 @@ Per-layer rows are an opt-in mode (`_rows=layers`, section 1a item 4); `PageOwne
 | `text` | Extracted plain text (or empty for shapes) | `1. Patient Intake` |
 | `link_target` | Link destination (or empty if unlinked) | `Operations/Intake#Procedure` |
 
-*Compatibility note:* For backward compatibility with existing Cargo table schemas created prior to CARGO-1, the store arguments will also supply the legacy surface-level aliases (`surface_id`, `surface_label`, `surface_kind`, `source_file`, `source_page`, `drawing_text`). Cargo ignores columns not declared in a table's `{{#cargo_declare:}}`.
+*Compatibility note:* The existing mode continues to supply its legacy surface-level fields (`surface_id`, `surface_label`, `surface_kind`, `source_file`, `source_page`, `drawing_text`). The opt-in layer mode supplies only the columns listed above. Cargo ignores fields not declared in a table's `{{#cargo_declare:}}`.
 
 ### 6.2 Projection algorithm
 

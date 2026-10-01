@@ -222,16 +222,22 @@ visible output). This is the low-level building block that v1.5.74 and
 v1.5.75 use internally; in most cases you should prefer the automatic
 detection described above.
 
-### Page-owned drawing text in Cargo: `{{#layers_cargo_store:}}` (pilot)
+### Page-owned layer-set data in Cargo: `{{#layers_cargo_store:}}` (pilot)
 
-On a page whose drawings are part of its revision history (the page-owned
-pilot), `{{#layers_cargo_store:}}` stores one row per drawing in a Cargo
-table, so drawing text can be queried like any other Cargo data. It shows
-nothing on the page and is available only when Cargo is installed. Declare
-the fields you want; undeclared ones are ignored:
+On a page whose layer sets are part of its revision history, Cargo can store
+either one row per stored surface (the existing mode) or, in a separate table,
+one row per layer that contains text or a link. For PDF content, each stored
+annotated-page surface gets its own row in the existing mode. The parser
+function shows no output for either supported mode and is available only when
+Cargo is installed.
+The two modes can be used on the same page by including both templates below;
+they must use different Cargo tables because their fields differ.
+
+Create a template for the existing one-row-per-surface mode. Keep its field
+names when upgrading a table that already uses this mode:
 
 ```text
-<noinclude>{{#cargo_declare:_table=Page_drawings
+<noinclude>{{#cargo_declare:_table=Page_layer_sets
  |surface_id=String
  |surface_label=String
  |surface_kind=String
@@ -240,25 +246,51 @@ the fields you want; undeclared ones are ignored:
  |drawing_text=Text}}</noinclude><includeonly>{{#layers_cargo_store:}}</includeonly>
 ```
 
-Add the template to the owner page, create the table from the template page,
-then query it:
+The `drawing_text` column name is retained for compatibility with existing
+tables. It contains visible text from text, text box and callout layers.
+`surface_kind` is `slide`, `image` or `pdf`; `source_file` and `source_page`
+are populated for image and PDF layer sets. Rows describe the page's current
+revision and are replaced on page saves, including a save that changes only
+a layer set. Recreating the table's data rebuilds them. Only page-owned layer
+sets are stored; shared layer sets on files are not.
+
+For per-layer rows, create a second template and table. The `page` field holds
+the owning page's database key (underscores are retained); `text` follows the
+existing search projection, and `link_target` is the layer's link value.
+Cargo is given all eight fields, with unused fields empty:
 
 ```text
-{{#cargo_query:tables=Page_drawings
- |fields=_pageName, surface_label, drawing_text
- |where=drawing_text LIKE '%valve%'}}
+<noinclude>{{#cargo_declare:_table=Page_layer_rows
+ |page=String
+ |revision=Integer
+ |layer_set=String
+ |kind=String
+ |layer=String
+ |type=String
+ |text=Text
+ |link_target=Text}}</noinclude><includeonly>{{#layers_cargo_store:_table=Page_layer_rows|_rows=layers}}</includeonly>
 ```
 
-- Rows describe the drawings of the page's current revision. Cargo replaces
-  them whenever the page is saved, including saves that change only a
-  drawing, and rebuilds them when you recreate the table's data.
-- Without `_table=`, the table declared by the calling template is used;
-  `{{#layers_cargo_store:_table=Name}}` names one explicitly.
-- `drawing_text` holds the text of visible text, text box and callout
-  layers, one per line. `surface_kind` is `slide`, `image` or `pdf`;
-  `source_file` and `source_page` are filled for image and PDF drawings.
-- Only page-owned drawings are stored. Shared layer sets on files are not,
-  and a revision whose content is hidden stores no rows.
+Add both templates to the owner page, create or recreate each table from its
+template page, then query either table:
+
+```text
+{{Page_layer_sets}}
+{{Page_layer_rows}}
+
+{{#cargo_query:tables=Page_layer_rows
+ |fields=page, revision, layer_set, kind, layer, type, text, link_target
+ |where=text LIKE '%valve%'}}
+```
+
+`_rows=layers` is the opt-in switch; without it, the existing one-row-per-stored-surface
+projection is unchanged. Each per-layer row contains the layer ID and type,
+plain visible text, and link target. A link-only layer is included with empty
+`text`. Hidden text and layers with neither projected text nor a link create no
+row. As with the existing mode, only the current readable page-owned revision
+is stored; hidden revision content and shared layer sets are not exposed.
+An unsupported `_rows` value produces a translated error rather than silently
+falling back to either mode.
 
 ### Values from the page in drawing text: `{{#layers_fields:}}`
 
