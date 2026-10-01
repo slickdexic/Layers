@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 to J105 ready; J106 held, J107 withdrawn — September 30, 2026
+## J102 accepted; J103 to J105 and J108 to J110 ready; J106 held, J107 withdrawn — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
@@ -34,6 +34,49 @@ Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](
 5. **Gates.** `npm test`, `npm run check:bundlesize` (PERF-1: still under 150 KB gzip and nothing loads on a page without drawings), the existing page-owned viewer specs, serially.
 
 Record findings, then return for lead review. J106 and J107 are independent; do J106 first.
+
+### J108 — Links, part 3: links reach the wiki's link tables and search (ready)
+
+**Advances:** FEAT-8 ("What links here", `Special:LinkSearch`), SRCH-3 (design PR 2). Follows J102 (the `link` property), which is accepted. Nothing visible changes for readers or editors, so no behaviour brief is needed; **wording in any text a person reads says "layer set", never "drawing"**.
+
+**Allowed changes:** `src/Content/LayersDocumentContentHandler.php`, `src/Revision/PageDrawingSearchText.php` (and the search classes that call it), tests under `tests/phpunit/`, `docs/CURRENT_STATUS.md` and its wiki mirror, the changelog and its mirror, this packet and the review ledger. No JavaScript, no change to what any page displays.
+
+Read the design first: [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md), section 1a and sections 4 and 5.
+
+1. **Link tables.** Override `fillParserOutput()` in `LayersDocumentContentHandler` so that parsing a revision's `layers` slot registers each layer's `link`: an external URL (the `'/^(?:' . $urlUtils->validProtocols() . ')/i'` test) through `ParserOutput::addExternalLink()`, anything else through `addLink()` with `Title::newFromText( $link )` (main namespace by default, like `[[Foo]]`), skipping a title with an empty DB key (a bare `#Section`) and anything that does not parse. It must **not** emit the JSON table HTML that `JsonContentHandler` produces: return empty output text. Read how core merges a secondary slot's output; the design **assumes** it merges links, and you must prove it.
+2. **Prove it with a native test** (`tests/phpunit/core/`, inside the container): publish a page's layers slot through `layerspublish` with layers linking to an existing page, a missing page, `File:Example.png`, a bare `#Section` and `https://example.org/a`; run the job queue (`runJobs` or `JobQueueGroup`) and assert the `pagelinks` rows (the missing page included, the bare section excluded), the `externallinks` row, that `Special:WhatLinksHere` for the target lists the page, and that `Special:LinkSearch` for `*.example.org` lists it. A second revision that removes the links must remove the rows. A link on a layer of a **hidden** (revision-deleted) revision must not be the page's current links; state what you observe.
+3. **Search (SRCH-3).** The index text for a page's layer sets already holds each layer's text. Add the link **target** (as written, and with `_` and `#` turned into spaces) for every layer that has a link. **Do not index layer names** (the design says why). A native test: a page whose only link is on a rectangle with no text is found by a search for the target's words; a layer name with no text is **not** found. Also cover the `auxiliary_text` path and the `ShowSearchHit` snippet that already exist for layer text: report what a link-only match shows as its snippet, and fix it only if it is blank.
+4. **Reindex.** `maintenance/reindexPageDrawings.php` must pick the new text up; say how an administrator refreshes the link tables of existing pages (`refreshLinks.php`) in the status page.
+5. **Gates.** Standalone and native suites, phpcs, `check:phprefs`, `node scripts/verify-docs.js`, `npm test`. Say in your report what the first draft of each test would have done if the implementation were wrong (every assertion must be able to fail).
+
+Record findings, then return for lead review.
+
+### J109 — Links, part 4: Cargo rows per layer (ready)
+
+**Advances:** CARGO-1 (design PR 3, section 1a item 4). Independent of J108. No visible change for readers or editors; text a person reads says "layer set".
+
+**Allowed changes:** `src/Cargo/PageOwnedCargoStore.php`, its tests, `docs/WIKITEXT_USAGE.md`, the status page and mirror, the changelog and mirror, this packet and the ledger. **The existing one-row-per-layer-set behaviour and its fields stay exactly as they are.**
+
+1. **Opt-in mode.** `{{#layers_cargo_store:_table=X|_rows=layers}}` stores one row per layer that has text or a link, with the fields `page`, `revision`, `layer_set`, `kind`, `layer`, `type`, `text`, `link_target` (the owning page's DB key, the revision ID being stored, the layer set's label, its kind `slide`, `image` or `pdf`, the layer's ID, its type, its plain text as the existing search code extracts it, and its `link`). Without `_rows=layers` (or with an unknown value, which must say so rather than guess) the function behaves exactly as today. Every field is passed, blank ones empty, so Cargo never fills them from the template.
+2. **Same guards as today:** nothing stored outside the page-owned scope, for a page that owns no layer sets, or for a revision whose content is hidden; hidden layers do not store text (use the same visibility rule as the existing text extraction).
+3. **Tests that can fail** (`tests/phpunit/core/PageOwnedCargoStoreTest.php` or a new class, with Cargo installed in the container): the opt-in rows for a layer set with a text layer, a linked shape with no text, a hidden text layer and a layer with neither; the unchanged per-layer-set rows for the same revision; the unknown-value refusal. The existing browser spec `tests/e2e/page-owned-cargo.spec.js` must still pass, run serially; its owner-page baseline rules apply.
+4. **Docs:** `WIKITEXT_USAGE.md` shows a two-template example (one declaring and storing per-layer rows), and says the two modes can be used in different tables.
+5. **Gates:** standalone and native suites, phpcs, `node scripts/verify-docs.js`, `npm test`.
+
+Record findings, then return for lead review.
+
+### J110 — Make KNOWN_ISSUES.md true (OPS, documentation only) (ready)
+
+**Advances:** the charter's documentation refresh (section 10, item 10). **No production code, no wording change to any feature name.**
+
+**Allowed changes:** `docs/KNOWN_ISSUES.md`, this packet and the review ledger.
+
+1. Read every entry. For each, decide from the **code and the current status page**, not from memory, whether it is still true, fixed, partly fixed or unverifiable, and say which evidence (a file and line, a test, or a status-page section) shows it. Do not delete an entry that is still true. Record a fixed one as fixed with the date and the commit or status-page section, rather than silently removing it.
+2. Add entries for known gaps that are missing. Start from the charter's "Partial" and "Open" rows and the protected register in "Read this first" (hover overlay and full-size viewer on page-owned layer sets, server PDF export fidelity, revision deletion untested, XML import refused, the editor's Escape and return target, and so on).
+3. Vocabulary: a layer is one element, a layer set is a named set of layers, and "drawing" is used only for "drawing tools" and the like (see the charter, rule 2). Decide by meaning; do not search and replace.
+4. Gates: `node scripts/verify-docs.js`. List what you could not verify and why.
+
+Record findings, then return for lead review.
 
 ### J102 — Links, part 1: the `link` property and its server validation (accepted)
 
