@@ -1,0 +1,679 @@
+{
+  "benchmark": "PERF-0 Repeatable Performance Benchmark",
+  "date": "2026-09-30",
+  "environment": {
+    "date": "2026-09-30",
+    "platform": "win32",
+    "release": "10.0.26200",
+    "arch": "x64",
+    "cpus": 16,
+    "cpuModel": "AMD Ryzen 7 3700X 8-Core Processor             ",
+    "totalMemoryBytes": 34282106880,
+    "nodeVersion": "v24.20.0",
+    "browser": "Chromium 145.0.7632.6",
+    "wiki": {
+      "generator": "MediaWiki 1.45.3",
+      "server": "http://localhost:8080",
+      "sitename": "Test_001",
+      "phpversion": "8.3.31",
+      "note": "The test wiki runs inside a Docker container with an extension checkout mounted over a Windows filesystem share. This shared-folder mount introduces substantial disk I/O and stat overhead for PHP file inclusion and asset loading, making measurements slower than a standard production Linux deployment."
+    }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false,
+        "ownerLoadedModules": [
+          "ext.layers.history",
+          "ext.layers.shared",
+          "ext.layers",
+          "ext.layers.modal"
+        ]
+      },
+      "perf2": {
+        "imageLoadToPaintedMs": 9072.9,
+        "layersreadDurationMs": 652.4,
+        "timeline": {
+          "coreImageLoadedAtMs": 1206.9,
+          "layerSetPaintedAtMs": 10279.8,
+          "imageLoadToPaintedMs": 9072.9,
+          "historyModule": {
+            "requestObserved": true,
+            "requestTimingSource": "playwright-request-event",
+            "request": {
+              "startTime": 6723.83,
+              "requestStart": 6724.73,
+              "responseStart": 9500.41,
+              "responseEnd": 9533.73,
+              "queueingMs": 0.9,
+              "waitingMs": 2775.68,
+              "downloadMs": 33.32,
+              "durationMs": 2809.9
+            },
+            "readyAtMs": 9591,
+            "readyAfterResponseMs": 57.27
+          },
+          "layersread": {
+            "startTime": 9581.2,
+            "requestStart": 9581.6,
+            "responseStart": 10231.5,
+            "responseEnd": 10233.6,
+            "queueingMs": 0.4,
+            "waitingMs": 649.9,
+            "downloadMs": 2.1,
+            "durationMs": 652.4
+          },
+          "pinnedRendition": {
+            "request": {
+              "startTime": 10239.9,
+              "requestStart": 10240.2,
+              "responseStart": 10254,
+              "responseEnd": 10266.7,
+              "queueingMs": 0.3,
+              "waitingMs": 13.8,
+              "downloadMs": 12.7,
+              "durationMs": 26.8
+            },
+            "assignedAtMs": 10239.5,
+            "loadedAtMs": 10269.1,
+            "decodePromiseRequestedAtMs": 10239.5,
+            "decodePromiseResolvedAtMs": 10282.6,
+            "responseToLoadMs": 2.4,
+            "decodePromiseStatus": "decoded",
+            "decodePromiseRequestToReadyMs": 43.1,
+            "loadToDecodeReadyMs": 13.5
+          },
+          "stageOffsetsFromCoreImageLoadMs": {
+            "historyModuleRequestStart": 5516.93,
+            "historyModuleResponseEnd": 8326.83,
+            "historyModuleReady": 8384.1,
+            "layersreadRequestStart": 8374.3,
+            "layersreadResponseEnd": 9026.7,
+            "pinnedRenditionRequestStart": 9033,
+            "pinnedRenditionLoaded": 9062.2,
+            "pinnedRenditionDecodePromiseResolved": 9075.7,
+            "firstPaint": 9072.9
+          }
+        }
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 5883
+      },
+      "perf4": {
+        "dragFramesPerSecond": 61,
+        "resizeFramesPerSecond": 60.5,
+        "panFramesPerSecond": 60,
+        "typingDelayMedianMs": 10.55,
+        "typingDelayWorstMs": 18.3
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1928.2,
+        "viewPreviousRevisionInSpecialPageMs": 3756.16
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 2,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false,
+        "ownerLoadedModules": [
+          "ext.layers.history",
+          "ext.layers.shared",
+          "ext.layers",
+          "ext.layers.modal"
+        ]
+      },
+      "perf2": {
+        "imageLoadToPaintedMs": 3809.3,
+        "layersreadDurationMs": 683.2,
+        "timeline": {
+          "coreImageLoadedAtMs": 1347.3,
+          "layerSetPaintedAtMs": 5156.6,
+          "imageLoadToPaintedMs": 3809.3,
+          "historyModule": {
+            "requestObserved": false,
+            "requestTimingSource": "no-observable-network-request",
+            "request": null,
+            "readyAtMs": 4465.4,
+            "readyAfterResponseMs": null
+          },
+          "layersread": {
+            "startTime": 4455,
+            "requestStart": 4455.7,
+            "responseStart": 5135.8,
+            "responseEnd": 5138.2,
+            "queueingMs": 0.7,
+            "waitingMs": 680.1,
+            "downloadMs": 2.4,
+            "durationMs": 683.2
+          },
+          "pinnedRendition": {
+            "request": {
+              "startTime": 5142.8,
+              "requestStart": 5143.2,
+              "responseStart": 5143.2,
+              "responseEnd": 5143.9,
+              "queueingMs": 0.4,
+              "waitingMs": 0,
+              "downloadMs": 0.7,
+              "durationMs": 1.1
+            },
+            "assignedAtMs": 5142.5,
+            "loadedAtMs": 5146,
+            "decodePromiseRequestedAtMs": 5142.6,
+            "decodePromiseResolvedAtMs": 5159.5,
+            "responseToLoadMs": 2.1,
+            "decodePromiseStatus": "decoded",
+            "decodePromiseRequestToReadyMs": 16.9,
+            "loadToDecodeReadyMs": 13.5
+          },
+          "stageOffsetsFromCoreImageLoadMs": {
+            "historyModuleRequestStart": null,
+            "historyModuleResponseEnd": null,
+            "historyModuleReady": 3118.1,
+            "layersreadRequestStart": 3107.7,
+            "layersreadResponseEnd": 3790.9,
+            "pinnedRenditionRequestStart": 3795.5,
+            "pinnedRenditionLoaded": 3798.7,
+            "pinnedRenditionDecodePromiseResolved": 3812.2,
+            "firstPaint": 3809.3
+          }
+        }
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1944
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "resizeFramesPerSecond": 60,
+        "panFramesPerSecond": 60.5,
+        "typingDelayMedianMs": 12.65,
+        "typingDelayWorstMs": 18.7
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1642.12,
+        "viewPreviousRevisionInSpecialPageMs": 1149.03
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 3,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false,
+        "ownerLoadedModules": [
+          "ext.layers.history",
+          "ext.layers.shared",
+          "ext.layers",
+          "ext.layers.modal"
+        ]
+      },
+      "perf2": {
+        "imageLoadToPaintedMs": 658.2,
+        "layersreadDurationMs": 606.1,
+        "timeline": {
+          "coreImageLoadedAtMs": 1138.8,
+          "layerSetPaintedAtMs": 1797,
+          "imageLoadToPaintedMs": 658.2,
+          "historyModule": {
+            "requestObserved": false,
+            "requestTimingSource": "no-observable-network-request",
+            "request": null,
+            "readyAtMs": 1189.9,
+            "readyAfterResponseMs": null
+          },
+          "layersread": {
+            "startTime": 1176.3,
+            "requestStart": 1176.7,
+            "responseStart": 1780.1,
+            "responseEnd": 1782.4,
+            "queueingMs": 0.4,
+            "waitingMs": 603.4,
+            "downloadMs": 2.3,
+            "durationMs": 606.1
+          },
+          "pinnedRendition": {
+            "request": {
+              "startTime": 1784.7,
+              "requestStart": 1784.9,
+              "responseStart": 1784.9,
+              "responseEnd": 1785.5,
+              "queueingMs": 0.2,
+              "waitingMs": 0,
+              "downloadMs": 0.6,
+              "durationMs": 0.8
+            },
+            "assignedAtMs": 1784.4,
+            "loadedAtMs": 1787.2,
+            "decodePromiseRequestedAtMs": 1784.5,
+            "decodePromiseResolvedAtMs": 1799.7,
+            "responseToLoadMs": 1.7,
+            "decodePromiseStatus": "decoded",
+            "decodePromiseRequestToReadyMs": 15.2,
+            "loadToDecodeReadyMs": 12.5
+          },
+          "stageOffsetsFromCoreImageLoadMs": {
+            "historyModuleRequestStart": null,
+            "historyModuleResponseEnd": null,
+            "historyModuleReady": 51.1,
+            "layersreadRequestStart": 37.5,
+            "layersreadResponseEnd": 643.6,
+            "pinnedRenditionRequestStart": 645.9,
+            "pinnedRenditionLoaded": 648.4,
+            "pinnedRenditionDecodePromiseResolved": 660.9,
+            "firstPaint": 658.2
+          }
+        }
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1657
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "resizeFramesPerSecond": 60,
+        "panFramesPerSecond": 60,
+        "typingDelayMedianMs": 11.75,
+        "typingDelayWorstMs": 17.8
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1701.79,
+        "viewPreviousRevisionInSpecialPageMs": 1147.05
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 4,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false,
+        "ownerLoadedModules": [
+          "ext.layers.history",
+          "ext.layers.shared",
+          "ext.layers",
+          "ext.layers.modal"
+        ]
+      },
+      "perf2": {
+        "imageLoadToPaintedMs": 628.8,
+        "layersreadDurationMs": 561.7,
+        "timeline": {
+          "coreImageLoadedAtMs": 1074.2,
+          "layerSetPaintedAtMs": 1703,
+          "imageLoadToPaintedMs": 628.8,
+          "historyModule": {
+            "requestObserved": false,
+            "requestTimingSource": "no-observable-network-request",
+            "request": null,
+            "readyAtMs": 1136.6,
+            "readyAfterResponseMs": null
+          },
+          "layersread": {
+            "startTime": 1122.4,
+            "requestStart": 1122.8,
+            "responseStart": 1681.9,
+            "responseEnd": 1684.1,
+            "queueingMs": 0.4,
+            "waitingMs": 559.1,
+            "downloadMs": 2.2,
+            "durationMs": 561.7
+          },
+          "pinnedRendition": {
+            "request": {
+              "startTime": 1686.5,
+              "requestStart": 1686.8,
+              "responseStart": 1686.8,
+              "responseEnd": 1687.4,
+              "queueingMs": 0.3,
+              "waitingMs": 0,
+              "downloadMs": 0.6,
+              "durationMs": 0.9
+            },
+            "assignedAtMs": 1686.2,
+            "loadedAtMs": 1690,
+            "decodePromiseRequestedAtMs": 1686.2,
+            "decodePromiseResolvedAtMs": 1699.8,
+            "responseToLoadMs": 2.6,
+            "decodePromiseStatus": "decoded",
+            "decodePromiseRequestToReadyMs": 13.6,
+            "loadToDecodeReadyMs": 9.8
+          },
+          "stageOffsetsFromCoreImageLoadMs": {
+            "historyModuleRequestStart": null,
+            "historyModuleResponseEnd": null,
+            "historyModuleReady": 62.4,
+            "layersreadRequestStart": 48.2,
+            "layersreadResponseEnd": 609.9,
+            "pinnedRenditionRequestStart": 612.3,
+            "pinnedRenditionLoaded": 615.8,
+            "pinnedRenditionDecodePromiseResolved": 625.6,
+            "firstPaint": 628.8
+          }
+        }
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1672
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "resizeFramesPerSecond": 60.5,
+        "panFramesPerSecond": 60.5,
+        "typingDelayMedianMs": 10.5,
+        "typingDelayWorstMs": 17.9
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1784.17,
+        "viewPreviousRevisionInSpecialPageMs": 1113.29
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      }
+    },
+    {
+      "run": 5,
+      "perf1": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false,
+        "ownerLoadedModules": [
+          "ext.layers.history",
+          "ext.layers.shared",
+          "ext.layers",
+          "ext.layers.modal"
+        ]
+      },
+      "perf2": {
+        "imageLoadToPaintedMs": 649,
+        "layersreadDurationMs": 624,
+        "timeline": {
+          "coreImageLoadedAtMs": 1200.5,
+          "layerSetPaintedAtMs": 1849.5,
+          "imageLoadToPaintedMs": 649,
+          "historyModule": {
+            "requestObserved": false,
+            "requestTimingSource": "no-observable-network-request",
+            "request": null,
+            "readyAtMs": 1224.4,
+            "readyAfterResponseMs": null
+          },
+          "layersread": {
+            "startTime": 1210.3,
+            "requestStart": 1210.8,
+            "responseStart": 1832.1,
+            "responseEnd": 1834.3,
+            "queueingMs": 0.5,
+            "waitingMs": 621.3,
+            "downloadMs": 2.2,
+            "durationMs": 624
+          },
+          "pinnedRendition": {
+            "request": {
+              "startTime": 1836.7,
+              "requestStart": 1837,
+              "responseStart": 1837,
+              "responseEnd": 1837.5,
+              "queueingMs": 0.3,
+              "waitingMs": 0,
+              "downloadMs": 0.5,
+              "durationMs": 0.8
+            },
+            "assignedAtMs": 1836.4,
+            "loadedAtMs": 1839,
+            "decodePromiseRequestedAtMs": 1836.4,
+            "decodePromiseResolvedAtMs": 1852.3,
+            "responseToLoadMs": 1.5,
+            "decodePromiseStatus": "decoded",
+            "decodePromiseRequestToReadyMs": 15.9,
+            "loadToDecodeReadyMs": 13.3
+          },
+          "stageOffsetsFromCoreImageLoadMs": {
+            "historyModuleRequestStart": null,
+            "historyModuleResponseEnd": null,
+            "historyModuleReady": 23.9,
+            "layersreadRequestStart": 9.8,
+            "layersreadResponseEnd": 633.8,
+            "pinnedRenditionRequestStart": 636.2,
+            "pinnedRenditionLoaded": 638.5,
+            "pinnedRenditionDecodePromiseResolved": 651.8,
+            "firstPaint": 649
+          }
+        }
+      },
+      "perf3": {
+        "editLinkToEditorReadyMs": 1810
+      },
+      "perf4": {
+        "dragFramesPerSecond": 60.5,
+        "resizeFramesPerSecond": 60,
+        "panFramesPerSecond": 60.5,
+        "typingDelayMedianMs": 10.5,
+        "typingDelayWorstMs": 18.9
+      },
+      "perf5": {
+        "layersPublishResponseTimeMs": 1904.17,
+        "viewPreviousRevisionInSpecialPageMs": 1206.6
+      },
+      "perf6": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "perf7": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      }
+    }
+  ],
+  "median": {
+    "PERF-1": {
+      "ownerPageLayersGzipBytesMedian": 84319,
+      "mainPageLayersGzipBytesMedian": 0,
+      "layersModuleLoadedOnMainPage": false
+    },
+    "PERF-2": {
+      "imageLoadToPaintedMsMedian": 658.2,
+      "imageLoadToPaintedMsWarmMedian": 653.6,
+      "layersreadDurationMsMedian": 624,
+      "layersreadDurationMsWarmMedian": 615.05
+    },
+    "PERF-3": {
+      "editLinkToEditorReadyMsMedian": 1810,
+      "editLinkToEditorReadyMsWarmMedian": 1741
+    },
+    "PERF-4": {
+      "dragFramesPerSecondMedian": 60.5,
+      "resizeFramesPerSecondMedian": 60,
+      "panFramesPerSecondMedian": 60.5,
+      "typingDelayMedianMsMedian": 10.55,
+      "typingDelayWorstMsMedian": 18.9
+    },
+    "PERF-5": {
+      "layersPublishResponseTimeMsMedian": 1784.17,
+      "layersPublishResponseTimeMsWarmMedian": 1742.98,
+      "viewPreviousRevisionInSpecialPageMsMedian": 1149.03,
+      "viewPreviousRevisionInSpecialPageMsWarmMedian": 1148.04
+    },
+    "PERF-6": {
+      "longTaskCountMedian": 0,
+      "totalLongTaskDurationMsMedian": 0,
+      "maxLongTaskDurationMsMedian": 0
+    },
+    "PERF-7": {
+      "revision1SlotSizeBytesMedian": 200787,
+      "revision2SlotSizeBytesMedian": 200787,
+      "slotSizeDeltaBytesMedian": 0
+    }
+  },
+  "criteriaSummary": {
+    "PERF-1": {
+      "charterTarget": "A page with layer sets gets at most 150 KB (gzip) of Layers code and styles; a page without layer sets gets none.",
+      "verdictUses": "median",
+      "coldRun": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false
+      },
+      "median": {
+        "ownerPageLayersGzipBytes": 84319,
+        "mainPageLayersGzipBytes": 0,
+        "layersModuleLoadedOnMainPage": false
+      },
+      "isMetOnTestWiki": true,
+      "notes": "Met on test wiki. Measures only Layers' own ResourceLoader modules alone (gzip compressed); excludes core bundles."
+    },
+    "PERF-2": {
+      "charterTarget": "A layer set appears within 300 ms after its image has loaded.",
+      "verdictUses": "warm",
+      "coldRun": {
+        "imageLoadToPaintedMs": 9072.9,
+        "layersreadDurationMs": 652.4
+      },
+      "warm": {
+        "imageLoadToPaintedMs": 653.6,
+        "layersreadDurationMs": 615.05
+      },
+      "median": {
+        "imageLoadToPaintedMs": 653.6,
+        "layersreadDurationMs": 615.05
+      },
+      "isMetOnTestWiki": false,
+      "notes": "Not met on test wiki (warm 653.6 ms > 300 ms; cold was 9072.9 ms). Slower due to shared folder mount overhead and layersread API round-trip (615.05 ms); target applies to production reference install. Verdict uses warm measurement."
+    },
+    "PERF-3": {
+      "charterTarget": "The editor is usable within 3 s of pressing Edit, with a warm cache.",
+      "verdictUses": "warm",
+      "coldRun": {
+        "editLinkToEditorReadyMs": 5883
+      },
+      "warm": {
+        "editLinkToEditorReadyMs": 1741
+      },
+      "median": {
+        "editLinkToEditorReadyMs": 1741
+      },
+      "isMetOnTestWiki": true,
+      "notes": "Met on test wiki (warm median 1741 ms < 3 s; cold was 5883 ms). Verdict uses warm measurement."
+    },
+    "PERF-4": {
+      "charterTarget": "With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms.",
+      "verdictUses": "median",
+      "coldRun": {
+        "dragFramesPerSecond": 61,
+        "resizeFramesPerSecond": 60.5,
+        "panFramesPerSecond": 60,
+        "typingDelayMedianMs": 10.55,
+        "typingDelayWorstMs": 18.3
+      },
+      "median": {
+        "dragFramesPerSecond": 60.5,
+        "resizeFramesPerSecond": 60,
+        "panFramesPerSecond": 60.5,
+        "typingDelayMedianMs": 10.55,
+        "typingDelayWorstMs": 18.9
+      },
+      "isMetOnTestWiki": true,
+      "notes": "Met on test wiki."
+    },
+    "PERF-5": {
+      "charterTarget": "Saving a layer set with 100 layers takes at most 1 s on the server, and so does viewing an old revision.",
+      "verdictUses": "warm",
+      "coldRun": {
+        "layersPublishResponseTimeMs": 1928.2,
+        "viewPreviousRevisionInSpecialPageMs": 3756.16
+      },
+      "warm": {
+        "layersPublishResponseTimeMs": 1742.98,
+        "viewPreviousRevisionInSpecialPageMs": 1148.04
+      },
+      "median": {
+        "layersPublishResponseTimeMs": 1742.98,
+        "viewPreviousRevisionInSpecialPageMs": 1148.04
+      },
+      "isMetOnTestWiki": false,
+      "notes": "Not met on test wiki (warm publish 1742.98 ms, viewPrev 1148.04 ms; target <= 1000 ms). Slower due to shared folder mount overhead; target applies to production reference install. Verdict uses warm measurement."
+    },
+    "PERF-6": {
+      "charterTarget": "On a page with 20 layer sets, off-screen layer sets are deferred, and no Layers task blocks the browser for more than 200 ms.",
+      "verdictUses": "median",
+      "coldRun": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "median": {
+        "longTaskCount": 0,
+        "totalLongTaskDurationMs": 0,
+        "maxLongTaskDurationMs": 0
+      },
+      "isMetOnTestWiki": true,
+      "notes": "Observed with type: 'longtask', buffered: true after waiting until all 20 layer sets are confirmed painted."
+    },
+    "PERF-7": {
+      "charterTarget": "A small edit to a layer set that contains images does not copy image data into the new revision (see FEAT-3c).",
+      "verdictUses": "median",
+      "coldRun": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      },
+      "median": {
+        "revision1SlotSizeBytes": 200787,
+        "revision2SlotSizeBytes": 200787,
+        "slotSizeDeltaBytes": 0
+      },
+      "isMetOnTestWiki": false,
+      "notes": "Criterion is not met: each edit re-serializes the entire layer set including the 200 KB image payload into the layers slot (slot size ~200 KB for both revisions), rather than storing only the delta (FEAT-3c)."
+    }
+  },
+  "charterCriteria": {
+    "PERF-0": "Benchmark script implemented in tests/perf/benchmark.spec.js with npm run bench entry",
+    "PERF-1": "A page with layer sets gets at most 150 KB (gzip) of Layers code and styles; a page without layer sets gets none.",
+    "PERF-2": "A layer set appears within 300 ms after its image has loaded.",
+    "PERF-3": "The editor is usable within 3 s of pressing Edit, with a warm cache.",
+    "PERF-4": "With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms.",
+    "PERF-5": "Saving a layer set with 100 layers takes at most 1 s on the server, and so does viewing an old revision.",
+    "PERF-6": "On a page with 20 layer sets, off-screen layer sets are deferred, and no Layers task blocks the browser for more than 200 ms.",
+    "PERF-7": "A small edit to a layer set that contains images does not copy image data into the new revision (see FEAT-3c)."
+  }
+}

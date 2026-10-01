@@ -1,4 +1,44 @@
-# Junior implementation review — J01–J103
+# Junior implementation review — J01–J105
+
+## J105 lead review — accepted, report only — September 30, 2026
+
+Advances: **PERF-5**.
+
+Added `tests/perf/j105-perf5-profile.spec.js` and [the stage profile](PERF5_PROFILE.md); updated the J105 packet. The measurement used only the original `localhost:8080` test wiki and its existing automation owner. No second wiki or production feature was introduced.
+
+- **Five serial pairs:** Each pair published a one-property change to a 100-layer image layer set and opened the preceding revision with `Special:ViewLayersPage`. The test passed five pairs; browser publish wall was **1,496.94–1,599.50 ms** and view TTFB was **994.70–1,295.39 ms**. Canvas-visible time was **8,360.16–9,771.11 ms**, including browser startup, source loading and painting.
+- **Measured PHP sections:** `ApiLayersPublish.execute` took **208.855–227.434 ms** inclusive. `SpecialViewLayersPage.execute` took **320.500–560.008 ms** inclusive. First-post-seed and repeat stage values, inclusive/exclusive definitions, medians, ranges and limits are in `docs/PERF5_PROFILE.md`.
+- **Cold/warm accuracy:** Relevant caches were not forcibly cleared, so run 1 is labeled first post-seed, not cold. Its source-rendition resolution was **207.309 ms**; the four repeat samples were **2.880–3.178 ms**, consistent with a first-use cost followed by cached access, without proving a globally cold state.
+- **Unisolated stages:** The probe did not split out snapshot hashing, `LinksUpdate`, search indexing, job-queue subphases or MediaWiki request bootstrap. Those timings are marked unavailable; the enclosing synchronous save and view methods are not used as substitutes for those subphases.
+- **Conclusion:** The measured extension PHP sections are under one second, but this does not establish the full server request meets PERF-5. Browser request timings exceed one second and the complete server bootstrap/client view path was not isolated. Evidence does not justify a production optimization or marking PERF-5 met.
+- **Cleanup:** The spec restored the automated owner via compare-and-swap. A separate read-only check confirmed page ID **228**, latest revision **2702**, exact original main text and semantic snapshot equality. The temporary helper, nine PHP instrumentation edits and container timing log were removed; no production source diff remains.
+- **Checks:** The J105 Playwright profile passed **1 test** with five serial pairs and exit code 0. ESLint passed; `node scripts/verify-docs.js` and `npm run check:docs` both passed (73 maintained/policy documents, 53 historical records); `git diff --check` passed with only the pre-existing J104 `benchmark.spec.js` CRLF normalization warning. No commit or push was performed.
+
+Lead review: **accepted**. No production change is justified by these measurements. PERF-5 remains unverified because the first post-seed sample was not proven cache-cold and the full request bootstrap was not isolated. J108 is next in the requested batch.
+
+## J104 lead review — accepted, no production change — September 30, 2026
+
+Advances: **PERF-2**.
+
+The J104 performance pass changed only `tests/perf/benchmark.spec.js`, its fresh measurement record `tests/perf/results/2026-10-01-0330-test-wiki.json`, this packet, and this ledger. No viewer production code, `extension.json`, server code, wiki configuration, or user page was changed.
+
+- **Collector repair:** The prior `load.php` substring match intermittently omitted warm ResourceLoader entries. The benchmark now captures same-origin Playwright requests whose decoded `modules` parameter includes `ext.layers.history`, records sanitized timing fields (no query string), falls back to a decoded Resource Timing match, and explicitly records `no-observable-network-request` when neither source exposes one. A two-load validation passed before the five-run measurement.
+- **Timing method:** The start is the `img.layers-bound-file` load event. The end is a `requestAnimationFrame` observation of the seeded red probe pixel in the rendered canvas. The report separates ResourceLoader request/readiness, `layersread` queue/wait/download, pinned-rendition response/load, decode-promise readiness, and paint. The decode promise begins after assigning the exact pinned URL and runs alongside the network request; its duration includes fetch and is not claimed to be decoder CPU time.
+- **Five-run PERF-2 evidence:**
+
+| Run | Type | History request start / response end / ready | `layersread` request / response end (duration / waiting) | Pinned rendition load / decode-promise ready | First paint |
+|---:|---|---:|---:|---:|---:|
+| 1 | Cold | +5,516.9 / +8,326.8 / +8,384.1 ms | +8,374.3 / +9,026.7 ms (652.4 / 649.9 ms) | +9,062.2 / +9,075.7 ms | +9,072.9 ms |
+| 2 | Warm | Not observed / — / +3,118.1 ms | +3,107.7 / +3,790.9 ms (683.2 / 680.1 ms) | +3,798.7 / +3,812.2 ms | +3,809.3 ms |
+| 3 | Warm | Not observed / — / +51.1 ms | +37.5 / +643.6 ms (606.1 / 603.4 ms) | +648.4 / +660.9 ms | +658.2 ms |
+| 4 | Warm | Not observed / — / +62.4 ms | +48.2 / +609.9 ms (561.7 / 559.1 ms) | +615.8 / +625.6 ms | +628.8 ms |
+| 5 | Warm | Not observed / — / +23.9 ms | +9.8 / +633.8 ms (624.0 / 621.3 ms) | +638.5 / +651.8 ms | +649.0 ms |
+
+- **Finding:** Warm first-paint median is **653.6 ms**, with a 628.8–3,809.3 ms range; the 300 ms target is **not met on this test wiki**. Warm `layersread` median is **615.05 ms**. Runs 3–5 show the read begins only 10–48 ms after the core image load and then waits 559–621 ms; the pinned rendition loads 10–20 ms after the API response, and the pixel paints 9.8–13.0 ms after the pinned rendition's load. The decode promise settled after pixel paint in four runs and 3.2 ms before paint in one, so decode/repaint is not the cause. Run 1 is dominated by late and slow ResourceLoader delivery. Run 2 has a 3.1 s delay before read dispatch, with the read starting about 10 ms before the module-ready timestamp; no matching request or timing entry was observed, so its specific source remains unknown.
+- **Lead review:** Accepted as a measurement-only packet. No production change is justified within J104's no-server-code boundary. To reach 300 ms in runs 3–5, the same `layersread` request would need to start roughly **281–339 ms before the core image load**, assuming downstream timing stays unchanged, and the viewer must consume that same response. The current bootstrap dispatches the read during module initialization, while the high-variance module delay cannot consistently be attributed from request events. Any earlier request needs a lead-owned bootstrap/output design; do not add a duplicate request or cross-reader cache. No product change was made, so there is no meaningful before/after comparison; the five-run measurement is the corrected baseline. The Windows-mounted Docker test host does not establish production Linux timing.
+- **Other measured gates:** PERF-1 remained 84,319 B gzip on the owner page and 0 B on Main_Page. The benchmark's PERF-3/4/5/6/7 checks completed on all five iterations. `npm test` passed (206 suites / 15,124 tests, including the bundle budgets); standalone `npm run check:bundlesize` passed. The serial `page-owned-search-pdf-gallery.spec.js` passed (1 test). Journey specs for drawing tools, layer types, move and properties each passed (1 test); the acceptance journey spec skipped at its explicit migration-state guard because the original wiki has migration recorded and shared sets are read-only. `npm run check:docs` passed (72 maintained/policy documents, 53 historical records). ESLint, Node syntax validation and `git diff --check` passed.
+- **Wiki cleanup:** The browser specs and benchmark left the automated owner in the exact baseline state on page ID 228, revision 2695: baseline text, one `presentation` layer set labelled `Welcome Slide`. No foreign page or uploaded file was modified by this work.
+- **Execution:** The five-run serial benchmark completed with exit code 0 in 4.5 minutes. No commit or push was performed.
 
 ## J103 lead review — accepted with correction, September 30, 2026
 
@@ -14,7 +54,7 @@ Implemented only the J103 files: new `resources/ext.layers.shared/LayerBounds.js
 - ResourceLoader review: `LayerBounds.js` is listed in `ext.layers.shared`; editor, main viewer and history modules depend on `ext.layers.shared`, so it loads before consumers.
 - Lead correction: `CanvasManager` rotates raw bounds after reading them from `GeometryUtils`. The adapter now disables rotation as well as stroke expansion, preventing a second rotation; the shared API retains rotation by default for viewer and PDF consumers. A regression test asserts the editor adapter still returns raw bounds for a rotated rectangle.
 
-The junior made no commit or push. The J103 base implementation was already present in upstream commit `2654dbbf` during review; the lead correction and review updates remain uncommitted. J104 is the next independent packet.
+The junior made no commit or push. The J103 base implementation was already present in upstream commit `2654dbbf` during review; the lead correction and review updates remain uncommitted. J104 and J105 are accepted; J108 is next in the requested batch.
 
 ## J102 lead review — September 30, 2026
 

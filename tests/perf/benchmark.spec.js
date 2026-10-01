@@ -11,15 +11,15 @@
  *           requestAnimationFrame until seeded solid probe rectangle is painted; no fallback allowed).
  *           Records ResourceLoader, layersread, pinned rendition decode/load and first-paint stages.
  * - PERF-3: time from pressing edit link to editor instance ready and canvas visible (warm cache).
- * - PERF-4: FPS during 2-second drag of selected layer in 100-layer drawing (no fallback; asserts layer
+ * - PERF-4: FPS during 2-second drag of selected layer in a layer set with 100 layers (no fallback; asserts layer
  *           position moved in stateManager); typing latency across 20 characters into textbox layer
  *           measured inside the page from each keydown to the paint of the frame in which the character
  *           is in the visible editor element (no Playwright roundtrip; reports median and worst).
  * - PERF-5: layerspublish response time for 1-property edit on 100 layers; time to view in Special:ViewLayersPage.
  * - PERF-6: long tasks (PerformanceObserver type 'longtask', buffered: true) during page load with 20
- *           slide drawings embedded, read only after all 20 drawings are confirmed painted.
- * - PERF-7: drawing slot size (rvprop=slotsize&rvslots=layers) across 2 revisions where second changes
- *           text in drawing with 200 KB image layer.
+ *           slide layer sets embedded, read only after all 20 layer sets are confirmed painted.
+ * - PERF-7: layers slot size (rvprop=slotsize&rvslots=layers) across 2 revisions where second changes
+ *           text in a layer set with a 200 KB image layer.
  *
  * Runs 5 iterations, records each run, and computes the median.
  * Results are written to tests/perf/results/<UTC date and time>-test-wiki.json.
@@ -53,7 +53,7 @@ function fetchGzipBytes( targetUrl ) {
 }
 
 test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', async ( { page, context, browser } ) => {
-	test.setTimeout( 600000 ); // 10 minutes for 3 complete measurement passes
+	test.setTimeout( 600000 ); // 10 minutes; prior 3-pass suite took 2.7 minutes, leaving >2x headroom for 5 passes plus cleanup
 	const configPath = process.env.LAYERS_ACCEPTANCE_CONFIG ||
 		( process.env.TEMP ? path.join( process.env.TEMP, 'layers-original-session.json' ) : null );
 	test.skip( !configPath || !fs.existsSync( configPath ), 'Requires an explicitly provisioned, seeded pilot automation owner' );
@@ -157,7 +157,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 		initialSurfaces[ 0 ].label === 'Welcome Slide' &&
 		initialSurfaces[ 0 ].kind === 'slide';
 	if ( !matchesBaseline ) {
-		throw new Error( `Owner ${ owner } is not in the known baseline state (revision 1803: text "${ knownBaselineMainText }" and single slide drawing "presentation" labelled "Welcome Slide"); failing per J86 baseline rule` );
+		throw new Error( `Owner ${ owner } is not in the known baseline state (revision 1803: text "${ knownBaselineMainText }" and single slide layer set "presentation" labelled "Welcome Slide"); failing per J86 baseline rule` );
 	}
 
 	// Discover first JPEG or PNG fixture
@@ -216,7 +216,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			// eslint-disable-next-line no-console
 			console.log( `[PERF-1] Run ${ runIndex }: Measuring Layers own modules gzip transfer bytes...` );
 
-			// Seed owner with 1 slide drawing and 1 image drawing (with solid probe rectangle for PERF-2)
+			// Seed owner with one slide layer set and one image layer set (with solid probe rectangle for PERF-2)
 			const p1SlideSurface = {
 				id: 'perf1_slide',
 				kind: 'slide',
@@ -263,7 +263,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				baserevid: String( lastOwnedRevision ),
 				data: JSON.stringify( p1Snapshot ),
 				maintext: p1Wikitext,
-				summary: `Benchmark Run ${ runIndex }: seed drawings for PERF-1/2/3`,
+				summary: `Benchmark Run ${ runIndex }: seed layer sets for PERF-1/2/3`,
 				token: csrfToken
 			}, true );
 			expect( p1Pub.layerspublish?.result ).toBe( 'Success' );
@@ -288,7 +288,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				ownerLayersGzipBytes = await fetchGzipBytes( loadUrl );
 			}
 
-			// Measure Main_Page in the fresh browser context (page without drawings)
+			// Measure Main_Page in the fresh browser context (page without layer sets)
 			await p1Page.goto( `${ base }/index.php?title=Main_Page` );
 			await p1Page.waitForLoadState( 'networkidle' );
 
@@ -316,84 +316,260 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			console.log( `[PERF-1] Run ${ runIndex } result: owner=${ ownerLayersGzipBytes } B (${ ownerLayersModules.length } modules), main=${ mainPageLayersGzipBytes } B, onMain=${ mainPageLayersModules.length > 0 }` );
 
 			// ---------------------------------------------------------------------
-			// PERF-2: time from core img.layers-bound-file load to drawing painted (polled via rAF; no fallback)
+			// PERF-2: time from core img.layers-bound-file load to layer set painted (polled via rAF; no fallback)
 			// ---------------------------------------------------------------------
 			// eslint-disable-next-line no-console
-			console.log( `[PERF-2] Run ${ runIndex }: Measuring photo load to drawing painted time...` );
+			console.log( `[PERF-2] Run ${ runIndex }: Measuring core image load to layer set paint...` );
 
 			await page.goto( 'about:blank' );
 			await page.evaluate( () => {
+				performance.clearResourceTimings();
+				performance.setResourceTimingBufferSize( 1000 );
 				window.__perf2 = null;
 			} );
 
-			// Track core img.layers-bound-file load timestamp via initScript (observe DOM & attach load listener)
+			// Track core image, viewer module readiness, pinned rendition load and API timing before page scripts run.
 			await page.addInitScript( {
 				content: `
-					window.__perf2 = { coreImgSrc: null, coreImgLoad: null };
-					const checkCoreImg = () => {
-						const img = document.querySelector( 'img.layers-bound-file' );
-						if ( img && !window.__perf2.coreImgSrc ) {
-							window.__perf2.coreImgSrc = img.currentSrc || img.src || img.getAttribute( 'src' );
-							if ( img.complete && img.naturalWidth > 0 ) {
-								window.__perf2.coreImgLoad = performance.now();
-							} else {
-								img.addEventListener( 'load', () => {
-									if ( !window.__perf2.coreImgLoad ) {
-										window.__perf2.coreImgLoad = performance.now();
-									}
-								}, { once: true } );
+					(() => {
+						if ( window.__perf2HookInstalled ) return;
+						window.__perf2HookInstalled = true;
+						performance.clearResourceTimings();
+						performance.setResourceTimingBufferSize( 1000 );
+						const expectedRenditionName = ${ JSON.stringify( file.name ) };
+						window.__perf2 = {
+							coreImgSrc: null,
+							coreImgLoad: null,
+							historyModuleReadyAt: null,
+							pinnedImageSrc: null,
+							pinnedImagePath: null,
+							pinnedImageSetAt: null,
+							pinnedImageLoadAt: null,
+							pinnedImageDecodeStartAt: null,
+							pinnedImageDecodedAt: null,
+							pinnedImageErrorAt: null,
+							pinnedImageDecodePromise: null
+						};
+
+						const recordHistoryModuleReady = () => {
+							if ( window.__perf2.historyModuleReadyAt !== null ) return;
+							const loader = window.mw && window.mw.loader;
+							if ( loader && typeof loader.getState === 'function' &&
+								loader.getState( 'ext.layers.history' ) === 'ready' ) {
+								window.__perf2.historyModuleReadyAt = performance.now();
+								return;
 							}
+							requestAnimationFrame( recordHistoryModuleReady );
+						};
+						requestAnimationFrame( recordHistoryModuleReady );
+
+						const imageSrcDescriptor = Object.getOwnPropertyDescriptor( HTMLImageElement.prototype, 'src' );
+						if ( imageSrcDescriptor && imageSrcDescriptor.configurable && imageSrcDescriptor.set ) {
+							Object.defineProperty( HTMLImageElement.prototype, 'src', {
+								configurable: imageSrcDescriptor.configurable,
+								enumerable: imageSrcDescriptor.enumerable,
+								get: imageSrcDescriptor.get,
+								set( value ) {
+									let isExpectedRendition = false;
+									if ( typeof value === 'string' ) {
+										try {
+											const candidate = new URL( value, document.baseURI );
+											isExpectedRendition = candidate.origin === location.origin &&
+												decodeURIComponent( candidate.pathname ).includes( expectedRenditionName );
+										} catch ( e ) {}
+									}
+									if ( window.__perf2 && !window.__perf2.pinnedImageSrc && isExpectedRendition ) {
+										window.__perf2.pinnedImageSrc = new URL( value, document.baseURI ).href;
+										window.__perf2.pinnedImagePath = new URL( value, document.baseURI ).pathname;
+										window.__perf2.pinnedImageSetAt = performance.now();
+										this.addEventListener( 'load', () => {
+											window.__perf2.pinnedImageLoadAt = performance.now();
+										}, { once: true } );
+										this.addEventListener( 'error', () => {
+											window.__perf2.pinnedImageErrorAt = performance.now();
+										}, { once: true } );
+										imageSrcDescriptor.set.call( this, value );
+										if ( typeof this.decode === 'function' ) {
+											window.__perf2.pinnedImageDecodeStartAt = performance.now();
+											window.__perf2.pinnedImageDecodePromise = Promise.resolve().then( () => this.decode() ).then( () => {
+												window.__perf2.pinnedImageDecodedAt = performance.now();
+												return 'decoded';
+											}, () => {
+												window.__perf2.pinnedImageErrorAt = performance.now();
+												return 'rejected';
+											} );
+										}
+										return;
+								}
+									imageSrcDescriptor.set.call( this, value );
+								}
+							} );
 						}
-					};
-					const obs = new MutationObserver( checkCoreImg );
-					obs.observe( document, { childList: true, subtree: true } );
-					document.addEventListener( 'readystatechange', checkCoreImg );
-					document.addEventListener( 'DOMContentLoaded', checkCoreImg );
+
+						const checkCoreImg = () => {
+							const img = document.querySelector( 'img.layers-bound-file' );
+							if ( img && !window.__perf2.coreImgSrc ) {
+								window.__perf2.coreImgSrc = img.currentSrc || img.src || img.getAttribute( 'src' );
+								if ( img.complete && img.naturalWidth > 0 ) {
+									window.__perf2.coreImgLoad = performance.now();
+								} else {
+									img.addEventListener( 'load', () => {
+										if ( !window.__perf2.coreImgLoad ) {
+											window.__perf2.coreImgLoad = performance.now();
+										}
+									}, { once: true } );
+								}
+							}
+						};
+						const obs = new MutationObserver( checkCoreImg );
+						obs.observe( document, { childList: true, subtree: true } );
+						document.addEventListener( 'readystatechange', checkCoreImg );
+						document.addEventListener( 'DOMContentLoaded', checkCoreImg );
+					})();
 				`
 			} );
 
+			const historyModuleRequests = [];
+			const matchesHistoryModuleRequest = ( requestUrl ) => {
+				try {
+					const parsed = new URL( requestUrl );
+					if ( parsed.origin !== base || !parsed.pathname.endsWith( '/load.php' ) ) {
+						return false;
+					}
+					return parsed.searchParams.getAll( 'modules' ).some( ( rawModules ) => {
+						let modules = rawModules;
+						for ( let i = 0; i < 3; i++ ) {
+							try {
+								const decoded = decodeURIComponent( modules );
+								if ( decoded === modules ) break;
+								modules = decoded;
+							} catch ( e ) {
+								break;
+							}
+						}
+						return modules.split( /[|,]/ ).some( ( name ) => name.trim() === 'ext.layers.history' );
+					} );
+				} catch ( e ) {
+					return false;
+				}
+			};
+			const captureHistoryModuleRequest = ( request ) => {
+				if ( matchesHistoryModuleRequest( request.url() ) ) {
+					historyModuleRequests.push( request );
+				}
+			};
+			page.on( 'request', captureHistoryModuleRequest );
 			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 
 			// Poll with requestAnimationFrame until pixel inside seeded solid probe rectangle is painted with its color
 			const perf2Timing = await page.evaluate( async ( fileName ) => {
 				return new Promise( ( resolve, reject ) => {
 					const timeout = setTimeout( () => {
-						reject( new Error( 'PERF-2 timeout: drawing was not painted within 30 seconds' ) );
+						reject( new Error( 'PERF-2 timeout: layer set was not painted within 30 seconds' ) );
 					}, 30000 );
+					let paintObserved = false;
+
+					const toTiming = ( entry ) => entry ? {
+						startTime: Number( entry.startTime.toFixed( 2 ) ),
+						requestStart: Number( entry.requestStart.toFixed( 2 ) ),
+						responseStart: Number( entry.responseStart.toFixed( 2 ) ),
+						responseEnd: Number( entry.responseEnd.toFixed( 2 ) ),
+						queueingMs: Number( ( entry.requestStart - entry.startTime ).toFixed( 2 ) ),
+						waitingMs: Number( ( entry.responseStart - entry.requestStart ).toFixed( 2 ) ),
+						downloadMs: Number( ( entry.responseEnd - entry.responseStart ).toFixed( 2 ) ),
+						durationMs: Number( entry.duration.toFixed( 2 ) )
+					} : null;
+
+					const finishAfterPaint = async ( paintedTime ) => {
+						const decodePromise = window.__perf2?.pinnedImageDecodePromise;
+						let decodePromiseStatus = 'unsupported';
+						if ( decodePromise ) {
+							let decodeWaitTimer;
+							const decodeTimeout = new Promise( ( done ) => {
+								decodeWaitTimer = setTimeout( () => done( 'timeout' ), 5000 );
+							} );
+							decodePromiseStatus = await Promise.race( [ decodePromise, decodeTimeout ] );
+							clearTimeout( decodeWaitTimer );
+					}
+						clearTimeout( timeout );
+
+						const resources = performance.getEntriesByType( 'resource' );
+						let coreImgEntry = null;
+						if ( window.__perf2?.coreImgSrc ) {
+							coreImgEntry = performance.getEntriesByName( window.__perf2.coreImgSrc )[ 0 ];
+						}
+						if ( !coreImgEntry ) {
+							coreImgEntry = resources.find( ( r ) => r.name.includes( '/thumb/' ) && r.name.includes( fileName ) ) ||
+								resources.find( ( r ) => r.initiatorType === 'img' && r.name.includes( fileName ) );
+						}
+						const coreImgLoadTime = window.__perf2?.coreImgLoad || coreImgEntry?.responseEnd || null;
+						const isHistoryModuleResource = ( entry ) => {
+							try {
+								const parsed = new URL( entry.name );
+								if ( parsed.origin !== location.origin || !parsed.pathname.endsWith( '/load.php' ) ) {
+									return false;
+								}
+								return parsed.searchParams.getAll( 'modules' ).some( ( rawModules ) => {
+									let modules = rawModules;
+									for ( let i = 0; i < 3; i++ ) {
+										try {
+											const decoded = decodeURIComponent( modules );
+											if ( decoded === modules ) break;
+											modules = decoded;
+										} catch ( e ) {
+											break;
+										}
+									}
+									return modules.split( /[|,]/ ).some( ( name ) => name.trim() === 'ext.layers.history' );
+								} );
+							} catch ( e ) {
+								return false;
+							}
+						};
+						const moduleEntry = resources.find( isHistoryModuleResource ) || null;
+						const lrEntry = resources.find( ( r ) => r.name.includes( 'action=layersread' ) ) || null;
+						const moduleTiming = toTiming( moduleEntry );
+						const layersreadTiming = toTiming( lrEntry );
+						const pinnedImageSrc = window.__perf2?.pinnedImageSrc;
+						const pinnedImageEntry = pinnedImageSrc ?
+							performance.getEntriesByName( pinnedImageSrc, 'resource' )[ 0 ] || null : null;
+						const pinnedImageTiming = toTiming( pinnedImageEntry );
+						const layersreadDuration = layersreadTiming?.durationMs ?? null;
+
+						resolve( {
+							coreImgLoadTime,
+							paintedTime,
+							layersreadDuration,
+							historyModuleReadyAt: window.__perf2?.historyModuleReadyAt ?? null,
+							pinnedImageSetAt: window.__perf2?.pinnedImageSetAt ?? null,
+							pinnedImagePath: window.__perf2?.pinnedImagePath ?? null,
+							pinnedImageLoadAt: window.__perf2?.pinnedImageLoadAt ?? null,
+							pinnedImageDecodeStartAt: window.__perf2?.pinnedImageDecodeStartAt ?? null,
+							pinnedImageDecodedAt: window.__perf2?.pinnedImageDecodedAt ?? null,
+							pinnedImageErrorAt: window.__perf2?.pinnedImageErrorAt ?? null,
+							pinnedImageDecodePromiseStatus: decodePromiseStatus,
+							moduleTiming,
+							moduleTimingSource: moduleEntry ? 'resource-timing' : null,
+							timeOrigin: performance.timeOrigin,
+							layersreadTiming,
+							pinnedImageTiming
+						} );
+					};
 
 					const checkPainted = () => {
+						if ( paintObserved ) return;
 						const canvas = document.querySelector( '.layers-bound-file-view canvas' );
 						if ( canvas && canvas.width > 0 && canvas.height > 0 ) {
 							try {
 								const ctx = canvas.getContext( '2d' );
 								if ( ctx ) {
-									// Pixel at (50, 50) is inside probe rectangle (x:20..120, y:20..120)
 									const pixel = ctx.getImageData( 50, 50, 1, 1 ).data;
-									// Check if pixel is red: R > 200, G < 50, B < 50, A > 200
 									if ( pixel[ 0 ] > 200 && pixel[ 1 ] < 50 && pixel[ 2 ] < 50 && pixel[ 3 ] > 200 ) {
+										paintObserved = true;
 										const paintedTime = performance.now();
-										clearTimeout( timeout );
-
-										// Read resource timing entries
-										const resources = performance.getEntriesByType( 'resource' );
-										let coreImgEntry = null;
-										if ( window.__perf2?.coreImgSrc ) {
-											coreImgEntry = performance.getEntriesByName( window.__perf2.coreImgSrc )[ 0 ];
-										}
-										if ( !coreImgEntry ) {
-											coreImgEntry = resources.find( ( r ) => r.name.includes( '/thumb/' ) && r.name.includes( fileName ) ) ||
-												resources.find( ( r ) => r.initiatorType === 'img' && r.name.includes( fileName ) );
-										}
-
-										const coreImgLoadTime = window.__perf2?.coreImgLoad || coreImgEntry?.responseEnd || null;
-
-										const lrEntry = resources.find( ( r ) => r.name.includes( 'action=layersread' ) );
-										const layersreadDuration = lrEntry ? Number( lrEntry.duration.toFixed( 2 ) ) : null;
-
-										resolve( {
-											coreImgLoadTime,
-											paintedTime,
-											layersreadDuration
+										finishAfterPaint( paintedTime ).catch( ( error ) => {
+											clearTimeout( timeout );
+											reject( error );
 										} );
 										return;
 									}
@@ -405,6 +581,25 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 					requestAnimationFrame( checkPainted );
 				} );
 			}, file.name );
+			page.off( 'request', captureHistoryModuleRequest );
+			const observedHistoryModuleRequest = historyModuleRequests[ 0 ] || null;
+			if ( observedHistoryModuleRequest ) {
+				const timing = observedHistoryModuleRequest.timing();
+				if ( timing.responseEnd >= 0 ) {
+					const startTime = timing.startTime - perf2Timing.timeOrigin;
+					perf2Timing.moduleTiming = {
+						startTime: Number( startTime.toFixed( 2 ) ),
+						requestStart: Number( ( startTime + timing.requestStart ).toFixed( 2 ) ),
+						responseStart: Number( ( startTime + timing.responseStart ).toFixed( 2 ) ),
+						responseEnd: Number( ( startTime + timing.responseEnd ).toFixed( 2 ) ),
+						queueingMs: Number( timing.requestStart.toFixed( 2 ) ),
+						waitingMs: Number( ( timing.responseStart - timing.requestStart ).toFixed( 2 ) ),
+						downloadMs: Number( ( timing.responseEnd - timing.responseStart ).toFixed( 2 ) ),
+						durationMs: Number( timing.responseEnd.toFixed( 2 ) )
+					};
+					perf2Timing.moduleTimingSource = 'playwright-request-event';
+				}
+			}
 
 			if ( !perf2Timing.coreImgLoadTime || perf2Timing.coreImgLoadTime <= 0 ) {
 				throw new Error( `PERF-2 failed: core img.layers-bound-file load timestamp could not be read (${ perf2Timing.coreImgLoadTime }); no fallback permitted` );
@@ -413,12 +608,66 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			if ( perf2DurationMs < 0 ) {
 				throw new Error( `PERF-2 failed: painted time (${ perf2Timing.paintedTime }) preceded image load time (${ perf2Timing.coreImgLoadTime })` );
 			}
+			if ( perf2Timing.historyModuleReadyAt === null ||
+				!perf2Timing.layersreadTiming || !perf2Timing.pinnedImageTiming ||
+				perf2Timing.pinnedImageLoadAt === null || perf2Timing.pinnedImageDecodeStartAt === null ||
+				!perf2Timing.pinnedImageDecodePromiseStatus ) {
+				throw new Error( `PERF-2 failed: incomplete stage timeline (module ready ${ perf2Timing.historyModuleReadyAt }, layersread ${ Boolean( perf2Timing.layersreadTiming ) }, rendition path ${ perf2Timing.pinnedImagePath }, resource ${ Boolean( perf2Timing.pinnedImageTiming ) }, loaded ${ perf2Timing.pinnedImageLoadAt }, decode requested ${ perf2Timing.pinnedImageDecodeStartAt }, decode confirmed ${ perf2Timing.pinnedImageDecodedAt })` );
+			}
+			const pinnedImageLoadAfterResponseMs = Number( ( perf2Timing.pinnedImageLoadAt - perf2Timing.pinnedImageTiming.responseEnd ).toFixed( 2 ) );
+			const pinnedImageDecodePromiseMs = perf2Timing.pinnedImageDecodedAt === null ? null :
+				Number( ( perf2Timing.pinnedImageDecodedAt - perf2Timing.pinnedImageDecodeStartAt ).toFixed( 2 ) );
+			const pinnedImageLoadToDecodeReadyMs = perf2Timing.pinnedImageDecodedAt === null ? null :
+				Number( ( perf2Timing.pinnedImageDecodedAt - perf2Timing.pinnedImageLoadAt ).toFixed( 2 ) );
+			const moduleRequestStartOffsetMs = perf2Timing.moduleTiming ?
+				Number( ( perf2Timing.moduleTiming.startTime - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ) : null;
+			const moduleResponseEndOffsetMs = perf2Timing.moduleTiming ?
+				Number( ( perf2Timing.moduleTiming.responseEnd - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ) : null;
+			const perf2Timeline = {
+				coreImageLoadedAtMs: Number( perf2Timing.coreImgLoadTime.toFixed( 2 ) ),
+				layerSetPaintedAtMs: Number( perf2Timing.paintedTime.toFixed( 2 ) ),
+				imageLoadToPaintedMs: perf2DurationMs,
+				historyModule: {
+					requestObserved: Boolean( perf2Timing.moduleTiming ),
+					requestTimingSource: perf2Timing.moduleTimingSource || 'no-observable-network-request',
+					request: perf2Timing.moduleTiming,
+					readyAtMs: Number( perf2Timing.historyModuleReadyAt.toFixed( 2 ) ),
+					readyAfterResponseMs: perf2Timing.moduleTiming ?
+						Number( ( perf2Timing.historyModuleReadyAt - perf2Timing.moduleTiming.responseEnd ).toFixed( 2 ) ) : null
+				},
+				layersread: perf2Timing.layersreadTiming,
+				pinnedRendition: {
+					request: perf2Timing.pinnedImageTiming,
+					assignedAtMs: Number( perf2Timing.pinnedImageSetAt.toFixed( 2 ) ),
+					loadedAtMs: Number( perf2Timing.pinnedImageLoadAt.toFixed( 2 ) ),
+					decodePromiseRequestedAtMs: Number( perf2Timing.pinnedImageDecodeStartAt.toFixed( 2 ) ),
+					decodePromiseResolvedAtMs: perf2Timing.pinnedImageDecodedAt === null ? null : Number( perf2Timing.pinnedImageDecodedAt.toFixed( 2 ) ),
+					responseToLoadMs: pinnedImageLoadAfterResponseMs,
+					decodePromiseStatus: perf2Timing.pinnedImageDecodePromiseStatus,
+					decodePromiseRequestToReadyMs: pinnedImageDecodePromiseMs,
+					loadToDecodeReadyMs: pinnedImageLoadToDecodeReadyMs
+				},
+				stageOffsetsFromCoreImageLoadMs: {
+					historyModuleRequestStart: moduleRequestStartOffsetMs,
+					historyModuleResponseEnd: moduleResponseEndOffsetMs,
+					historyModuleReady: Number( ( perf2Timing.historyModuleReadyAt - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					layersreadRequestStart: Number( ( perf2Timing.layersreadTiming.startTime - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					layersreadResponseEnd: Number( ( perf2Timing.layersreadTiming.responseEnd - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					pinnedRenditionRequestStart: Number( ( perf2Timing.pinnedImageTiming.startTime - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					pinnedRenditionLoaded: Number( ( perf2Timing.pinnedImageLoadAt - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					pinnedRenditionDecodePromiseResolved: perf2Timing.pinnedImageDecodedAt === null ? null : Number( ( perf2Timing.pinnedImageDecodedAt - perf2Timing.coreImgLoadTime ).toFixed( 2 ) ),
+					firstPaint: perf2DurationMs
+				}
+			};
 			runData.perf2 = {
 				imageLoadToPaintedMs: perf2DurationMs,
-				layersreadDurationMs: perf2Timing.layersreadDuration
+				layersreadDurationMs: perf2Timing.layersreadDuration,
+				timeline: perf2Timeline
 			};
 			// eslint-disable-next-line no-console
-			console.log( `[PERF-2] Run ${ runIndex } result: ${ perf2DurationMs } ms (coreImgLoad: ${ perf2Timing.coreImgLoadTime.toFixed( 1 ) }, painted: ${ perf2Timing.paintedTime.toFixed( 1 ) }, layersreadDuration: ${ perf2Timing.layersreadDuration } ms)` );
+			console.log( `[PERF-2] Run ${ runIndex } result: ${ perf2DurationMs } ms (module request ${ perf2Timing.moduleTiming ? `+${ moduleRequestStartOffsetMs } ms via ${ perf2Timing.moduleTimingSource }` : 'not observed' } / ready +${ perf2Timeline.stageOffsetsFromCoreImageLoadMs.historyModuleReady } ms; layersread ${ perf2Timing.layersreadDuration } ms: queue ${ perf2Timing.layersreadTiming.queueingMs }, wait ${ perf2Timing.layersreadTiming.waitingMs }, download ${ perf2Timing.layersreadTiming.downloadMs }; pinned rendition loaded +${ perf2Timeline.stageOffsetsFromCoreImageLoadMs.pinnedRenditionLoaded } ms, response-to-load ${ pinnedImageLoadAfterResponseMs } ms, decode-promise request-to-ready ${ pinnedImageDecodePromiseMs } ms; first paint +${ perf2DurationMs } ms)` );
+			// eslint-disable-next-line no-console
+			console.log( `[PERF-2 TIMELINE] ${ JSON.stringify( perf2Timeline ) }` );
 
 			// ---------------------------------------------------------------------
 			// PERF-3: time from pressing edit link to editor instance ready + canvas visible
@@ -451,7 +700,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			console.log( `[PERF-3] Run ${ runIndex } result: ${ perf3DurationMs } ms` );
 
 			// ---------------------------------------------------------------------
-			// PERF-4: FPS while dragging 1 layer for 2s in 100-layer drawing; typing delay
+			// PERF-4: FPS while dragging 1 layer for 2s in a layer set with 100 layers; typing delay
 			// ---------------------------------------------------------------------
 			// eslint-disable-next-line no-console
 			console.log( `[PERF-4] Run ${ runIndex }: Measuring 100-layer drag FPS and typing latency...` );
@@ -520,7 +769,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			lastOwnedRevision = p4Pub.layerspublish.revid;
 			const hundredBaseRevId = lastOwnedRevision;
 
-			// Open editor on the 100-layer drawing
+			// Open editor on the layer set with 100 layers
 			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 			const p4EditLink = page.locator( '.layers-page-edit-link' ).first();
 			await Promise.all( [ page.waitForNavigation(), p4EditLink.click() ] );
@@ -846,7 +1095,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			console.log( `[PERF-4] Run ${ runIndex } result: dragFPS=${ dragFps }, resizeFPS=${ resizeFps }, panFPS=${ panFps }, typingMedian=${ typingMedianMs } ms, typingWorst=${ typingWorstMs } ms` );
 
 			// ---------------------------------------------------------------------
-			// PERF-5: layerspublish response time for 1-prop change to 100-layer drawing;
+			// PERF-5: layerspublish response time for a 1-property change to a layer set with 100 layers;
 			//         time to open previous revision in Special:ViewLayersPage
 			// ---------------------------------------------------------------------
 			// eslint-disable-next-line no-console
@@ -895,10 +1144,10 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			console.log( `[PERF-5] Run ${ runIndex } result: publish=${ publishDurationMs } ms, viewPrev=${ viewPrevRevDurationMs } ms` );
 
 			// ---------------------------------------------------------------------
-			// PERF-6: long tasks on page with 20 slide drawings (buffered: true; wait all 20 painted)
+			// PERF-6: long tasks on page with 20 slide layer sets (buffered: true; wait until all are painted)
 			// ---------------------------------------------------------------------
 			// eslint-disable-next-line no-console
-			console.log( `[PERF-6] Run ${ runIndex }: Measuring long tasks on page with 20 slide drawings...` );
+			console.log( `[PERF-6] Run ${ runIndex }: Measuring long tasks on page with 20 slide layer sets...` );
 
 			const twentySurfaces = [];
 			const twentyEmbeds = [];
@@ -909,7 +1158,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 					kind: 'slide',
 					label: sId,
 					canvas: { width: 400, height: 300, backgroundColor: '#ffffff', backgroundVisible: true, backgroundOpacity: 1 },
-					layers: [ { id: `txt_${ i }`, type: 'text', x: 20, y: 20, text: `Drawing ${ i } content` } ],
+					layers: [ { id: `txt_${ i }`, type: 'text', x: 20, y: 20, text: `Layer set ${ i } content` } ],
 					readingOrder: [ `txt_${ i }` ]
 				} );
 				twentyEmbeds.push( `{{#Slide:${ pageId }:${ sId }}}` );
@@ -918,7 +1167,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				schemaVersion: 1,
 				surfaces: [ ...knownBaselineSnapshot.surfaces, ...twentySurfaces ]
 			};
-			const p6Wikitext = `${ knownBaselineMainText }\n\n== Twenty Slide Drawings ==\n` + twentyEmbeds.join( '\n\n' );
+			const p6Wikitext = `${ knownBaselineMainText }\n\n== Twenty Slide Layer Sets ==\n` + twentyEmbeds.join( '\n\n' );
 
 			const p6Pub = await api( {
 				action: 'layerspublish',
@@ -926,7 +1175,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				baserevid: String( lastOwnedRevision ),
 				data: JSON.stringify( p6Snapshot ),
 				maintext: p6Wikitext,
-				summary: `Benchmark Run ${ runIndex }: seed 20 slide drawings for PERF-6`,
+				summary: `Benchmark Run ${ runIndex }: seed 20 slide layer sets for PERF-6`,
 				token: csrfToken
 			}, true );
 			expect( p6Pub.layerspublish?.result ).toBe( 'Success' );
@@ -954,7 +1203,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 
 			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 
-			// Wait until all 20 drawings are confirmed painted before reading entries
+			// Wait until all 20 layer sets are confirmed painted before reading entries
 			await page.waitForFunction( () => {
 				const canvases = document.querySelectorAll( '.layers-bound-slide canvas' );
 				if ( canvases.length < 20 ) return false;
@@ -994,10 +1243,10 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			console.log( `[PERF-6] Run ${ runIndex } result: count=${ longTasksData.count }, total=${ longTasksData.totalDurationMs } ms, max=${ longTasksData.maxDurationMs } ms` );
 
 			// ---------------------------------------------------------------------
-			// PERF-7: size of drawing slot (rvprop=slotsize&rvslots=layers) across 2 revisions
+			// PERF-7: layers slot size (rvprop=slotsize&rvslots=layers) across 2 revisions
 			// ---------------------------------------------------------------------
 			// eslint-disable-next-line no-console
-			console.log( `[PERF-7] Run ${ runIndex }: Measuring drawing slot sizes with 200KB image layer...` );
+			console.log( `[PERF-7] Run ${ runIndex }: Measuring layers slot sizes with a 200 KB image layer...` );
 
 			// Build valid 200KB PNG data URI
 			const rawPngHeader = Buffer.from( '\x89PNG\r\n\x1a\n', 'binary' );
@@ -1080,7 +1329,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			const p7RevId2 = pubP7Rev2.layerspublish.revid;
 			lastOwnedRevision = p7RevId2;
 
-			// Query drawing slot sizes (rvprop=slotsize&rvslots=layers)
+			// Query layers slot sizes (rvprop=slotsize&rvslots=layers)
 			const revSlotsQuery = await api( {
 				action: 'query',
 				prop: 'revisions',
@@ -1158,7 +1407,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 		// ---------------------------------------------------------------------
 		const criteriaSummary = {
 			'PERF-1': {
-				charterTarget: 'A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none.',
+				charterTarget: 'A page with layer sets gets at most 150 KB (gzip) of Layers code and styles; a page without layer sets gets none.',
 				verdictUses: 'median',
 				coldRun: {
 					ownerPageLayersGzipBytes: runResults[ 0 ].perf1.ownerPageLayersGzipBytes,
@@ -1175,7 +1424,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				notes: 'Met on test wiki. Measures only Layers\' own ResourceLoader modules alone (gzip compressed); excludes core bundles.'
 			},
 			'PERF-2': {
-				charterTarget: 'A drawing appears within 300 ms after its image has loaded.',
+				charterTarget: 'A layer set appears within 300 ms after its image has loaded.',
 				verdictUses: 'warm',
 				coldRun: {
 					imageLoadToPaintedMs: runResults[ 0 ].perf2.imageLoadToPaintedMs,
@@ -1191,7 +1440,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				},
 				isMetOnTestWiki: medians[ 'PERF-2' ].imageLoadToPaintedMsWarmMedian <= 300,
 				notes: medians[ 'PERF-2' ].imageLoadToPaintedMsWarmMedian <= 300 ?
-					'Met on test wiki (warm drawing painted within 300 ms of photo load).' :
+					'Met on test wiki (warm layer set painted within 300 ms of photo load).' :
 					`Not met on test wiki (warm ${ medians[ 'PERF-2' ].imageLoadToPaintedMsWarmMedian } ms > 300 ms; cold was ${ runResults[ 0 ].perf2.imageLoadToPaintedMs } ms). Slower due to shared folder mount overhead and layersread API round-trip (${ medians[ 'PERF-2' ].layersreadDurationMsWarmMedian } ms); target applies to production reference install. Verdict uses warm measurement.`
 			},
 			'PERF-3': {
@@ -1238,7 +1487,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 					`Dragging (${ medians[ 'PERF-4' ].dragFramesPerSecondMedian } FPS), resizing (${ medians[ 'PERF-4' ].resizeFramesPerSecondMedian } FPS), and panning (${ medians[ 'PERF-4' ].panFramesPerSecondMedian } FPS) all >= 50 FPS; typing median is ${ medians[ 'PERF-4' ].typingDelayMedianMsMedian } ms (<= 50 met), but worst single-character latency was ${ medians[ 'PERF-4' ].typingDelayWorstMsMedian } ms (target: <= 50 ms).`
 			},
 			'PERF-5': {
-				charterTarget: 'Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision.',
+				charterTarget: 'Saving a layer set with 100 layers takes at most 1 s on the server, and so does viewing an old revision.',
 				verdictUses: 'warm',
 				coldRun: {
 					layersPublishResponseTimeMs: runResults[ 0 ].perf5.layersPublishResponseTimeMs,
@@ -1257,7 +1506,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 				notes: `Not met on test wiki (warm publish ${ medians[ 'PERF-5' ].layersPublishResponseTimeMsWarmMedian } ms, viewPrev ${ medians[ 'PERF-5' ].viewPreviousRevisionInSpecialPageMsWarmMedian } ms; target <= 1000 ms). Slower due to shared folder mount overhead; target applies to production reference install. Verdict uses warm measurement.`
 			},
 			'PERF-6': {
-				charterTarget: 'On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms.',
+				charterTarget: 'On a page with 20 layer sets, off-screen layer sets are deferred, and no Layers task blocks the browser for more than 200 ms.',
 				verdictUses: 'median',
 				coldRun: {
 					longTaskCount: runResults[ 0 ].perf6.longTaskCount,
@@ -1270,10 +1519,10 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 					maxLongTaskDurationMs: medians[ 'PERF-6' ].maxLongTaskDurationMsMedian
 				},
 				isMetOnTestWiki: medians[ 'PERF-6' ].maxLongTaskDurationMsMedian <= 200,
-				notes: 'Observed with type: \'longtask\', buffered: true after waiting until all 20 drawings are confirmed painted.'
+				notes: 'Observed with type: \'longtask\', buffered: true after waiting until all 20 layer sets are confirmed painted.'
 			},
 			'PERF-7': {
-				charterTarget: 'A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c).',
+				charterTarget: 'A small edit to a layer set that contains images does not copy image data into the new revision (see FEAT-3c).',
 				verdictUses: 'median',
 				coldRun: {
 					revision1SlotSizeBytes: runResults[ 0 ].perf7.revision1SlotSizeBytes,
@@ -1286,7 +1535,7 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 					slotSizeDeltaBytes: medians[ 'PERF-7' ].slotSizeDeltaBytesMedian
 				},
 				isMetOnTestWiki: false,
-				notes: 'Criterion is not met: each edit re-serializes the entire drawing including the 200 KB image payload into the layers slot (slot size ~200 KB for both revisions), rather than storing only the delta (FEAT-3c).'
+				notes: 'Criterion is not met: each edit re-serializes the entire layer set including the 200 KB image payload into the layers slot (slot size ~200 KB for both revisions), rather than storing only the delta (FEAT-3c).'
 			}
 		};
 
@@ -1299,13 +1548,13 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 			criteriaSummary,
 			charterCriteria: {
 				'PERF-0': 'Benchmark script implemented in tests/perf/benchmark.spec.js with npm run bench entry',
-				'PERF-1': 'A page with drawings gets at most 150 KB (gzip) of Layers code and styles; a page without drawings gets none.',
-				'PERF-2': 'A drawing appears within 300 ms after its image has loaded.',
+				'PERF-1': 'A page with layer sets gets at most 150 KB (gzip) of Layers code and styles; a page without layer sets gets none.',
+				'PERF-2': 'A layer set appears within 300 ms after its image has loaded.',
 				'PERF-3': 'The editor is usable within 3 s of pressing Edit, with a warm cache.',
 				'PERF-4': 'With 100 layers, dragging, resizing and panning run at 50 frames per second or more, and each typed character appears within 50 ms.',
-				'PERF-5': 'Saving a 100-layer drawing takes at most 1 s on the server, and so does viewing an old revision.',
-				'PERF-6': 'On a page with 20 drawings, drawings that are off screen are deferred, and no Layers task blocks the browser for more than 200 ms.',
-				'PERF-7': 'A small edit to a drawing that contains images does not copy the image data into the new revision (see FEAT-3c).'
+				'PERF-5': 'Saving a layer set with 100 layers takes at most 1 s on the server, and so does viewing an old revision.',
+				'PERF-6': 'On a page with 20 layer sets, off-screen layer sets are deferred, and no Layers task blocks the browser for more than 200 ms.',
+				'PERF-7': 'A small edit to a layer set that contains images does not copy image data into the new revision (see FEAT-3c).'
 			}
 		};
 

@@ -1,8 +1,8 @@
 # Layers implementation handoff plan
 
-## J102 and J103 accepted; J104 is next; J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
+## J102–J105 accepted; J108 next; J109–J110 follow; J106 held, J107 withdrawn — September 30, 2026
 
-Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102 and J103 were completed and reviewed separately. Proceed with J104 next, then continue the remaining ready packets serially and return each for separate review.
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102–J105 are accepted. Continue the requested batch with J108, then J109 and J110 one at a time, returning each for lead review before starting another. J111 remains a separate ready packet outside this batch. J106 is held and J107 is withdrawn.
 
 ### J106 — Authors never see a page ID (HIST-9) (**replaced by J113 on September 30**; do not start)
 
@@ -169,35 +169,51 @@ Record findings, then return for lead review.
 
 **Verification:** Isolated `LayerBounds.test.js`: 43 tests passed; `LayerBounds.js` coverage is 100% statements, 97.82% branches, 100% functions and 100% lines. Full `npm test` completed with exit code 0, including its Jest suites and bundle budgets. `npm run check:parallel` completed with exit code 0. ESLint, extension manifest JSON parsing, `npm run check:docs` and `git diff --check` passed. ResourceLoader review confirmed the shared script precedes its consumers and is a declared dependency of `ext.layers.editor`, `ext.layers`, and `ext.layers.history`. The J103 base implementation was already present in upstream commit `2654dbbf` during review; this lead correction and review documentation remain uncommitted.
 
-### J104 — Performance: why a drawing paints late (PERF-2) (ready)
+### J104 — Performance: why a layer set paints late (PERF-2) (accepted; no production change)
 
-**Advances:** PERF-2 ("a drawing appears within 300 ms after its image has loaded"; measured 0.6 s to 3.1 s warm, 8.1 s cold). Independent of J102 and J103.
+**Advances:** PERF-2 ("a layer set appears within 300 ms after its image has loaded"; previous measurement was 0.6 s to 3.1 s warm, 8.1 s cold). Independent of J102 and J103.
 
-**Purpose:** find what is slow, then fix it in the viewer's start-up path. Known: the drawing's own fetch takes about 0.55 s and starts only after the viewer module has loaded; what makes some warm runs slow is **not known**.
+**Purpose:** measure where the layer set viewer spends time, then make only a viewer start-up change supported by the evidence. Before J104, the layer set data fetch took about 0.55 s and started after the viewer module loaded; the source of warm-run variation was **not known**.
 
 **Allowed changes:** the viewer start-up code (`resources/ext.layers/`, the bound-file and page-owned bootstraps), the `extension.json` module declarations that load it, their Jest tests, `tests/perf/` (only to add a measurement), this packet and the review ledger. The bundle budgets and PERF-1 (150 KB gzip, nothing blocks rendering, nothing on a page without drawings) must still hold. No server code.
 
-1. **Diagnose first, with numbers.** Use `npm run bench` (read `tests/perf/benchmark.spec.js`; run serially). Add a per-stage timeline for a warm and a cold load, from the `img.layers-bound-file` load event to the first painted frame: module request and execution, the `layersread` request (queueing, waiting, download), image decode of the pinned rendition, and the first paint. Report which stage or stages account for the slow warm runs, and show the evidence (a table of at least five runs). If the slow runs have different causes, say so.
-2. **Fix what the numbers show.** Likely candidates, to confirm or reject: start the drawing's fetch before the viewer module has executed (the identity is in the page output, so the fetch needs no module); fetch the pinned rendition in parallel with the drawing; avoid repainting or re-decoding. Do not add a second delivery path or cache anything that may differ between readers (see the read contract: only an anonymous read of the owner's current revision may be publicly cached).
+1. **Diagnose first, with numbers.** Use `npm run bench` (read `tests/perf/benchmark.spec.js`; run serially). Add a per-stage timeline for warm and cold loads, from the `img.layers-bound-file` load event to the first painted frame: module request and readiness, the `layersread` request (queueing, waiting, download), pinned-rendition load and decode readiness, and first paint. Report which stage or stages account for slow warm runs in a table of at least five runs. If slow runs have different causes, say so.
+2. **Fix what the numbers show.** Likely candidates, to confirm or reject: start the layer set data fetch before the viewer module has executed (the identity is in the page output, so the fetch needs no module); fetch the pinned rendition in parallel with the layer set data; avoid repainting or re-decoding. Do not add a second delivery path or cache anything that may differ between readers (see the read contract: only an anonymous read of the owner's current revision may be publicly cached).
 3. **Prove it.** Before and after tables from the same bench, warm and cold. The charter target is 300 ms warm; report the real result even if it falls short, with what remains.
 4. **Gates.** `npm test`, `npm run check:bundlesize`, the existing Playwright specs that touch viewers (`page-owned-search-pdf-gallery.spec.js` and the journey specs), each run serially.
 
 Record findings, then return for lead review.
 
-### J105 — Performance: where saving and old-revision views spend time (PERF-5) (ready, report only)
+**J104 measurement result — September 30, 2026:** Updated `tests/perf/benchmark.spec.js` to collect five serial stage timelines. The load.php string search missed warm requests intermittently; the collector now observes same-origin Playwright request events matched by the decoded `modules` parameter, falls back to Resource Timing, and records when neither exposes a request instead of inventing timings. It separately captures the core image load, ResourceLoader readiness, `layersread` timing, exact pinned-rendition response/load, decode-promise readiness and the first painted pixel. Decode-promise duration includes concurrent fetch and is not presented as isolated decoder CPU time.
 
-**Advances:** PERF-5 (saving a 100-layer drawing at most 1 s on the server, and so does viewing an old revision; measured 1.6 s saving, 1.0 s warm and 3.2 s cold opening an old revision). Independent of the others.
+| Run | Classification | History module request start / response end / ready | `layersread` request / response end (duration / waiting) | Pinned rendition load / decode-promise ready | First paint |
+|---:|---|---:|---:|---:|---:|
+| 1 | Cold | +5,516.9 / +8,326.8 / +8,384.1 ms | +8,374.3 / +9,026.7 ms (652.4 / 649.9 ms) | +9,062.2 / +9,075.7 ms | +9,072.9 ms |
+| 2 | Warm | Not observed / — / +3,118.1 ms | +3,107.7 / +3,790.9 ms (683.2 / 680.1 ms) | +3,798.7 / +3,812.2 ms | +3,809.3 ms |
+| 3 | Warm | Not observed / — / +51.1 ms | +37.5 / +643.6 ms (606.1 / 603.4 ms) | +648.4 / +660.9 ms | +658.2 ms |
+| 4 | Warm | Not observed / — / +62.4 ms | +48.2 / +609.9 ms (561.7 / 559.1 ms) | +615.8 / +625.6 ms | +628.8 ms |
+| 5 | Warm | Not observed / — / +23.9 ms | +9.8 / +633.8 ms (624.0 / 621.3 ms) | +638.5 / +651.8 ms | +649.0 ms |
+
+Warm first-paint median is **653.6 ms** (range 628.8–3,809.3 ms), above PERF-2's 300 ms target. Warm `layersread` median is **615.05 ms**. Runs 3–5 show the normal warm bottleneck: the read begins 10–48 ms after core image load, then spends 559–621 ms waiting; the pinned rendition loads 10–20 ms after the API response, and the first painted pixel follows the pinned rendition's load by 9.8–13.0 ms. The decode promise settled after pixel paint in four runs and 3.2 ms before paint in one, so decode readiness is not the gate. Run 1 was dominated by late/slow ResourceLoader delivery. Run 2 had a 3.1 s delay before read dispatch; its read started about 10 ms before the module-ready timestamp, and no matching module request was observable, so the exact source remains unverified.
+
+No viewer production change was made, so there is no meaningful before/after comparison; this five-run result is the corrected baseline. To reach 300 ms in runs 3–5, the same `layersread` request would need to start roughly **281–339 ms before the core image load** and the viewer would have to reuse that response. This assumes the measured downstream timing remains unchanged. The current bootstrap dispatches the request during module initialization; initiating it earlier requires a bootstrap/output hook beyond J104's no-server-code boundary. Avoiding repaint/redecode or fetching the pinned rendition earlier cannot recover the measured 0.56–0.68 s API wait on its own. The test wiki uses a Windows-mounted Docker checkout; these figures do not establish timing on a production Linux install, and the 300 ms target is not met on the test host.
+
+**Verification:** `npm run bench -- --workers=1` completed five serial runs with exit code 0 in 4.5 minutes. The existing CAS cleanup and a read-only check after the viewer journeys confirmed the original test wiki owner (page ID 228, revision 2695) is restored to its exact baseline text and single `presentation` layer set labelled `Welcome Slide`. PERF-1 measured 84,319 B gzip on the owner page and 0 B on Main_Page. `npm test` passed (206 suites / 15,124 tests, including budgets); standalone `npm run check:bundlesize` passed. The gallery browser spec passed (1 test); journey specs for drawing tools, layer types, move and properties passed (1 each). The journey acceptance spec skipped at its explicit migration guard because the original wiki has recorded migration state and shared sets are read-only. `npm run check:docs` passed (72 maintained/policy documents, 53 historical records). ESLint, Node syntax validation and `git diff --check` passed. No viewer production file, manifest, wiki configuration, or unrelated page was changed.
+
+### J105 — Performance: where saving and old-revision views spend time (PERF-5) (accepted; report only)
+
+**Advances:** PERF-5 (saving a 100-layer layer set in at most 1 s on the server, and viewing an old revision in at most 1 s; earlier browser measurements were 1.6 s saving, 1.0 s warm and 3.2 s first-run opening an old revision). Independent of the others.
 
 **Purpose:** a profile, not a fix. The server path is the lead's; you report, the lead decides.
 
 **Allowed changes:** a new `tests/perf/` spec or script and a new document `docs/PERF5_PROFILE.md`, this packet and the review ledger. **No production code.**
 
-1. Reproduce both timings with `npm run bench` and report the server-side share: measure inside the container with a temporary timing probe that you **do not commit** (for example `microtime` around stages in a scratch copy, or the MediaWiki debug log `$wgDebugLogFile` timings), for `layerspublish` of a 100-layer drawing (one property changed) and for `Special:ViewLayersPage` of an old revision.
-2. Break the time into stages: request and validation (`ServerSideLayerValidator`, `DocumentSchema`), snapshot encoding and hashing, the compare-and-swap and page save (core's edit, `LinksUpdate`, search updates, job queue), the slot reads, and on the view side the source rendition and page rendering. Give each stage's milliseconds over at least five runs, warm and cold, in a table.
+1. Profile `layerspublish` of a 100-layer layer set (one property changed) and `Special:ViewLayersPage` of an old revision on the original test wiki. Use a temporary server timing probe that you **do not commit** and tag only those exact requests. Report browser wall/response timing beside the server-side share. Do not create another wiki.
+2. Break the time into measurable stages: request and validation (`ServerSideLayerValidator`, `DocumentSchema`), snapshot encoding/hash, compare-and-swap and page save, slot reads, and on the view side source rendition and page rendering. Give raw milliseconds for at least five serial pairs, including first-post-seed and repeat samples. Call a sample “cold” only when relevant caches are demonstrably cleared; otherwise state that cold timing could not be established. If MediaWiki does not expose `LinksUpdate`, search, job-queue, hash, or rendering subphases independently, label them unavailable rather than allocating the enclosing time to them.
 3. Name the three largest costs and, for each, what would reduce it and what it would risk (correctness, history, permissions). Do not implement anything.
-4. Remove every probe and leave the tree clean apart from the two new files; run `node scripts/verify-docs.js`.
+4. Remove every probe and its log, restore any temporary instrumentation, and leave no production changes. Add `docs/PERF5_PROFILE.md` and the test spec; update this packet and the review ledger. Run `node scripts/verify-docs.js`.
 
-Record findings, then return for lead review.
+**Lead review — September 30, 2026:** Accepted as a report-only profile. Five serial pairs passed on the original wiki; the measurements, tradeoffs and attribution limits are in [PERF5_PROFILE.md](PERF5_PROFILE.md). The first post-seed sample was not proven cache-cold, and no cold-server timing is claimed. Measured extension PHP sections are below one second, but the browser publish wall and view response timings exceed one second, and request bootstrap is not separately measured; PERF-5 remains unverified. The exact baseline was restored at page 228/revision 2702. Temporary instrumentation and logs were removed; no production changes remain. J108 is next.
 
 ## J100 and J101 accepted — September 30, 2026
 
