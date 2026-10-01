@@ -1,4 +1,19 @@
-# Junior implementation review — J01–J102
+# Junior implementation review — J01–J103
+
+## J103 implemented awaiting lead review — September 30, 2026
+
+Advances: **FEAT-8** (design section 1a, item 3).
+
+Implemented only the J103 files: new `resources/ext.layers.shared/LayerBounds.js`, its ResourceLoader registration in `extension.json`, delegation from `resources/ext.layers.editor/GeometryUtils.js`, this packet, and `tests/jest/LayerBounds.test.js`. No existing GeometryUtils tests were changed.
+
+- Shared bounds cover all `ServerSideLayerValidator::SUPPORTED_LAYER_TYPES`; group layers and text needing an unavailable measure callback return `null`.
+- Rotation is applied around the layer bounds' center. Shared line-like bounds include explicit stroke width; the editor adapter disables stroke expansion and rotation so `CanvasManager` can keep its existing raw-bounds-then-rotate behavior.
+- The new test suite has 43 passing cases, each using hand-calculated expected values for the supported layer types and requested edge cases.
+- Isolated coverage (`LayerBounds.test.js`, collecting only `LayerBounds.js`): **100% statements, 97.82% branches, 100% functions, 100% lines**.
+- `npm test`: **exit code 0**; all project test and bundle-budget stages passed. `npm run check:parallel`: **exit code 0**. ESLint, `extension.json` JSON parsing, and `git diff --check` passed.
+- ResourceLoader review: `LayerBounds.js` is listed in `ext.layers.shared`; editor, main viewer and history modules depend on `ext.layers.shared`, so it loads before consumers.
+
+No commit or push was made. Returned for lead review; J104 is the next independent ready packet.
 
 ## J102 lead review — September 30, 2026
 

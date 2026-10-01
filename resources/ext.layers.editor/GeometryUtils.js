@@ -248,7 +248,7 @@
 		}
 
 		/**
-		 * Get shared surface-pixel bounds for a layer based on its type.
+		 * Get raw surface-pixel bounds for editor geometry based on layer type.
 		 *
 		 * @param {Object} layer - The layer object
 		 * @param {Object} [options] - Optional bounds options, including measureText
@@ -257,7 +257,7 @@
 		static getLayerBoundsForType( layer, options ) {
 			// Preserve the editor's historical geometry contract (stroke is handled by
 			// its hit testing); shared viewer consumers use stroke-inclusive bounds.
-			const editorOptions = Object.assign( {}, options, { includeStroke: false } );
+			const editorOptions = Object.assign( {}, options, { includeStroke: false, includeRotation: false } );
 			return LayerBounds ? LayerBounds.getBounds( layer, editorOptions ) : null;
 		}
 

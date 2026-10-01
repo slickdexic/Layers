@@ -1,8 +1,8 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 to J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
+## J102 accepted; J103 implemented awaiting lead review; J104 to J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
 
-Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102 and J103 were independent and have been completed separately; J102 is accepted and J103 awaits lead review. Continue the remaining ready packets serially and return each for separate review.
 
 ### J106 — Authors never see a page ID (HIST-9) (**held September 30**: the owner's naming model, charter D1 amendment, changes its rules; the lead rewrites it after the behaviour brief is approved; do not start)
 
@@ -113,7 +113,7 @@ Record findings, then return for lead review. The owner looks at the screens bef
 
 **Result:** Implemented in `src/Validation/LayerLinkValidator.php`, `ServerSideLayerValidator.php`, `ApiLayersSave.php`, `i18n/en.json`, `i18n/qqq.json`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, `docs/API.md`, `tests/phpunit/unit/Validation/LayerLinkValidatorTest.php` (54 tests), `tests/phpunit/unit/Api/ApiLayersSavePayloadTest.php`, `tests/phpunit/unit/Revision/DocumentSchemaTest.php`, and `tests/phpunit/core/ApiLayersPublishTest.php`. All gates passed; Jest count unchanged (15,081 passed across 205 suites). Rule removal tests verified (control characters, forbidden protocols, max length). Native publication test verified exact byte-for-byte link preservation and refusal with `invalid-or-lossy-layer-data`.
 
-### J103 — Links, part 2: one shared layer-bounds function (ready)
+### J103 — Links, part 2: one shared layer-bounds function (implemented awaiting lead review)
 
 **Advances:** FEAT-8 (design 1a item 3).
 
@@ -127,6 +127,10 @@ Record findings, then return for lead review. The owner looks at the screens bef
 4. **Gates.** `npm test` (every Jest suite and the bundle budgets), coverage of the new file at 95% or more, `check:parallel`. Do not change any production file other than those named.
 
 Record findings, then return for lead review.
+
+**Result — September 30, 2026:** Implemented in `resources/ext.layers.shared/LayerBounds.js`; registered it in `ext.layers.shared`; changed `GeometryUtils.getLayerBoundsForType()` to delegate while preserving its historical no-rotation/no-stroke result for editor callers. Shared bounds handle every validator-supported layer type, groups return `null`, measured text uses the optional callback, line-like shapes include stroke width by default, and rotation returns a centered axis-aligned box. The new Jest suite uses independent hand-calculated expectations for each type, negative coordinates, both requested rotations, and missing text measurement. Existing `GeometryUtils.test.js` remains unmodified.
+
+**Verification:** Isolated `LayerBounds.test.js`: 43 tests passed; `LayerBounds.js` coverage is 100% statements, 97.82% branches, 100% functions and 100% lines. Full `npm test` completed with exit code 0, including its Jest suites and bundle budgets. `npm run check:parallel` completed with exit code 0. ESLint, extension manifest JSON parsing, `npm run check:docs` and `git diff --check` passed. ResourceLoader review confirmed the shared script precedes its consumers and is a declared dependency of `ext.layers.editor`, `ext.layers`, and `ext.layers.history`. No commit or push was made.
 
 ### J104 — Performance: why a drawing paints late (PERF-2) (ready)
 

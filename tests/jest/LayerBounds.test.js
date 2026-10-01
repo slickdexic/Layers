@@ -25,6 +25,11 @@ describe( 'LayerBounds.getBounds', () => {
 		} );
 	} );
 
+	it( 'defaults a rectangle with missing geometry to a zero-sized origin box', () => {
+		// Missing x, y, width and height each default to zero.
+		expect( LayerBounds.getBounds( { type: 'rectangle' } ) ).toEqual( { x: 0, y: 0, width: 0, height: 0 } );
+	} );
+
 	it( 'bounds a textbox from its top-left and dimensions', () => {
 		// The textbox occupies x=3..23 and y=7..16.
 		expect( LayerBounds.getBounds( { type: 'textbox', x: 3, y: 7, width: 20, height: 9 } ) ).toEqual( {
@@ -93,11 +98,23 @@ describe( 'LayerBounds.getBounds', () => {
 		} ) ).toEqual( { x: 10, y: 20, width: 30, height: 40 } );
 	} );
 
+	it( 'leaves rotation to the editor adapter caller to avoid applying it twice', () => {
+		// CanvasManager rotates these raw 100×50 bounds itself around (60,45).
+		expect( GeometryUtils.getLayerBoundsForType( {
+			type: 'rectangle', x: 10, y: 20, width: 100, height: 50, rotation: 90
+		} ) ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+	} );
+
 	it( 'bounds an arrow and gives a zero-length axis a one-pixel minimum', () => {
 		// A vertical arrow at x=9 has a 1px width and a 15px height.
 		expect( LayerBounds.getBounds( { type: 'arrow', x1: 9, y1: 3, x2: 9, y2: 18 } ) ).toEqual( {
 			x: 9, y: 3, width: 1, height: 15
 		} );
+	} );
+
+	it( 'uses the origin fallback when a line has no endpoint or layer coordinates', () => {
+		// All four endpoint coordinates default to zero; each axis receives the 1px minimum.
+		expect( LayerBounds.getBounds( { type: 'line' } ) ).toEqual( { x: 0, y: 0, width: 1, height: 1 } );
 	} );
 
 	it( 'bounds a polygon with negative point coordinates', () => {
@@ -140,6 +157,11 @@ describe( 'LayerBounds.getBounds', () => {
 		expect( LayerBounds.getBounds( {
 			type: 'angleDimension', cx: 30, cy: 40, ax: 10, ay: 50, bx: 60, by: 5
 		} ) ).toEqual( { x: 10, y: 5, width: 50, height: 45 } );
+	} );
+
+	it( 'uses the origin and one-pixel minimum for an angle dimension without points', () => {
+		// Vertex and arms default to (0,0), producing the minimum 1×1 extent.
+		expect( LayerBounds.getBounds( { type: 'angleDimension' } ) ).toEqual( { x: 0, y: 0, width: 1, height: 1 } );
 	} );
 
 	it( 'uses explicit dimensions for a custom shape', () => {

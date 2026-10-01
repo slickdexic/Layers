@@ -14,8 +14,10 @@
 		 * Return the axis-aligned surface-pixel box that contains a layer.
 		 *
 		 * @param {Object} layer Layer data
-		 * @param {Object} [options={}] Optional measurement callback
+		 * @param {Object} [options={}] Optional bounds controls
 		 * @param {Function} [options.measureText] Returns {width, height} for text
+		 * @param {boolean} [options.includeStroke=true] Expand line-like bounds by half the stroke on each side
+		 * @param {boolean} [options.includeRotation=true] Apply the layer rotation to the bounds
 		 * @return {{x:number,y:number,width:number,height:number}|null}
 		 */
 		static getBounds( layer, options ) {
@@ -175,6 +177,9 @@
 					};
 			}
 
+			if ( options && options.includeRotation === false ) {
+				return bounds;
+			}
 			return LayerBounds.rotateBounds( bounds, layer.rotation || 0 );
 		}
 
