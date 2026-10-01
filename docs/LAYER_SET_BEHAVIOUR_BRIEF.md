@@ -1,12 +1,12 @@
 # Layer sets on pages: behaviour brief
 
-**Status:** for the project owner's approval, September 30, 2026. Nothing in this brief is built until it is approved. It restates decisions the owner has already made (charter D1 as amended, UI-10, HIST-9) and adds the wording and the cases around them. It is written in plain words: what a reader sees, what an editor sees and clicks, and what goes away.
+**Status:** approved by the project owner on September 30, 2026, except item 2 of section 10 (Import into a layer set that already has layers), which is still under discussion. Builds follow the approved parts only. Anything not in this brief that changes what people see or click needs a new brief.
 
 Vocabulary: people see **layers** and **layer set**, never "drawing". Page IDs never appear in wikitext.
 
 ## 1. The model, in one paragraph
 
-A layer set belongs to a file (or a slide), to a page, and has a name. A page's layer set called ABC on `Manual.pdf` is a different layer set from another page's ABC on the same file, and from this page's ABC on a different file. The same file used twice on one page with `layerset=ABC` is one layer set. Each page controls only its own layer sets. A PDF has one layer set name for the whole document; its pages are shown as "Page 1", "Page 2" and so on inside it. The author writes `[[File:Name.jpg|layerset=ABC]]` and nothing else; the system finds this page's layer set.
+A layer set belongs to a file (or a slide), to a page, and has a name. A page's layer set called ABC on `Manual.pdf` is a different layer set from another page's ABC on the same file, and from this page's ABC on a different file. The same file used twice on one page with `layerset=ABC` is one layer set. Each page controls only its own layer sets. A PDF is a file like any other, so it can have several layer sets (ABC, XYZ and so on), each with its own name. A layer set on a PDF covers the whole document: it holds the layers of every page, kept separately for each page and shown in the editor under "Page 1", "Page 2" and so on. The author never names pages: `layerset=ABC` names the layer set, and the embed's `page=2` chooses which page is shown. The author writes `[[File:Name.jpg|layerset=ABC]]` and nothing else; the system finds this page's layer set.
 
 ## 2. What a reader sees on a page
 
@@ -29,7 +29,7 @@ The viewer the old overlay opened, for every page-owned layer set: zoom, pan, fi
 | Other pages have a layer set of that name on this file | The editor opens empty and says: "A layer set named “ABC” already exists on other pages. To start from one of them, use Import." **Import** lists those pages; choosing one copies it. The copy never follows the original. |
 | The same file is used twice with the same name | One layer set; both embeds open it. |
 | Two different files use the same name | Two layer sets. |
-| A PDF | One layer set; the layers panel groups the pages under "Page 1", "Page 2"…; each page's layers are separate. |
+| A PDF | Works like any file: it can have several layer sets. Each covers the whole document; the layers panel groups its layers under "Page 1", "Page 2"…, and each page's layers are separate. |
 
 Nobody can edit another page's layer set. The editor may show the page's name beside the layer set, for understanding. Page IDs are never shown or typed.
 
@@ -50,7 +50,7 @@ Nobody can edit another page's layer set. The editor may show the page's name be
 
 ## 7. The migration under this model
 
-Each old shared set becomes a layer set of the page that shows it, with the **same name**. No numbering, no "(page N)" and no "<slide> (<set>)" names are needed. The wikitext does not change at all. If a page shows set ABC of file A and set ABC of file B, they are two layer sets. A PDF's per-page sets become one layer set with pages.
+Each old shared set becomes a layer set of the page that shows it, with the **same name**. No numbering, no "(page N)" and no "<slide> (<set>)" names are needed. The wikitext does not change at all. If a page shows set ABC of file A and set ABC of file B, they are two layer sets. The old per-page sets of one PDF that share a name become one layer set that holds the layers of each page.
 
 ## 8. New and changed wording
 
@@ -63,7 +63,7 @@ Existing overlay words stay: "Edit layers", "View full size", "Print", "Download
 
 ## 10. For the owner to decide
 
-1. **The test wiki:** may I run the step that removes `8:` from existing embeds, after a dry run you can look at?
-2. **Import into a layer set that already has layers:** I propose it is not offered (nothing is overwritten); the editor's copy and paste of layers covers adding some. Agreed?
+1. **The test wiki:** approved. The tidy step that removes `8:` from existing embeds runs after a dry run that the owner can look at.
+2. **Import into a layer set that already has layers** (owner proposal, lead agrees, awaiting the owner's confirmation): Import is offered, and it **replaces all the layers of that layer set**. Before anything changes, a warning dialog says in plain words: "Importing replaces ALL existing layers in this layer set (N layers) with the layers from the other page. This cannot be merged." The dialog names both layer sets, its default button is Cancel, and the replace button is worded "Replace all layers". The import changes only the editor's working copy: nothing is saved until the editor saves, the editor's Undo brings the old layers back, and after a save the page history can restore them. Adding some layers to an existing set stays with copy and paste.
 
 After approval: one build packet per section (overlays and viewer; the model and the migration; the editor cases; file updates; wording), each reviewed by the owner on screen before it is called done.

@@ -13,6 +13,12 @@
 ( function () {
 	'use strict';
 
+	let LayerBounds = typeof window !== 'undefined' && window.Layers && window.Layers.Utils &&
+		window.Layers.Utils.LayerBounds;
+	if ( !LayerBounds && typeof module !== 'undefined' && module.exports && typeof module.require === 'function' ) {
+		LayerBounds = module.require( '../ext.layers.shared/LayerBounds.js' );
+	}
+
 	/**
 	 * Static utility class for geometric calculations
 	 * @class GeometryUtils
@@ -242,161 +248,17 @@
 		}
 
 		/**
-		 * Get raw bounds for a layer based on its type (excludes text layers - use TextUtils for those)
+		 * Get shared surface-pixel bounds for a layer based on its type.
 		 *
 		 * @param {Object} layer - The layer object
+		 * @param {Object} [options] - Optional bounds options, including measureText
 		 * @return {{x:number,y:number,width:number,height:number}|null} Bounding box or null
 		 */
-		static getLayerBoundsForType( layer ) {
-			if ( !layer || !layer.type ) {
-				return null;
-			}
-
-			let rectX, rectY, safeWidth, safeHeight;
-			switch ( layer.type ) {
-				case 'text':
-					// Text bounds require canvas context - caller should handle this with TextUtils
-					return null;
-				case 'rectangle':
-				case 'textbox':
-				case 'callout':
-				case 'image': {
-					rectX = layer.x || 0;
-					rectY = layer.y || 0;
-					safeWidth = layer.width || 0;
-					safeHeight = layer.height || 0;
-					if ( safeWidth < 0 ) {
-						rectX += safeWidth;
-						safeWidth = Math.abs( safeWidth );
-					}
-					if ( safeHeight < 0 ) {
-						rectY += safeHeight;
-						safeHeight = Math.abs( safeHeight );
-					}
-					return { x: rectX, y: rectY, width: safeWidth, height: safeHeight };
-				}
-				case 'circle': {
-					const radius = Math.abs( layer.radius || 0 );
-					return {
-						x: ( layer.x || 0 ) - radius,
-						y: ( layer.y || 0 ) - radius,
-						width: radius * 2,
-						height: radius * 2
-					};
-				}
-				case 'ellipse': {
-					const radiusX = Math.abs( layer.radiusX || layer.radius || 0 );
-					const radiusY = Math.abs( layer.radiusY || layer.radius || 0 );
-					return {
-						x: ( layer.x || 0 ) - radiusX,
-						y: ( layer.y || 0 ) - radiusY,
-						width: radiusX * 2,
-						height: radiusY * 2
-					};
-				}
-				case 'line':
-				case 'arrow': {
-					const x1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
-					const y1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
-					const x2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
-					const y2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
-					return {
-						x: Math.min( x1, x2 ),
-						y: Math.min( y1, y2 ),
-						width: Math.max( Math.abs( x2 - x1 ), 1 ),
-						height: Math.max( Math.abs( y2 - y1 ), 1 )
-					};
-				}
-				case 'polygon':
-				case 'star':
-				case 'path': {
-					if ( Array.isArray( layer.points ) && layer.points.length >= 3 ) {
-						return GeometryUtils.getBoundingBox( layer.points );
-					}
-					// Fallback for polygon/star without points array
-					let r = layer.radius;
-					if ( layer.type === 'star' && layer.outerRadius ) {
-						r = layer.outerRadius;
-					}
-					const radiusFallback = Math.abs( r || 50 );
-					return {
-						x: ( layer.x || 0 ) - radiusFallback,
-						y: ( layer.y || 0 ) - radiusFallback,
-						width: radiusFallback * 2,
-						height: radiusFallback * 2
-					};
-				}
-				case 'marker': {
-					// Marker is a circle centered at x,y with size as diameter
-					// If it has an arrow, include the arrow endpoint in bounds
-					const markerSize = layer.size || 24;
-					const markerRadius = markerSize / 2;
-					const mx = layer.x || 0;
-					const my = layer.y || 0;
-
-					if ( layer.hasArrow && layer.arrowX !== undefined && layer.arrowY !== undefined ) {
-						// Include both marker circle and arrow endpoint
-						const minX = Math.min( mx - markerRadius, layer.arrowX );
-						const minY = Math.min( my - markerRadius, layer.arrowY );
-						const maxX = Math.max( mx + markerRadius, layer.arrowX );
-						const maxY = Math.max( my + markerRadius, layer.arrowY );
-						return {
-							x: minX,
-							y: minY,
-							width: maxX - minX,
-							height: maxY - minY
-						};
-					}
-
-					// Just the marker circle
-					return {
-						x: mx - markerRadius,
-						y: my - markerRadius,
-						width: markerSize,
-						height: markerSize
-					};
-				}
-				case 'dimension': {
-					// Dimension is a line from x1,y1 to x2,y2 (like arrow)
-					const dx1 = layer.x1 !== undefined ? layer.x1 : ( layer.x || 0 );
-					const dy1 = layer.y1 !== undefined ? layer.y1 : ( layer.y || 0 );
-					const dx2 = layer.x2 !== undefined ? layer.x2 : ( layer.x || 0 );
-					const dy2 = layer.y2 !== undefined ? layer.y2 : ( layer.y || 0 );
-					return {
-						x: Math.min( dx1, dx2 ),
-						y: Math.min( dy1, dy2 ),
-						width: Math.max( Math.abs( dx2 - dx1 ), 1 ),
-						height: Math.max( Math.abs( dy2 - dy1 ), 1 )
-					};
-				}
-				case 'angleDimension': {
-					// Angle dimension has vertex (cx,cy) and two arm endpoints (ax,ay, bx,by)
-					const adCx = layer.cx || 0;
-					const adCy = layer.cy || 0;
-					const adAx = layer.ax || 0;
-					const adAy = layer.ay || 0;
-					const adBx = layer.bx || 0;
-					const adBy = layer.by || 0;
-					const adMinX = Math.min( adCx, adAx, adBx );
-					const adMinY = Math.min( adCy, adAy, adBy );
-					const adMaxX = Math.max( adCx, adAx, adBx );
-					const adMaxY = Math.max( adCy, adAy, adBy );
-					return {
-						x: adMinX,
-						y: adMinY,
-						width: Math.max( adMaxX - adMinX, 1 ),
-						height: Math.max( adMaxY - adMinY, 1 )
-					};
-				}
-				default: {
-					// Default fallback for unknown types
-					rectX = layer.x || 0;
-					rectY = layer.y || 0;
-					safeWidth = Math.abs( layer.width || 50 ) || 50;
-					safeHeight = Math.abs( layer.height || 50 ) || 50;
-					return { x: rectX, y: rectY, width: safeWidth, height: safeHeight };
-				}
-			}
+		static getLayerBoundsForType( layer, options ) {
+			// Preserve the editor's historical geometry contract (stroke is handled by
+			// its hit testing); shared viewer consumers use stroke-inclusive bounds.
+			const editorOptions = Object.assign( {}, options, { includeStroke: false } );
+			return LayerBounds ? LayerBounds.getBounds( layer, editorOptions ) : null;
 		}
 
 		/**

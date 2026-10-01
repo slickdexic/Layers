@@ -399,6 +399,7 @@
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",
+				"LayerBounds.js",
 				"PolygonGeometry.js",
 				"GradientRenderer.js",
 				"ShadowRenderer.js",

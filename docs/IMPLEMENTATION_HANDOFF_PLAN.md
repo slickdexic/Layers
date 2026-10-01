@@ -1,6 +1,6 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 to J105 and J108 to J110 ready; J106 held, J107 withdrawn — September 30, 2026
+## J102 accepted; J103 to J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
@@ -77,6 +77,24 @@ Record findings, then return for lead review.
 4. Gates: `node scripts/verify-docs.js`. List what you could not verify and why.
 
 Record findings, then return for lead review.
+
+### J111 — Hover overlay and full-size viewer on page-owned layer sets (UI-10) (ready)
+
+**Advances:** UI-10, from the owner-approved [behaviour brief](LAYER_SET_BEHAVIOUR_BRIEF.md) sections 2 and 3. **Read the charter's "Read this first" and the brief before anything else. Wording in anything a person reads says "layer set" or "layers", never "drawing".** This replaces the withdrawn J107.
+
+**Purpose:** a reader hovering (or focusing, or tapping) an image, PDF page or slide that shows one of the page's layer sets gets the buttons the old viewer had: **View full size** for everyone, and **Edit layers** only for those who may edit. View full size opens the viewer with zoom, pan, fit, PDF paging, Print and Download.
+
+**Scope, exactly.** Layer sets that already exist on the page. **Do not remove** the box of links above the page, the `File:` page tab, or any other entry point in this packet: the box stays until the packet that handles an embed naming a layer set that does not exist yet (the lead will say so). Report any other behaviour you think should change; do not change it.
+
+**Allowed changes:** the viewer scripts and styles under `resources/ext.layers/`, the `extension.json` module declarations and messages they need, their Jest tests, a new spec `tests/e2e/page-owned-overlay-viewer.spec.js`, this packet and the review ledger. Server code only if no other way exists; if you need it, stop and say why before writing it.
+
+1. **Read first and report what you found** at the top of your ledger entry: how `ViewerManager._initializeOverlay()` and `ViewerOverlay` build the buttons and decide who may edit; how the page-owned bootstraps (`PageOwnedRevisionBootstrap.js` for images and PDF pages, `SlideController` for slides) mount their canvases; where the old full-size viewer (`LayersLightbox`) gets its layer data and its image, and what it needs to keep Print and Download working from supplied data alone. The parser output is cached across readers, so **who may edit must be decided in the browser, never baked into the page**. If anything does not fit this plan (for example the viewer cannot show a pinned older file version), stop and report.
+2. **Build.** Reuse `ViewerOverlay` and `LayersLightbox`; do not write new ones. Buttons use the existing words ("Edit layers", "View full size"); no new wording is needed. **Edit layers** goes to `Special:EditLayersPage` for **that** layer set (the same parameters the box's link uses: owner page, current revision, surface ID) and shows only on the page's current revision. **View full size** shows exactly the file version and layers of the revision displayed, so it also works on an old revision; there, Edit is absent. `noedit` on a slide embed still hides Edit. Keyboard: the buttons are reachable with Tab, visible on focus, and activate with Enter and Space; Escape closes the viewer and returns focus to the button; touch screens show the buttons on tap.
+3. **Do not** show Edit on an old revision or a diff, to anonymous readers, or on a layer set the page does not own; do not add the overlay to the history viewer.
+4. **Tests that can fail.** Jest: the buttons exist for an image, a PDF page and a slide; Edit is absent without the right and on an old revision; the lightbox is given the exact layers. Playwright, serially, on the owner page with the usual baseline rules and run twice: hover shows both buttons for an editor and View full size only for an anonymous reader; View full size opens the viewer for **that** layer set (check its stroke colour on the canvas, not only that a canvas exists, as the earlier specs do), zoom in changes the scale, a drag pans, Print and Download are present, Download delivers a PDF; Edit layers opens the editor on **that** layer set (check the name in the editor); an old revision offers View full size but not Edit; Tab reaches the buttons and Escape returns focus.
+5. **Gates.** `npm test`, `npm run check:bundlesize` (PERF-1: under 150 KB gzip, nothing loads on a page without layers, nothing blocks rendering), the existing page-owned viewer and journey specs, run serially. Tell the lead which screens the owner should look at (list URLs and what to hover).
+
+Record findings, then return for lead review. The owner looks at the screens before this counts as done.
 
 ### J102 — Links, part 1: the `link` property and its server validation (accepted)
 
