@@ -1,10 +1,10 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 implemented awaiting lead review; J104 to J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
+## J102 and J103 accepted; J104 is next; J105 and J108 to J111 ready; J106 held, J107 withdrawn — September 30, 2026
 
-Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102 and J103 were independent and have been completed separately; J102 is accepted and J103 awaits lead review. Continue the remaining ready packets serially and return each for separate review.
+Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. J102 and J103 were completed and reviewed separately. Proceed with J104 next, then continue the remaining ready packets serially and return each for separate review.
 
-### J106 — Authors never see a page ID (HIST-9) (**held September 30**: the owner's naming model, charter D1 amendment, changes its rules; the lead rewrites it after the behaviour brief is approved; do not start)
+### J106 — Authors never see a page ID (HIST-9) (**replaced by J113 on September 30**; do not start)
 
 **Advances:** HIST-9 (owner finding, September 30). The owner opened a migrated page and found `[[File:ImageTest02.jpg|layerset=8:002]]`. A page ID is machinery; an author must be able to read, type and copy `layerset=002` and `{{#Slide:name}}`. Bare names already work as input after the migration. The writers still produce the ID form: the migration (`PageCopyMigration` through `DirectEmbeddingRewriter::rewrite()`), rename (`renameReferences()`, called from `PagePublicationService`), copy (`PageDrawingCopy`) and pre-migration adoption.
 
@@ -96,6 +96,43 @@ Record findings, then return for lead review.
 
 Record findings, then return for lead review. The owner looks at the screens before this counts as done.
 
+### J112 — A layer set is identified by page, file (or slide), PDF page and name (HIST-4) (ready)
+
+**Advances:** HIST-4, from the owner-approved [behaviour brief](LAYER_SET_BEHAVIOUR_BRIEF.md) section 1 and charter D1 as amended September 30. **Read the charter's "Read this first" first. In anything a person reads, say "layer set" or "layers".** Server only: no editor, overlay, migration or embed-writing change belongs here (J113 does those).
+
+**The rule.** Today a name is unique across a whole page and resolves to the one surface with that label. The owner's model: two images on one page may each have a layer set "ABC"; the same file used twice with `layerset=ABC` is one layer set; a PDF layer set covers the whole document, one surface per PDF page (`source.page`) sharing one name. A layer set's identity key is: for a slide, its name; for an image, its file and name; for a PDF, its file, name and page. (Names compare as today: `DrawingName::key()`, so case, spacing and underscores do not matter.)
+
+**Allowed changes:** `src/Revision/PageOwnedBinding.php`, `DrawingName.php`, `PageOwnedBindingOptions.php`, `PagePublicationService.php` (the rename path), the callers of `resolveNamed()` (`BoundFileHooks`, `BoundSlideHooks`, `WikitextHooks`, `PageDrawingCopy`, `PageOwnedPilot`) only as far as the signature needs, tests under `tests/phpunit/`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, this packet and the ledger. **No change to any message, any text a person reads, the migration, the adoption code's output, `DirectEmbeddingRewriter`, or JavaScript.**
+
+1. **Resolve by identity.** `PageOwnedBinding::resolveNamed()` gets the embed's file, and for a PDF the page the embed shows (find how a `[[File:X.pdf|page=N|…]]` embed's page is read today; default 1). It returns the single surface whose name key matches **and** whose kind and file fit **and**, for a PDF, whose `source.page` is that page. More than one match, or none, returns null as today. A slide embed matches slides only, by name.
+2. **`layerset=on` and its show-intent spellings** (`SetNameResolver::SHOW_INTENTS`: on, true, all, 1) now mean the layer set named "Default" (compared as a name: "default" matches). The hide spellings are unchanged. In `PageOwnedBindingOptions::named()` a bare name that is a show intent resolves to "Default" instead of being left alone. A layer set literally named "on" can no longer be reached by a bare embed; say so in your report.
+3. **Uniqueness.** `DrawingName::assertPublishable()` refuses a new or changed surface only when another surface has the **same identity key** (so the same name on two different files is allowed, and the same name on two pages of one PDF is the one layer set, but the same name, file **and** page twice is refused). Keep the existing refusal and its message for the refused case. `DrawingName::unused()` and its callers (migration, adoption, copy) take the taken names **of the same file** (or of slides) when numbering a clash.
+4. **Rename.** In the publication's rename detection (`PagePublicationService`, around the old-label map), renaming a layer set renames every surface of it consistently (all PDF pages), and the page's embeds that name the old name are rewritten **only when they are embeds of that same file** (or slides, for a slide). **Trap:** renaming "ABC" on file A must not touch `layerset=ABC` embeds of file B. Test it.
+5. **Security stays.** An embed naming another page's layer set (the `<pageId>:<name>` form with another page's ID) still shows nothing and never grants editing; the `<ownPageId>:<name>` form still resolves as input.
+6. **Tests that can fail** (native and standalone): the resolver (two files, one name; one file twice; a PDF with pages 1 and 3 of "ABC" and an embed with `page=3`; `page=2` with no surface returns null; a slide and an image with the same name); publication (same name on two files accepted; duplicate identity refused; a PDF's pages with one name accepted); `on` resolving to "Default" and not to the latest set; the rename trap; every existing test that assumed page-wide uniqueness is updated, and your report lists each one with the reason. Run `page-owned-named-embeds.spec.js` and the journey specs serially and report; fix a spec only where it asserted the old rule, and say so.
+7. **Gates.** Standalone and native suites, phpcs, `check:phprefs`, `node scripts/verify-docs.js`, `npm test`.
+
+Record findings, then return for lead review. If anything in the code contradicts this packet, stop and report; do not choose.
+
+### J113 — Names, not page IDs, in wikitext; the migration under the new model; the tidy step (HIST-8, HIST-9) (ready after J112 is accepted)
+
+**Advances:** HIST-9 and HIST-8, from the brief sections 6 and 7. Replaces J106. Depends on J112. **"Layer set" in anything a person reads.**
+
+**The rules.**
+1. **Writers emit names.** `DirectEmbeddingRewriter::rewrite()` and `renameReferences()` take a `bool $bareNames`: when true they write `layerset=<name>` and `{{#Slide:<name>}}` and never a page ID. Callers pass true once the migration is recorded (`MigrationState`). Before it is recorded, adoption and the migration keep the explicit `<pageId>:<name>` form only where a bare name would mean a different set (see 2).
+2. **The migration** writes the embed byte for byte unchanged when the layer set keeps the name the embed used. Where it must differ (the rare numbered name, a slide shown with several sets, `layerset=on` that resolved to a set not named "Default") it writes the **bare new name**, not the page-ID form, unless a bare name would resolve to a different layer set before the completion record exists; in that case it keeps the explicit form and lists the page in its report so the tidy step can fix it later. `layerset=on` that resolved to a set named "Default" stays as it is. A PDF's old per-page sets of one name become one layer set with a surface per page, **with no "(page N)" name**. The old rule that gave a name a number because another file on the page used it is gone (J112).
+3. **`--tidy-names`** on `maintenance/migrateLayersToPageHistory.php`: once the migration is recorded, rewrite every direct embed of the page's own layer sets from `<ownPageId>:<name>` to the bare name, one bot edit per page (tags `layers-migration` and `layers-page-drawing`), a dry run without `--commit`, resumable, skipping and reporting a page whose text changed since planning. It refuses to run before the record exists, and never touches another page's ID, `layersbinding=`, or an embed where the bare name would resolve to a different layer set than the explicit form does (use the reader's own resolver from J112 to check).
+4. **Input stays liberal:** the `<pageId>:<name>` form is still read everywhere it is read today.
+5. **Docs.** `docs/UPGRADING.md`, `docs/WIKITEXT_USAGE.md` and the status page: authors write names; the ID form is described only as accepted input. Changelog and mirrors. Charter rows HIST-8 and HIST-9.
+
+**Tests that can fail.** Native: a page of bare-name embeds migrates with its wikitext byte-identical; a clash case and a multi-set slide case; `on` to "Default" and `on` to another name; a PDF with several pages becomes one layer set with surfaces for each page; after the record, rename and copy write bare names and the rendered page shows the right layer set (check the rendered output, not only the text); `--tidy-names` dry run lists, commit rewrites, a second run does nothing, a page changed meanwhile is skipped, it refuses before the record exists, undo of the migration still works on a bare-name page. Update every test that asserted the ID form where it is no longer written, and list each with the reason.
+
+**Gates.** Standalone and native suites, `npm test`, phpcs, `check:phprefs`, `node scripts/verify-docs.js`. **Do not run `--tidy-names --commit` on the test wiki:** report its dry run; the lead runs the commit with the owner watching.
+
+Record findings, then return for lead review.
+
+**Still to be written, after J111 and J112 are accepted:** the editor cases and Import (brief section 4, with the right-click "Copy to page N" and "Move to page N"), the missing-layer-set path that removes the box of links and the `File:` tab, the file-update badge and review flow (section 5), and the wording packet (section 8). The lead writes each from the approved brief; none starts earlier.
+
 ### J102 — Links, part 1: the `link` property and its server validation (accepted)
 
 **Advances:** FEAT-8, SEC-3, SEC-5 (design PR 1).
@@ -113,7 +150,7 @@ Record findings, then return for lead review. The owner looks at the screens bef
 
 **Result:** Implemented in `src/Validation/LayerLinkValidator.php`, `ServerSideLayerValidator.php`, `ApiLayersSave.php`, `i18n/en.json`, `i18n/qqq.json`, `docs/PAGE_OWNED_DOCUMENT_FORMAT.md`, `docs/API.md`, `tests/phpunit/unit/Validation/LayerLinkValidatorTest.php` (54 tests), `tests/phpunit/unit/Api/ApiLayersSavePayloadTest.php`, `tests/phpunit/unit/Revision/DocumentSchemaTest.php`, and `tests/phpunit/core/ApiLayersPublishTest.php`. All gates passed; Jest count unchanged (15,081 passed across 205 suites). Rule removal tests verified (control characters, forbidden protocols, max length). Native publication test verified exact byte-for-byte link preservation and refusal with `invalid-or-lossy-layer-data`.
 
-### J103 — Links, part 2: one shared layer-bounds function (implemented awaiting lead review)
+### J103 — Links, part 2: one shared layer-bounds function (accepted after lead correction)
 
 **Advances:** FEAT-8 (design 1a item 3).
 
@@ -128,9 +165,9 @@ Record findings, then return for lead review. The owner looks at the screens bef
 
 Record findings, then return for lead review.
 
-**Result — September 30, 2026:** Implemented in `resources/ext.layers.shared/LayerBounds.js`; registered it in `ext.layers.shared`; changed `GeometryUtils.getLayerBoundsForType()` to delegate while preserving its historical no-rotation/no-stroke result for editor callers. Shared bounds handle every validator-supported layer type, groups return `null`, measured text uses the optional callback, line-like shapes include stroke width by default, and rotation returns a centered axis-aligned box. The new Jest suite uses independent hand-calculated expectations for each type, negative coordinates, both requested rotations, and missing text measurement. Existing `GeometryUtils.test.js` remains unmodified.
+**Result — September 30, 2026:** Implemented in `resources/ext.layers.shared/LayerBounds.js`; registered it in `ext.layers.shared`; changed `GeometryUtils.getLayerBoundsForType()` to delegate while preserving its historical raw, no-rotation/no-stroke result for editor callers. Lead review caught that rotating the adapter result would make `CanvasManager` apply rotation a second time; the adapter now explicitly leaves rotation to `CanvasManager`, while shared viewer consumers get the rotation-aware result. Shared bounds handle every validator-supported layer type, groups return `null`, measured text uses the optional callback, line-like shapes include stroke width by default, and rotation returns a centered axis-aligned box. The new Jest suite uses independent hand-calculated expectations for each type, negative coordinates, both requested rotations, and missing text measurement. Existing `GeometryUtils.test.js` remains unmodified.
 
-**Verification:** Isolated `LayerBounds.test.js`: 43 tests passed; `LayerBounds.js` coverage is 100% statements, 97.82% branches, 100% functions and 100% lines. Full `npm test` completed with exit code 0, including its Jest suites and bundle budgets. `npm run check:parallel` completed with exit code 0. ESLint, extension manifest JSON parsing, `npm run check:docs` and `git diff --check` passed. ResourceLoader review confirmed the shared script precedes its consumers and is a declared dependency of `ext.layers.editor`, `ext.layers`, and `ext.layers.history`. No commit or push was made.
+**Verification:** Isolated `LayerBounds.test.js`: 43 tests passed; `LayerBounds.js` coverage is 100% statements, 97.82% branches, 100% functions and 100% lines. Full `npm test` completed with exit code 0, including its Jest suites and bundle budgets. `npm run check:parallel` completed with exit code 0. ESLint, extension manifest JSON parsing, `npm run check:docs` and `git diff --check` passed. ResourceLoader review confirmed the shared script precedes its consumers and is a declared dependency of `ext.layers.editor`, `ext.layers`, and `ext.layers.history`. The J103 base implementation was already present in upstream commit `2654dbbf` during review; this lead correction and review documentation remain uncommitted.
 
 ### J104 — Performance: why a drawing paints late (PERF-2) (ready)
 

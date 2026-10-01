@@ -1,6 +1,6 @@
 # Junior implementation review — J01–J103
 
-## J103 implemented awaiting lead review — September 30, 2026
+## J103 lead review — accepted with correction, September 30, 2026
 
 Advances: **FEAT-8** (design section 1a, item 3).
 
@@ -12,8 +12,9 @@ Implemented only the J103 files: new `resources/ext.layers.shared/LayerBounds.js
 - Isolated coverage (`LayerBounds.test.js`, collecting only `LayerBounds.js`): **100% statements, 97.82% branches, 100% functions, 100% lines**.
 - `npm test`: **exit code 0**; all project test and bundle-budget stages passed. `npm run check:parallel`: **exit code 0**. ESLint, `extension.json` JSON parsing, and `git diff --check` passed.
 - ResourceLoader review: `LayerBounds.js` is listed in `ext.layers.shared`; editor, main viewer and history modules depend on `ext.layers.shared`, so it loads before consumers.
+- Lead correction: `CanvasManager` rotates raw bounds after reading them from `GeometryUtils`. The adapter now disables rotation as well as stroke expansion, preventing a second rotation; the shared API retains rotation by default for viewer and PDF consumers. A regression test asserts the editor adapter still returns raw bounds for a rotated rectangle.
 
-No commit or push was made. Returned for lead review; J104 is the next independent ready packet.
+The junior made no commit or push. The J103 base implementation was already present in upstream commit `2654dbbf` during review; the lead correction and review updates remain uncommitted. J104 is the next independent packet.
 
 ## J102 lead review — September 30, 2026
 
