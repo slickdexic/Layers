@@ -1,4 +1,4 @@
-# Junior implementation review — J01–J110
+# Junior implementation review — J01–J112
 
 ## Lead re-verification of J103, J104, J105, J108 and J110 — October 1, 2026
 
@@ -20,6 +20,26 @@ Advances **CARGO-1**. The owner resolved the Cargo field name as `layer_set`; th
 - **Limits:** acceptance was run on MediaWiki 1.45.3 / PHP 8.3.31 with the test wiki's installed Cargo. MediaWiki 1.44 and other Cargo versions were not tested. The junior made no commit or push.
 
 **Lead acceptance:** Accepted after reviewing the opt-in and legacy projections, parser error handling, owner-page isolation and compare-and-swap cleanup. The lead corrected the existing-mode terminology to “one row per stored surface” and armed cleanup before write requests. Focused PHPUnit (**6 tests / 16 assertions**), the original-wiki serial browser acceptance (**1 passed**), docs parity (**73 maintained/policy documents; 53 historical records**), i18n wiring and `git diff --check` passed.
+
+## J111 read-first audit — held for exact-version PDF design — October 1, 2026
+
+The read-first report made no code or wiki changes. It confirmed that page-owned file/image and slide paths currently bypass the legacy hover overlay. The page-owned read API rechecks the reader against the exact displayed owner revision; parser output contains binding and revision identity, not a cached per-reader permission decision. Preserve that separation when the overlay is added.
+
+- The page-owned reader currently returns the selected PDF page's rendition. `LayersLightbox` obtains subsequent pages through the legacy `layersinfo` lookup by filename and uses `Special:Redirect/file/<filename>` for its PDF.js upgrade. Both resolve the current upload, so reusing them for an old page revision can show the wrong file version. This fails the approved brief's exact-version paging, Print and Download requirement.
+- The full-size path needs a reader-authorized page-owned PDF data request that resolves the source from the selected page revision, returns the exact page rendition and its matching page surface, and represents pages without annotations with an empty layer list. Navigation and the existing client compositor can then use supplied page data; PDF.js must not fetch an unversioned current-file URL. The request must remain private/zero-age and reauthorize each page. J112's file/name identity contract should supply the sibling-surface selection rule.
+- The slide branch's placeholder omits parsed `noedit`; the image focus behavior does not guarantee keyboard users can reach its overlay when the image is not focusable; the viewer does not restore focus to the opening button. The exact editor URL must carry owner page, displayed revision and selected surface. `Edit layers` visibility should match both page edit permission and `editlayers`, while the server route remains authoritative.
+- **Disposition:** no J111 implementation packet is ready as written. The lead must authorize the native read-path scope and update the allowed-files list after J112's identity contract is accepted. Keep the legacy viewer and page links in place until replacement acceptance passes. The owner still needs to inspect the requested screens before J111 is accepted.
+
+## J112 read-only identity audit — scope decision pending — October 1, 2026
+
+The audit made no code changes. It found that the approved identity model is not yet implemented consistently across resolution, allocation, migration, adoption, rename and PDF-page plumbing. The packet's narrow allowed-files list excludes required call sites; no implementation should begin by silently widening it.
+
+- Name allocation inputs are needed in `FilePageMigration`, `PageCopyMigration`, `DirectAdoptionPreparationService`, `PageOwnedAdoptionService` and `PageDrawingCopy`. This conflicts with the packet's promise that adoption output does not change. File-specific rename also crosses `DirectEmbeddingRewriter::renameReferences()` and `PagePublicationService::withRenamedEmbeds()`; a PDF layer set spans all of its page surfaces and must be renamed as one identity.
+- The audit found page-wide name filters that remain in `PageOwnedPilot::missingName()`, `PageDrawingCopy` and the legacy `layerset=on` path. The parser currently does not carry PDF page number through the bound-surface selection queue. The allowed-files list also permits PHP tests only, while the contract calls for named-embed and journey browser coverage.
+- The brief already establishes the PDF grouping rule: the same PDF file and name form one layer set across its pages; `page=N` selects the displayed page. Therefore allocating `ABC` on page 3 when `ABC` already exists on page 1 should resolve to that existing PDF layer set, not create `ABC 2`. The packet still needs to define how migration handles genuinely duplicate legacy sets with the same file, name and page. The lead recommends that a rename update every page surface in that PDF layer set atomically; record that as an explicit contract rule before implementation.
+- **Disposition:** held for the owner/lead scope decision previously requested. The lead has recorded the caller, rename, page plumbing and browser-test conflicts in `docs/IMPLEMENTATION_HANDOFF_PLAN.md`. Once scope is clarified, revise J112 into a complete server-side packet and queue it before J111's dependent PDF viewer integration.
+
+**Checkpoint:** J109 is locally committed as `4e46ee80` (`Add opt-in per-layer Cargo rows`); it has not been pushed. J111 and J112 are audit reports only and are not ready for owner testing or production acceptance.
 
 ## J110 — KNOWN_ISSUES.md refresh — accepted — October 1, 2026
 
