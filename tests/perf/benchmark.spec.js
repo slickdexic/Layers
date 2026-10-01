@@ -1,15 +1,15 @@
 /* eslint-env node */
 /* global BigInt */
 /**
- * J86: Measure PERF-2 from the reader's image, and typing inside the page
+ * J86/J104: Measure PERF-2 from the reader's image, and typing inside the page
  * Advances: PERF-0, PERF-2, PERF-4 (and establishes a corrected, usable baseline for PERF-1 to PERF-7).
  *
  * Measures in real Chromium on the test wiki (http://localhost:8080):
  * - PERF-1: gzip transfer bytes of Layers' own ResourceLoader modules alone (requested via load.php
  *           with Accept-Encoding: gzip) in a fresh browser context on owner vs Main_Page.
- * - PERF-2: time from core img.layers-bound-file load to drawing painted (polled via
+ * - PERF-2: time from core img.layers-bound-file load to layer set painted (polled via
  *           requestAnimationFrame until seeded solid probe rectangle is painted; no fallback allowed).
- *           Records layersread duration alongside.
+ *           Records ResourceLoader, layersread, pinned rendition decode/load and first-paint stages.
  * - PERF-3: time from pressing edit link to editor instance ready and canvas visible (warm cache).
  * - PERF-4: FPS during 2-second drag of selected layer in 100-layer drawing (no fallback; asserts layer
  *           position moved in stateManager); typing latency across 20 characters into textbox layer
@@ -21,7 +21,7 @@
  * - PERF-7: drawing slot size (rvprop=slotsize&rvslots=layers) across 2 revisions where second changes
  *           text in drawing with 200 KB image layer.
  *
- * Runs 3 iterations, records each run, and computes the median.
+ * Runs 5 iterations, records each run, and computes the median.
  * Results are written to tests/perf/results/<UTC date and time>-test-wiki.json.
  */
 const { test, expect } = require( '@playwright/test' );
@@ -205,9 +205,9 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 	try {
 		needsRestore = true;
 
-		for ( let runIndex = 1; runIndex <= 3; runIndex++ ) {
+		for ( let runIndex = 1; runIndex <= 5; runIndex++ ) {
 			// eslint-disable-next-line no-console
-			console.log( `\n=== Starting Benchmark Run ${ runIndex } / 3 ===` );
+			console.log( `\n=== Starting Benchmark Run ${ runIndex } / 5 ===` );
 			const runData = { run: runIndex };
 
 			// ---------------------------------------------------------------------
