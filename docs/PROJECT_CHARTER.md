@@ -173,6 +173,8 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 ### D1 — Every drawing belongs to a page (decided September 27, 2026)
 
+**Amended September 30 by the project owner (binding; where it disagrees with what follows, this wins).** A layer set belongs to a file, slide or PDF **and** to a page. Its identity is the page, the file (or slide), the PDF page where there is one, and the name. Two images on one page may therefore each have a layer set called "ABC": they are two layer sets. The same image used twice on a page with `layerset=ABC` is **one** layer set. An image may have many layer sets called "ABC", one per page, and each is controlled only by its page. The author writes `[[File:Name.jpg|layerset=ABC]]` and never a page ID; the system shows this page's layer set "ABC" of that file if it exists. The editor may show the page's name beside the layer set for understanding. If other pages have a layer set of that name on the file, the editor opens an empty one and says so, offering **Import** (a copy, as below). Refinement (a) below, writing the page ID into the embed, is withdrawn, and so is the rule that a name is unique across a whole page.
+
 Proposed by the project owner; refinements (a)–(d) are the lead's.
 
 - A drawing is created on a page and belongs to it, and its edits are revisions of that page. Its name is unique on that page, and its full identity is the page's ID plus the name. A file's own `File:` page can own drawings like any other page.

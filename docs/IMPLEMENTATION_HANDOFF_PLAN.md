@@ -1,10 +1,10 @@
 # Layers implementation handoff plan
 
-## J102 accepted; J103 to J106 ready, J107 withdrawn — September 30, 2026
+## J102 accepted; J103 to J105 ready; J106 held, J107 withdrawn — September 30, 2026
 
 Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](LINKS_FROM_LAYERS_DESIGN.md); **section 1a of it overrides the rest**. Read it first. J102 and J103 are independent: run them in either order, serially, and return each for lead review separately.
 
-### J106 — Authors never see a page ID (HIST-9) (ready, **first priority**)
+### J106 — Authors never see a page ID (HIST-9) (**held September 30**: the owner's naming model, charter D1 amendment, changes its rules; the lead rewrites it after the behaviour brief is approved; do not start)
 
 **Advances:** HIST-9 (owner finding, September 30). The owner opened a migrated page and found `[[File:ImageTest02.jpg|layerset=8:002]]`. A page ID is machinery; an author must be able to read, type and copy `layerset=002` and `{{#Slide:name}}`. Bare names already work as input after the migration. The writers still produce the ID form: the migration (`PageCopyMigration` through `DirectEmbeddingRewriter::rewrite()`), rename (`renameReferences()`, called from `PagePublicationService`), copy (`PageDrawingCopy`) and pre-migration adoption.
 
