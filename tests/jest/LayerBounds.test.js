@@ -3,6 +3,8 @@
  */
 'use strict';
 
+const fs = require( 'fs' );
+const vm = require( 'vm' );
 const LayerBounds = require( '../../resources/ext.layers.shared/LayerBounds.js' );
 const GeometryUtils = require( '../../resources/ext.layers.editor/GeometryUtils.js' );
 
@@ -51,10 +53,22 @@ describe( 'LayerBounds.getBounds', () => {
 		} );
 	} );
 
+	it( 'uses zero defaults for a circle without coordinates or radius', () => {
+		// A missing center and radius yield a zero-area box at the origin.
+		expect( LayerBounds.getBounds( { type: 'circle' } ) ).toEqual( { x: 0, y: 0, width: 0, height: 0 } );
+	} );
+
 	it( 'bounds an ellipse using its independent radii', () => {
 		// Center (20,30), radii (7,4): x=13, y=26, width=14, height=8.
 		expect( LayerBounds.getBounds( { type: 'ellipse', x: 20, y: 30, radiusX: 7, radiusY: 4 } ) ).toEqual( {
 			x: 13, y: 26, width: 14, height: 8
+		} );
+	} );
+
+	it( 'uses a zero default when ellipse radii and center are absent', () => {
+		// Both radii and the center default to zero.
+		expect( LayerBounds.getBounds( { type: 'ellipse', radiusX: 0, radiusY: 0, radius: 0 } ) ).toEqual( {
+			x: 0, y: 0, width: 0, height: 0
 		} );
 	} );
 
@@ -168,6 +182,13 @@ describe( 'LayerBounds.getBounds', () => {
 		} );
 	} );
 
+	it( 'preserves zero text coordinates and dimensions', () => {
+		// Every explicit zero remains zero; falsy coordinates/dimensions do not drift.
+		expect( LayerBounds.getBounds( { type: 'text', x: 0, y: 0, width: 0, height: 0 } ) ).toEqual( {
+			x: 0, y: 0, width: 0, height: 0
+		} );
+	} );
+
 	it( 'rotates a non-square rectangle by 90 degrees about its center', () => {
 		// Center is (60,45); a 100×50 rectangle swaps to 50×100, starting at (35,-5).
 		expect( LayerBounds.getBounds( { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, rotation: 90 } ) ).toEqual( {
@@ -214,6 +235,11 @@ describe( 'LayerBounds.getBounds', () => {
 		} ) ).toEqual( { x: 15, y: 20, width: 10, height: 10 } );
 	} );
 
+	it( 'uses an origin-centered default box for a path without coordinates', () => {
+		// Missing path center defaults to (0,0); the legacy radius default is 50.
+		expect( LayerBounds.getBounds( { type: 'path' } ) ).toEqual( { x: -50, y: -50, width: 100, height: 100 } );
+	} );
+
 	it( 'returns null for malformed point data instead of producing invalid bounds', () => {
 		expect( LayerBounds.getBounds( { type: 'polygon', points: [ { x: 1, y: 2 }, null, { x: 3, y: 4 } ] } ) ).toBeNull();
 		expect( LayerBounds.getBounds( { type: 'path', points: [ { y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 } ] } ) ).toBeNull();
@@ -226,10 +252,33 @@ describe( 'LayerBounds.getBounds', () => {
 		} );
 	} );
 
+	it( 'uses the marker defaults when its size and center are absent', () => {
+		// Default marker size is 24, centered at origin: radius 12 on all sides.
+		expect( LayerBounds.getBounds( { type: 'marker' } ) ).toEqual( { x: -12, y: -12, width: 24, height: 24 } );
+	} );
+
 	it( 'uses the existing default box for unknown shape types', () => {
 		// Unknown geometry retains the legacy default 50×50 box at its origin.
 		expect( LayerBounds.getBounds( { type: 'futureShape', x: 7, y: 13 } ) ).toEqual( {
 			x: 7, y: 13, width: 50, height: 50
 		} );
+	} );
+
+	it( 'preserves zero origins and uses legacy defaults for malformed dimensions', () => {
+		// The old fallback turns non-numeric truthy dimensions into its 50px default.
+		expect( LayerBounds.getBounds( { type: 'futureShape', x: 0, y: 0, width: 'wide', height: 'tall' } ) ).toEqual( {
+			x: 0, y: 0, width: 50, height: 50
+		} );
+	} );
+
+	it( 'exports to a browser namespace without relying on CommonJS', () => {
+		const filename = require.resolve( '../../resources/ext.layers.shared/LayerBounds.js' );
+		const source = fs.readFileSync( filename, 'utf8' );
+		const browserWindow = {};
+		vm.runInNewContext( source, { window: browserWindow } );
+		// The fresh global namespace is created and the browser API can calculate a 4×3 box.
+		expect( browserWindow.Layers.Utils.LayerBounds.getBounds( {
+			type: 'rectangle', x: 2, y: 5, width: 4, height: 3
+		} ) ).toEqual( { x: 2, y: 5, width: 4, height: 3 } );
 	} );
 } );
