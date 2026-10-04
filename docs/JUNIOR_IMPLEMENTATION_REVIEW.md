@@ -1,44 +1,51 @@
 # Junior implementation review — J01–J113
 
-## October 4 continuation: J113G accepted; J113H evidence remains open
+## October 4 continuation: H evidence accepted; I corrected map accepted; bounded J search implemented
 
-Advances HIST-4/HIST-8 and DATA-1, prepares SRCH-1 and records OPS-2/OPS-3/OPS-4
-evidence. The lead accepts [J113G's inactive metadata foundation](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)
-after independent read-only review found no production defect. The lead added
-same-file/set distinct-page deduplication and order, exact sorted 50-entry
-selection, stored page-1 quadruple/triple budget and escaped fragment coverage.
-Fresh focused host tests pass **29 / 57**; full standalone passes **1,542 /
-3,810 / 1 existing skip**. Three-file PHP style/lint and
-reference/parallel-list/atomicity gates pass. All production callers remain
-unchanged.
+Advances HIST-4/HIST-8 and DATA-1, preserves SRCH-1 and records OPS-2/OPS-3/OPS-4
+evidence. The lead accepts [J113H's completed independent evidence](J113H_WHOLE_SET_FILE_MIGRATION_PACKET.md)
+after read-only review and the fresh fourteen-class native gate: **195 tests /
+2,341 assertions / no skips**. The filter contains the exact twelve-class H
+group plus `ShownSetSearchQueryTest` and `DrawingSearchTest`. JE1's H **176 /
+2,238** and both restored controls remain junior-attributed evidence. The
+lead does not claim to have witnessed or rerun those controls. H's earlier full
+native **612 / 5,586 / 1 existing skip** remains its implementation baseline.
 
-JE2's two negative-control executions remain junior-reported evidence. Current
-helper SHA-256 matches the reported restoration fingerprint
-`EC86DD69099CABA402735789D5D729B7A46365C1F2514D6A743F45E019F9E300`;
-fingerprint readback does not claim to witness those executions. JE1's partial
-H test preparation is host-only and native-unverified. The coordination hold is
-released on JE2's completed return after the lead host checks. JE1 must pass a
-fresh idle native preflight and finish the assigned controls/native/shared
-gates. No native/browser run occurred in this lead continuation. The earlier H
-**612 / 5,586 / 1 existing skip** full-native result is the implementation
-baseline, not verification of JE1's new tests.
+[J113I's regression map](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md) is accepted
+with the lead's appended factual corrections, not as a wholesale activation
+specification. The lead implemented bounded
+[J113J](J113J_SHARED_SEARCH_QUERY_PACKET.md) in `src/Search/DrawingSearchText.php`:
+each exact kind/name/selector shared query runs once while retaining all
+returned members, existing limits and permission boundaries, and distinct
+named/latest queries. The exact native `ShownSetSearchQueryTest` first failed
+**4 tests / 9 assertions / 2 failures**, then passed the identical filter
+**4 / 9** after correction. Fresh full standalone **1,542 / 3,810 / 1 existing
+skip**, changed-three-file PHP style/lint and reference (127 classes/files),
+parallel-list and atomicity gates pass. No metadata producer is activated.
 
-Curated checkpoint **`8f309f4b26b367cae317eb3584ea14c2a83f8574` is pushed**,
-superseding the earlier preparing statement. Another G-only curated checkpoint
-is prepared and excludes JE1's partial H test and packet, which remain local
-until the completed return; no future SHA or push is claimed. This entry
-supersedes the G assignment and coordination directions below, preserving
-historical evidence.
+[J113G's accepted metadata foundation](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)
+is unchanged and inactive. Its earlier focused host **29 / 57** and JE2's
+reported controls remain historical evidence with their original attribution.
 
-JE2's next assignment, [J113I](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md), is ready
-and not started: a documentation-only producer/consumer, native-page,
-deduplication and search regression map. It may run during JE1's native window,
-with no source/test/control/native/browser/Git writes.
+JE1 takes [J113J](J113J_SHARED_SEARCH_QUERY_PACKET.md), the first native
+control/review window. JE2 takes
+[J113K](J113K_NATIVE_PDF_METADATA_EVIDENCE_PACKET.md), preparing allowed host
+evidence first and running native work only after JE1 completes, restores and
+releases its window. No additional permission is required for this serial
+sequence. Packet issue does not claim either assignment has started.
 
-Copy-pass allocation, proven prior/partial/historical reconciliation,
-numbered-alias bound-editor parity, template/gallery consumption, search
-deduplication, Default/show-intent, name-only output/tidy and J111 remain open.
-No broader migration or charter acceptance is claimed.
+The previously confirmed checkpoint
+**`cb5f1fc31a3e5d15606c417eddb7d8ccb517a53e` is pushed**. The reviewed H/I/J checkpoint is
+prepared; its exact commit/push readback belongs in the lead return. No future SHA or push is claimed. Earlier checkpoints and
+acceptance archives remain preserved. This entry supersedes earlier G/H/I
+assignment and coordination directions below, preserving historical evidence.
+
+Whole-set copy-pass allocation, native property-page consumption, producer
+association and the 50-tuple budget, proven prior/partial/historical
+reconciliation, numbered-alias bound-editor parity, Default/show-intent and
+name-only output/tidy remain open. J111's architect contract and C2 owner
+screens remain open. No new browser, full-native, current JavaScript or
+MediaWiki 1.44 acceptance, migration or charter completion is claimed.
 
 ## Earlier October 4 continuation: J113E/F accepted; J113H independent review next
 

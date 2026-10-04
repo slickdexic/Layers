@@ -1,44 +1,60 @@
 # Current status and limitations
 
-## J113G inactive foundation accepted; J113H evidence remains open — October 4, 2026
+## J113H evidence accepted; corrected J113I map accepted; bounded J113J search implemented — October 4, 2026
 
-Advances HIST-4/HIST-8 and DATA-1, prepares SRCH-1 and records OPS-2/OPS-3/OPS-4
-evidence. [J113G](../docs/J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md) is accepted
-after independent read-only review and lead strengthening of same-file/set page
-identity, exact sorted limit, page-1 normalization budget and escaped fragment
-coverage. Fresh lead focused host tests pass **29 tests / 57 assertions**; full
-standalone passes **1,542 / 3,810 / 1 existing skip**. Three-file PHP style/lint
-and reference/parallel-list/atomicity gates pass. Existing production callers
-remain unchanged; this optional metadata foundation stays inactive.
+Advances HIST-4/HIST-8 and DATA-1, preserves SRCH-1 and records OPS-2/OPS-3/OPS-4
+evidence. [J113H](../docs/J113H_WHOLE_SET_FILE_MIGRATION_PACKET.md)'s completed
+independent evidence is accepted after read-only review and the fresh lead
+fourteen-class native gate: **195 tests / 2,341 assertions / no skips**. The
+filter contains the exact twelve-class H group plus `ShownSetSearchQueryTest`
+and `DrawingSearchTest`. JE1's H **176 / 2,238** and both restored controls
+remain junior-attributed evidence. Earlier H full native **612 / 5,586 / 1
+existing skip** remains its implementation baseline, not a fresh full-native run.
 
-Both negative controls remain JE2-reported executions. The current helper's
-SHA-256 matches the reported restored fingerprint
-`EC86DD69099CABA402735789D5D729B7A46365C1F2514D6A743F45E019F9E300`.
-JE1's partial J113H test preparation is host-only and native-unverified. The
-coordination hold is released on JE2's completed return after the lead's host
-checks. JE1 must pass a fresh idle native preflight, then finish the assigned
-controls, native tests and shared gates. No native/browser run occurred in this
-lead continuation. Earlier H full native **612 / 5,586 / 1 existing skip** remains
-the implementation baseline and does not verify JE1's new tests.
+[J113I](../docs/J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md)'s regression map is
+accepted with the lead's appended factual corrections; it is not a wholesale
+caller-activation specification. The lead implemented bounded
+[J113J](../docs/J113J_SHARED_SEARCH_QUERY_PACKET.md) in
+`src/Search/DrawingSearchText.php`: each exact kind/name/selector shared query
+runs once, retaining all returned members, existing limits and permission
+boundaries, and separate named/latest queries. The exact native
+`ShownSetSearchQueryTest` first failed **4 tests / 9 assertions / 2 failures**,
+then passed the identical filter **4 / 9** after correction. Fresh full
+standalone **1,542 / 3,810 / 1 existing skip**, changed-three-file PHP style/lint
+and reference (127 classes/files), parallel-list and atomicity gates pass.
+No metadata producer is activated. The [H/J lead log archive](../docs/acceptance/2026-10-04-j113hj.zip)
+and [SHA-256 manifest](../docs/acceptance/2026-10-04-j113hj-manifest.json) preserve
+the search before/after, combined native and standalone logs plus a full-native
+listing; that listing is not a test execution.
 
-Curated checkpoint **`8f309f4b26b367cae317eb3584ea14c2a83f8574` is pushed**,
-superseding the earlier preparing statement. The preceding pushed checkpoint
-and acceptance archives remain preserved. Another G-only curated checkpoint is
-prepared and excludes JE1's partial H test and packet, which remain local until
-the completed return; no future SHA or push is claimed.
+[J113G](../docs/J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)'s accepted foundation
+is unchanged and inactive. Earlier focused host **29 / 57** and JE2's reported
+restored controls retain their original attribution; they are historical
+evidence, not new runs in this continuation.
 
-JE2's next assignment, [J113I](../docs/J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md),
-is ready and not started: a documentation-only producer/consumer, native-page,
-deduplication and search regression map. It may run during JE1's native window,
-with no source/test/control/native/browser/Git writes.
+JE1 takes [J113J](../docs/J113J_SHARED_SEARCH_QUERY_PACKET.md), the first native
+control/review window. JE2 takes
+[J113K](../docs/J113K_NATIVE_PDF_METADATA_EVIDENCE_PACKET.md): prepare the
+allowed host evidence first, then run native work after JE1 completes, restores
+and releases its window. No additional permission is required to follow that
+serial sequence.
 
-Copy-pass allocation, proven prior/partial/historical reconciliation,
-numbered-alias bound-editor parity, native template/gallery page consumption,
-search deduplication, Default/show-intent and name-only output/tidy remain
-lead-owned. J111's exact-version/render/export contract and C2 owner screen
-approval remain outstanding. This entry supersedes earlier G assignments,
-coordination and checkpoint directions below; their dated evidence retains its
-original attribution. No migration or charter criterion is declared complete.
+The previously confirmed development checkpoint
+**`cb5f1fc31a3e5d15606c417eddb7d8ccb517a53e` is pushed**. Earlier checkpoints and
+acceptance archives remain preserved. The reviewed H/I/J checkpoint is prepared; its exact commit/push readback belongs in the lead return;
+no future SHA or push is claimed. The [team update](../docs/TEAM_STATUS_2026-10-04.md)
+retains the conditional **8–13 focused engineering working days / 2–3 calendar
+weeks** broad-testing estimate, with decision/review waiting time additional.
+
+Whole-set copy-pass allocation, native property-page consumption, producer
+association and the 50-stored-tuple budget, proven prior/partial/historical
+reconciliation, numbered-alias bound-editor parity, Default/show-intent and
+name-only output/tidy remain lead-owned. J111's exact-version/render/export
+contract and C2 owner screen approval remain outstanding. This entry supersedes
+earlier G/H/I assignment, coordination and checkpoint directions below; dated
+evidence retains its original attribution. No new browser, full-native, current
+JavaScript or MediaWiki 1.44 acceptance, ordinary migration command or charter
+completion is claimed.
 
 ## Earlier J113E/F acceptance and first-pass whole-PDF migration — October 4, 2026
 

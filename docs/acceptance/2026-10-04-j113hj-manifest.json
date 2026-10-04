@@ -1,0 +1,38 @@
+{
+  "archive": "docs/acceptance/2026-10-04-j113hj.zip",
+  "bytes": 12607,
+  "sha256": "7bc84739065aa329fae78922db5e935ddd4e0bae112dbe1b8029afd3d88c368c",
+  "files": [
+    {
+      "original": "tmp/J113J-before-native.log",
+      "archivePath": "J113J-before-native.log",
+      "bytes": 1238,
+      "sha256": "aabfae0bc492d7a238ac999b1ab488cda5bfceafc5b7a4f18bba061d7ec29725"
+    },
+    {
+      "original": "tmp/J113J-after-native.log",
+      "archivePath": "J113J-after-native.log",
+      "bytes": 225,
+      "sha256": "3d95ef9352cb9a98b25c1d4c89bd54e0b43063f8d7e37f0b3fdf5bbfe742f0fe"
+    },
+    {
+      "original": "tmp/J113HJ-lead-native.log",
+      "archivePath": "J113HJ-lead-native.log",
+      "bytes": 477,
+      "sha256": "823c1843e20a71948985332b0c23ea01c8abf2f1209c88413f54b8c691843669"
+    },
+    {
+      "original": "tmp/J113HJ-lead-standalone.log",
+      "archivePath": "J113HJ-lead-standalone.log",
+      "bytes": 2371,
+      "sha256": "8b91e63f303c9aefd25bfdb8a4f3794c95270ea286b21785c8b6c361573c6277"
+    },
+    {
+      "original": "tmp/J113J-native-test-list.log",
+      "archivePath": "J113J-native-test-list.log",
+      "bytes": 71109,
+      "sha256": "9446c7728723023b235d4718dfcf7c420d790b0997528900bf507a829304f2d7"
+    }
+  ],
+  "attribution": "Lead-executed native search before/after, combined H/search and standalone gates; list operation ran no tests."
+}

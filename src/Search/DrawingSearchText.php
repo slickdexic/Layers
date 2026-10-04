@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Search;
 use MediaWiki\Content\TextContent;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
@@ -77,7 +78,14 @@ class DrawingSearchText {
 				$parts[] = PageDrawingSearchText::layerText( $set );
 			}
 		}
+		$queried = [];
 		foreach ( $shown ?? $this->shown( $page, $fromPrimary ) as [ $kind, $name, $setName ] ) {
+			// The shared query already returns member pages; their internal selectors do not change it.
+			$key = JsonSnapshotCodec::encode( [ $kind, $name, $setName ] );
+			if ( isset( $queried[$key] ) ) {
+				continue;
+			}
+			$queried[$key] = true;
 			$slide = $kind === ShownLayerSets::SLIDE;
 			foreach ( $this->db->getSetForSearch( $slide ? LayersConstants::SLIDE_PREFIX . $name : $name, $setName,
 				$slide, $fromPrimary ) as $set
