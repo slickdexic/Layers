@@ -139,26 +139,33 @@ class ThumbnailProcessor {
 	}
 
 	/**
-	 * Extract the 1-based page number from a thumbnail's transform params.
-	 *
-	 * Multi-page files (PDF) carry a 'page' transform param. Images and
-	 * single-page files default to page 1.
+	 * Read the effective page from transform params or native description-link attributes.
+	 * Native ThumbnailImage exposes the selected PDF page through its description link.
+	 * When transform params are available they retain precedence, including the page-1 default.
 	 *
 	 * @param mixed $thumbnail
 	 * @return int Page number (>= 1)
 	 */
-	private function extractPageFromThumbnail( $thumbnail ): int {
-		if ( $thumbnail === null || !method_exists( $thumbnail, 'getParams' ) ) {
+	public static function sourcePage( $thumbnail ): int {
+		if ( !is_object( $thumbnail ) ) {
 			return 1;
 		}
-		$params = $thumbnail->getParams();
-		if ( is_array( $params ) && isset( $params['page'] ) ) {
-			$page = (int)$params['page'];
-			if ( $page > 0 ) {
-				return $page;
-			}
+		if ( method_exists( $thumbnail, 'getParams' ) ) {
+			$params = $thumbnail->getParams();
+			return is_array( $params ) ? max( 1, (int)( $params['page'] ?? 1 ) ) : 1;
+		}
+		if ( method_exists( $thumbnail, 'getDescLinkAttribs' ) ) {
+			$attributes = $thumbnail->getDescLinkAttribs();
+			$query = parse_url( $attributes['href'] ?? '', PHP_URL_QUERY );
+			parse_str( is_string( $query ) ? $query : '', $params );
+			return max( 1, (int)( $params['page'] ?? 1 ) );
 		}
 		return 1;
+	}
+
+	/** @param mixed $thumbnail @return int */
+	private function extractPageFromThumbnail( $thumbnail ): int {
+		return self::sourcePage( $thumbnail );
 	}
 
 	/**

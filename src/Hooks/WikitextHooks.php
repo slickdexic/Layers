@@ -1083,17 +1083,7 @@ class WikitextHooks {
 	 * @return int Effective page from transform params or native MediaTransformOutput's description link
 	 */
 	private static function sourcePage( $thumbnail ): int {
-		if ( method_exists( $thumbnail, 'getParams' ) ) {
-			$params = $thumbnail->getParams();
-			return max( 1, (int)( $params['page'] ?? 1 ) );
-		}
-		if ( method_exists( $thumbnail, 'getDescLinkAttribs' ) ) {
-			$attributes = $thumbnail->getDescLinkAttribs();
-			$query = parse_url( $attributes['href'] ?? '', PHP_URL_QUERY );
-			parse_str( is_string( $query ) ? $query : '', $params );
-			return max( 1, (int)( $params['page'] ?? 1 ) );
-		}
-		return 1;
+		return ThumbnailProcessor::sourcePage( $thumbnail );
 	}
 
 	/**
