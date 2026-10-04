@@ -8,6 +8,30 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions;
  * @covers \MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions
  */
 class PageOwnedBindingOptionsTest extends \MediaWikiUnitTestCase {
+	/**
+	 * @dataProvider provideSourcePages
+	 * @param array $options
+	 * @param int $expected
+	 */
+	public function testEffectiveSourcePage( array $options, int $expected ): void {
+		// Native syntax matching is injected; core tests verify its aliases and spacing.
+		$match = static fn ( string $option ): ?string => str_starts_with( $option, 'page=' ) ?
+			substr( $option, 5 ) : null;
+		$this->assertSame( $expected, PageOwnedBindingOptions::sourcePage( $options, $match ) );
+	}
+
+	public static function provideSourcePages(): array {
+		return [
+			[ [], 1 ],
+			[ [ 'page=2' ], 2 ],
+			[ [ 'page=1', 'page=2' ], 2 ],
+			[ [ 'page=2', 'page=1' ], 1 ],
+			[ [ 'page=2', 'page=oops', 'page=0', 'page=-1', 'page=02', 'page=2x' ], 2 ],
+			[ [ 'page=oops' ], 1 ],
+			[ [ 'page=3' ], 3 ],
+			[ [ 'page= 2 ' ], 2 ]
+		];
+	}
 
 	public function testReturnsNullWhenNoBindingPresent(): void {
 		$this->assertNull( PageOwnedBindingOptions::extract( [] ) );

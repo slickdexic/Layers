@@ -6,12 +6,12 @@
  * Proves on the test wiki (http://localhost:8080) that:
  * 1. A page nobody enrolled (Layers D2 probe) can start a drawing.
  *    Creates or resets Layers D2 probe with text {{#Slide:<pageId>:D2 slide}}.
- * 2. On page view, drawing controls offer "Create page drawing: D2 slide".
+ * 2. On page view, drawing controls offer "Create layer set: D2 slide".
  *    Following it, drawing a rectangle and saving with empty summary creates exactly
- *    one new revision with comment 'Added drawing “D2 slide”' and tag 'layers-page-drawing',
+ *    one new revision with comment 'Added layer set “D2 slide”' and tag 'layers-page-drawing',
  *    and the page then shows the painted drawing.
  * 3. A page outside configured namespaces (Project:Layers D2 probe) cannot start drawings:
- *    its page view offers no "Create page drawing" link, and layerspublish fails
+ *    its page view offers no "Create layer set" link, and layerspublish fails
  *    with 'layers-publication-disabled'.
  * 4. Owner page still works as before: editor opens, layer moves, saves, and baseline restores.
  * 5. Both probe pages remain in place (never deleted); on rerun, Layers D2 probe is reset with
@@ -222,9 +222,9 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		expect( Number.isInteger( probeBaseRevId ) ).toBe( true );
 
 		// =========================================================================
-		// Step 2: On its page view, drawing controls offer "Create page drawing: D2 slide".
+		// Step 2: On its page view, drawing controls offer "Create layer set: D2 slide".
 		//         Follow it, draw a rectangle, save with an empty summary.
-		//         Exactly one new revision appears with comment 'Added drawing “D2 slide”'
+		//         Exactly one new revision appears with comment 'Added layer set “D2 slide”'
 		//         and tag 'layers-page-drawing', and page then shows the drawing.
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( probeTitle ) }` );
@@ -234,7 +234,7 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		await expect( probeControls ).toBeVisible();
 
 		const createD2Link = probeControls.locator( '.layers-page-edit-link', {
-			hasText: 'Create page drawing: D2 slide'
+			hasText: 'Create layer set: D2 slide'
 		} );
 		await expect( createD2Link ).toBeVisible();
 
@@ -245,7 +245,7 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		] );
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: D2 slide' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: D2 slide' );
 
 		// Draw a rectangle
 		await drawRectangle();
@@ -279,7 +279,7 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		const probeRevData = probeRevQuery.query.pages[ 0 ].revisions[ 0 ];
 		expect( probeRevData.revid ).toBe( d2Rev );
 		expect( probeRevData.parentid ).toBe( probeBaseRevId );
-		expect( probeRevData.comment ).toBe( 'Added drawing “D2 slide”' );
+		expect( probeRevData.comment ).toBe( 'Added layer set “D2 slide”' );
 		expect( probeRevData.tags ).toContain( 'layers-page-drawing' );
 
 		// Page then shows the drawing
@@ -292,15 +292,15 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		const slideCanvas = slideHost.locator( 'canvas' );
 		await expect( slideCanvas ).toBeVisible();
 
-		// Controls now read "Edit page drawing: D2 slide"
+		// Controls now read "Edit layer set: D2 slide"
 		const editD2Link = probeControlsAfter.locator( '.layers-page-edit-link', {
-			hasText: 'Edit page drawing: D2 slide'
+			hasText: 'Edit layer set: D2 slide'
 		} );
 		await expect( editD2Link ).toBeVisible();
 
 		// =========================================================================
 		// Step 3: Create or reset Project:Layers D2 probe the same way with its own page ID.
-		//         Its page view offers no "Create page drawing" link, and a layerspublish
+		//         Its page view offers no "Create layer set" link, and a layerspublish
 		//         API request for it fails with 'layers-publication-disabled'.
 		// =========================================================================
 		const projectQuery = await api( {
@@ -353,7 +353,7 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 		expect( Number.isInteger( projectPageId ) ).toBe( true );
 		expect( Number.isInteger( projectBaseRevId ) ).toBe( true );
 
-		// On page view: offers no "Create page drawing" link
+		// On page view: offers no "Create layer set" link
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( projectProbeTitle ) }` );
 		await expect( page.locator( '.layers-page-edit-link' ) ).toHaveCount( 0 );
 
@@ -401,7 +401,7 @@ test( 'drawings on by default for content pages and disabled for Project: pages 
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
 		await page.waitForFunction( () => ( window.layersEditorInstance?.stateManager?.get( 'layers' ) || [] ).length > 0 );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Welcome Slide' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Welcome Slide' );
 
 		// Move a layer
 		const ownerLayerItem = page.locator( '.layer-item:not(.background-layer-item)' ).first();

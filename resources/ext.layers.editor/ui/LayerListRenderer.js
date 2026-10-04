@@ -549,7 +549,7 @@
 				case ( LAYER_TYPES.LINE || 'line' ):
 					return t( 'layers-type-line', 'Line' );
 				case ( LAYER_TYPES.PATH || 'path' ):
-					return t( 'layers-type-path', 'Drawing' );
+					return t( 'layers-type-path', 'Freehand layer' );
 				default:
 					return t( 'layers-type-layer', 'Layer' );
 			}

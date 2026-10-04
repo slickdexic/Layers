@@ -128,20 +128,37 @@ class DirectAdoptionPreparationService {
 	private function nameDrawing( string $document, array $selected, RevisionRecord $base,
 		Authority $authority
 	): string {
-		$taken = [];
+		$existing = [];
 		if ( $base->hasSlot( PageRevisionWriter::SLOT ) ) {
 			$stored = $base->getContent( PageRevisionWriter::SLOT, RevisionRecord::FOR_THIS_USER, $authority );
 			if ( !$stored instanceof LayersDocumentContent ) {
 				throw new \InvalidArgumentException();
 			}
-			foreach ( json_decode( $stored->getText() )->surfaces as $surface ) {
-				$taken[] = (string)$surface->label;
-			}
+			$existing = json_decode( $stored->getText() )->surfaces;
 		}
 		$doc = json_decode( $document );
 		$surface = $doc->surfaces[0];
 		$wanted = $selected['kind'] === 'slide' ? $selected['target'] : (string)$surface->label;
-		$surface->label = DrawingName::unused( DrawingName::normalize( $wanted ) ?? $surface->id, $taken );
+		$surface->label = DrawingName::normalize( $wanted ) ?? $surface->id;
+		$taken = LayerSetIdentity::namesInScope( $existing, $surface );
+		$group = array_values( array_filter( $existing, static fn ( $item ) =>
+			LayerSetIdentity::key( $item ) === LayerSetIdentity::key( $surface ) ) );
+		$hasPage = array_filter( $group, static fn ( $item ) =>
+			LayerSetIdentity::surfaceKey( $item ) === LayerSetIdentity::surfaceKey( $surface ) );
+		if ( $surface->kind === 'pdf' && $group && !$hasPage ) {
+			// An additional PDF page belongs to the same layer set and keeps its name and source pin.
+			$label = (string)$group[0]->label;
+			foreach ( $group as $item ) {
+				if ( $item->kind !== 'pdf' || $item->label !== $label ||
+					$item->source->timestamp !== $surface->source->timestamp ||
+					$item->source->sha1 !== $surface->source->sha1 ) {
+					throw new \InvalidArgumentException();
+				}
+			}
+			$surface->label = $label;
+		} else {
+			$surface->label = DrawingName::unused( $surface->label, $taken );
+		}
 		return JsonSnapshotCodec::encode( $doc );
 	}
 

@@ -6,7 +6,7 @@
  * Proves in real Chromium on the test wiki (http://localhost:8080) that:
  * 1. From the owner page's baseline, publish text that adds:
  *    {{#Slide:Bare probe}} and [[File:B010.jpg|layerset=Bare notes]].
- * 2. The page view offers "Create page drawing: Bare probe" and "Create page drawing: Bare notes".
+ * 2. The page view offers "Create layer set: Bare probe" and "Create layer set: Bare notes".
  *    Create the slide through its link, draw a rectangle and save.
  *    The page then paints it, and the embed in the page text is still bare.
  * 3. Rename the drawing to "Bare probe renamed" in the editor and save.
@@ -183,17 +183,17 @@ test( 'bare names mean page-owned drawings after migration (HIST-4, HIST-8)', as
 		lastOwnedRevision = rev1;
 
 		// =========================================================================
-		// Step 2: Page view offers "Create page drawing: Bare probe" and
-		//         "Create page drawing: Bare notes". Create slide through its link,
+		// Step 2: Page view offers "Create layer set: Bare probe" and
+		//         "Create layer set: Bare notes". Create slide through its link,
 		//         draw a rectangle and save.
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 		await page.waitForLoadState( 'networkidle' );
 
-		const createSlideLink = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Bare probe' } );
+		const createSlideLink = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Bare probe' } );
 		await expect( createSlideLink ).toBeVisible();
 
-		const createFileLink = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Bare notes' } );
+		const createFileLink = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Bare notes' } );
 		await expect( createFileLink ).toBeVisible();
 
 		// Create slide through its link
@@ -203,7 +203,7 @@ test( 'bare names mean page-owned drawings after migration (HIST-4, HIST-8)', as
 		] );
 
 		await page.waitForSelector( '.layers-canvas' );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Bare probe' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Bare probe' );
 
 		// Draw one rectangle
 		await drawRectangle();
@@ -244,10 +244,10 @@ test( 'bare names mean page-owned drawings after migration (HIST-4, HIST-8)', as
 		expect( rev2Text ).not.toContain( `{{#Slide:${ pageId }:Bare probe}}` );
 
 		// =========================================================================
-		// Step 3: Rename drawing to "Bare probe renamed" in editor and save.
+		// Step 3: Rename layer set to "Bare probe renamed" in editor and save.
 		//         Embed becomes {{#Slide:<pageId>:Bare probe renamed}}.
 		// =========================================================================
-		const editSlideLink = page.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing: Bare probe' } );
+		const editSlideLink = page.locator( '.layers-page-edit-link', { hasText: 'Edit layer set: Bare probe' } );
 		await expect( editSlideLink ).toBeVisible();
 		await Promise.all( [
 			page.waitForNavigation(),

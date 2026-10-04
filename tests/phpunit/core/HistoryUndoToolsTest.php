@@ -78,7 +78,7 @@ class HistoryUndoToolsTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			static fn ( $k ) => str_starts_with( $k, 'layers-undo-' ) ) );
 		$this->assertCount( 1, $ids );
 		$link = $tools[$ids[0]];
-		$this->assertStringContainsString( 'undo drawing: Welcome Slide', $link );
+		$this->assertStringContainsString( 'undo layer set: Welcome Slide', $link );
 		$this->assertStringContainsString( 'ViewLayersPage', $link );
 		$this->assertStringContainsString( 'revid=' . $first, $link, 'the version before the edit' );
 

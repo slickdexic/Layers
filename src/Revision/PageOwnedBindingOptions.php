@@ -15,6 +15,26 @@ use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 final class PageOwnedBindingOptions {
 
 	/**
+	 * @param array $options Ordered scanned file options
+	 * @param callable $matchPageOption Native option matcher returning its value, or null when not matched
+	 * @return int Effective PDF page, following core's positive-integer validation
+	 */
+	public static function sourcePage( array $options, callable $matchPageOption ): int {
+		$page = 1;
+		foreach ( $options as $option ) {
+			$value = $matchPageOption( trim( $option ) );
+			if ( $value === null ) {
+				continue;
+			}
+			$value = trim( $value );
+			if ( $value === (string)(int)$value && (int)$value > 0 ) {
+				$page = (int)$value;
+			}
+		}
+		return $page;
+	}
+
+	/**
 	 * Conflicting legacy selector option names (lowercased).
 	 */
 	private const LEGACY_SELECTORS = [

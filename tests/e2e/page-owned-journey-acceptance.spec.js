@@ -243,7 +243,7 @@ test( 'adoption-to-history journeys verify slide, image, pdf page two, and cross
 		const assertIsolationIntegrity = async ( stageDesc ) => {
 			await page.goto( `${ base }/index.php?title=${ isolationOwner }` );
 			// Pages in the drawing namespaces are offered adoption; they must never edit the owner's drawings
-			await expect( page.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing' } ) ).toHaveCount( 0 );
+			await expect( page.locator( '.layers-page-edit-link', { hasText: 'Edit layer set' } ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-bound-slide' ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-bound-file-view' ) ).toHaveCount( 0 );
 			await expect( page.locator( '.layers-slide-container' ) ).toHaveCount( 1 );

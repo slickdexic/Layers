@@ -1622,6 +1622,32 @@ class LayersDatabase {
 	}
 
 	/**
+	 * Retained file-set metadata for migration provenance, including earlier source versions and saves.
+	 * This internal query does not authorize access and never loads layer payloads.
+	 * @param string $imgName Canonical file name, accepting the existing space/underscore lookup
+	 * @return array[] id, name, page, sha1, imgName, mime and revision, ordered by row ID
+	 */
+	public function listRetainedFileSetRows( string $imgName ): array {
+		$db = $this->getReadDb();
+		if ( !$db ) {
+			return [];
+		}
+		$res = $db->newSelectQueryBuilder()->select( [ 'ls_id', 'ls_name', 'ls_page', 'ls_img_sha1',
+			'ls_img_name', 'ls_img_major_mime', 'ls_img_minor_mime', 'ls_revision' ] )->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				$db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ] )
+			->orderBy( 'ls_id' )->caller( __METHOD__ )->fetchResultSet();
+		$rows = [];
+		foreach ( $res as $row ) {
+			$rows[] = [ 'id' => (int)$row->ls_id, 'name' => (string)$row->ls_name, 'page' => (int)$row->ls_page,
+				'sha1' => (string)$row->ls_img_sha1, 'imgName' => (string)$row->ls_img_name,
+				'mime' => $row->ls_img_major_mime . '/' . $row->ls_img_minor_mime,
+				'revision' => (int)$row->ls_revision ];
+		}
+		return $rows;
+	}
+
+	/**
 	 * Sets saved for versions of a file other than the given one.
 	 * @param string $imgName
 	 * @param string $sha1 Version to leave out

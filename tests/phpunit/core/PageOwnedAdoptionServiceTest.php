@@ -29,9 +29,10 @@ class PageOwnedAdoptionServiceTest extends \MediaWikiIntegrationTestCase {
 			$lookup, $registered['publisher'] );
 	}
 
-	private function addition( string $id ): string {
+	private function addition( string $id, string $label = 'Welcome Slide' ): string {
 		$doc = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
 		$doc->surfaces[0]->id = $id;
+		$doc->surfaces[0]->label = $label;
 		return json_encode( $doc );
 	}
 
@@ -49,8 +50,8 @@ class PageOwnedAdoptionServiceTest extends \MediaWikiIntegrationTestCase {
 		$first = $this->adoption->publishPreparedSurface( $id, $base, $actor, $this->addition( 'A' ),
 			new WikitextContent( "{{#Slide:First|layersbinding=v1:$id:A}}" ), 'Adopt first' );
 		$secondMain = "{{#Slide:First|layersbinding=v1:$id:A}}\n{{#Slide:Second|layersbinding=v1:$id:B}}";
-		$second = $this->adoption->publishPreparedSurface( $id, $first, $actor, $this->addition( 'B' ),
-			new WikitextContent( $secondMain ), 'Adopt second' );
+		$second = $this->adoption->publishPreparedSurface( $id, $first, $actor,
+			$this->addition( 'B', 'Welcome Slide 2' ), new WikitextContent( $secondMain ), 'Adopt second' );
 		$lookup = $this->getServiceContainer()->getRevisionLookup();
 		$old = $lookup->getRevisionById( $first );
 		$current = $lookup->getRevisionById( $second );
@@ -60,7 +61,7 @@ class PageOwnedAdoptionServiceTest extends \MediaWikiIntegrationTestCase {
 		$this->assertCount( 2, $newDoc['surfaces'] );
 		$this->assertSame( $oldDoc['surfaces'][0], $newDoc['surfaces'][0] );
 		$this->assertSame( [ 'A', 'B' ], array_column( $newDoc['surfaces'], 'id' ) );
-		// The fixture gives both the same name; names are unique on a page.
+		// Preparation supplies the final scoped name before it constructs the main-slot edit.
 		$this->assertSame( [ 'Welcome Slide', 'Welcome Slide 2' ], array_column( $newDoc['surfaces'], 'label' ) );
 		$this->assertSame( $first, $current->getParentId() );
 		$this->assertSame( $id, $current->getPageId() );
@@ -107,6 +108,7 @@ class PageOwnedAdoptionServiceTest extends \MediaWikiIntegrationTestCase {
 	/** @return array */
 	public static function provideRejectedAdditions(): array {
 		return [
+			[ 'name', 'layers-invalid-snapshot' ],
 			[ 'duplicate', 'layers-surface-already-bound' ],
 			[ 'empty', 'layers-invalid-snapshot' ],
 			[ 'stale', 'layers-edit-conflict' ],

@@ -52,6 +52,8 @@ class PageCopyMigration {
 	private PagePublicationService $publisher;
 	/** @var callable|null */
 	private $pendingFile = null;
+	/** @var callable|null */
+	private $sourcePages;
 
 	/**
 	 * @param LayersDatabase $legacy
@@ -65,11 +67,12 @@ class PageCopyMigration {
 	 * @param callable $fileTargets Native file title normalizer for the scanner
 	 * @param IConnectionProvider $db
 	 * @param PagePublicationService $publisher
+	 * @param callable|null $sourcePages (array $candidate): int Native effective page for a direct file embed
 	 */
 	public function __construct( LayersDatabase $legacy, PageOwnedScope $scope, RepoGroup $repos,
 		TitleFactory $titles, RevisionLookup $revisions, PageHistoryAccess $access,
 		LegacySurfaceConverter $converter, DirectEmbeddingRewriter $rewriter, callable $fileTargets,
-		IConnectionProvider $db, PagePublicationService $publisher
+		IConnectionProvider $db, PagePublicationService $publisher, ?callable $sourcePages = null
 	) {
 		$this->legacy = $legacy;
 		$this->scope = $scope;
@@ -82,6 +85,7 @@ class PageCopyMigration {
 		$this->fileTargets = $fileTargets;
 		$this->db = $db;
 		$this->publisher = $publisher;
+		$this->sourcePages = $sourcePages;
 	}
 
 	/**
@@ -152,10 +156,13 @@ class PageCopyMigration {
 				continue;
 			}
 			$reason = null;
-			$source = $candidate['kind'] === 'file' ?
-				$this->fileSource( $candidate['target'], $selector, (int)( self::option( $options, [ 'page' ] ) ?? 1 ),
-					$authority, $reason ) :
-				$this->slideSource( $candidate['target'], $selector, $reason );
+			if ( $candidate['kind'] === 'file' ) {
+				$page = $this->sourcePages ? ( $this->sourcePages )( $candidate ) :
+					(int)( self::option( $options, [ 'page' ] ) ?? 1 );
+				$source = $this->fileSource( $candidate['target'], $selector, $page, $authority, $reason );
+			} else {
+				$source = $this->slideSource( $candidate['target'], $selector, $reason );
+			}
 			if ( !$source ) {
 				if ( $reason !== null ) {
 					$plan['notMoved'][] = [ 'what' => $candidate['raw'], 'reason' => $reason ];

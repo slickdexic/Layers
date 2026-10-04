@@ -47,27 +47,40 @@ final class PageOwnedBinding {
 	}
 
 	/**
+	 * Select within one already-authorized owner's snapshot. This helper does not authorize the owner.
+	 * Equal labels on different files or kinds are independent layer sets, not ambiguous matches.
+	 * A PDF page selects an internal record of the set without changing its name.
 	 * @param array{pageId:int,name:string} $named
-	 * @param array[] $surfaces The page's drawings, decoded as arrays
-	 * @param string|null $kind 'file' or 'slide', the kind of embed; null accepts any drawing
+	 * @param array[] $surfaces The owning page's surfaces, decoded as arrays
+	 * @param string|null $kind 'file' or 'slide', the kind of embed; null accepts any kind
 	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
-	 * @return string|null ID of the one drawing with that name that fits the embed
+	 * @param int|null $sourcePage Effective PDF page; null preserves callers without page context
+	 * @return string|null ID of the single matching surface; never a first-match fallback
 	 */
-	public static function resolveNamed( array $named, array $surfaces, ?string $kind, ?string $fileTitle ): ?string {
-		$key = DrawingName::key( $named['name'] );
-		$found = array_values( array_filter( $surfaces, static function ( $surface ) use ( $key ) {
-			return is_string( $surface['label'] ?? null ) && DrawingName::key( $surface['label'] ) === $key;
-		} ) );
-		if ( count( $found ) !== 1 ) {
+	public static function resolveNamed( array $named, array $surfaces, ?string $kind, ?string $fileTitle,
+		?int $sourcePage = null
+	): ?string {
+		if ( $sourcePage !== null && $sourcePage < 1 ) {
 			return null;
 		}
-		$surface = $found[0];
-		if ( $kind === null ) {
-			return (string)$surface['id'];
-		}
-		$fits = $kind === 'slide' ? $surface['kind'] === 'slide' :
-			in_array( $surface['kind'], [ 'image', 'pdf' ], true ) &&
-			( $surface['source']['fileTitle'] ?? null ) === $fileTitle;
-		return $fits ? (string)$surface['id'] : null;
+		$key = DrawingName::key( $named['name'] );
+		$found = array_values( array_filter( $surfaces, static function ( $surface ) use (
+			$key, $kind, $fileTitle, $sourcePage
+		) {
+			if ( !is_string( $surface['label'] ?? null ) || DrawingName::key( $surface['label'] ) !== $key ) {
+				return false;
+			}
+			if ( $kind !== null ) {
+				$fits = $kind === 'slide' ? $surface['kind'] === 'slide' :
+					in_array( $surface['kind'], [ 'image', 'pdf' ], true ) &&
+					( $surface['source']['fileTitle'] ?? null ) === $fileTitle;
+				if ( !$fits ) {
+					return false;
+				}
+			}
+			return $sourcePage === null || $surface['kind'] !== 'pdf' ||
+				( $surface['source']['page'] ?? null ) === $sourcePage;
+		} ) );
+		return count( $found ) === 1 ? (string)$found[0]['id'] : null;
 	}
 }

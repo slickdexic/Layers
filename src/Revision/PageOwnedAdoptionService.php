@@ -79,16 +79,14 @@ class PageOwnedAdoptionService {
 				$snapshot = json_decode( $stored->getCanonicalText() );
 			}
 			$surface = $addition->surfaces[0];
-			$taken = [];
 			foreach ( $snapshot->surfaces as $existing ) {
 				if ( $existing->id === $surface->id ) {
 					throw new PublicationException( 'layers-surface-already-bound' );
 				}
-				$taken[] = (string)$existing->label;
 			}
-			$surface->label = DrawingName::unused(
-				DrawingName::normalize( (string)$surface->label ) ?? $surface->id, $taken );
 			$snapshot->surfaces[] = $surface;
+			// Main text already names the prepared set. Verify it; never allocate a different name here.
+			DrawingName::assertPublishable( $snapshot->surfaces, [ $surface->id ] );
 			$json = $schema->canonicalize( JsonSnapshotCodec::encode( $snapshot ) );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-invalid-snapshot' );

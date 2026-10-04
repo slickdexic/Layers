@@ -7,16 +7,16 @@
  * 1. Baseline setup: On owner Layers_browser_acceptance (PageID 228), publish exact-base revision
  *    with two slide drawings: presentation ("Welcome Slide") and second_probe ("Second probe"),
  *    embedded by name in page wikitext.
- * 2. Editor header shows "Drawing: Welcome Slide".
+ * 2. Editor header shows "Layer set: Welcome Slide".
  * 3. Refused names: Entering invalid name "a|b" and duplicate name "second_PROBE" show exact
- *    English notifications, keep header "Drawing: Welcome Slide", and leave revision ID unchanged.
- * 4. Rename to "Renamed probe" shows notice "The drawing will be called \"Renamed probe\" when you save.",
- *    updates header to "Drawing: Renamed probe", and saving with summary creates exactly one new revision.
+ *    English notifications, keep header "Layer set: Welcome Slide", and leave revision ID unchanged.
+ * 4. Rename to "Renamed probe" shows notice "The layer set will be called \"Renamed probe\" when you save.",
+ *    updates header to "Layer set: Renamed probe", and saving with summary creates exactly one new revision.
  * 5. In the new revision, layers slot names presentation "Renamed probe" while leaving "Second probe" unchanged;
  *    main text updates embed to {{#Slide:<pageId>:Renamed probe}} and leaves Second probe unchanged without "Welcome Slide";
- *    page view paints both drawings and edit link reads "Edit page drawing: Renamed probe".
+ *    page view paints both drawings and edit link reads "Edit layer set: Renamed probe".
  * 6. Local draft recovery: Reopening editor, renaming to "Draft name" without saving, and reloading offers
- *    draft in recovery dialog; restoring draft updates header to "Drawing: Draft name"; closing without saving
+ *    draft in recovery dialog; restoring draft updates header to "Layer set: Draft name"; closing without saving
  *    does not change latest revision ID.
  * 7. Exact-base CAS cleanup restores baseline wikitext and initial snapshot in main flow and finally.
  */
@@ -203,12 +203,12 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		lastOwnedRevision = rev1;
 
 		// =========================================================================
-		// Step 2: Open editor from "Edit page drawing: Welcome Slide" link.
-		//         Header must read "Drawing: Welcome Slide".
+		// Step 2: Open editor from "Edit layer set: Welcome Slide" link.
+		//         Header must read "Layer set: Welcome Slide".
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 		const welcomeEditLink = page.locator( '.layers-page-edit-link' ).filter( {
-			hasText: 'Edit page drawing: Welcome Slide'
+			hasText: 'Edit layer set: Welcome Slide'
 		} );
 		await expect( welcomeEditLink ).toBeVisible();
 
@@ -219,12 +219,12 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
 		const nameText = page.locator( '.layers-page-drawing-name-text' );
-		await expect( nameText ).toHaveText( 'Drawing: Welcome Slide' );
+		await expect( nameText ).toHaveText( 'Layer set: Welcome Slide' );
 
 		// =========================================================================
-		// Step 3: Refused names: Press "Rename drawing" button, enter "a|b", then
+		// Step 3: Refused names: Press "Rename layer set" button, enter "a|b", then
 		//         "second_PROBE". Each must show exact English error notification,
-		//         header must remain "Drawing: Welcome Slide", and latest revid must
+		//         header must remain "Layer set: Welcome Slide", and latest revid must
 		//         not change.
 		// =========================================================================
 
@@ -232,9 +232,9 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		await renameDrawing( 'a|b' );
 		const errorNotif1 = page.locator( '.mw-notification.mw-notification-type-error' );
 		await expect( errorNotif1.last() ).toContainText(
-			'"a|b" cannot be used as a drawing name. A name needs 1 to 255 characters and none of these: | [ ] { } < > :'
+			'"a|b" cannot be used as a layer set name. A name needs 1 to 255 characters and none of these: | [ ] { } < > :'
 		);
-		await expect( nameText ).toHaveText( 'Drawing: Welcome Slide' );
+		await expect( nameText ).toHaveText( 'Layer set: Welcome Slide' );
 
 		const historyAfterRefusal1 = await api( {
 			action: 'query',
@@ -249,9 +249,9 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		await renameDrawing( 'second_PROBE' );
 		const errorNotif2 = page.locator( '.mw-notification.mw-notification-type-error' );
 		await expect( errorNotif2.last() ).toContainText(
-			'This page already has a drawing named "second_PROBE". Names that differ only in case, spaces or underscores count as the same name.'
+			'The name "second_PROBE" is already used for this file or slide on this page. Names that differ only in case, spaces or underscores count as the same name.'
 		);
-		await expect( nameText ).toHaveText( 'Drawing: Welcome Slide' );
+		await expect( nameText ).toHaveText( 'Layer set: Welcome Slide' );
 
 		const historyAfterRefusal2 = await api( {
 			action: 'query',
@@ -264,17 +264,17 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 
 		// =========================================================================
 		// Step 4: Rename to "Renamed probe":
-		//         - Verify notification: "The drawing will be called \"Renamed probe\" when you save."
-		//         - Header must read "Drawing: Renamed probe".
+		//         - Verify notification: "The layer set will be called \"Renamed probe\" when you save."
+		//         - Header must read "Layer set: Renamed probe".
 		//         - Latest revision ID must still not change.
 		//         - Save with summary ("Rename Welcome Slide to Renamed probe").
 		// =========================================================================
 		await renameDrawing( 'Renamed probe' );
 		const infoNotif = page.locator( '.mw-notification' ).filter( {
-			hasText: 'The drawing will be called "Renamed probe" when you save.'
+			hasText: 'The layer set will be called "Renamed probe" when you save.'
 		} );
 		await expect( infoNotif.last() ).toBeVisible();
-		await expect( nameText ).toHaveText( 'Drawing: Renamed probe' );
+		await expect( nameText ).toHaveText( 'Layer set: Renamed probe' );
 
 		const historyBeforeSave = await api( {
 			action: 'query',
@@ -306,7 +306,7 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		//         - Main text contains {{#Slide:<pageId>:Renamed probe}} and second
 		//           embed unchanged, and no longer contains "Welcome Slide".
 		//         - On page view, both drawings are painted and edit link reads
-		//           "Edit page drawing: Renamed probe".
+		//           "Edit layer set: Renamed probe".
 		// =========================================================================
 		const historyAfterSave = await api( {
 			action: 'query',
@@ -359,7 +359,7 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		}
 
 		const renamedEditLink = page.locator( '.layers-page-edit-link' ).filter( {
-			hasText: 'Edit page drawing: Renamed probe'
+			hasText: 'Edit layer set: Renamed probe'
 		} );
 		await expect( renamedEditLink ).toBeVisible();
 
@@ -379,12 +379,12 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 
 		// =========================================================================
 		// Step 6: Draft recovery:
-		//         - Open editor again from "Edit page drawing: Renamed probe"
+		//         - Open editor again from "Edit layer set: Renamed probe"
 		//         - Rename to "Draft name" without saving
 		//         - Reload browser page
 		//         - The recovery dialog (dialog.layers-page-recovery) must offer draft
 		//         - Press restore (layers-page-draft-dialog-restore)
-		//         - Header must read "Drawing: Draft name"
+		//         - Header must read "Layer set: Draft name"
 		//         - Close editor without saving; latest revision ID must not change
 		// =========================================================================
 		page.on( 'dialog', ( prompt ) => prompt.accept() );
@@ -395,10 +395,10 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		] );
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Renamed probe' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Renamed probe' );
 
 		await renameDrawing( 'Draft name' );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Draft name' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Draft name' );
 
 		// Do not save; wait a tick for localStorage sync then reload
 		await page.waitForTimeout( 200 );
@@ -415,7 +415,7 @@ test( 'renaming a drawing updates this page embeds in the same revision (HIST-7)
 		await restoreBtn.click();
 		await expect( recoveryDialog ).toHaveCount( 0 );
 
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Draft name' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Draft name' );
 
 		// Close editor without saving
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );

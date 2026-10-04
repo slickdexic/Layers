@@ -8,7 +8,7 @@
  *    found via Special:Search (fulltext=1&ns0=1), and displays drawing text
  *    as snippet with .searchmatch. When baseline is restored, search clears.
  * 2. PDF page: On the owner page, embed [[File:Layers migration fixture B.pdf|page=2|layerset=Page two notes]].
- *    Follow "Create page drawing", draw a shape and save. The page paints it
+ *    Follow "Create layer set", draw a shape and save. The page paints it
  *    over the rendition of page 2 (not page 1), and layersread gives the surface
  *    a source for page 2. An earlier revision from history does not show the drawing.
  *    Editor page navigation is absent (pinned to page 2).
@@ -308,7 +308,7 @@ test( 'search, PDF pages and galleries after migration (TYPES-2, TYPES-4, HIST-8
 		// =========================================================================
 		// Part 2: PDF page drawing acceptance
 		//         1. On owner page embed [[File:Layers migration fixture B.pdf|page=2|layerset=Page two notes]]
-		//         2. Follow "Create page drawing: Page two notes", draw rectangle and save.
+		//         2. Follow "Create layer set: Page two notes", draw rectangle and save.
 		//         3. Page paints it over rendition of page 2 (not page 1).
 		//         4. layersread gives surface a source for page 2.
 		//         5. Earlier revision of owner page from history does not show drawing.
@@ -330,12 +330,12 @@ test( 'search, PDF pages and galleries after migration (TYPES-2, TYPES-4, HIST-8
 		const revPdfEmbed = pubPdfEmbed.layerspublish.revid;
 		lastOwnedRevision = revPdfEmbed;
 
-		// Navigate to page view and locate "Create page drawing: Page two notes"
+		// Navigate to page view and locate "Create layer set: Page two notes"
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 		await page.waitForLoadState( 'networkidle' );
 		await clearDrafts();
 
-		const createPdfLink = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Page two notes' } );
+		const createPdfLink = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Page two notes' } );
 		await expect( createPdfLink ).toBeVisible();
 
 		// Open editor from the link
@@ -345,7 +345,7 @@ test( 'search, PDF pages and galleries after migration (TYPES-2, TYPES-4, HIST-8
 		] );
 
 		await page.waitForSelector( '.layers-canvas' );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Page two notes' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Page two notes' );
 
 		// Editor check on PDF page:
 		// Page navigation group is absent (session is strictly pinned to page 2)
@@ -443,12 +443,12 @@ test( 'search, PDF pages and galleries after migration (TYPES-2, TYPES-4, HIST-8
 		const revB010Embed = pubB010Embed.layerspublish.revid;
 		lastOwnedRevision = revB010Embed;
 
-		// Navigate to page view and follow "Create page drawing: Gallery notes"
+		// Navigate to page view and follow "Create layer set: Gallery notes"
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 		await page.waitForLoadState( 'networkidle' );
 		await clearDrafts();
 
-		const createImgLink = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Gallery notes' } );
+		const createImgLink = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Gallery notes' } );
 		await expect( createImgLink ).toBeVisible();
 
 		await Promise.all( [
@@ -457,7 +457,7 @@ test( 'search, PDF pages and galleries after migration (TYPES-2, TYPES-4, HIST-8
 		] );
 
 		await page.waitForSelector( '.layers-canvas' );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Gallery notes' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Gallery notes' );
 
 		// Wait for image background to load
 		await page.waitForFunction( () => {

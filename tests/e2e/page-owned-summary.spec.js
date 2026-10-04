@@ -7,10 +7,10 @@
  * 1. Opening editor on owner's current revision (Special:EditLayersPage) shows
  *    a field labelled "Summary:" in the header that is initially empty.
  * 2. Automatic summary, one change: Moving a layer and saving with empty summary
- *    records exact comment 'Edited drawing “Welcome Slide”' with tag 'layers-page-drawing'.
+ *    records exact comment 'Edited layer set “Welcome Slide”' with tag 'layers-page-drawing'.
  * 3. Automatic summary, two changes: Renaming drawing to "Summary probe", moving a layer,
  *    and saving with empty summary records exact comment
- *    'Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”'.
+ *    'Renamed layer set “Welcome Slide” to “Summary probe”; Edited layer set “Summary probe”'.
  * 4. Typed summary: Moving a layer, typing "Probe summary" into the field, and saving
  *    records exact comment 'Probe summary', and clears the field afterwards.
  * 5. History page: Opening action=history shows the three summaries on the three newest rows in order.
@@ -141,7 +141,7 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		// Step 2: Automatic, one change:
 		//         - Move the text layer (select it in layer list, press ArrowDown).
 		//         - Press Save with Summary field empty.
-		//         - New revision comment must be exactly: Edited drawing “Welcome Slide”
+		//         - New revision comment must be exactly: Edited layer set “Welcome Slide”
 		//         - New revision must carry layers-page-drawing tag.
 		// =========================================================================
 		await moveTextLayer();
@@ -170,16 +170,16 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		} );
 		const revData1 = revQuery1.query.pages[ 0 ].revisions[ 0 ];
 		expect( revData1.revid ).toBe( rev1 );
-		expect( revData1.comment ).toBe( 'Edited drawing “Welcome Slide”' );
+		expect( revData1.comment ).toBe( 'Edited layer set “Welcome Slide”' );
 		expect( revData1.tags ).toContain( 'layers-page-drawing' );
 
 		// =========================================================================
 		// Step 3: Automatic, two changes:
-		//         - Rename drawing to "Summary probe" with Rename button.
+		//         - Rename layer set to "Summary probe" with Rename button.
 		//         - Move the layer again.
 		//         - Save with Summary field empty.
 		//         - Comment must be exactly:
-		//           Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”
+		//           Renamed layer set “Welcome Slide” to “Summary probe”; Edited layer set “Summary probe”
 		// =========================================================================
 		const renameBtn = page.locator( 'button.layers-page-drawing-rename' );
 		await expect( renameBtn ).toBeVisible();
@@ -188,7 +188,7 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		await expect( promptInput ).toBeVisible();
 		await promptInput.fill( 'Summary probe' );
 		await page.locator( '.layers-modal-buttons button.layers-btn-primary' ).click();
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Summary probe' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Summary probe' );
 
 		await moveTextLayer();
 
@@ -216,7 +216,7 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		} );
 		const revData2 = revQuery2.query.pages[ 0 ].revisions[ 0 ];
 		expect( revData2.revid ).toBe( rev2 );
-		expect( revData2.comment ).toBe( 'Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”' );
+		expect( revData2.comment ).toBe( 'Renamed layer set “Welcome Slide” to “Summary probe”; Edited layer set “Summary probe”' );
 		expect( revData2.tags ).toContain( 'layers-page-drawing' );
 
 		// =========================================================================
@@ -265,8 +265,8 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		//         - Open action=history for owner.
 		//         - Check that the three summaries appear on the three newest rows, in order:
 		//           Row 0 (newest, rev3): "Probe summary"
-		//           Row 1 (rev2): "Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”"
-		//           Row 2 (rev1): "Edited drawing “Welcome Slide”"
+		//           Row 1 (rev2): "Renamed layer set “Welcome Slide” to “Summary probe”; Edited layer set “Summary probe”"
+		//           Row 2 (rev1): "Edited layer set “Welcome Slide”"
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&action=history` );
 		await page.waitForSelector( '#pagehistory' );
@@ -279,12 +279,12 @@ test( 'every drawing save through the editor gets a summary in page history (HIS
 		// Row 1: rev2 with two automatic changes
 		await expect( historyRows.nth( 1 ) ).toHaveAttribute( 'data-mw-revid', String( rev2 ) );
 		await expect( historyRows.nth( 1 ).locator( '.comment' ) ).toContainText(
-			'Renamed drawing “Welcome Slide” to “Summary probe”; Edited drawing “Summary probe”'
+			'Renamed layer set “Welcome Slide” to “Summary probe”; Edited layer set “Summary probe”'
 		);
 
 		// Row 2: rev1 with one automatic change
 		await expect( historyRows.nth( 2 ) ).toHaveAttribute( 'data-mw-revid', String( rev1 ) );
-		await expect( historyRows.nth( 2 ).locator( '.comment' ) ).toContainText( 'Edited drawing “Welcome Slide”' );
+		await expect( historyRows.nth( 2 ).locator( '.comment' ) ).toContainText( 'Edited layer set “Welcome Slide”' );
 
 		// =========================================================================
 		// Step 6: Restore baseline wikitext and initial snapshot via CAS exact-base publication

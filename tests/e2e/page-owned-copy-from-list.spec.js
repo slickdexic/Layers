@@ -12,7 +12,7 @@
  *    Special:CopyLayersDrawing naming the drawing, source page, revision and this page;
  *    a GET changes nothing.
  * 3. The copy: Submitting with note "J100" creates a new revision tagged layers-page-drawing
- *    with summary 'Copied drawing “anatomy” from [[:Layers migration fixture/Direct]] (revision N): J100'.
+ *    with summary 'Copied the layer set “anatomy” from [[:Layers migration fixture/Direct]] (revision N): J100'.
  *    layersread lists "Welcome Slide" and "anatomy", and copy's layers equal source's.
  *    Copying a second time names the new drawing "anatomy 2".
  * 4. Showing it: Publishing owner page text with [[File:<file>|layerset=<ownerId>:anatomy]]
@@ -237,7 +237,7 @@ test( 'copy drawing from editor list of other pages (HIST-5, TYPES-3, S4)', asyn
 		lastOwnedRevision = latestRev.revid;
 
 		expect( latestRev.tags ).toContain( 'layers-page-drawing' );
-		expect( latestRev.comment ).toMatch( /^Copied drawing “anatomy” from \[\[:Layers migration fixture\/Direct\]\] \(revision \d+\): J100$/ );
+		expect( latestRev.comment ).toMatch( /^Copied the layer set “anatomy” from \[\[:Layers migration fixture\/Direct\]\] \(revision \d+\): J100$/ );
 		expect( latestRev.slots.main.content ).toBe( initialMainText );
 
 		// layersread lists "Welcome Slide" and "anatomy", and copy's layers equal source's

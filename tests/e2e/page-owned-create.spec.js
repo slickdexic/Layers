@@ -9,19 +9,19 @@
  *    {{#Slide:<pageId>:Created slide}}
  *    [[File:<test image>|layerset=<pageId>:Created notes]]
  *    {{#Slide:<pageId + 1>:Other page}}
- * 2. On page view, drawing controls list "Create page drawing: Created slide"
- *    and "Create page drawing: Created notes", and nothing for "Other page".
+ * 2. On page view, drawing controls list "Create layer set: Created slide"
+ *    and "Create layer set: Created notes", and nothing for "Other page".
  *    The first two embeds show no drawing yet.
- * 3. Slide: Open "Create page drawing: Created slide". Header reads "Drawing: Created slide".
- *    Press Rename drawing: message is the exact English text of layers-page-drawing-rename-new.
+ * 3. Slide: Open "Create layer set: Created slide". Header reads "Layer set: Created slide".
+ *    Press Rename layer set: message is the exact English text of layers-page-drawing-rename-new.
  *    Leave editor without saving: latest revision ID does not change.
  * 4. Draft: Open it again, draw one rectangle, reload editor page, restore draft from recovery dialog,
  *    and check rectangle is there. Save with empty summary. Exactly one new revision appears with
- *    comment 'Added drawing “Created slide”' and tag 'layers-page-drawing'; layers slot holds
+ *    comment 'Added layer set “Created slide”' and tag 'layers-page-drawing'; layers slot holds
  *    baseline drawing unchanged plus slide named "Created slide" with one rectangle.
- * 5. Image: Open "Create page drawing: Created notes". Editor shows uploaded image; draw one shape
+ * 5. Image: Open "Create layer set: Created notes". Editor shows uploaded image; draw one shape
  *    and save. New drawing is of kind 'image' with its source naming the uploaded file's current version.
- * 6. On page view, both drawings are painted, controls read "Edit page drawing: …" for both,
+ * 6. On page view, both drawings are painted, controls read "Edit layer set: …" for both,
  *    and "Other page" still shows nothing.
  * 7. Accessibility rerun on tests/e2e/accessibility.spec.js.
  * 8. Baseline restoration by exact-base publication, in main flow and finally.
@@ -215,8 +215,8 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 
 		// =========================================================================
 		// Step 2: On page view:
-		//         - Controls must list "Create page drawing: Created slide"
-		//         - Controls must list "Create page drawing: Created notes"
+		//         - Controls must list "Create layer set: Created slide"
+		//         - Controls must list "Create layer set: Created notes"
 		//         - Nothing for "Other page"
 		//         - First two embeds show no drawing yet
 		// =========================================================================
@@ -226,10 +226,10 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		const controls = page.locator( '.layers-page-edit-controls' );
 		await expect( controls ).toBeVisible();
 
-		const createSlideLink = controls.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Created slide' } );
+		const createSlideLink = controls.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Created slide' } );
 		await expect( createSlideLink ).toBeVisible();
 
-		const createNotesLink = controls.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Created notes' } );
+		const createNotesLink = controls.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Created notes' } );
 		await expect( createNotesLink ).toBeVisible();
 
 		// Nothing for "Other page"
@@ -242,9 +242,9 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 
 		// =========================================================================
 		// Step 3: Slide:
-		//         - Open "Create page drawing: Created slide"
-		//         - Header reads "Drawing: Created slide"
-		//         - Press Rename drawing: message must be exact English text of layers-page-drawing-rename-new
+		//         - Open "Create layer set: Created slide"
+		//         - Header reads "Layer set: Created slide"
+		//         - Press Rename layer set: message must be exact English text of layers-page-drawing-rename-new
 		//         - Leave editor without saving: latest revid must not change
 		// =========================================================================
 		await Promise.all( [
@@ -254,9 +254,9 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
 		const nameText = page.locator( '.layers-page-drawing-name-text' );
-		await expect( nameText ).toHaveText( 'Drawing: Created slide' );
+		await expect( nameText ).toHaveText( 'Layer set: Created slide' );
 
-		// Press Rename drawing
+		// Press Rename layer set
 		const renameBtn = page.locator( 'button.layers-page-drawing-rename' );
 		await expect( renameBtn ).toBeVisible();
 		await renameBtn.click();
@@ -268,9 +268,9 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		// Refusal notification with exact text
 		const errorNotif = page.locator( '.mw-notification.mw-notification-type-error' );
 		await expect( errorNotif.last() ).toContainText(
-			"Save this new drawing before renaming it: the page's embed names it, and would no longer find it."
+			"Save this new layer set before renaming it: the page's embed names it, and would no longer find it."
 		);
-		await expect( nameText ).toHaveText( 'Drawing: Created slide' );
+		await expect( nameText ).toHaveText( 'Layer set: Created slide' );
 
 		// Leave editor without saving; assert latest revision ID is unchanged
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
@@ -288,19 +288,19 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 
 		// =========================================================================
 		// Step 4: Draft:
-		//         - Open "Create page drawing: Created slide" again
+		//         - Open "Create layer set: Created slide" again
 		//         - Draw one rectangle
 		//         - Reload editor page, restore draft from recovery dialog
 		//         - Check rectangle is there
 		//         - Save with empty summary
 		//         - Exactly one new revision appears (rev2)
-		//         - Comment is exactly 'Added drawing “Created slide”'
+		//         - Comment is exactly 'Added layer set “Created slide”'
 		//         - Tag: layers-page-drawing
 		//         - layers slot holds baseline drawing unchanged plus slide "Created slide" with 1 rectangle
 		// =========================================================================
 		page.on( 'dialog', ( prompt ) => prompt.accept() );
 
-		const createSlideLink2 = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Created slide' } );
+		const createSlideLink2 = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Created slide' } );
 		await expect( createSlideLink2 ).toBeVisible();
 		await Promise.all( [
 			page.waitForNavigation(),
@@ -308,7 +308,7 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		] );
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Created slide' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Created slide' );
 
 		// Draw one rectangle
 		await drawRectangle();
@@ -369,7 +369,7 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		const revData2 = revQuery2.query.pages[ 0 ].revisions[ 0 ];
 		expect( revData2.revid ).toBe( rev2 );
 		expect( revData2.parentid ).toBe( rev1 );
-		expect( revData2.comment ).toBe( 'Added drawing “Created slide”' );
+		expect( revData2.comment ).toBe( 'Added layer set “Created slide”' );
 		expect( revData2.tags ).toContain( 'layers-page-drawing' );
 
 		// Verify layers slot holds baseline drawing unchanged plus slide "Created slide" with 1 rectangle
@@ -389,13 +389,13 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 
 		// =========================================================================
 		// Step 5: Image:
-		//         - Open "Create page drawing: Created notes"
+		//         - Open "Create layer set: Created notes"
 		//         - Editor must show the uploaded image
 		//         - Draw one shape and save
 		//         - New drawing must be of kind image with source naming uploaded file's current version
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
-		const createNotesLink2 = page.locator( '.layers-page-edit-link', { hasText: 'Create page drawing: Created notes' } );
+		const createNotesLink2 = page.locator( '.layers-page-edit-link', { hasText: 'Create layer set: Created notes' } );
 		await expect( createNotesLink2 ).toBeVisible();
 
 		await Promise.all( [
@@ -404,7 +404,7 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		] );
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Created notes' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Created notes' );
 
 		// Editor must show the uploaded image
 		await page.waitForFunction( () => {
@@ -442,7 +442,7 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		const revData3 = revQuery3.query.pages[ 0 ].revisions[ 0 ];
 		expect( revData3.revid ).toBe( rev3 );
 		expect( revData3.parentid ).toBe( rev2 );
-		expect( revData3.comment ).toBe( 'Added drawing “Created notes”' );
+		expect( revData3.comment ).toBe( 'Added layer set “Created notes”' );
 		expect( revData3.tags ).toContain( 'layers-page-drawing' );
 
 		// Verify new drawing is of kind image with source naming uploaded file's current version
@@ -461,7 +461,7 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 		// =========================================================================
 		// Step 6: Post-creation page view:
 		//         - Both drawings are painted
-		//         - Controls now read "Edit page drawing: …" for both
+		//         - Controls now read "Edit layer set: …" for both
 		//         - "Other page" still shows nothing
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
@@ -503,11 +503,11 @@ test( 'an embed can start a new drawing: Create link, empty editor, first save a
 			} );
 		} ).toBe( true );
 
-		// Controls now read "Edit page drawing: …" for both
-		const editSlideLink = controlsAfter.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing: Created slide' } );
+		// Controls now read "Edit layer set: …" for both
+		const editSlideLink = controlsAfter.locator( '.layers-page-edit-link', { hasText: 'Edit layer set: Created slide' } );
 		await expect( editSlideLink ).toBeVisible();
 
-		const editNotesLink = controlsAfter.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing: Created notes' } );
+		const editNotesLink = controlsAfter.locator( '.layers-page-edit-link', { hasText: 'Edit layer set: Created notes' } );
 		await expect( editNotesLink ).toBeVisible();
 
 		// "Other page" still shows nothing

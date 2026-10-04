@@ -177,9 +177,9 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 		$comment = fn ( int $revisionId ) => $this->getServiceContainer()->getRevisionLookup()
 			->getRevisionById( $revisionId )->getComment()->text;
 		$id = $service->publish( $page->getTitle(), $actor, 0, $this->snapshot(), '', new WikitextContent( 'Owner' ) );
-		$this->assertSame( 'Added drawing “Ideas”', $comment( $id ) );
+		$this->assertSame( 'Added layer set “Ideas”', $comment( $id ) );
 		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Plans' ), '  ' );
-		$this->assertSame( 'Renamed drawing “Ideas” to “Plans”', $comment( $id ) );
+		$this->assertSame( 'Renamed layer set “Ideas” to “Plans”', $comment( $id ) );
 		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Ideas' ), 'My words' );
 		$this->assertSame( 'My words', $comment( $id ) );
 		$id = $service->publish( $page->getTitle(), $actor, $id, $this->snapshot(), '',
@@ -303,6 +303,10 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( CONTENT_MODEL_JSON, $current->getContent( SlotRecord::MAIN )->getModel() );
 		$this->assertSame( [ 'keep' => true ],
 			json_decode( $current->getContent( SlotRecord::MAIN )->getText(), true ) );
+		$renamed = $this->service()->publish( $page->getTitle(), $actor, $id, $this->snapshot( 'Renamed' ), '' );
+		$this->assertSame( $current->getContent( SlotRecord::MAIN )->getText(),
+			$this->getServiceContainer()->getRevisionLookup()->getRevisionById( $renamed )
+				->getContent( SlotRecord::MAIN )->getText() );
 	}
 
 	public function testWriteAuthorizationOccursOnlyOncePerAction(): void {

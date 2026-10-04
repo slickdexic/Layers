@@ -4,7 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Revision;
 
-/** A drawing's name: unique on its page, and safe to write into an embed on that page. */
+/** A layer-set name, compared within its owning page and file/slide namespace. */
 final class DrawingName {
 	public const MAX_LENGTH = 255;
 
@@ -32,7 +32,7 @@ final class DrawingName {
 
 	/**
 	 * @param string $name A valid name
-	 * @param string[] $taken Names of the page's other drawings
+	 * @param string[] $taken Names in the caller's allocation scope
 	 * @return string $name, or $name with the first free number appended
 	 */
 	public static function unused( string $name, array $taken ): string {
@@ -53,9 +53,11 @@ final class DrawingName {
 	 */
 	public static function assertPublishable( array $surfaces, array $changed ): void {
 		$uses = [];
+		$labels = [];
 		foreach ( $surfaces as $surface ) {
-			$key = self::key( (string)$surface->label );
+			$key = LayerSetIdentity::surfaceKey( $surface );
 			$uses[$key] = ( $uses[$key] ?? 0 ) + 1;
+			$labels[LayerSetIdentity::key( $surface )][(string)$surface->label] = true;
 		}
 		foreach ( $surfaces as $surface ) {
 			if ( !in_array( $surface->id, $changed, true ) ) {
@@ -65,7 +67,8 @@ final class DrawingName {
 			if ( self::normalize( $label ) !== $label ) {
 				throw PublicationException::refusedName( $label, false );
 			}
-			if ( $uses[self::key( $label )] > 1 ) {
+			if ( $uses[LayerSetIdentity::surfaceKey( $surface )] > 1 ||
+				count( $labels[LayerSetIdentity::key( $surface )] ) > 1 ) {
 				throw PublicationException::refusedName( $label, true );
 			}
 		}

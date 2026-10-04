@@ -6,7 +6,7 @@
  * Proves in Chromium on the test wiki (http://localhost:8080) that:
  * 1. Changed drawing gets drawing undo link: On an edit that modified an existing drawing
  *    ("Welcome Slide"), action=history replaces core's undo link with
- *    "undo drawing: Welcome Slide" (class layers-history-undo-link inside .mw-pager-tools;
+ *    "undo layer set: Welcome Slide" (class layers-history-undo-link inside .mw-pager-tools;
  *    href is Special:ViewLayersPage with owner=Layers_browser_acceptance, revid=previous_revid,
  *    and surface=presentation). Core's rollback remains available.
  * 2. Drawing undo flow: Following the link opens Special:ViewLayersPage with the prior canvas
@@ -162,7 +162,7 @@ test( 'page history undo links, feeds and permissions for drawing edits (HIST-2)
 		// Drawing undo link is present with exact attributes
 		const drawingUndoLink = topTools.locator( '.layers-history-undo-link' );
 		await expect( drawingUndoLink ).toBeVisible();
-		await expect( drawingUndoLink ).toHaveText( 'undo drawing: Welcome Slide' );
+		await expect( drawingUndoLink ).toHaveText( 'undo layer set: Welcome Slide' );
 
 		const undoHref = await drawingUndoLink.getAttribute( 'href' );
 		expect( undoHref ).toContain( 'Special:ViewLayersPage' );
@@ -216,7 +216,7 @@ test( 'page history undo links, feeds and permissions for drawing edits (HIST-2)
 		lastOwnedRevision = revRestored.revid;
 
 		expect( revRestored.tags ).toContain( 'layers-page-drawing' );
-		expect( revRestored.comment ).toContain( 'Restored the drawing “Welcome Slide”' );
+		expect( revRestored.comment ).toContain( 'Restored the layer set “Welcome Slide”' );
 		expect( revRestored.slots.main.content ).toBe( initialMainText );
 
 		// PROVE RESTORE BY VALUE: read latest layers slot through API

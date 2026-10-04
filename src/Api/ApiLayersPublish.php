@@ -66,7 +66,8 @@ class ApiLayersPublish extends ApiBase {
 				$params['maintext'] !== null ? new WikitextContent( $params['maintext'] ) : null,
 				$params['pageid'] );
 		} catch ( PublicationException $e ) {
-			$reason = $e->getMessage() === 'layers-owner-unavailable' ?
+			$reason = in_array( $e->getMessage(),
+				[ 'layers-owner-unavailable', 'layers-embedding-source-unavailable' ], true ) ?
 				'layers-invalid-publication-request' : $e->getMessage();
 			$code = in_array( $reason, self::PUBLIC_ERRORS, true ) ? $reason : 'layers-publication-failed';
 			$this->dieWithError( $e->getUserMessage() ?? $code, $code );

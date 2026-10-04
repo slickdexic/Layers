@@ -104,7 +104,7 @@ class CopyFromListTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $copied );
 		$this->assertSame( 'Text of Copy pick target', $revision->getContent( 'main' )->getText(),
 			'the page text is untouched' );
-		$this->assertSame( 'Copied drawing “Welcome Slide 2” from [[:' . $source->getPrefixedText() .
+		$this->assertSame( 'Copied the layer set “Welcome Slide 2” from [[:' . $source->getPrefixedText() .
 			"]] (revision $sourceRev): for the handout", $revision->getComment()->text );
 		$surfaces = $this->surfaces( $revision );
 		$original = json_decode( ( new LayersDocumentContent( $fixture ) )->getCanonicalText(), true )['surfaces'][0];

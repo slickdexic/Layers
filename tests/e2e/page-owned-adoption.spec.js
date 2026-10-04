@@ -204,12 +204,12 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		await expect( controls ).toHaveAttribute( 'aria-labelledby', 'layers-page-edit-controls-heading' );
 
 		const heading = controls.locator( '#layers-page-edit-controls-heading' );
-		await expect( heading ).toHaveText( 'Drawings on this page' );
+		await expect( heading ).toHaveText( 'Layer sets on this page' );
 		await expect( heading ).toHaveAttribute( 'role', 'heading' );
 		await expect( heading ).toHaveAttribute( 'aria-level', '2' );
 
 		const notice = controls.locator( '.layers-page-edit-controls__notice' );
-		await expect( notice ).toContainText( 'Some drawings on this page are shared' );
+		await expect( notice ).toContainText( 'Some layer sets on this page are shared' );
 		await expect( notice ).toContainText( 'shared original is not changed' );
 
 		const adoptLink = controls.locator( '.layers-page-adopt-link' );
@@ -261,7 +261,7 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		// 2. Confirmation page presentation (Special:AdoptLayersDrawing - GET Preview)
 		const confirmationUrl = new URL( await adoptLink.getAttribute( 'href' ), base ).href;
 		await page.goto( confirmationUrl );
-		await expect( page.locator( '#firstHeading' ) ).toHaveText( 'Make a shared drawing owned by a page' );
+		await expect( page.locator( '#firstHeading' ) ).toHaveText( 'Make a shared layer set owned by a page' );
 		await expect( page.locator( 'meta[name="robots"]' ) ).toHaveAttribute( 'content', /noindex,nofollow/ );
 
 		const introParagraph = page.locator( '.mw-htmlform-ooui-wrapper p, #mw-content-text p' ).first();
@@ -311,7 +311,7 @@ test( 'shared-slide adoption presentation verifies notices, confirmation page, r
 		// 3a. Malformed request refusal
 		await page.goto( `${ base }/index.php?title=Special:AdoptLayersDrawing&pageid=invalid` );
 		await expect( page.locator( '#mw-content-text' ) )
-			.toContainText( 'This drawing cannot be made owned by its page right now. Nothing was saved.' );
+			.toContainText( 'This layer set cannot be made owned by its page right now. Nothing was saved.' );
 		await expect( page.locator( '.mw-htmlform' ) ).toHaveCount( 0 );
 		await expect( page.locator( 'button[type="submit"]' ) ).toHaveCount( 0 );
 

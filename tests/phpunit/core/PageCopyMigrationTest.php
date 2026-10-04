@@ -92,7 +92,7 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 			"E [[File:Copied_photo.png|120px]]\n" .
 			"F [[File:Copied_notes.pdf|page=2|layerset=$id:notes (page 2)]]",
 			$revision->getContent( 'main' )->getText() );
-		$this->assertSame( 'Copied 3 shared drawings into this page: "anatomy" from [[:File:Copied photo.png]] ' .
+		$this->assertSame( 'Copied 3 shared layer sets into this page: "anatomy" from [[:File:Copied photo.png]] ' .
 			"(revision $imageRevision), \"labels\" from [[:File:Copied photo.png]] (revision $imageRevision), " .
 			"\"notes (page 2)\" from [[:File:Copied notes.pdf]] (revision $pdfRevision)",
 			$revision->getComment()->text );
@@ -130,7 +130,7 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame(
 			"{{#Slide:$id:Welcome|size=300x200}}\n{{#slide:$id:Deck (intro)}}\n{{#Slide:$id:Deck (outro)}}",
 			$revision->getContent( 'main' )->getText() );
-		$this->assertSame( 'Copied 3 shared drawings into this page: "Welcome" from shared slide “Welcome”, ' .
+		$this->assertSame( 'Copied 3 shared layer sets into this page: "Welcome" from shared slide “Welcome”, ' .
 			'"Deck (intro)" from shared slide “Deck”, "Deck (outro)" from shared slide “Deck”',
 			$revision->getComment()->text );
 		$copies = $this->surfaces( $revision );
@@ -179,7 +179,7 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 			$migration->commit( $plan, $this->actor ) );
 		$this->assertSame( 'Shows [[File:Self_shown.png|layerset=' . $image->getTitle()->getArticleID() . ':anatomy]]',
 			$revision->getContent( 'main' )->getText() );
-		$this->assertSame( "Pointed embeds at this page's own drawings", $revision->getComment()->text );
+		$this->assertSame( "Pointed embeds at this page's own layer sets", $revision->getComment()->text );
 		$this->assertCount( 1, $this->surfaces( $revision ) );
 	}
 

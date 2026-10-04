@@ -329,6 +329,9 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			'fileSetNames',
 			'fileRenderCount',
 			'fileLinkTypes',
+			'fileBindings',
+			'fileRenderParams',
+			'fetchingParsers',
 			'fileParamLayerset',
 			'fileParseCount',
 			'pendingRender',
@@ -621,5 +624,22 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 
 		$this->assertSame( 'first', $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
 		$this->assertSame( 'second', $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
+	}
+
+	public function testImageHookDiscardsAnUnrenderedStagedOccurrence(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$this->setStaticState( [ 'fileRenderParams' => [ 'X.jpg' => [ 'binding' => false ] ] ] );
+		$file = new class {
+			public function getName(): string {
+				return 'X.jpg';
+			}
+		};
+		$dummy = null;
+		$attrs = [];
+		$links = [];
+		$hooks::onImageBeforeProduceHTML( $dummy, null, $file, $attrs, $links );
+		$this->assertSame( [], $this->getStaticState( 'fileRenderParams' ) );
+		$this->assertSame( [], $this->getStaticState( 'fileRenderCount' ) );
 	}
 }

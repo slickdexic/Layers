@@ -10,6 +10,7 @@ namespace MediaWiki\Extension\Layers\Action;
 
 use MediaWiki\Extension\Layers\Migration\FilePageDrawings;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
+use MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Utility\FramingHeaders;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
@@ -91,8 +92,15 @@ class EditLayersAction extends \Action {
 		}
 
 		if ( MigrationState::isCompleteNow() ) {
-			// Shared sets are read-only now; the file's drawings belong to its File: page.
-			$this->showFilePageDrawings( $file->getName(), $initialSetName, $request->getInt( 'page', 1 ) );
+			// Shared sets are read-only now; the file's layer sets belong to its File: page.
+			$page = PageOwnedBindingOptions::sourcePage( [ 'page=' . $request->getText( 'page', '1' ) ],
+				static fn ( string $option ) => substr( $option, strlen( 'page=' ) ) );
+			if ( $file->getMimeType() !== 'application/pdf' ) {
+				$page = 1;
+			} elseif ( $file->isMultipage() && $file->pageCount() > 0 ) {
+				$page = min( $page, $file->pageCount() );
+			}
+			$this->showFilePageDrawings( $file->getName(), $initialSetName, $page );
 			return;
 		}
 
@@ -353,7 +361,7 @@ class EditLayersAction extends \Action {
 	}
 
 	/**
-	 * After the migration: open the File page's drawing the request names, or list its drawings.
+	 * After the migration: open the File page's exact requested layer-set page, or list its entries.
 	 * @param string $fileName
 	 * @param string $setName Requested set, '' for none
 	 * @param int $page Requested PDF page
@@ -361,8 +369,9 @@ class EditLayersAction extends \Action {
 	private function showFilePageDrawings( string $fileName, string $setName, int $page ): void {
 		$out = $this->getOutput();
 		$title = $this->getTitle();
-		[ , $drawings ] = FilePageDrawings::current( $title, $this->getAuthority() );
-		$drawing = FilePageDrawings::find( $drawings, $setName, $page );
+		[ $revisionId, $drawings ] = FilePageDrawings::current( $title, $this->getAuthority() );
+		$drawing = $drawings ? FilePageDrawings::select( $title, $revisionId, $this->getAuthority(),
+			$setName, $page ) : null;
 		if ( $drawing !== null ) {
 			$out->redirect( FilePageDrawings::editUrl( $title, $drawing['id'] ) );
 			return;

@@ -39,10 +39,10 @@ class DrawingNameTest extends \MediaWikiUnitTestCase {
 
 	public function testOnlyNewOrChangedDrawingsAreChecked(): void {
 		$surfaces = [
-			(object)[ 'id' => 'a', 'label' => 'Legacy|name' ],
-			(object)[ 'id' => 'b', 'label' => 'Twin' ],
-			(object)[ 'id' => 'c', 'label' => 'twin' ],
-			(object)[ 'id' => 'd', 'label' => 'Fresh' ]
+			(object)[ 'id' => 'a', 'kind' => 'slide', 'label' => 'Legacy|name' ],
+			(object)[ 'id' => 'b', 'kind' => 'slide', 'label' => 'Twin' ],
+			(object)[ 'id' => 'c', 'kind' => 'slide', 'label' => 'twin' ],
+			(object)[ 'id' => 'd', 'kind' => 'slide', 'label' => 'Fresh' ]
 		];
 		DrawingName::assertPublishable( $surfaces, [ 'd' ] );
 		foreach ( [

@@ -15,6 +15,49 @@
 			this.adapter = adapter;
 			this.wiki = scope.wiki;
 			this.user = scope.user;
+			this._legacySurface = this._legacyOption( scope );
+			this._legacyCandidates = new WeakSet();
+			this._selectedLegacy = null;
+		}
+
+		/** @param {Object} scope Server-authorized draft options @return {?Object} @private */
+		_legacyOption( scope ) {
+			try {
+				const option = Object.getOwnPropertyDescriptor( scope, 'legacySurface' );
+				if ( !option ) {
+					return null;
+				}
+				if ( !Object.prototype.hasOwnProperty.call( option, 'value' ) ) {
+					throw this._error();
+				}
+				const value = option.value;
+				const keys = value && typeof value === 'object' && !Array.isArray( value ) ?
+					Reflect.ownKeys( value ) : [];
+				if ( keys.length !== 2 || !keys.includes( 'surfaceId' ) || !keys.includes( 'baseRevisionId' ) ) {
+					throw this._error();
+				}
+				const surface = Object.getOwnPropertyDescriptor( value, 'surfaceId' );
+				const base = Object.getOwnPropertyDescriptor( value, 'baseRevisionId' );
+				if ( !surface || !base || !Object.prototype.hasOwnProperty.call( surface, 'value' ) ||
+					!Object.prototype.hasOwnProperty.call( base, 'value' ) ||
+					typeof surface.value !== 'string' || surface.value.length === 0 ||
+					!Number.isInteger( base.value ) || base.value < 1 || base.value > 2147483647 ) {
+					throw this._error();
+				}
+				return Object.freeze( { surfaceId: surface.value, baseRevisionId: base.value } );
+			} catch ( error ) {
+				throw this._error();
+			}
+		}
+
+		/** @param {Object} scope Current exact identity @return {?Object} @private */
+		_legacyScope( scope ) {
+			if ( !this._legacySurface || this._legacySurface.baseRevisionId !== scope.baseRevisionId ||
+				this._legacySurface.surfaceId === scope.surfaceId ||
+				typeof this.bridge.session.isUnsavedNew !== 'function' || !this.bridge.session.isUnsavedNew() ) {
+				return null;
+			}
+			return Object.assign( {}, scope, { surfaceId: this._legacySurface.surfaceId } );
 		}
 
 		/** @return {Object} Current identity; rejects unloaded, disposed and historical sessions */
@@ -64,7 +107,11 @@
 		 * @return {?Object} Candidate for explicit recovery; publicationBlocked requires reconciliation
 		 */
 		inspectRecovery() {
-			const scope = this._scope();
+			const current = this._scope();
+			const scope = this._selectedLegacy ? this._legacyScope( current ) : current;
+			if ( !scope || ( this._selectedLegacy && this._selectedLegacy.surfaceId !== scope.surfaceId ) ) {
+				throw this._error();
+			}
 			const raw = this.store.read( scope );
 			if ( raw === null ) {
 				return null;
@@ -93,7 +140,17 @@
 
 		/** @return {Array} IDs of independent records for this authorized exact revision */
 		listCandidates() {
-			return this.store.listCandidates( this._scope() );
+			const scope = this._scope();
+			const candidates = this.store.listCandidates( scope );
+			const legacy = this._legacyScope( scope );
+			if ( legacy ) {
+				for ( const writerId of this.store.listCandidates( legacy ) ) {
+					const candidate = Object.freeze( { surfaceId: legacy.surfaceId, writerId } );
+					this._legacyCandidates.add( candidate );
+					candidates.push( candidate );
+				}
+			}
+			return candidates;
 		}
 
 		/** @param {Array} ids Record IDs @return {Array} Text-preview data; corrupt records remain untouched */
@@ -108,9 +165,19 @@
 			} );
 		}
 
-		/** @param {?string} writerId Select a source only; writes retain this editor's independent ID */
-		selectRecovery( writerId ) {
-			this.store.selectRecovery( writerId );
+		/** @param {string|Object|null} candidate Source only; writes retain this editor's independent ID */
+		selectRecovery( candidate ) {
+			if ( candidate !== null && typeof candidate === 'object' ) {
+				const legacy = this._legacyScope( this._scope() );
+				if ( !this._legacyCandidates.has( candidate ) || !legacy || candidate.surfaceId !== legacy.surfaceId ) {
+					throw this._error();
+				}
+				this.store.selectRecovery( candidate.writerId );
+				this._selectedLegacy = candidate;
+			} else {
+				this.store.selectRecovery( candidate );
+				this._selectedLegacy = null;
+			}
 		}
 
 		/** @return {Error} @private */

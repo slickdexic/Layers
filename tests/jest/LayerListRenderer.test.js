@@ -438,7 +438,7 @@ describe( 'LayerListRenderer', () => {
 				star: 'Star',
 				arrow: 'Arrow',
 				line: 'Line',
-				path: 'Drawing'
+				path: 'Freehand layer'
 			};
 
 			for ( const [ type, expected ] of Object.entries( types ) ) {

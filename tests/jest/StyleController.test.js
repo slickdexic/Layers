@@ -187,10 +187,10 @@ describe('StyleController', () => {
 			expect(() => sc.applyToLayer(null, { color: '#000' })).not.toThrow();
 		});
 
-		test('uses default fontSize for text without fontSize', () => {
+		test('does not add text properties absent from the requested changes', () => {
 			const layer = { type: 'text' };
 			sc.applyToLayer(layer, {});
-			expect(layer.fontSize).toBe(16);
+			expect(layer).toStrictEqual({ type: 'text' });
 		});
 	});
 

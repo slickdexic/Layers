@@ -26,6 +26,8 @@ class PageDrawingCopy {
 	private DirectEmbeddingRewriter $rewriter;
 	/** @var callable */
 	private $fileTargets;
+	/** @var callable|null */
+	private $sourcePages;
 
 	/**
 	 * @param PageOwnedIdentityResolver $identities
@@ -34,10 +36,11 @@ class PageDrawingCopy {
 	 * @param PagePublicationService $publisher
 	 * @param DirectEmbeddingRewriter $rewriter Scanner configured with the wiki's extension tags
 	 * @param callable $fileTargets Canonical `File:` target of a link head, or null
+	 * @param callable|null $sourcePages Native effective file page for a scanned embed
 	 */
 	public function __construct( PageOwnedIdentityResolver $identities, RevisionLookup $revisions,
 		TitleFactory $titles, PagePublicationService $publisher, DirectEmbeddingRewriter $rewriter,
-		callable $fileTargets
+		callable $fileTargets, ?callable $sourcePages = null
 	) {
 		$this->identities = $identities;
 		$this->revisions = $revisions;
@@ -46,6 +49,7 @@ class PageDrawingCopy {
 		$this->publisher = $publisher;
 		$this->rewriter = $rewriter;
 		$this->fileTargets = $fileTargets;
+		$this->sourcePages = $sourcePages;
 	}
 
 	/**
@@ -65,7 +69,7 @@ class PageDrawingCopy {
 		foreach ( $this->rewriter->scan( $main, $this->fileTargets ) as $candidate ) {
 			try {
 				$source = $this->source( $candidate, $pageId, null, $authority );
-				if ( !$source || isset( $taken[DrawingName::key( $source['label'] )] ) ) {
+				if ( !$source || isset( $taken[LayerSetIdentity::key( $source['surface'] )] ) ) {
 					continue;
 				}
 				$entries[] = [ 'label' => $source['label'], 'source' => $source['title'], 'params' => [
@@ -215,11 +219,10 @@ class PageDrawingCopy {
 		if ( !$copy ) {
 			throw new PublicationException( 'layers-copy-source-unavailable' );
 		}
-		$taken = array_map( static fn ( $surface ) => (string)$surface->label, $document->surfaces );
+		$taken = LayerSetIdentity::namesInScope( $document->surfaces, $copy );
 		$label = DrawingName::unused( DrawingName::normalize( (string)$copy->label ) ?? 'Copy', $taken );
-		$copy->id = NewPageDrawing::surfaceId( $pageId, $revisionId, $label );
-		$copy->label = $label;
-		$document->surfaces[] = $copy;
+		$document->surfaces = array_merge( $document->surfaces,
+			self::copySet( $source->surfaces, $copy, $pageId, $revisionId, $label ) );
 		return [ 'owner' => $owner, 'source' => $title, 'label' => $label, 'sourceRevision' => $sourceRevisionId,
 			'document' => JsonSnapshotCodec::encode( $document ) ];
 	}
@@ -260,13 +263,11 @@ class PageDrawingCopy {
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-copy-source-unavailable' );
 		}
-		if ( isset( $taken[DrawingName::key( $source['label'] )] ) ) {
+		if ( isset( $taken[LayerSetIdentity::key( $source['surface'] )] ) ) {
 			throw PublicationException::refusedName( $source['label'], true );
 		}
-		$copy = clone $source['surface'];
-		$copy->id = NewPageDrawing::surfaceId( $pageId, $revisionId, $source['label'] );
-		$copy->label = $source['label'];
-		$document->surfaces[] = $copy;
+		$document->surfaces = array_merge( $document->surfaces,
+			self::copySet( $source['surfaces'], $source['surface'], $pageId, $revisionId, $source['label'] ) );
 		try {
 			$main = $this->rewriter->rewrite( $main, $start, $expected, $pageId, $source['label'], $this->fileTargets );
 		} catch ( \InvalidArgumentException $e ) {
@@ -298,7 +299,7 @@ class PageDrawingCopy {
 			(object)[ 'schemaVersion' => DocumentSchema::VERSION, 'surfaces' => [] ];
 		$taken = [];
 		foreach ( $document->surfaces as $surface ) {
-			$taken[DrawingName::key( (string)$surface->label )] = true;
+			$taken[LayerSetIdentity::key( $surface )] = true;
 		}
 		return [ $owner, $main->getText(), $taken, $document ];
 	}
@@ -329,14 +330,55 @@ class PageDrawingCopy {
 		$text = $this->access->read( $title, $revisionId, $authority, $named['pageId'] )->getText();
 		$surfaceId = PageOwnedBinding::resolveNamed( $named,
 			json_decode( $text, true, 64, JSON_THROW_ON_ERROR )['surfaces'],
-			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null );
+			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null,
+			$candidate['kind'] === 'file' ? $this->sourcePage( $candidate ) : null );
 		$surfaces = $surfaceId === null ? [] : json_decode( $text, false, 64, JSON_THROW_ON_ERROR )->surfaces;
 		foreach ( $surfaces as $surface ) {
 			if ( $surface->id === $surfaceId ) {
 				$label = DrawingName::normalize( (string)$surface->label ) ?? $named['name'];
-				return [ 'title' => $title, 'revisionId' => $revisionId, 'label' => $label, 'surface' => $surface ];
+				return [ 'title' => $title, 'revisionId' => $revisionId, 'label' => $label, 'surface' => $surface,
+					'surfaces' => $surfaces ];
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Copy every internal page of the selected set from the same exact source revision.
+	 * @param \stdClass[] $surfaces
+	 * @param \stdClass $selected
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param string $label One allocated destination name
+	 * @return \stdClass[]
+	 */
+	private static function copySet( array $surfaces, \stdClass $selected, int $pageId, int $revisionId,
+		string $label
+	): array {
+		$key = LayerSetIdentity::key( $selected );
+		$copies = [];
+		foreach ( $surfaces as $surface ) {
+			if ( LayerSetIdentity::key( $surface ) !== $key ) {
+				continue;
+			}
+			$copy = clone $surface;
+			$copy->id = NewPageDrawing::surfaceId( $pageId, $revisionId, $label,
+				$copy->kind === 'slide' ? null : $copy->source->fileTitle,
+				$copy->kind === 'pdf' ? $copy->source->page : 1 );
+			$copy->label = $label;
+			$copies[] = $copy;
+		}
+		return $copies;
+	}
+
+	/** @param array $candidate Scanned embed @return int Effective file page */
+	private function sourcePage( array $candidate ): int {
+		if ( $this->sourcePages !== null ) {
+			return ( $this->sourcePages )( $candidate );
+		}
+		return PageOwnedBindingOptions::sourcePage( $candidate['options'], static function ( string $option ): ?string {
+			$parts = explode( '=', $option, 2 );
+			return trim( $parts[0] ) === 'page' && isset( $parts[1] ) ? $parts[1] : null;
+		} );
 	}
 }

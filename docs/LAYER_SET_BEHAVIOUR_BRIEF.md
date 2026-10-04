@@ -8,6 +8,14 @@ Vocabulary: people see **layers** and **layer set**, never "drawing". Page IDs n
 
 A layer set belongs to a file (or a slide), to a page, and has a name. A page's layer set called ABC on `Manual.pdf` is a different layer set from another page's ABC on the same file, and from this page's ABC on a different file. The same file used twice on one page with `layerset=ABC` is one layer set. Each page controls only its own layer sets. A PDF is a file like any other, so it can have several layer sets (ABC, XYZ and so on), each with its own name. A layer set on a PDF covers the whole document: it holds the layers of every page, kept separately for each page and shown in the editor under "Page 1", "Page 2" and so on. The author never names pages: `layerset=ABC` names the layer set, and the embed's `page=2` chooses which page is shown. The author writes `[[File:Name.jpg|layerset=ABC]]` and nothing else; the system finds this page's layer set.
 
+### Owner clarification — October 1, 2026: one name for the whole PDF layer set
+
+For `Filename.pdf` on wiki page ID 150, `layerset=001` identifies **one layer set covering all 99 PDF pages**. Every PDF page's layers belong to that same `001`. Another wiki page may own a separate `001` on the same PDF; another file on wiki page 150 may also have its own `001`.
+
+The layer set's identity is **owning wiki page + file + layer-set name**. A PDF page number or internal surface ID selects a part inside that layer set; it does not create another layer-set identity or name. Internal references could conceptually be `150:001:P1` through `150:001:P99` within the file's identity, but this is illustrative, not new embed syntax or a prescribed ID encoding. The author sees and writes only `layerset=001`; `page=37` selects PDF page 37. All pages keep the same layer-set name. A rename affects the whole layer set; adding layers on another PDF page never allocates a different layer-set name.
+
+This clarifies the already-approved model and advances HIST-4. It does not approve the separate proposed viewer rendering mechanism or legacy-data reconciliation writes.
+
 ## 2. What a reader sees on a page
 
 - The image, slide or PDF page with its layers, as today.

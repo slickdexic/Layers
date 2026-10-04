@@ -13,11 +13,11 @@
  *    and writes nothing. Axe-core accessibility check runs with 0 critical/serious violations.
  *    Press Cancel: returns to page and nothing was written.
  * 4. Follow link again, enter note "J91 copy" and confirm: exactly one new revision appears.
- *    Comment is exactly 'Copied drawing “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy'.
+ *    Comment is exactly 'Copied the layer set “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy'.
  *    Main text rewrites embed to owner's own page ID. layers slot holds baseline drawing unchanged
  *    plus "Welcome Slide" with new ID (not presentation) and same layers as source.
  * 5. Layers_history_test still at same revision.
- * 6. On page view, copy is painted, controls read "Edit page drawing: Welcome Slide", no copy link.
+ * 6. On page view, copy is painted, controls read "Edit layer set: Welcome Slide", no copy link.
  *    Open editor from link, move a layer, save: owner changes, source 227 remains unchanged.
  * 7. Clean baseline restoration via CAS exact-base publication in main flow and finally.
  */
@@ -165,7 +165,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		// =========================================================================
 		// Step 2: On page view:
 		//         - The embed shows no drawing
-		//         - No "Edit page drawing: Welcome Slide" link
+		//         - No "Edit layer set: Welcome Slide" link
 		//         - Controls list exactly one "Copy “Welcome Slide” from Layers history test to this page" link
 		// =========================================================================
 		await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
@@ -176,7 +176,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		await expect( page.locator( '.layers-bound-slide canvas' ) ).toHaveCount( 0 );
 
 		// No edit link for Welcome Slide
-		await expect( controls.locator( '.layers-page-edit-link', { hasText: 'Edit page drawing: Welcome Slide' } ) ).toHaveCount( 0 );
+		await expect( controls.locator( '.layers-page-edit-link', { hasText: 'Edit layer set: Welcome Slide' } ) ).toHaveCount( 0 );
 
 		// Exactly one copy link
 		const copyLink = controls.locator( '.layers-page-copy-link' );
@@ -196,7 +196,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		] );
 
 		// Special:CopyLayersDrawing loaded
-		await expect( page.locator( '#firstHeading' ) ).toContainText( 'Copy a drawing from another page' );
+		await expect( page.locator( '#firstHeading' ) ).toContainText( 'Copy a layer set from another page' );
 		const pageContent = page.locator( '#mw-content-text' );
 		await expect( pageContent ).toContainText( 'Layers history test' );
 		await expect( pageContent ).toContainText( String( sourceRevId ) );
@@ -254,7 +254,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		// Step 4: Follow link again, type note "J91 copy" and confirm:
 		//         - Exactly one new revision appears (rev2)
 		//         - Comment is exactly:
-		//           'Copied drawing “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy'
+		//           'Copied the layer set “Welcome Slide” from [[:Layers history test]] (revision <N>): J91 copy'
 		//         - Main text names owner's own page ID in embed
 		//         - layers slot holds baseline drawing unchanged plus "Welcome Slide"
 		//           with new ID (not presentation) and same layers as source
@@ -294,7 +294,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		expect( revData2.parentid ).toBe( rev1 );
 
 		// Comment must be exactly:
-		expect( revData2.comment ).toBe( `Copied drawing “Welcome Slide” from [[:Layers history test]] (revision ${ sourceRevId }): J91 copy` );
+		expect( revData2.comment ).toBe( `Copied the layer set “Welcome Slide” from [[:Layers history test]] (revision ${ sourceRevId }): J91 copy` );
 		expect( revData2.tags ).toContain( 'layers-page-drawing' );
 
 		// Main text must name owner's own page ID in embed
@@ -333,7 +333,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		// =========================================================================
 		// Step 6: On page view:
 		//         - Copy is painted
-		//         - Controls read "Edit page drawing: Welcome Slide"
+		//         - Controls read "Edit layer set: Welcome Slide"
 		//         - Offer no copy link
 		//         - Open editor from that link, move a layer and save:
 		//           owner changes, and 227 is still at same revision with layer where it was
@@ -348,9 +348,9 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 		const slideCanvas = slideHost.locator( 'canvas' );
 		await expect( slideCanvas ).toBeVisible();
 
-		// Controls read "Edit page drawing: Welcome Slide"
+		// Controls read "Edit layer set: Welcome Slide"
 		const editWelcomeLink = controlsAfterCopy.locator( '.layers-page-edit-link', {
-			hasText: 'Edit page drawing: Welcome Slide'
+			hasText: 'Edit layer set: Welcome Slide'
 		} );
 		await expect( editWelcomeLink ).toBeVisible();
 
@@ -365,7 +365,7 @@ test( 'copy another page’s drawing into a page from its embed (HIST-5, TYPES-3
 
 		await page.waitForFunction( () => window.layersEditorInstance?.apiManager?.pageOwnedDrafts?.ready === true );
 		await page.waitForFunction( () => ( window.layersEditorInstance?.stateManager?.get( 'layers' ) || [] ).length > 0 );
-		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Drawing: Welcome Slide' );
+		await expect( page.locator( '.layers-page-drawing-name-text' ) ).toHaveText( 'Layer set: Welcome Slide' );
 
 		// Move a layer
 		const layerItem = page.locator( '.layer-item:not(.background-layer-item)' ).first();

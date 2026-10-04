@@ -114,12 +114,27 @@ class PagePublicationService {
 		}
 		$document = json_decode( $content->getText() );
 		$stored = $this->access->getStoredSurfaces( $owner, $baseRevisionId, $authority );
+		$rename = LayerSetRename::prepare( $stored, $document->surfaces );
+		$document->surfaces = $rename['surfaces'];
+		// Admission and source validation must see every expanded sibling change, in canonical bytes.
+		$expanded = JsonSnapshotCodec::encode( $document );
+		if ( $expanded !== $content->getText() ) {
+			try {
+				$content = new LayersDocumentContent( $expanded );
+				$content = new LayersDocumentContent( $content->getCanonicalText() );
+			} catch ( LossyLayerException $e ) {
+				throw PublicationException::refusedLayer( $e );
+			} catch ( \InvalidArgumentException $e ) {
+				throw new PublicationException( 'layers-invalid-snapshot', 0, $e );
+			}
+		}
+		$document = json_decode( $content->getText() );
 		$changed = self::changedSurfaceIds( $stored, $document );
 		DrawingName::assertPublishable( $document->surfaces, $changed );
 		if ( trim( $summary ) === '' ) {
 			$summary = DrawingAutoSummary::text( $stored, $document );
 		}
-		$main = $this->withRenamedEmbeds( $owner, $authority, $baseRevisionId, $stored, $document, $main );
+		$main = $this->withRenamedEmbeds( $owner, $authority, $baseRevisionId, $rename['renames'], $main );
 		foreach ( $document->surfaces as $surface ) {
 			if ( in_array( $surface->id, $changed, true ) && !PageOwnedRenderCapability::isRenderable( $surface ) ) {
 				throw new PublicationException( 'layers-content-not-renderable' );
@@ -250,35 +265,30 @@ class PagePublicationService {
 	}
 
 	/**
-	 * A renamed drawing keeps its embeds on this page: they are rewritten in the same revision.
+	 * A renamed layer set keeps its embeds on this page: they are rewritten in the same revision.
 	 * @param Title $owner
 	 * @param Authority $authority
 	 * @param int $baseRevisionId
-	 * @param \stdClass[] $stored The base revision's drawings
-	 * @param \stdClass $document Canonical proposed document
+	 * @param array[] $renames Scoped instructions derived from the exact base
 	 * @param WikitextContent|null $main Main text sent with the drawings, if any
 	 * @return WikitextContent|null Main text to publish
 	 */
-	private function withRenamedEmbeds( Title $owner, Authority $authority, int $baseRevisionId, array $stored,
-		\stdClass $document, ?WikitextContent $main
+	private function withRenamedEmbeds( Title $owner, Authority $authority, int $baseRevisionId, array $renames,
+		?WikitextContent $main
 	): ?WikitextContent {
-		$old = [];
-		foreach ( $stored as $surface ) {
-			$old[$surface->id] = DrawingName::key( (string)$surface->label );
-		}
-		$renames = [];
-		foreach ( $document->surfaces as $surface ) {
-			if ( isset( $old[$surface->id] ) && $old[$surface->id] !== DrawingName::key( (string)$surface->label ) ) {
-				$renames[$old[$surface->id]] = (string)$surface->label;
-			}
-		}
-		$text = !$renames ? null :
-			( $main ? $main->getText() : $this->access->getStoredMainText( $owner, $baseRevisionId, $authority ) );
-		if ( $text === null ) {
+		if ( !$renames ) {
 			return $main;
 		}
+		// Non-wikitext owners cannot contain named embeds; retain their supported slot-only edits.
+		if ( $main === null && $owner->getContentModel( IDBAccessObject::READ_LATEST ) !== CONTENT_MODEL_WIKITEXT ) {
+			return null;
+		}
+		$text = $main ? $main->getText() : $this->access->getStoredMainText( $owner, $baseRevisionId, $authority );
+		if ( $text === null ) {
+			throw new PublicationException( 'layers-embedding-source-unavailable' );
+		}
 		try {
-			$rewritten = ( new DirectEmbeddingRewriter() )->renameReferences( $text,
+			$rewritten = ( new DirectEmbeddingRewriter() )->renameScopedReferences( $text,
 				$owner->getArticleID( IDBAccessObject::READ_LATEST ), $renames,
 				static function ( string $name ): ?string {
 					$title = Title::newFromText( $name );
@@ -286,8 +296,7 @@ class PagePublicationService {
 						!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
 				}, MigrationState::isCompleteNow() );
 		} catch ( \InvalidArgumentException $e ) {
-			// Text the scanner refuses keeps its bytes; its named embeds then show nothing.
-			return $main;
+			throw new PublicationException( 'layers-embedding-source-unavailable', 0, $e );
 		}
 		return $rewritten === $text ? $main : new WikitextContent( $rewritten );
 	}

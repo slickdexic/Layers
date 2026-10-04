@@ -1,4 +1,151 @@
-# Junior implementation review — J01–J112
+# Junior implementation review — J01–J113
+
+## October 4 continuation: native environment restored; J113F ready
+
+Advances HIST-4/HIST-8/HIST-9, DATA-1 and OPS-2/OPS-3/OPS-4. The existing
+environment passed idle preflight and the lead's fresh compatibility/pilot gate
+(**191 / 2,357**). Full standalone **1,486 / 3,662 / 1 existing skip**, full
+JavaScript/static gates **15,190 / 208 suites** and repository PHP syntax/style
+checks pass. These reruns preserve the earlier implementation baseline; they
+do not complete the missing J113E journeys, foreign-owner/no-write comparisons
+or negative controls. Resume that assignment under its existing packet.
+
+[J113F](J113F_MIGRATION_NAME_ALLOCATION_PACKET.md) is ready for external
+implementation after J113E, or by a separate junior in parallel. A delegated
+read-only review checked the allocation contract; the lead incorporated its
+source-topology, exact-name and observable-control clarifications. The helper
+allocates once per new PDF group within its file scope, returns names without
+mutating surfaces and has no production callers. It leaves source admission,
+historical resume/reconciliation, writes and undo with the lead. No junior
+implementation or acceptance is claimed. Selected browser/native evidence is
+preserved in the [checkpoint archive](CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md).
+
+## J113E external read-only review returned; native evidence deferred — October 4, 2026
+
+The lead received the junior's report. No demonstrated production defect or test change was returned. The three assigned gaps—redirect/current-editor composition, foreign-owner migration IDs, and deterministic full-byte no-write comparisons—and both required negative controls remain incomplete while the existing Docker engine is unavailable. This is an accepted limited read-only review, not completion of the implementation-review assignment. Earlier lead native **191 / 2,357** is historical scoped evidence; external standalone **1,486 / 3,662 / 1 existing skip** and style/static/docs checks passed. No control/restoration claim is inferred.
+
+The existing packet remains the junior's assignment when a fresh idle native preflight can pass. The [team update](TEAM_STATUS_2026-10-04.md) records the checkpoint recommendation and conditional testing-readiness estimate. No production/test behavior, ordinary wiki/configuration state, activation, commit or push changed for this status review.
+
+## J113D accepted; J113E lead integration implemented — October 4, 2026
+
+Advances **HIST-4/HIST-8/DATA-1**. The lead reviewed the external J113D implementation and its native parsed-binding/complete-payload cases. Distinct normalized group counting, first stored spelling, exact-name precedence and the unchanged numeric-suffix pattern are accepted. No production correction was required. The junior's original before-fix regressions remain their evidence.
+
+The lead delegated J113E's exact-authorized metadata projection and its tests, then integrated canonical file/page/name selection in `FilePageDrawings` and the legacy File-page action. A subsequent read-only internal review identified duplicate-alias refusal and an invalid remote-repository fixture; the lead corrected both and added regression evidence. No remaining actionable issue was reported; the reviewer ran no tests. The audit is consumed only as bounded read evidence, never as payload provenance or a write plan.
+
+Lead verification: before-fix **2 / 6 / 2 failures**; final focused native **43 / 519**; complete J113D compatibility gate plus new classes and pilot tests **191 / 2,357**, no failures/errors/skips; standalone **1,486 / 3,662 / 1 existing skip**. Seven-file style, reference/parallel/atomic/docs/mirror and diff checks pass. Native work used isolated tables serially. The final log was read back October 4; Docker was then unavailable, so no extra run is claimed. The [J113E packet](J113E_LEGACY_PDF_SELECTION_PACKET.md) gives a direct external review/test-strengthening assignment, ready to dispatch, not started.
+
+Whole-set migration allocation/resume, numbered-alias bound-editor parity, Default/show-intent, template/gallery page metadata, writer output and owner-reviewed tidy/undo remain lead work. No ordinary wiki/configuration change, migration execution, browser write, activation, commit or push occurred. C2 owner screen approval remains outstanding.
+
+## J113C accepted; J113D implementation ready — October 3, 2026
+
+Advances **HIST-8/DATA-1**. The external J113C reviewer found no production blocker, strengthened full-byte no-write evidence and source/permission/name boundaries, and demonstrated two restored negative controls. The lead reviewed the report and test changes and accepts the audit's bounded read-only scope. Fresh focused native **26 / 172** and five-file PHP style/static/docs checks pass. Junior broader native **116 / 1,394** and standalone **1,486 / 3,662 / 1 skip** remain their reported evidence; no duplicated full-suite or negative-control claim.
+
+For the next stage, a delegated read-only audit established the current parser compatibility precedence and the separate legacy entry-point dependencies. The lead prepared [J113D](J113D_GROUPED_PDF_READ_PACKET.md) for direct external implementation: deduplicate normalized layer-set labels within each canonical file in two existing parser helpers. Page routing and exact-name precedence remain intact; Default activation and the File-page selector stay lead-owned. Its reader baseline is **31 native tests / 422 assertions** after a one-line lead correction of a stale terminology assertion. No production code, ordinary wiki/configuration command, browser workflow, commit or push was changed by this review. J113D is ready to dispatch, not started.
+
+## J113C — read-only evidence implemented; independent review assigned — October 3, 2026
+
+Advances **HIST-8/DATA-1**, preparing HIST-9. The lead reread the charter and retained the approved owner/file/name identity. A delegated engineer implemented only the metadata enumeration and two focused native tests; the lead reviewed that query, built the exact-revision audit and administrator command, and added native matching/access/grouping/command tests. An attempted second internal review hit the agent usage limit without returning findings; no independent acceptance is claimed.
+
+Fresh native compatibility **109 tests / 1,338 assertions**, focused audit **19 / 116**, full standalone **1,486 / 3,662 / 1 existing skip**, changed-file PHP style and static checks pass. A controlled missing-page-check mutation failed as intended and was restored before the compatibility run. Native tests ran alone against isolated core tables. Subsequent read-only reports on three existing owners found concrete retained evidence of old PDF suffix splitting; all names and content remain unchanged.
+
+The [J113C packet](J113C_MIGRATION_AUDIT_PACKET.md) gives the external junior a direct review and bounded test-strengthening assignment. It is ready to dispatch, not evidence that the junior has started. The lead retains coordinated migration allocation/resume, compatibility, Default/output and tidy integration. No browser/configuration/content write, migration execution, activation, commit or push occurred.
+
+## J113B — effective migration page accepted — October 3, 2026
+
+Advances **HIST-8/HIST-4**. The external junior implemented the assigned native effective-page callback in step-2 migration and its production factory, with full-payload native regressions. Lead and delegated independent review found no blocker; no additional code changes were needed. The junior demonstrated two wrong-page payload failures before the fix. Exact source/payload, alias/order/invalid-option behavior, file isolation, missing pages, dry-run equivalence, commit/rerun and stale-base preservation are covered.
+
+Fresh lead verification: required native **90 tests / 1,222 assertions**, full standalone **1,486 / 3,662 / 1 existing skip**, changed-file PHP style and static/docs/mirror/diff gates pass. The independent reviewer inspected code/tests without running tests or writing files. Logs and review limits are in the [J113B acceptance](J113B_MIGRATION_PDF_PAGE_PACKET.md#lead-acceptance--october-3-2026). Native tests ran alone in isolated core tables; no ordinary wiki/configuration change, migration command, activation, commit or push occurred.
+
+Accepted only for direct-embed migration page selection. Names/output and compatibility are unchanged. Template/gallery metadata and the coordinated whole-set/provenance/Default/output/tidy transition remain lead work; no new external implementation packet is issued by this acceptance. Earlier J113B assignment wording below is historical.
+
+## J113B — direct migration page-selection assignment — October 3, 2026
+
+Advances **HIST-8/HIST-4**. The delegated readiness audit identified that step-2 migration reads the first raw `page=` value, while accepted editor/copy paths use native aliases, last valid options and the file's effective page. It prepared a bounded [J113B packet](J113B_MIGRATION_PDF_PAGE_PACKET.md); the lead checked the callback, factory, call sites, PdfHandler rules and existing native test evidence before issuing it directly to an external junior through the owner. The follow-up audit ended at an agent usage limit after writing the draft; final packet review was completed by the lead.
+
+Implement active factory wiring and exact-page native regressions. Preserve name allocation, output and reader compatibility; no migration/wiki commands or browser writes. This is an assignment, not implementation evidence. Broader migration grouping, retained provenance, Default semantics and tidy integration remain with the lead.
+
+## J113A — inactive output component accepted — October 3, 2026
+
+Advances **HIST-9**, preparing **HIST-8**. The external junior implemented the distinct default-off bare-output option on single-embed rewrite and scoped rename. Actual replacement bytes must resolve to the intended owner/name and canonical file and must contain the requested bare spelling. Unsafe matched output refuses the whole call; input eligibility remains independently controlled. Existing production callers remain unchanged. Lead and delegated independent code review found no remaining component blocker.
+
+The lead corrected three stale migration-summary expectations in `PageCopyMigrationTest.php` to match the already approved layer-set messages. Fresh full standalone **1,486 tests / 3,662 assertions / 1 existing skip** and the complete required native group **95 tests / 606 assertions** pass. Independent focused standalone **127 / 475** passes; the junior's three restored negative controls are recorded in the [packet](J113A_BARE_NAME_OUTPUT_PACKET.md#lead-acceptance--october-3-2026). Changed-file PHP style, static consistency, documentation/mirror and diff checks pass. No full-native, JavaScript or browser rerun is claimed. Native tests ran alone against isolated core tables.
+
+Accepted only for this inactive component. HIST-8/HIST-9 remain partial; migration/output integration and actual tidy dry runs remain lead-owned. The default-off whitespace slide trap is documented, not broadened into this assignment. No ordinary wiki/configuration/migration change, commit or push. This entry supersedes J113A's earlier next-assignment status below.
+
+## Owner terminology finding — corrected by lead — October 3, 2026
+
+Advances **HIST-4/HIST-5/HIST-7** and charter Rule 2. The owner found the already prohibited “drawing” label in the copy screens. The lead accepts responsibility for deferring the approved wording and then presenting those screens. Two delegated engineers hit usage limits before making changes; the lead completed the semantic message audit, correction, test alignment and rendered verification directly.
+
+Changed 67 English messages, 61 translator descriptions and two Pen-path fallback labels, preserving keys, parameters, internal names, historical content and proper drawing-tool terminology. Both copy screens now say **Copy a layer set from another page**. Full JavaScript/static **15,190 / 208 suites**, focused native **61 / 538**, and serial Chromium **2 tests / 19 screenshots** pass. Final readback verifies exact owner restorations **2834/2835** and unchanged isolation **230/2740**. The updated gallery and [C2 correction evidence](J112C2_INTEGRATED_ACCEPTANCE_PACKET.md#owner-wording-correction--october-3-2026) replace the screens with incorrect terminology; owner approval remains pending. No independent review is claimed for this correction. J113A's inactive component task is unchanged.
+## J113A — next packet reviewed and ready — October 3, 2026
+
+Advances **HIST-9**, preparing the HIST-8 transition. A delegated engineer audited current J113 readiness and drafted the [inactive bare-name output packet](J113A_BARE_NAME_OUTPUT_PACKET.md); the lead checked its signatures, exception contract, scoped matching and parser round-trip requirements against current code. The older J113 wording conflated input eligibility with output spelling and named the superseded publication helper. The handoff now separates the new default-off output argument from existing bare-input interpretation and retains later migration/caller integration with the lead.
+
+One external junior may implement the pure component and tests. No implementation has been assigned internally. Existing callers and old APIs remain unchanged; valid stored names remain valid, and unsafe requested output refuses without partial results. The packet includes exact allowed files, negative controls, focused/full standalone gates and a serialized native test group. C2 screen review is independent. No new runtime verification or migration/ordinary wiki write is claimed for this planning deliverable.
+
+## J112C2 — accepted after lead corrections — October 3, 2026
+
+Advances **HIST-4/HIST-7, TYPES-4 and DATA-1/DATA-3**. The completed junior return is accepted for its bounded technical scope after two review findings were corrected by separate delegated engineers. Font Size had applied unrelated defaults to existing text layers; five new integration tests failed before the fix. Cleanup-only receipts could name unauthorized owners; 26 validator tests now cover the allowed identities, baselines and acknowledgement chains. The production scope extension is limited to `CanvasManager.js` and `StyleController.js`, preserving existing styles without new UI or stored-content repair.
+
+The lead strengthened the actual browser assertions to compare complete selected and saved layers, then ran the journey serially: **2 tests / 18 screenshots passed**. Full JavaScript/static gates pass **15,190 tests / 208 suites**. An independent reviewer audited the fresh ledger and cleanup without finding a remaining bounded blocker. Readback verified all 15 scenario revisions, exact restoration at **2819/2820**, and unchanged isolation owner **230/2740**. Junior native **98 / 790** and focused client **142 / 2 suites** remain their evidence; no fresh full-PHP claim. See the [lead acceptance record](J112C2_INTEGRATED_ACCEPTANCE_PACKET.md#final-lead-verification-and-owner-review).
+
+Owner screen approval remains pending; local gallery `tmp/J112C2-owner-review.html` groups all 18 original screenshots. J113's transition/wording and J111's viewer remain open. No ordinary content/configuration/migration changes, commit or push. The dated partial-return report below is historical.
+
+## J112C2 partial return — tests reviewed, fixture blocker resolved — October 2, 2026
+
+Advances **HIST-4/HIST-7, TYPES-4 and DATA-3**. The junior's exact-preview whole-PDF test changes the source name and both pages after preview, then verifies the copied earlier revision's complete content/pins/canvases and unchanged unrelated destination set. Accepted for this bounded coverage; the test-only result filter is a negative control of the completeness assertion, not a production mutation. Junior verification: **97 native / 771 assertions**, **142 client / 2 suites**, style/docs pass. No fresh full-suite claim.
+
+The preflight blocker was valid: isolation owner 230/revision 2740 has no Layers slot, and admission prohibits removing one. A delegated independent reviewer confirmed this, found that preflight needed to require a real valid snapshot, and identified an unsafe latest-revision cleanup fallback in the older copy-list spec. The new packet prohibits that fallback and excludes running that older write spec as part of C2.
+
+The lead delegated the bounded preflight corrections and a native test proving exact empty-baseline restoration plus refusal after another writer intervenes. Lead-run native verification, also covering the junior's exact-preview case and existing unauthorized-write/slot-removal guard: **3 / 52**, all passed. The lead then created `Layers_browser_scoped_source` through normal publication (**page 272, revision 2742**) with empty Layers and fixed main text. Existing pages 228/230 stayed at revisions 2741/2740 with identical captured state. Strengthened read-only preflight passed **1 / 0 skips**. Style/docs/diff checks pass. No production/configuration changes, commit or push; one dedicated fixture creation on the original wiki.
+
+The [updated packet](J112C2_INTEGRATED_ACCEPTANCE_PACKET.md) is ready for the same external junior to resume the browser journey and screenshots. The lead did not run those scenarios or grant owner screen sign-off. HIST-4/HIST-7 remain partial.
+
+## J112C lead integration — implemented; independent acceptance next — October 2, 2026
+
+Advances **HIST-4/HIST-7, TYPES-4 and DATA-3**. The lead integrated scoped publication and source rewriting, whole-PDF renames, consistent creation/copy/adoption allocation and client conflict recovery. Delegated engineers contributed the creation/copy audit and implementation, editor integration, native publication tests and legacy draft recovery. Two implementation agents hit their usage limit before returning final reports; the lead inspected and completed their changes. The native-test/draft engineer independently reviewed the integration and identified size-limit, reconciliation and legacy timestamp issues, which were corrected. No independent final acceptance of the full feature is claimed.
+
+Review also closed cross-kind old-draft ID ambiguity: every new target, including slides, receives a scoped ID; legacy aliases require unique exact-base proof. Persisted IDs and old draft records are preserved. Native coverage uses real uploads, guarded publication, existing entry points and historical reads; publication orchestration tests separately control source admission. Failed fixtures and an obsolete missing-PDF-page expectation were corrected without waiving behavior assertions. The [integration review](J112C_INTEGRATION_REVIEW.md) contains the verification record and remaining limits.
+
+Final gates pass: standalone **1,458 tests / 3,456 assertions / 1 skip**, native **501 tests / 4,140 assertions / 1 skip**, JavaScript **15,159 tests / 206 suites**, changed PHP style, static consistency, documentation and diff checks. The [J112C2 acceptance packet](J112C2_INTEGRATED_ACCEPTANCE_PACKET.md) is ready for the owner to dispatch externally. It has not already been assigned internally. It permits bounded acceptance tests and a junior report, with production fixes returned to the lead. Browser evidence and owner screen review remain outstanding. Earlier C1 inactive-component reports below retain their historical scope; C1 now has a production caller. No commit/push, ordinary wiki/configuration changes or migration writes.
+
+## J112C1 scoped rename component — accepted after senior corrections — October 2, 2026
+
+Advances **HIST-7**, as a prerequisite for HIST-4. Reviewed the junior's descriptor validation, owner/kind/file/name matching, conservative selector handling, original-source swaps, native title alias coverage and required file-scope mutation evidence. The lead reproduced a missing rename when accepted slide syntax begins with whitespace. A delegated independent reviewer found that empty or otherwise impossible old names can share the comparison key of a valid underscore-only name. Both defects were corrected in the new method only, with failing-before/passing-after regression coverage. The independent reviewer then checked both corrections, legitimate underscore names, noncanonical usable spacing and conflicting unreachable descriptors, and found no remaining actionable defect in this component.
+
+**Accepted for the packet's bounded implementation.** Final standalone: **1,449 tests / 3,425 assertions / 1 existing skip**. Final required native group: **57 tests / 309 assertions**, no failures/errors, on MediaWiki 1.45.3 / PHP 8.3.31. One intermediate native run had **57 tests / 305 assertions / 1 failure** from the previously documented `backend-fail-alreadyexists` adoption archive collision. That method passed alone (**1 test / 6 assertions**), and the full required group passed on retry. Changed-file PHPCS, class references, parallel lists, atomicity, documentation and diff checks pass. The [senior report](J112C1_SCOPED_RENAME_PACKET.md#senior-review-and-acceptance--october-2-2026) preserves the details.
+
+Existing methods and their assertions remain unchanged, and the new helper has no production caller. No conditional full-native rerun was required; no JavaScript or browser acceptance is claimed. The lead retains J112C publication/creation/copy/adoption integration, followed by a junior acceptance packet. No commit/push, ordinary wiki content/configuration changes, browser writes or migration writes; no stop-gap or claim of completed HIST-4/HIST-7.
+
+## J112C1 scoped rename component — packet ready — October 1, 2026
+
+Advances **HIST-7**, as a dependency of HIST-4. The lead inspected publication, validation and new-surface ID generation while a delegated engineer audited the rename, copy and adoption callers. The audit confirmed that `renameReferences()` has one production caller and uses a page-wide name map, copy still selects one PDF surface and lacks page propagation, and adoption performs allocation twice. These remain coordinated integration work; none justifies changing the owner's settled identity model.
+
+The resulting [J112C1 packet](J112C1_SCOPED_RENAME_PACKET.md) assigns a pure scoped rename component to one external junior. It freezes the input record/API, preserves the existing production method, defines selector ambiguity and exact-byte safeguards, and supplies unit/native acceptance and mutation checks. The audit engineer read the completed packet and found no blockers. Implementation is not already assigned internally. No production or test files changed for this planning handoff, and no new runtime-test result is claimed. The lead retains publication/creation/copy/adoption integration and will issue integrated acceptance after it exists.
+
+## J112B PDF page routing — accepted after senior corrections — October 1, 2026
+
+Advances **HIST-4**, preserving HIST-6 and SEC-2. Reviewed the junior's queue/adapters, exact-revision and owner checks, native transform page extraction, editor normalization and test evidence. The initial focused native rerun passed **64 tests / 859 assertions**. Review nevertheless found two concrete defects: `page 2` and localized aliases were not recognized by editor lookup, and staging from a failed embed reached a following gallery. The lead reproduced and fixed both inside J112B's scope. Five native syntax-parity cases pass (**45 assertions**); the gallery control/failure regression passes (**14 assertions**). The [packet's senior report](J112B_PDF_PAGE_ROUTING_PACKET.md#senior-review-and-corrections--october-1-2026) records the failures, corrections and verification boundary.
+
+**Accepted for the packet's bounded implementation.** Final full native rerun: **475 tests / 3,955 assertions / 1 skip** on MediaWiki 1.45.3 / PHP 8.3.31. Full standalone rerun: **1,392 tests / 3,282 assertions / 1 existing skip**, no failures/errors. Changed PHP style, references, parallel lists, atomicity, documentation and diff checks pass. The junior's full JavaScript evidence is retained; no JavaScript changed during review. No independent second review is claimed: the delegated reviewer hit a usage limit, so the lead completed the review directly. J112C remains the next lead-owned integration step. No commit/push, browser writes, ordinary wiki content/configuration changes or persistent migration writes; no claim of whole HIST-4 or UI-10 completion.
+
+## J112A lookup foundation — reviewed; J112B packet issued — October 1, 2026
+
+Advances **HIST-4**. The lead implemented the file/kind-first resolver and optional explicit PDF page selection in `PageOwnedBinding::resolveNamed()`. Five new standalone tests cover independent equal labels, PDF pages within one named set, duplicate same-page ambiguity, absence of wrong-page fallback, order independence and canonical file-case distinctions. Four new cases failed before the fix. The final focused suite passed **8 / 58**; full standalone **1,383 / 3,269 / 1 skip**; focused native parser/editor/migration-compatibility/source regression **54 / 635**, all passed on MediaWiki 1.45.3 / PHP 8.3.31. Changed PHP style and class references passed. No new user wording or wiki data/configuration changes.
+
+A delegated engineer traced the parser/gallery/editor call chains and independently reviewed the actual two-file diff; no actionable defect was found. The lead used that report to prepare [J112B](J112B_PDF_PAGE_ROUTING_PACKET.md), ready for the owner to assign externally. The packet freezes the tested resolver signature, lists exact allowed files, separates ordinary file queues from gallery renders, specifies native negative assertions and preserves migration compatibility. Implementation is not already assigned to that reviewing subagent. The lead retains publication/creation/migration integration and final review. No claim that the full identity feature or UI-10 is complete; no commit or push.
+
+## J112 planning correction after owner review — October 1, 2026
+
+Advances **HIST-4**. The original proposal mixed regression fixtures and legacy storage problems with already-settled product rules. The lead takes responsibility for accepting that confusing presentation. After rereading the approved brief and charter and reviewing `PageOwnedBinding::resolveNamed()` and `DrawingName::assertPublishable()`, the lead corrected the proposal: equal labels across different full identities are valid; one PDF layer set has one name; an unannotated PDF page is not an absent layer set. The junior independently reviewed the wording and confirmed those corrections, plus the approved empty-Default/first-save behavior. Redundant architecture questions were withdrawn. This corrects planning only; no production implementation or new runtime acceptance is claimed.
+
+## J112 proposal reviewed; implementation still held — October 1, 2026
+
+Advances **HIST-4, HIST-7 and HIST-8**. The lead delegated a bounded planning task while preparing J111's exact-version viewer contract. The junior produced [the identity implementation proposal](J112_IDENTITY_IMPLEMENTATION_PROPOSAL.md), mapping the minimum coherent caller/rename scope and concrete acceptance assertions. No production code, tests or wiki data changed.
+
+Lead review accepted this as a planning deliverable only and added a concrete recommended decision bundle, proposed conflict wording and a requirement to preserve unsaved-draft recovery if new-surface IDs change. The review confirmed two transition concerns: existing migrated pages depend on numbered-name fallback; existing PDF page surfaces can carry separate labels and source pins. Neither suffix guessing nor an ID-only tidy operation solves those concerns. The architect must decide the held behavior/scope before the packets authorize implementation. J111 has a separate [viewer read proposal](J111_VIEWER_READ_PROPOSAL.md); neither draft changes the approved behavior brief.
+
+Fresh lead verification of existing components: **174 tests / 2 Jest suites passed** (`LayersLightbox` and `PageOwnedRevisionBootstrap`); native `SourceRenditionsTest` filter **4 tests / 47 assertions passed** on MediaWiki 1.45.3 / PHP 8.3.31. Documentation verification passed for **75 maintained/policy documents and 53 historical records**, including exact status mirrors; `git diff --check` passed. No proposed behavior has browser acceptance or owner sign-off, and no full-suite rerun is claimed. The proposals and status updates remain uncommitted.
 
 ## Lead re-verification of J103, J104, J105, J108 and J110 — October 1, 2026
 

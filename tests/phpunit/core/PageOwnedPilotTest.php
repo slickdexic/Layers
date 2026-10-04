@@ -643,7 +643,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			'baserevid' => $base, 'data' => json_encode( [ 'schemaVersion' => 1, 'surfaces' => [ $new ] ] ) ],
 			null, $actor )[0]['layerspublish'];
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $result['revid'] );
-		$this->assertSame( 'Added drawing “New slide”', $revision->getComment()->text );
+		$this->assertSame( 'Added layer set “New slide”', $revision->getComment()->text );
 
 		// Saved, the drawing is edited like any other; the photo is still offered for creation.
 		$entries = $pilot->listBoundEditorSelections( $pageId, $result['revid'], $actor );
@@ -690,7 +690,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $copied );
 		$this->assertSame( $prefix . "{{#Slide:$targetId:Welcome Slide}}",
 			$revision->getContent( 'main' )->getText() );
-		$this->assertSame( 'Copied drawing “Welcome Slide” from [[:' . $source->getPrefixedText() .
+		$this->assertSame( 'Copied the layer set “Welcome Slide” from [[:' . $source->getPrefixedText() .
 			"]] (revision $sourceRev): handout", $revision->getComment()->text );
 		$copy = json_decode( $revision->getContent( 'layers' )->getText(), true )['surfaces'];
 		$original = json_decode( ( new LayersDocumentContent( $fixture ) )->getCanonicalText(), true )['surfaces'][0];

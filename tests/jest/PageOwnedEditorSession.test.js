@@ -107,14 +107,270 @@ describe( 'PageOwnedEditorSession', () => {
 		[ 'x:y', 'layers-page-drawing-rename-invalid' ],
 		[ '[[z]]', 'layers-page-drawing-rename-invalid' ],
 		[ 'bell\u0007', 'layers-page-drawing-rename-invalid' ],
-		[ 'x'.repeat( 256 ), 'layers-page-drawing-rename-invalid' ],
-		[ 'annotated_DIAGRAM', 'layers-page-drawing-rename-taken' ],
-		[ ' Reference   sheet', 'layers-page-drawing-rename-taken' ]
+		[ 'x'.repeat( 256 ), 'layers-page-drawing-rename-invalid' ]
 	] )( 'refuses the name %j without changing the drawing', async ( name, code ) => {
 		await session.load();
 		expect( () => session.rename( name ) ).toThrow( expect.objectContaining( { code } ) );
 		expect( session.getLabel() ).toBe( 'Welcome' );
 		expect( session.getStatus().dirty ).toBe( false );
+	} );
+
+	describe( 'J112C full layer-set identity and PDF group renames', () => {
+		function pdfDocument() {
+			const snapshot = JSON.parse( JSON.stringify( fixture ) );
+			const first = snapshot.surfaces[ 2 ];
+			first.label = 'Shared set';
+			const second = JSON.parse( JSON.stringify( first ) );
+			second.id = 'reference-next';
+			second.source.page = 3;
+			second.source.timestamp = '20260907120000';
+			second.label = first.label;
+			snapshot.surfaces.push( second );
+			return snapshot;
+		}
+
+		async function openPdf( snapshot = pdfDocument() ) {
+			reader.read.mockResolvedValueOnce( { revisionId: 12, snapshot } );
+			session = new Session( { ...options, surfaceId: 'reference' }, {
+				reader, publisher: new Publisher( api ), adapter: new Adapter()
+			} );
+			await session.load();
+			return snapshot;
+		}
+
+		it.each( [ 'annotated_DIAGRAM', 'Reference sheet' ] )(
+			'allows a slide to take another file\'s name %j', async ( name ) => {
+				await session.load();
+				expect( session.rename( name ) ).toBe( name );
+				expect( session.getDraft().snapshot.surfaces.slice( 1 ) ).toEqual( fixture.surfaces.slice( 1 ) );
+			}
+		);
+
+		it( 'still rejects another slide with the same normalized name', async () => {
+			const snapshot = JSON.parse( JSON.stringify( fixture ) );
+			snapshot.surfaces.push( { ...snapshot.surfaces[ 0 ], id: 'another-slide', label: 'Other slide' } );
+			reader.read.mockResolvedValueOnce( { revisionId: 12, snapshot } );
+			await session.load();
+			expect( () => session.rename( 'other_SLIDE' ) ).toThrow( 'layers-page-drawing-rename-taken' );
+			expect( session.getStatus().dirty ).toBe( false );
+		} );
+
+		it.each( [ 'New set', 'SHARED SET' ] )( 'renames all PDF pages to %j while preserving every other field', async ( label ) => {
+			const snapshot = await openPdf();
+			expect( session.rename( label ) ).toBe( label );
+			const expected = JSON.parse( JSON.stringify( snapshot ) );
+			expected.surfaces[ 2 ].label = label;
+			expected.surfaces[ 3 ].label = label;
+			expect( session.getDraft().snapshot ).toEqual( expected );
+			await session.save();
+			expect( JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data ) ).toEqual( expected );
+			expect( session.getStatus().dirty ).toBe( false );
+		} );
+
+		it.each( [ 'image', 'pdf' ] )( 'rejects merging a PDF group into another same-file %s set', async ( kind ) => {
+			const snapshot = pdfDocument();
+			const occupied = JSON.parse( JSON.stringify( snapshot.surfaces[ 2 ] ) );
+			occupied.id = 'occupied';
+			occupied.kind = kind;
+			occupied.label = 'Other set';
+			occupied.source.page = 99;
+			snapshot.surfaces.push( occupied );
+			await openPdf( snapshot );
+			expect( () => session.rename( 'other_SET' ) ).toThrow( 'layers-page-drawing-rename-taken' );
+			expect( session.getDraft().snapshot ).toEqual( snapshot );
+		} );
+
+		it( 'allows equal names on different exact canonical files and on a slide', async () => {
+			const snapshot = pdfDocument();
+			snapshot.surfaces[ 0 ].label = 'Other set';
+			snapshot.surfaces[ 1 ].label = 'Other set';
+			snapshot.surfaces[ 1 ].source.fileTitle = 'File:REFERENCE.pdf';
+			await openPdf( snapshot );
+			session.rename( 'Other set' );
+			expect( session.getDraft().snapshot.surfaces.map( ( surface ) => surface.label ) )
+				.toEqual( [ 'Other set', 'Other set', 'Other set', 'Other set' ] );
+		} );
+
+		it( 'keeps a whole-PDF rename through reconciliation while accepting sibling content changes', async () => {
+			const snapshot = await openPdf();
+			session.rename( 'Renamed set' );
+			edit( 777 );
+			const server = JSON.parse( JSON.stringify( snapshot ) );
+			server.surfaces[ 3 ].layers[ 0 ].text = 'New sibling content';
+			server.surfaces[ 3 ].extensionMetadata = { retained: true };
+			server.surfaces[ 1 ].label = 'Unrelated change';
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			expect( await session.reconcile( 15 ) ).toMatchObject( { dirty: true, revisionId: 15 } );
+			const merged = session.getDraft().snapshot;
+			expect( merged.surfaces[ 2 ].canvas.width ).toBe( 777 );
+			expect( merged.surfaces[ 2 ].label ).toBe( 'Renamed set' );
+			expect( merged.surfaces[ 3 ] ).toEqual( { ...server.surfaces[ 3 ], label: 'Renamed set' } );
+			expect( merged.surfaces[ 1 ] ).toEqual( server.surfaces[ 1 ] );
+			api.postWithToken.mockResolvedValueOnce( { layerspublish: { result: 'Success', revid: 16 } } );
+			await session.save();
+			expect( JSON.parse( api.postWithToken.mock.calls[ 0 ][ 1 ].data ) ).toEqual( merged );
+		} );
+
+		it.each( [ 'different-name', 'different-case', 'changed-page', 'changed-file', 'removed' ] )(
+			'preserves local work when a renamed PDF sibling is remotely %s', async ( change ) => {
+				const server = await openPdf();
+				session.rename( 'Renamed set' );
+				session.blockPublication();
+				const before = session.getDraft();
+				if ( change === 'different-name' || change === 'different-case' ) {
+					server.surfaces[ 3 ].label = change === 'different-name' ? 'Remote set' : 'RENAMED SET';
+				} else if ( change === 'changed-page' ) {
+					server.surfaces[ 3 ].source.page = 4;
+				} else if ( change === 'changed-file' ) {
+					server.surfaces[ 3 ].source.fileTitle = 'File:Other.pdf';
+				} else {
+					server.surfaces.pop();
+				}
+				reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+				await expect( session.reconcile( 15 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+				expect( session.getDraft() ).toEqual( before );
+				expect( session.getStatus().phase ).toBe( 'uncertain' );
+				expect( api.postWithToken ).not.toHaveBeenCalled();
+			}
+		);
+
+		it( 'rejects a destination newly occupied by another same-file set during reconciliation', async () => {
+			const server = await openPdf();
+			session.rename( 'Renamed set' );
+			const before = session.getDraft();
+			const occupied = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+			occupied.id = 'new-occupied';
+			occupied.label = 'renamed_set';
+			occupied.source.page = 99;
+			server.surfaces.push( occupied );
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			await expect( session.reconcile( 15 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+			expect( session.getDraft() ).toEqual( before );
+		} );
+
+		it( 'includes a newly added PDF page of the original group in the pending rename', async () => {
+			const server = await openPdf();
+			session.rename( 'Renamed set' );
+			const added = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+			added.id = 'new-page';
+			added.source.page = 4;
+			added.layers[ 0 ].text = 'New page content';
+			server.surfaces.push( added );
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			await session.reconcile( 15 );
+			expect( session.getDraft().snapshot.surfaces.slice( 2 ).map( ( surface ) => surface.label ) )
+				.toEqual( [ 'Renamed set', 'Renamed set', 'Renamed set' ] );
+			expect( session.getDraft().snapshot.surfaces[ 4 ] ).toEqual( { ...added, label: 'Renamed set' } );
+		} );
+
+		it( 'recognizes a saved PDF-group rename after a lost response and keeps newer sibling content', async () => {
+			await openPdf();
+			session.rename( 'Renamed set' );
+			session.blockPublication();
+			const server = session.getDraft().snapshot;
+			server.surfaces[ 3 ].layers[ 0 ].text = 'New sibling content';
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			expect( await session.reconcile( 15 ) ).toMatchObject( { phase: 'ready', revisionId: 15, dirty: false } );
+			expect( session.getDraft().snapshot ).toEqual( server );
+			expect( api.postWithToken ).not.toHaveBeenCalled();
+		} );
+
+		it( 'preserves a new server set that reused the old name after our rename succeeded', async () => {
+			await openPdf();
+			session.rename( 'Renamed set' );
+			session.blockPublication();
+			const server = session.getDraft().snapshot;
+			const added = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+			added.id = 'new-independent-set';
+			added.label = 'Shared set';
+			server.surfaces.push( added );
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			expect( await session.reconcile( 15 ) ).toMatchObject( { phase: 'ready', revisionId: 15, dirty: false } );
+			expect( session.getDraft().snapshot ).toEqual( server );
+			expect( session.getDraft().snapshot.surfaces[ 4 ].label ).toBe( 'Shared set' );
+		} );
+
+		it.each( [ 'other-file', 'slide', 'new-pdf-page' ] )( 'allows new surfaces with shared labels for %s', async ( scenario ) => {
+			const server = pdfDocument();
+			const newSurface = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+			newSurface.id = 'new-surface';
+			newSurface.label = 'Shared set';
+			newSurface.layers = [];
+			newSurface.readingOrder = [];
+			if ( scenario === 'other-file' ) {
+				newSurface.source.fileTitle = 'File:Other.pdf';
+			} else if ( scenario === 'slide' ) {
+				newSurface.kind = 'slide';
+				delete newSurface.source;
+			} else {
+				newSurface.source.page = 4;
+			}
+			reader.read.mockResolvedValueOnce( { revisionId: 12, snapshot: server } );
+			session = new Session( { ...options, surfaceId: newSurface.id, newSurface }, {
+				reader, publisher: new Publisher( api ), adapter: new Adapter()
+			} );
+			await session.load();
+			expect( session.isUnsavedNew() ).toBe( true );
+			server.surfaces[ 3 ].layers[ 0 ].text = 'New sibling content';
+			reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+			await session.reconcile( 15 );
+			expect( session.getDraft().snapshot.surfaces[ 3 ] ).toEqual( server.surfaces[ 3 ] );
+			expect( session.getDraft().snapshot.surfaces[ 4 ] ).toEqual( newSurface );
+		} );
+
+		it.each( [ 'renamed', 'recased', 'repinned', 'removed' ] )(
+			'keeps an unsaved PDF-page draft when its original set was %s remotely', async ( change ) => {
+				const server = pdfDocument();
+				const newSurface = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+				newSurface.id = 'new-page';
+				newSurface.source.page = 4;
+				newSurface.layers = [];
+				newSurface.readingOrder = [];
+				reader.read.mockResolvedValueOnce( { revisionId: 12, snapshot: server } );
+				session = new Session( { ...options, surfaceId: newSurface.id, newSurface }, {
+					reader, publisher: new Publisher( api ), adapter: new Adapter()
+				} );
+				await session.load();
+				const before = session.getDraft();
+				if ( change === 'removed' ) {
+					server.surfaces.splice( 2 );
+				} else {
+					for ( const member of server.surfaces.slice( 2 ) ) {
+						if ( change === 'repinned' ) {
+							member.source.timestamp = '20260909120000';
+						} else {
+							member.label = change === 'recased' ? 'SHARED SET' : 'Other set';
+						}
+					}
+				}
+				reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+				await expect( session.reconcile( 15 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+				expect( session.getDraft() ).toEqual( before );
+				expect( api.postWithToken ).not.toHaveBeenCalled();
+			}
+		);
+
+		it.each( [ false, true ] )( 'refuses a duplicate internal PDF page (reconciliation %s)', async ( reconcile ) => {
+			const server = pdfDocument();
+			const newSurface = JSON.parse( JSON.stringify( server.surfaces[ 2 ] ) );
+			newSurface.id = 'new-surface';
+			newSurface.layers = [];
+			newSurface.readingOrder = [];
+			reader.read.mockResolvedValueOnce( { revisionId: 12, snapshot: { ...server, surfaces: server.surfaces.slice( 0, 2 ) } } );
+			session = new Session( { ...options, surfaceId: newSurface.id, newSurface }, {
+				reader, publisher: new Publisher( api ), adapter: new Adapter()
+			} );
+			if ( reconcile ) {
+				await session.load();
+				const before = session.getDraft();
+				reader.read.mockResolvedValueOnce( { revisionId: 15, snapshot: server } );
+				await expect( session.reconcile( 15 ) ).rejects.toThrow( 'layers-editor-reconciliation-required' );
+				expect( session.getDraft() ).toEqual( before );
+			} else {
+				reader.read.mockReset().mockResolvedValue( { revisionId: 12, snapshot: server } );
+				await expect( session.load() ).rejects.toThrow( 'layers-editor-session-unavailable' );
+			}
+		} );
 	} );
 
 	it( 'accepts a 255-character name and a change of case to its own name', async () => {

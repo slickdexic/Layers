@@ -79,7 +79,7 @@ test( 'an editor makes a shared file drawing owned by the page, pinned to the fi
 		// The page offers the shared file drawing to its editor; nothing is written by looking.
 		await page.goto( `${ base }/index.php?title=${ owner }` );
 		await expect( page.locator( '.layers-page-edit-controls__notice' ) )
-			.toContainText( 'Some drawings on this page are shared' );
+			.toContainText( 'Some layer sets on this page are shared' );
 		const adopt = page.locator( '.layers-page-adopt-link' );
 		await expect( adopt ).toHaveCount( 1 );
 		await expect( adopt ).toContainText( shownName );

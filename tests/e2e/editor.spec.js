@@ -60,7 +60,7 @@ describeEditor( 'Layers Editor', () => {
 				await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
 				const editLink = page.locator( '.layers-page-edit-link' ).first();
 				await expect( editLink ).toBeVisible( { timeout: 15000 } );
-				await expect( editLink ).toContainText( 'Edit page drawing: Welcome Slide' );
+				await expect( editLink ).toContainText( 'Edit layer set: Welcome Slide' );
 				await Promise.all( [
 					page.waitForNavigation(),
 					editLink.click()

@@ -74,10 +74,13 @@ class BoundSlideHooks {
 	 * @param array $named From PageOwnedBinding::parseNamed()
 	 * @param string|null $kind 'file' or 'slide'; null for any drawing
 	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
+	 * @param int|null $sourcePage Effective rendered page for files
 	 * @return array Canonical identity for register()
 	 * @throws \DomainException layers-page-binding-unavailable
 	 */
-	public static function named( Parser $parser, array $named, ?string $kind, ?string $fileTitle ): array {
+	public static function named( Parser $parser, array $named, ?string $kind, ?string $fileTitle,
+		?int $sourcePage = null
+	): array {
 		// As in register(): renders without the revision must not be cached as the answer.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$revision = $parser->getRevisionRecordObject();
@@ -89,7 +92,8 @@ class BoundSlideHooks {
 			$parser->getOutput()->setExtensionData( self::COPYABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
-		$surfaceId = PageOwnedBinding::resolveNamed( $named, self::pageDrawings( $parser ), $kind, $fileTitle );
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, self::pageDrawings( $parser ), $kind, $fileTitle,
+			$sourcePage );
 		if ( $surfaceId === null ) {
 			// The page names a drawing it does not have yet; output() offers editors to create it.
 			$parser->getOutput()->setExtensionData( self::CREATABLE_KEY, true );
@@ -99,9 +103,8 @@ class BoundSlideHooks {
 	}
 
 	/**
-	 * The page's drawing of a file that a bare set name means once the migration has finished: the drawing of
-	 * that name, or else the one of that file with that name and a number, which the migration gives a copy
-	 * when two files on the page had sets of the same name.
+	 * Resolve an exact layer-set name, or one distinct numbered name, within this page's file.
+	 * PDF pages count as members of one normalized name; preserve its first stored spelling.
 	 * @param Parser $parser
 	 * @param string $fileTitle 'File:<DB key>'
 	 * @param string $name
@@ -110,46 +113,52 @@ class BoundSlideHooks {
 	public static function drawingOfFileNamed( Parser $parser, string $fileTitle, string $name ): string {
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		try {
+			$labels = [];
 			$numbered = [];
 			foreach ( self::pageDrawings( $parser ) as $surface ) {
-				if ( ( $surface['source']['fileTitle'] ?? null ) !== $fileTitle ) {
+				if ( $surface['kind'] === 'slide' || ( $surface['source']['fileTitle'] ?? null ) !== $fileTitle ) {
 					continue;
 				}
 				$label = (string)$surface['label'];
-				if ( DrawingName::key( $label ) === DrawingName::key( $name ) ) {
-					return $label;
+				$key = DrawingName::key( $label );
+				$labels[$key] = $labels[$key] ?? $label;
+				if ( $key === DrawingName::key( $name ) ) {
+					return $labels[$key];
 				}
 				if ( preg_match( '/\A(.+) [0-9]+\z/', $label, $match ) &&
 					DrawingName::key( $match[1] ) === DrawingName::key( $name )
 				) {
-					$numbered[] = $label;
+					$numbered[$key] = $labels[$key];
 				}
 			}
 		} catch ( \DomainException $e ) {
 			return $name;
 		}
-		return count( $numbered ) === 1 ? $numbered[0] : $name;
+		return count( $numbered ) === 1 ? reset( $numbered ) : $name;
 	}
 
 	/**
-	 * The name of the page's only drawing of a file, for `layerset=on` once bare names mean the page's own.
+	 * The file's single normalized layer-set name, preserving its first stored spelling.
+	 * Used by transitional show intent, not the final Default rule; PDF pages count once.
 	 * @param Parser $parser
 	 * @param string $fileTitle 'File:<DB key>'
-	 * @return string|null Null when the page has none or several
+	 * @return string|null Null when the file has none or several distinct names
 	 */
 	public static function onlyDrawingOf( Parser $parser, string $fileTitle ): ?string {
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		try {
 			$labels = [];
 			foreach ( self::pageDrawings( $parser ) as $surface ) {
-				if ( ( $surface['source']['fileTitle'] ?? null ) === $fileTitle ) {
-					$labels[] = (string)$surface['label'];
+				if ( $surface['kind'] !== 'slide' && ( $surface['source']['fileTitle'] ?? null ) === $fileTitle ) {
+					$label = (string)$surface['label'];
+					$key = DrawingName::key( $label );
+					$labels[$key] = $labels[$key] ?? $label;
 				}
 			}
 		} catch ( \DomainException $e ) {
 			return null;
 		}
-		return count( $labels ) === 1 ? $labels[0] : null;
+		return count( $labels ) === 1 ? reset( $labels ) : null;
 	}
 
 	/**

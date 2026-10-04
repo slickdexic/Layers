@@ -139,8 +139,12 @@
 
 			// Apply text-specific styles
 			if ( layer.type === 'text' ) {
-				layer.fontSize = next.fontSize || layer.fontSize || 16;
-				layer.fontFamily = next.fontFamily || layer.fontFamily;
+				if ( next.fontSize ) {
+					layer.fontSize = next.fontSize;
+				}
+				if ( next.fontFamily ) {
+					layer.fontFamily = next.fontFamily;
+				}
 				if ( next.textStrokeColor ) {
 					layer.textStrokeColor = next.textStrokeColor;
 				}

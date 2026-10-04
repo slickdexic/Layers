@@ -39,6 +39,31 @@
 		return typeof surface.label === 'string' ? surface.label : '';
 	}
 
+	// File titles are already canonical. Their case, underscores and source versions are not name keys.
+	function sameScope( left, right ) {
+		if ( left.kind === 'slide' || right.kind === 'slide' ) {
+			return left.kind === 'slide' && right.kind === 'slide';
+		}
+		return Boolean( left.source && right.source ) && typeof left.source.fileTitle === 'string' &&
+			left.source.fileTitle === right.source.fileTitle;
+	}
+
+	function sameSet( left, right ) {
+		return sameScope( left, right ) && nameKey( labelOf( left ) ) === nameKey( labelOf( right ) );
+	}
+
+	function newSurfaceCollides( existing, added ) {
+		return existing.id === added.id || ( sameSet( existing, added ) &&
+			( labelOf( existing ) !== labelOf( added ) || !( existing.kind === 'pdf' && added.kind === 'pdf' &&
+				Number.isInteger( existing.source.page ) && Number.isInteger( added.source.page ) &&
+				existing.source.page > 0 && added.source.page > 0 && existing.source.page !== added.source.page ) ) );
+	}
+
+	function setMembers( snapshot, selected ) {
+		return snapshot.surfaces.filter( ( surface ) => surface.id === selected.id ||
+			( selected.kind === 'pdf' && surface.kind === 'pdf' && sameSet( surface, selected ) ) );
+	}
+
 	function isNewSurface( surface, surfaceId ) {
 		return Boolean( surface ) && Object.getPrototypeOf( surface ) === Object.prototype &&
 			surface.id === surfaceId && [ 'slide', 'image', 'pdf' ].includes( surface.kind ) &&
@@ -105,9 +130,8 @@
 				let snapshot = bundle.snapshot;
 				let saved = null;
 				if ( this._newSurface ) {
-					const name = nameKey( this._newSurface.label );
 					if ( !snapshot || !Array.isArray( snapshot.surfaces ) || snapshot.surfaces.some( ( surface ) =>
-						surface.id === this._surfaceId || nameKey( labelOf( surface ) ) === name ) ) {
+						newSurfaceCollides( surface, this._newSurface ) ) ) {
 						throw failure( 'layers-editor-session-unavailable' );
 					}
 					// The page does not have this drawing until a save adds it, so it starts out unsaved.
@@ -186,11 +210,14 @@
 			if ( this.isUnsavedNew() ) {
 				throw failure( 'layers-page-drawing-rename-new' );
 			}
-			if ( this._snapshot.surfaces.some( ( surface ) => surface.id !== this._surfaceId &&
-				nameKey( typeof surface.label === 'string' ? surface.label : '' ) === nameKey( label ) ) ) {
+			const selected = this._selected( this._snapshot );
+			const members = setMembers( this._snapshot, selected );
+			const ids = new Set( members.map( ( surface ) => surface.id ) );
+			if ( this._snapshot.surfaces.some( ( surface ) => !ids.has( surface.id ) && sameScope( surface, selected ) &&
+				nameKey( labelOf( surface ) ) === nameKey( label ) ) ) {
 				throw failure( 'layers-page-drawing-rename-taken' );
 			}
-			this._selected( this._snapshot ).label = label;
+			members.forEach( ( surface ) => { surface.label = label; } );
 			return label;
 		}
 
@@ -309,14 +336,16 @@
 				}
 				const serverState = this._adapter.toEditorState( bundle.snapshot, this._surfaceId );
 				const server = this._adapter.withEditorState( bundle.snapshot, this._surfaceId, serverState );
+				const base = JSON.parse( this._savedJson );
 				const remote = comparable( this._selected( server ) );
-				if ( remote !== comparable( this._selected( JSON.parse( this._savedJson ) ) ) &&
+				if ( remote !== comparable( this._selected( base ) ) &&
 					remote !== comparable( this._selected( this._snapshot ) ) ) {
 					throw failure( 'layers-editor-reconciliation-required' );
 				}
-				// Retain every newer server-owned field/surface; carry only this surface's local name, canvas and layers.
+				// Retain newer sibling content while carrying the selected edits and the complete set's rename.
 				const merged = this._adapter.withEditorState( server, this._surfaceId, this.getEditorState() );
 				this._selected( merged ).label = this._selected( this._snapshot ).label;
+				this._reconcileRename( base, server, merged );
 				this._snapshot = merged;
 				this._savedJson = JSON.stringify( server );
 				this._revisionId = revisionId;
@@ -328,6 +357,56 @@
 		}
 
 		/**
+		 * Carry a pending name across stable group IDs without overwriting another editor's rename.
+		 * New PDF pages may join the same set; newer layers/source versions remain server-owned.
+		 * @param {Object} base Last confirmed document
+		 * @param {Object} server Newer document
+		 * @param {Object} merged Candidate with the selected surface's local content
+		 * @private
+		 */
+		_reconcileRename( base, server, merged ) {
+			const original = this._selected( base );
+			if ( !original ) {
+				return;
+			}
+			const members = setMembers( base, original );
+			const label = labelOf( this._selected( this._snapshot ) );
+			const localById = new Map( this._snapshot.surfaces.map( ( surface ) => [ surface.id, surface ] ) );
+			if ( !members.some( ( member ) => labelOf( localById.get( member.id ) ) !== labelOf( member ) ) ) {
+				return;
+			}
+			const remoteById = new Map( server.surfaces.map( ( surface ) => [ surface.id, surface ] ) );
+			const ids = new Set( members.map( ( member ) => member.id ) );
+			for ( const member of members ) {
+				const remote = remoteById.get( member.id );
+				if ( !remote || !sameScope( member, remote ) || member.kind !== remote.kind ||
+					( member.kind === 'pdf' && member.source.page !== remote.source.page ) ||
+					( labelOf( remote ) !== labelOf( member ) && labelOf( remote ) !== label ) ) {
+					throw failure( 'layers-editor-reconciliation-required' );
+				}
+			}
+			const alreadyRenamed = members.every( ( member ) => labelOf( remoteById.get( member.id ) ) === label );
+			for ( const remote of server.surfaces ) {
+				if ( ids.has( remote.id ) || !sameScope( original, remote ) ) {
+					continue;
+				}
+				const originalName = sameSet( original, remote );
+				const targetName = nameKey( labelOf( remote ) ) === nameKey( label );
+				if ( original.kind === 'pdf' && remote.kind === 'pdf' &&
+					( alreadyRenamed ? targetName : originalName ) ) {
+					ids.add( remote.id );
+				} else if ( targetName ) {
+					throw failure( 'layers-editor-reconciliation-required' );
+				}
+			}
+			merged.surfaces.forEach( ( surface ) => {
+				if ( ids.has( surface.id ) ) {
+					surface.label = label;
+				}
+			} );
+		}
+
+		/**
 		 * The server revision lacks this drawing: fine only if it was never saved and its name is still free.
 		 * @param {Object} server Newer revision's document
 		 * @param {number} revisionId
@@ -336,8 +415,15 @@
 		 */
 		_reconcileUnsavedNew( server, revisionId ) {
 			const local = this._selected( this._snapshot );
+			const baseMembers = setMembers( JSON.parse( this._savedJson ), local );
+			const remoteById = new Map( server.surfaces.map( ( surface ) => [ surface.id, surface ] ) );
 			if ( !this.isUnsavedNew() ||
-				server.surfaces.some( ( surface ) => nameKey( labelOf( surface ) ) === nameKey( labelOf( local ) ) ) ) {
+				server.surfaces.some( ( surface ) => newSurfaceCollides( surface, local ) ) ||
+				baseMembers.some( ( member ) => {
+					const remote = remoteById.get( member.id );
+					return !remote || !sameSet( remote, local ) || labelOf( remote ) !== labelOf( local ) ||
+						remote.kind !== member.kind || comparable( remote.source ) !== comparable( member.source );
+				} ) ) {
 				throw failure( 'layers-editor-reconciliation-required' );
 			}
 			const merged = Object.assign( {}, server, { surfaces: server.surfaces.concat( [ local ] ) } );

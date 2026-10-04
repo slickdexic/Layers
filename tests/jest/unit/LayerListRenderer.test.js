@@ -536,8 +536,8 @@ it( 'should create name element that is not editable by default', () => {
 			expect( renderer.getDefaultLayerName( { type: 'line' } ) ).toBe( 'Line' );
 		} );
 
-		it( 'should return Drawing for path type', () => {
-			expect( renderer.getDefaultLayerName( { type: 'path' } ) ).toBe( 'Drawing' );
+		it( 'should return Freehand layer for path type', () => {
+			expect( renderer.getDefaultLayerName( { type: 'path' } ) ).toBe( 'Freehand layer' );
 		} );
 
 		it( 'should return text prefix with content for text type', () => {

@@ -133,7 +133,7 @@ class PageSurfaceRestoreTest extends MediaWikiIntegrationTestCase {
 		$this->assertSame( [ 'Text two', [ 'presentation' => 'Drawing one', 'notes' => 'Notes two' ] ],
 			$this->surfaces( $latest ) );
 		$comment = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $latest )->getComment();
-		$this->assertSame( 'Restored the drawing “Welcome Slide” from revision ' . $first, $comment->text );
+		$this->assertSame( 'Restored the layer set “Welcome Slide” from revision ' . $first, $comment->text );
 
 		// Submitting the same form again saves nothing and says the page has changed since it was opened.
 		$again = $this->visit( $editor, $title, $first, true, [ 'wpbase' => (string)$second ] )->getOutput();

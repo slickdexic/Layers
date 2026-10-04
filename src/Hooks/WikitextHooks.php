@@ -235,10 +235,14 @@ class WikitextHooks {
 	private static $fileLinkTypes = [];
 
 	/**
-	 * Page-owned bindings per filename in render order: admitted identity, false when refused, null when absent.
+	 * Page-owned selectors in occurrence order: admitted identity, deferred named/parser pair,
+	 * false when refused, null when absent.
 	 * @var array<string, array<array|false|null>>
 	 */
 	private static array $fileBindings = [];
+
+	/** @var array<string, array> Occurrence staged by core's image hook for thumbnail output */
+	private static array $fileRenderParams = [];
 
 	/**
 	 * Fallback set-name queue populated by onParserMakeImageParams (indexed by render position).
@@ -291,6 +295,7 @@ class WikitextHooks {
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
 		self::$fileBindings = [];
+		self::$fileRenderParams = [];
 		self::$fileParamLayerset = [];
 		self::$fileParseCount = [];
 		self::$pendingRender = [];
@@ -310,6 +315,9 @@ class WikitextHooks {
 		if ( $parser instanceof Parser && $title instanceof \MediaWiki\Linker\LinkTarget &&
 			$title->getNamespace() === NS_FILE
 		) {
+			// A new fetch starts another occurrence, including galleries that bypass the
+			// image hook. Discard staging left by an earlier failed transform.
+			unset( self::$fileRenderParams[$title->getDBkey()] );
 			self::$fetchingParsers[$title->getDBkey()] = $parser;
 		}
 		return true;
@@ -322,9 +330,10 @@ class WikitextHooks {
 	 * @param string $filename DB key
 	 * @param string|null $hint The image's layerset= value, if any
 	 * @param array &$attribs
+	 * @param int $sourcePage
 	 */
 	private static function markGalleryDrawing( Parser $parser, string $filename, ?string $hint,
-		array &$attribs
+		array &$attribs, int $sourcePage
 	): void {
 		// Without a name a gallery image showed the file's latest set, except on the file's own page.
 		$value = $hint ?? ( self::isFilePageContext() ? null : 'on' );
@@ -333,7 +342,7 @@ class WikitextHooks {
 		}
 		$own = preg_match( '/\A\s*[0-9]+:/', $value ) ? trim( $value ) :
 			self::ownDrawingReference( $parser, $filename, $value );
-		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename );
+		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename, $sourcePage );
 		if ( $bound !== false ) {
 			BoundFileHooks::markImage( $attribs, $bound );
 			self::$pageHasLayers = true;
@@ -372,6 +381,20 @@ class WikitextHooks {
 	) {
 		// Add data attributes for full-size images (non-thumbnail) when layers are requested.
 		try {
+			$filename = $file ? $file->getName() : null;
+			if ( $filename ) {
+				unset( self::$fileRenderParams[$filename] );
+			}
+			if ( $filename && ( self::$pendingRender[$filename] ?? 0 ) > 0 ) {
+				self::$pendingRender[$filename]--;
+				if ( self::$pendingRender[$filename] <= 0 ) {
+					unset( self::$pendingRender[$filename] );
+				}
+				self::$fileRenderParams[$filename] = self::getFileParamsForRender( $filename );
+				if ( self::$fileRenderParams[$filename]['binding'] !== null ) {
+					return true;
+				}
+			}
 			if ( self::isFilePageContext() ) {
 				return true;
 			}
@@ -565,14 +588,16 @@ class WikitextHooks {
 		// each such render. Cargo gallery (#cargo_query format=gallery), native
 		// <gallery> tags, and other parser-function thumbnails do NOT go through
 		// onParserMakeImageParams, so they never increment the counter.
-		// We consume one queued count here so it cannot accidentally match a later
-		// non-wikitext render of the same filename.
-		$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
+		// Core's image hook stages the occurrence before transformation; callers that
+		// render directly through this hook consume a pending count here instead.
+		$staged = $filename ? ( self::$fileRenderParams[$filename] ?? null ) : null;
+		$isWikitextRender = $staged !== null || ( $filename && ( self::$pendingRender[$filename] ?? 0 ) > 0 );
 		$parser = $filename ? ( self::$fetchingParsers[$filename] ?? null ) : null;
 		if ( $filename ) {
 			unset( self::$fetchingParsers[$filename] );
+			unset( self::$fileRenderParams[$filename] );
 		}
-		if ( $isWikitextRender ) {
+		if ( $isWikitextRender && $staged === null ) {
 			self::$pendingRender[$filename]--;
 			if ( self::$pendingRender[$filename] <= 0 ) {
 				unset( self::$pendingRender[$filename] );
@@ -585,7 +610,11 @@ class WikitextHooks {
 		// $galleryHints first (pre-registered by {{#layers_hint:filename|setname}}),
 		// then fall back to 'on' (latest available layer set) if no hint is present.
 		if ( $isWikitextRender ) {
-			$fileParams = self::getFileParamsForRender( $filename );
+			$fileParams = $staged ?? self::getFileParamsForRender( $filename );
+			if ( is_array( $fileParams['binding'] ) && isset( $fileParams['binding']['named'] ) ) {
+				$fileParams['binding'] = BoundFileHooks::resolveNamed( $fileParams['binding']['parser'],
+					$fileParams['binding']['named'], $filename, self::sourcePage( $thumbnail ) );
+			}
 			if ( $fileParams['binding'] !== null ) {
 				// A page-owned embed never shows a shared drawing, even when its binding was refused.
 				if ( $fileParams['binding'] !== false ) {
@@ -598,7 +627,8 @@ class WikitextHooks {
 			if ( $parser && ( MigrationState::forParser( $parser ) ||
 				( $hint !== null && preg_match( '/\A\s*[0-9]+:/', $hint ) ) )
 			) {
-				self::markGalleryDrawing( $parser, $filename, $hint, $attribs );
+				self::markGalleryDrawing( $parser, $filename, $hint, $attribs,
+					self::sourcePage( $thumbnail ) );
 				return true;
 			}
 			if ( !$parser && MigrationState::isCompleteNow() ) {
@@ -1049,6 +1079,24 @@ class WikitextHooks {
 	}
 
 	/**
+	 * @param mixed $thumbnail
+	 * @return int Effective page from transform params or native MediaTransformOutput's description link
+	 */
+	private static function sourcePage( $thumbnail ): int {
+		if ( method_exists( $thumbnail, 'getParams' ) ) {
+			$params = $thumbnail->getParams();
+			return max( 1, (int)( $params['page'] ?? 1 ) );
+		}
+		if ( method_exists( $thumbnail, 'getDescLinkAttribs' ) ) {
+			$attributes = $thumbnail->getDescLinkAttribs();
+			$query = parse_url( $attributes['href'] ?? '', PHP_URL_QUERY );
+			parse_str( is_string( $query ) ? $query : '', $params );
+			return max( 1, (int)( $params['page'] ?? 1 ) );
+		}
+		return 1;
+	}
+
+	/**
 	 * Reset the page layers flag (useful for testing)
 	 */
 	public static function resetPageLayersFlag(): void {
@@ -1335,7 +1383,7 @@ class WikitextHooks {
 					$bound = false;
 				} else {
 					$bound = $raw !== null ? BoundFileHooks::resolve( $parser, $raw ) :
-						BoundFileHooks::resolveNamed( $parser, $named, $fileMatch['filename'] );
+						[ 'named' => $named, 'parser' => $parser ];
 				}
 				self::$fileBindings[$fileMatch['filename']][] = $bound;
 			}

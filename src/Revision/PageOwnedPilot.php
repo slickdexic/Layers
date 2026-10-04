@@ -448,9 +448,30 @@ class PageOwnedPilot {
 		if ( $named === null ) {
 			return $binding;
 		}
+		$sourcePage = $candidate['kind'] === 'file' ? $this->effectiveSourcePage( $candidate ) : null;
 		$surfaceId = PageOwnedBinding::resolveNamed( $named, is_callable( $surfaces ) ? $surfaces() : $surfaces,
-			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null );
+			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null,
+			$sourcePage );
 		return $surfaceId === null ? null : [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
+	}
+
+	/** @param array $candidate Scanned embed @return int Native selected file page, or 1 */
+	private function effectiveSourcePage( array $candidate ): int {
+		if ( $candidate['kind'] !== 'file' ) {
+			return 1;
+		}
+		$pageOptions = $this->services->getMagicWordFactory()->newArray( [ 'img_page' ] );
+		$page = PageOwnedBindingOptions::sourcePage( $candidate['options'],
+			static function ( string $option ) use ( $pageOptions ): ?string {
+				[ $name, $value ] = $pageOptions->matchVariableStartToEnd( $option );
+				return $name === 'img_page' ? $value : null;
+			} );
+		$title = $this->services->getTitleFactory()->newFromText( $candidate['target'] );
+		$file = $title ? $this->services->getRepoGroup()->findFile( $title ) : false;
+		if ( $file && $file->getMimeType() !== 'application/pdf' ) {
+			return 1;
+		}
+		return $file && $file->isMultipage() && $file->pageCount() > 0 ? min( $page, $file->pageCount() ) : $page;
 	}
 
 	/**
@@ -469,15 +490,122 @@ class PageOwnedPilot {
 	 * @return string|null
 	 * @throws \InvalidArgumentException For a malformed selector
 	 */
-	private static function missingName( array $candidate, int $pageId, array $surfaces ): ?string {
+	private function missingName( array $candidate, int $pageId, array $surfaces ): ?string {
 		if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
 			return null;
 		}
 		$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'],
 			self::bareOwner( $pageId ) );
-		// A drawing of that name of another kind or on another file still takes the name.
-		return $named === null || $named['pageId'] !== $pageId ||
-			PageOwnedBinding::resolveNamed( $named, $surfaces, null, null ) !== null ? null : $named['name'];
+		if ( $named === null || $named['pageId'] !== $pageId ) {
+			return null;
+		}
+		$page = $this->effectiveSourcePage( $candidate );
+		$label = $named['name'];
+		foreach ( $surfaces as $surface ) {
+			if ( DrawingName::key( (string)$surface['label'] ) !== DrawingName::key( $named['name'] ) ||
+				( $surface['kind'] === 'slide' ) !== ( $candidate['kind'] === 'slide' ) ||
+				( $candidate['kind'] === 'file' && $surface['source']['fileTitle'] !== $candidate['target'] ) ) {
+				continue;
+			}
+			if ( $surface['kind'] !== 'pdf' || $surface['source']['page'] === $page ) {
+				// Ambiguous stored matches cannot be treated as a new empty surface.
+				return null;
+			}
+			$label = (string)$surface['label'];
+		}
+		return $label;
+	}
+
+	/**
+	 * @param array $candidate Scanned embed
+	 * @param string $name Layer-set name
+	 * @param array[] $surfaces Authorized exact-base surfaces
+	 * @return array|null The consistent source pin of an existing PDF layer set
+	 */
+	private static function existingPdfSource( array $candidate, string $name, array $surfaces ): ?array {
+		$source = null;
+		foreach ( $surfaces as $surface ) {
+			if ( $candidate['kind'] !== 'file' || $surface['kind'] !== 'pdf' ||
+				$surface['source']['fileTitle'] !== $candidate['target'] ||
+				DrawingName::key( (string)$surface['label'] ) !== DrawingName::key( $name ) ) {
+				continue;
+			}
+			$pin = $surface['source'];
+			unset( $pin['page'] );
+			if ( (string)$surface['label'] !== $name || ( $source !== null && $source !== $pin ) ) {
+				throw new \DomainException( 'layers-source-unavailable' );
+			}
+			$source = $pin;
+		}
+		return $source;
+	}
+
+	/**
+	 * Old unsaved drafts used page/base/name only. Offer recovery only when that exact base proves
+	 * one possible target, with no upload since the base. Ambiguous records stay untouched in storage.
+	 * @param array[] $candidates Authorized source scan
+	 * @param array[] $surfaces Authorized exact-base snapshot
+	 * @param array $surface Newly prepared surface
+	 * @param RevisionRecord $base
+	 * @return array|null Read-only legacy draft alias
+	 */
+	private function legacyDraftSurface( array $candidates, array $surfaces, array $surface,
+		RevisionRecord $base
+	): ?array {
+		$isSlide = $surface['kind'] === 'slide';
+		if ( !$isSlide && $surface['source']['timestamp'] >= $base->getTimestamp() ) {
+			return null;
+		}
+		$nameKey = DrawingName::key( $surface['label'] );
+		$id = NewPageDrawing::legacySurfaceId( $base->getPageId(), $base->getId(), $surface['label'] );
+		foreach ( $surfaces as $stored ) {
+			// The earlier creation rule refused every already-used page-wide name.
+			if ( $stored['id'] === $id || DrawingName::key( (string)$stored['label'] ) === $nameKey ) {
+				return null;
+			}
+		}
+		$found = false;
+		foreach ( $candidates as $candidate ) {
+			try {
+				if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
+					continue;
+				}
+				$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+					$candidate['target'], self::bareOwner( $base->getPageId() ) );
+			} catch ( \InvalidArgumentException $e ) {
+				return null;
+			}
+			if ( !$named || $named['pageId'] !== $base->getPageId() ||
+				DrawingName::key( $named['name'] ) !== $nameKey ) {
+				continue;
+			}
+			if ( $isSlide ) {
+				if ( $candidate['kind'] !== 'slide' ) {
+					return null;
+				}
+				$found = true;
+				continue;
+			}
+			if ( $candidate['kind'] !== 'file' || $candidate['target'] !== $surface['source']['fileTitle'] ) {
+				return null;
+			}
+			// Reproduce the former new-draft page interpretation solely to prove a recovery alias.
+			$oldPage = 1;
+			if ( $surface['kind'] === 'pdf' ) {
+				foreach ( $candidate['options'] as $option ) {
+					$parts = explode( '=', $option, 2 );
+					if ( strtolower( trim( $parts[0], " \t\r\n\f" ) ) === 'page' && isset( $parts[1] ) ) {
+						$oldPage = max( 1, (int)trim( $parts[1], " \t\r\n\f" ) );
+					}
+				}
+			}
+			if ( $oldPage !== $surface['source']['page'] ||
+				$this->effectiveSourcePage( $candidate ) !== $surface['source']['page'] ) {
+				return null;
+			}
+			$found = true;
+		}
+		return $found ? [ 'surfaceId' => $id, 'baseRevisionId' => $base->getId() ] : null;
 	}
 
 	/**
@@ -607,7 +735,8 @@ class PageOwnedPilot {
 	/** @return PageDrawingCopy */
 	private function newDrawingCopy(): PageDrawingCopy {
 		return new PageDrawingCopy( $this->newIdentityResolver(), $this->services->getRevisionLookup(),
-			$this->services->getTitleFactory(), $this->publisher, $this->newRewriter(), $this->fileTargets() );
+			$this->services->getTitleFactory(), $this->publisher, $this->newRewriter(), $this->fileTargets(),
+			fn ( array $candidate ): int => $this->effectiveSourcePage( $candidate ) );
 	}
 
 	/** @return FilePageMigration Step 1 of the D3 migration, for the maintenance script */
@@ -627,7 +756,8 @@ class PageOwnedPilot {
 		return new PageCopyMigration( $this->services->getService( 'LayersDatabase' ), $this->scope,
 			$this->services->getRepoGroup(), $this->services->getTitleFactory(), $lookup,
 			new PageHistoryAccess( $lookup ), new LegacySurfaceConverter(), $this->newRewriter(),
-			$this->fileTargets(), $this->services->getConnectionProvider(), $this->publisher );
+			$this->fileTargets(), $this->services->getConnectionProvider(), $this->publisher,
+			fn ( array $candidate ): int => $this->effectiveSourcePage( $candidate ) );
 	}
 
 	/** @return SlidePageMigration Step 3 of the D3 migration, for the maintenance script */
@@ -706,9 +836,12 @@ class PageOwnedPilot {
 			foreach ( $candidates as $candidate ) {
 				try {
 					$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
-					$missing = $binding ? null : self::missingName( $candidate, $pageId, $surfaces );
-					if ( $missing !== null && !isset( $selections['new:' . DrawingName::key( $missing )] ) ) {
-						$selections['new:' . DrawingName::key( $missing )] = [ 'label' => $missing, 'create' => true,
+					$missing = $binding ? null : $this->missingName( $candidate, $pageId, $surfaces );
+					$newKey = $missing === null ? '' : 'new:' . json_encode( [ $candidate['kind'],
+						$candidate['kind'] === 'file' ? $candidate['target'] : null,
+						DrawingName::key( $missing ), $this->effectiveSourcePage( $candidate ) ] );
+					if ( $missing !== null && !isset( $selections[$newKey] ) ) {
+						$selections[$newKey] = [ 'label' => $missing, 'create' => true,
 							'params' => [ 'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
 								'expected' => $candidate['raw'] ] ];
 						continue;
@@ -778,16 +911,22 @@ class PageOwnedPilot {
 					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
 				$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
 				if ( !$binding ) {
-					$missing = self::missingName( $candidate, $pageId, $surfaces );
+					$missing = $this->missingName( $candidate, $pageId, $surfaces );
 					if ( $missing === null ) {
 						throw new \DomainException();
 					}
 					// The drawing exists only in the editor until its first save adds it to the page.
-					$new = $this->newDrawings->prepare( $pageId, $revisionId, $candidate, $missing, $authority );
+					$new = $this->newDrawings->prepare( $pageId, $revisionId, $candidate, $missing, $authority,
+						$this->effectiveSourcePage( $candidate ),
+						self::existingPdfSource( $candidate, $missing, $surfaces ) );
 					$init = $this->editorInit( $owner, $revisionId, $pageId, $new['surface'], $new['rendition'],
 						$authority );
 					$init['pageOwned'] += [ 'newSurface' => $new['surface'],
 						'emptyBase' => !$revision->hasSlot( PageRevisionWriter::SLOT ) ];
+					$legacy = $this->legacyDraftSurface( $candidates, $surfaces, $new['surface'], $revision );
+					if ( $legacy !== null ) {
+						$init['pageOwned']['draftScope']['legacySurface'] = $legacy;
+					}
 					return $init;
 				}
 				if ( $binding['pageId'] !== $pageId ) {
@@ -897,6 +1036,38 @@ class PageOwnedPilot {
 				$surfaces[] = [ 'id' => $surface['id'], 'label' => $surface['label'] ?? $surface['id'],
 					'kind' => $surface['kind'] ];
 			}
+		}
+		return $surfaces;
+	}
+
+	/**
+	 * List stored file/page selectors after an exact authorized read, for internal file selection.
+	 * Sources are not resolved here; the selected surface is checked when it is opened.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return array[]
+	 */
+	public function getFileSurfaceSelections( \MediaWiki\Title\Title $owner, int $revisionId,
+		Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) ||
+			$owner->hasFragment() || $revisionId < 1 || $revisionId > 2147483647 ) {
+			return [];
+		}
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [] );
+		$surfaces = [];
+		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
+			if ( !in_array( $surface['kind'], [ 'slide', 'image', 'pdf' ], true ) ) {
+				continue;
+			}
+			$selection = [ 'id' => $surface['id'], 'label' => $surface['label'] ?? $surface['id'],
+				'kind' => $surface['kind'] ];
+			if ( $surface['kind'] !== 'slide' ) {
+				$selection['source'] = [ 'fileTitle' => $surface['source']['fileTitle'],
+					'page' => $surface['source']['page'] ];
+			}
+			$surfaces[] = $selection;
 		}
 		return $surfaces;
 	}

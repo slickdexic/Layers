@@ -1,0 +1,438 @@
+{
+  "date": "2026-10-04",
+  "scope": "Selected existing acceptance evidence and fresh preservation gates; not release acceptance.",
+  "gallery": "J112C2-owner-review-corrected.html",
+  "galleryImages": 19,
+  "entries": [
+    {
+      "path": "J112C2-owner-review-corrected.html",
+      "bytes": 9570,
+      "sha256": "bbdceef1a6f5772cd35e71208ce4e8ebf517224a649a21d1c199ad850eb1ca0c"
+    },
+    {
+      "path": "J113DE-native-gate.log",
+      "bytes": 459,
+      "sha256": "1bdc6caa4e23ea43d8495380e596a87f609183e58a731be415393f5990ee948f"
+    },
+    {
+      "path": "J113E-before.log",
+      "bytes": 1159,
+      "sha256": "9d2d847b64d167be96030f9d985a4a937918d712a995a4042010a5b8de1b1e46"
+    },
+    {
+      "path": "J113E-focused-final.log",
+      "bytes": 211,
+      "sha256": "bc48294412981c015ea5e7a123291b923da2312cc6046cbb7603780091f16d95"
+    },
+    {
+      "path": "checkpoint-2026-10-04-client.log",
+      "bytes": 1062069,
+      "sha256": "c7e918d0d94d2def22a4dcd5d25f39dbf679b27ca1a7f443979db4defac2da61"
+    },
+    {
+      "path": "checkpoint-2026-10-04-native.log",
+      "bytes": 477,
+      "sha256": "f355f6e45a74ff1e99234bcd4dc4fa7b54ded3ed7dffaf1db0f07118a59d1879"
+    },
+    {
+      "path": "checkpoint-2026-10-04-php-style.log",
+      "bytes": 5568,
+      "sha256": "0daeac2653d92a3ba2af65fadc6f796b131929173c499dc472ab7c704407eecc"
+    },
+    {
+      "path": "checkpoint-2026-10-04-standalone.log",
+      "bytes": 2289,
+      "sha256": "bb8a3731f63d79746e68bb261d6d50ff66eb8d049430b8f9ef78151ce97dac19"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-536ef1a9a85b32b1356bf21e28ac3dae83bcc452.png",
+      "bytes": 63847,
+      "sha256": "06f4c0b1799282614eddabcd47151eb879fbbe26cc12cd9b3f2ee42f1c1f7d96"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-recovered-6585781b7cce6740f7077c59a1c493c3e165c222.png",
+      "bytes": 68588,
+      "sha256": "967b4c56124519bf2a6b433dcd69cee39d67650c6332f7c05c3634a8758794a8"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-recovery-offer-d2aa9709e935f0d766060bef01b21d2740b24f97.png",
+      "bytes": 66925,
+      "sha256": "9213296563b4ecb23a3a86875310aa6f5581daee75788e3f8477851b9127666c"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-saved-6f3453673311fa4eb55775e527121eabf2abbc05.png",
+      "bytes": 65340,
+      "sha256": "86a12b4a296c6c2ac0ba551b6b2cdf32172fa95126948baf6b18600b7b8e31b9"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-5ac4f93a77ee48eee4b45562404ff6cad43f189d.png",
+      "bytes": 65160,
+      "sha256": "f36f48769df7646f55ece16eda0d72386b9cc611eda47f29d28e098725e974fd"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-recovered-92f3e019f244c37ef0ed6edfd9292d6cec416d9e.png",
+      "bytes": 70791,
+      "sha256": "2b6a65b3eff5853733e582b623e31c769eff003f940c6e52b97bc8e4f9ef5aca"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-recovery-offer-965bdacd1f565f38ccdeba7fa60b4dbcd77131e1.png",
+      "bytes": 69297,
+      "sha256": "da4722d029b59087ec700945eb82ecd78d16e895859470ba572ef7a017d46b59"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-saved-99943c45b1aec9bfbf14f222ce30b985d9e5eb20.png",
+      "bytes": 66736,
+      "sha256": "0516063c784f9fe7450ee68da88de7b780b452d371aab97e6844c86ac0a9ca6f"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-photo-9a54fb21b94627a179018de8d8877ab4b74a268a.png",
+      "bytes": 1872746,
+      "sha256": "ccbe6924d5931877cea8dd65b0405bc438ecf450e8643ac72f6be26607784942"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-slide-12482ed4e5840e5bce7604b06f6b9e3c822d71f2.png",
+      "bytes": 59892,
+      "sha256": "8ddcd081d98cf5e9593ce6e9cdec8a0c39a2395b6e7c82cea22c828a7da65da0"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-source-two-4059b852b8cedfff03d7e249703cd2c168f40692.png",
+      "bytes": 63838,
+      "sha256": "ff79a042b1e94aadde5b2c78ed3458551583025c50d2a5e7af6a96dba10bb2e5"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copied-ABC-2-95b1a326cda9d7e910e6bc8dcda26a9ce9be5997.png",
+      "bytes": 71167,
+      "sha256": "6b5b47f5b929596fe69b925a940459a4d71ebd14e197de61d02010a4dfac0c09"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copied-ABC-ed7c2cefc724817d3183ee1b5660ea635f4bc590.png",
+      "bytes": 70891,
+      "sha256": "f338ab7a9034b3fceeaf4773311dd221446e51a567ca76396dca14437482f407"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copy-preview-c2-source-one-46eec8d402331c6652d57234592df3b2000a876a.png",
+      "bytes": 66798,
+      "sha256": "d6c02f946be918f0c4650f06e84bfd6d1fceac800782ecf543ddf71e73530ea7"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copy-preview-c2-source-two-72469a4bf401859bb923fd19662e103a5c4450d3.png",
+      "bytes": 66645,
+      "sha256": "ae02fb61ab01cd11a5ae8e6486e3b1f6deb5285130281d07b8fb23089754b56c"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/pdf-page-three-created-342a5253c5f1167fb0c0252d8e0fb792c4c1ce49.png",
+      "bytes": 51237,
+      "sha256": "0b7bc78d2d9f77c64050e257ba46bd21d8e2a1807b8cb77f61e8972fc14acbf5"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/pdf-whole-set-renamed-3401b59a17b6f124255540a70758699cfdfae625.png",
+      "bytes": 67405,
+      "sha256": "6973c412e3e7e4746afeb354aa80bc9aba434784059e2950b41845c01c9984d1"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/stale-save-retains-recovered-work-bbb521a26719e5f0ab1db333cbb205b8679142f2.png",
+      "bytes": 71754,
+      "sha256": "921fac26fcb48f650d4c7b8510638f7b21f708d7973df3a8f57b99f6587b2264"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one.png",
+      "bytes": 63847,
+      "sha256": "06f4c0b1799282614eddabcd47151eb879fbbe26cc12cd9b3f2ee42f1c1f7d96"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_recovered.png",
+      "bytes": 68588,
+      "sha256": "967b4c56124519bf2a6b433dcd69cee39d67650c6332f7c05c3634a8758794a8"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_recovery_offer.png",
+      "bytes": 66925,
+      "sha256": "9213296563b4ecb23a3a86875310aa6f5581daee75788e3f8477851b9127666c"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_saved.png",
+      "bytes": 65340,
+      "sha256": "86a12b4a296c6c2ac0ba551b6b2cdf32172fa95126948baf6b18600b7b8e31b9"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two.png",
+      "bytes": 65160,
+      "sha256": "f36f48769df7646f55ece16eda0d72386b9cc611eda47f29d28e098725e974fd"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_recovered.png",
+      "bytes": 70791,
+      "sha256": "2b6a65b3eff5853733e582b623e31c769eff003f940c6e52b97bc8e4f9ef5aca"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_recovery_offer.png",
+      "bytes": 69297,
+      "sha256": "da4722d029b59087ec700945eb82ecd78d16e895859470ba572ef7a017d46b59"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_saved.png",
+      "bytes": 66736,
+      "sha256": "0516063c784f9fe7450ee68da88de7b780b452d371aab97e6844c86ac0a9ca6f"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_photo.png",
+      "bytes": 1872746,
+      "sha256": "ccbe6924d5931877cea8dd65b0405bc438ecf450e8643ac72f6be26607784942"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_slide.png",
+      "bytes": 59892,
+      "sha256": "8ddcd081d98cf5e9593ce6e9cdec8a0c39a2395b6e7c82cea22c828a7da65da0"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_source_two.png",
+      "bytes": 63838,
+      "sha256": "ff79a042b1e94aadde5b2c78ed3458551583025c50d2a5e7af6a96dba10bb2e5"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copied_ABC.png",
+      "bytes": 70891,
+      "sha256": "f338ab7a9034b3fceeaf4773311dd221446e51a567ca76396dca14437482f407"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copied_ABC_2.png",
+      "bytes": 71167,
+      "sha256": "6b5b47f5b929596fe69b925a940459a4d71ebd14e197de61d02010a4dfac0c09"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copy_preview_c2_source_one.png",
+      "bytes": 66798,
+      "sha256": "d6c02f946be918f0c4650f06e84bfd6d1fceac800782ecf543ddf71e73530ea7"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copy_preview_c2_source_two.png",
+      "bytes": 66645,
+      "sha256": "ae02fb61ab01cd11a5ae8e6486e3b1f6deb5285130281d07b8fb23089754b56c"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/journey-evidence.json",
+      "bytes": 114955,
+      "sha256": "88c2672d2a7fb3815b05e86c933c7b89283ca445657eecf51dff3c848802af70"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/pdf_page_three_created.png",
+      "bytes": 51237,
+      "sha256": "0b7bc78d2d9f77c64050e257ba46bd21d8e2a1807b8cb77f61e8972fc14acbf5"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/pdf_whole_set_renamed.png",
+      "bytes": 67405,
+      "sha256": "6973c412e3e7e4746afeb354aa80bc9aba434784059e2950b41845c01c9984d1"
+    },
+    {
+      "path": "j112c2-lead-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/stale_save_retains_recovered_work.png",
+      "bytes": 71754,
+      "sha256": "921fac26fcb48f650d4c7b8510638f7b21f708d7973df3a8f57b99f6587b2264"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-0316f875d7d22648e1e7a3c72e55ee3abd419dae.png",
+      "bytes": 63901,
+      "sha256": "393cf54ec0c7f399af54196b33d418de9c4744ba865289ef5c5d71a061804c4b"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-recovered-16f992a61715c11df2360fc1e5f0be19d375179a.png",
+      "bytes": 68666,
+      "sha256": "d1687ec02ef912349796110c3be7f6fa1a01bf6bb080508338a9227e68c1bdb5"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-recovery-offer-b68d176b80d5e6e96ab7118cd37999c4d0722474.png",
+      "bytes": 66985,
+      "sha256": "1726d2cd1921893313a8e9aca44cdf80b01ea4c61a6fd39f5e223863b58632fa"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-one-saved-8d38d538bc8c5847d4b052c57c09a79c1fac598f.png",
+      "bytes": 65345,
+      "sha256": "ef27224753446f64e5d4ae3091f545ee84bc8421d98b2b12fac57a655678239e"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-d9dd26d2dfb27c86f65d7fd463f76d7caeb81bd2.png",
+      "bytes": 65251,
+      "sha256": "5db13fd409bb13469c50e2ec828b73053efc7a90e7556e78622f66b4e24b9c9a"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-recovered-34e35df308ac19b1963bec33ac7bd96ad932ac57.png",
+      "bytes": 70881,
+      "sha256": "1f3e43b2f1d121b416083d3b1cc5cc5c3b8efbb96397988ff027a8bb45553295"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-recovery-offer-5e6e7a3a49f0f8d7ed0d7027d061f91ee696f4d0.png",
+      "bytes": 69297,
+      "sha256": "da4722d029b59087ec700945eb82ecd78d16e895859470ba572ef7a017d46b59"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-pdf-two-saved-fafe40ad258106f5c639f1eafc4dbd391177cff9.png",
+      "bytes": 66740,
+      "sha256": "f7b6673cecabd166d18bed09eb6b32591ef3668546d37032b649aab854423e47"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-photo-459bd2d46f5103d8c057b6d9a68e97bc35303700.png",
+      "bytes": 1872750,
+      "sha256": "dc14f9b82b9405144dd398282562e37f51405ff612ea87dad3aea6588b53095a"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-slide-7d9a06c993dce02d5b16d10a23f46cfdf52bff66.png",
+      "bytes": 59887,
+      "sha256": "48163d19396e1bfba95a1bf36ae2d0df848bd5b10f9905810f728691908ad36f"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/c2-source-two-0b46a7fe68827a664c5c7df6517948fe76c3632f.png",
+      "bytes": 63647,
+      "sha256": "a5794f698f5401f1622a10d7c7b27afc8db1a8c0f37fafe42ba94b4e5611aefe"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copied-ABC-2-fe51f7d263c815c8e4cf2f1a02b07f69956e0f84.png",
+      "bytes": 71111,
+      "sha256": "1760d8a2742373809892719db57ddad93786e776c924d8aaf38ae6cee0a8a5e0"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copied-ABC-75df113fd4c30c0fb777cbce1509ea3c718c965b.png",
+      "bytes": 70896,
+      "sha256": "f5ec5f8b4d8cf270f90caed6fd4ecbe333c53618071c6b8d2f43615476f40777"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copy-picker-layer-sets-a7de65440703cf670c005a28fbc19c17b9fe311f.png",
+      "bytes": 77031,
+      "sha256": "5569c55f65f28903d198cb22c1f007d7c6ac4293b0f0e668a72c7035e7d1510c"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copy-preview-c2-source-one-1762704b7d948f720e621346136e1d5b47ad89b1.png",
+      "bytes": 66692,
+      "sha256": "7f0bd3a63dcb420012a4d31d3ac53ec0790ac21655a9c3b1dae6bae012399223"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/copy-preview-c2-source-two-171301700168c0b9e5a18178830a307a8528040a.png",
+      "bytes": 66452,
+      "sha256": "664d9904f7ee5e7f7d71f99666ab2a95a86fa12bcd61b74bbe83aaa28b799d9b"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/pdf-page-three-created-0fa4877b283f1734f005285cd80608f869ab6932.png",
+      "bytes": 51245,
+      "sha256": "d6d5d3f3392b72af376c7e541e1e6b1c58da0594379fba88cb089ad59546691c"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/pdf-whole-set-renamed-7f38a7c5b179dd408adcec65410da0835f64fa08.png",
+      "bytes": 67438,
+      "sha256": "0728e0f0d90a6c4fc31dedf251852d65a1a12cfa20e6bfc330fe68957b53314f"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/attachments/stale-save-retains-recovered-work-a11d1607d66bd5b9c22edbe8571e255a06c4edf9.png",
+      "bytes": 71734,
+      "sha256": "45e1b79a28ae29c0c700b1519cf26ed2dcad8b33d2b450712e3d216e94901149"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one.png",
+      "bytes": 63901,
+      "sha256": "393cf54ec0c7f399af54196b33d418de9c4744ba865289ef5c5d71a061804c4b"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_recovered.png",
+      "bytes": 68666,
+      "sha256": "d1687ec02ef912349796110c3be7f6fa1a01bf6bb080508338a9227e68c1bdb5"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_recovery_offer.png",
+      "bytes": 66985,
+      "sha256": "1726d2cd1921893313a8e9aca44cdf80b01ea4c61a6fd39f5e223863b58632fa"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_one_saved.png",
+      "bytes": 65345,
+      "sha256": "ef27224753446f64e5d4ae3091f545ee84bc8421d98b2b12fac57a655678239e"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two.png",
+      "bytes": 65251,
+      "sha256": "5db13fd409bb13469c50e2ec828b73053efc7a90e7556e78622f66b4e24b9c9a"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_recovered.png",
+      "bytes": 70881,
+      "sha256": "1f3e43b2f1d121b416083d3b1cc5cc5c3b8efbb96397988ff027a8bb45553295"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_recovery_offer.png",
+      "bytes": 69297,
+      "sha256": "da4722d029b59087ec700945eb82ecd78d16e895859470ba572ef7a017d46b59"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_pdf_two_saved.png",
+      "bytes": 66740,
+      "sha256": "f7b6673cecabd166d18bed09eb6b32591ef3668546d37032b649aab854423e47"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_photo.png",
+      "bytes": 1872750,
+      "sha256": "dc14f9b82b9405144dd398282562e37f51405ff612ea87dad3aea6588b53095a"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_slide.png",
+      "bytes": 59887,
+      "sha256": "48163d19396e1bfba95a1bf36ae2d0df848bd5b10f9905810f728691908ad36f"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/c2_source_two.png",
+      "bytes": 63647,
+      "sha256": "a5794f698f5401f1622a10d7c7b27afc8db1a8c0f37fafe42ba94b4e5611aefe"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copied_ABC.png",
+      "bytes": 70896,
+      "sha256": "f5ec5f8b4d8cf270f90caed6fd4ecbe333c53618071c6b8d2f43615476f40777"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copied_ABC_2.png",
+      "bytes": 71111,
+      "sha256": "1760d8a2742373809892719db57ddad93786e776c924d8aaf38ae6cee0a8a5e0"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copy_picker_layer_sets.png",
+      "bytes": 77031,
+      "sha256": "5569c55f65f28903d198cb22c1f007d7c6ac4293b0f0e668a72c7035e7d1510c"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copy_preview_c2_source_one.png",
+      "bytes": 66692,
+      "sha256": "7f0bd3a63dcb420012a4d31d3ac53ec0790ac21655a9c3b1dae6bae012399223"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/copy_preview_c2_source_two.png",
+      "bytes": 66452,
+      "sha256": "664d9904f7ee5e7f7d71f99666ab2a95a86fa12bcd61b74bbe83aaa28b799d9b"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/journey-evidence.json",
+      "bytes": 114955,
+      "sha256": "4562fc629afbe9a0720fadf34ee3113a58a53e4ded98b49c4c87d36ed5c901db"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/pdf_page_three_created.png",
+      "bytes": 51245,
+      "sha256": "d6d5d3f3392b72af376c7e541e1e6b1c58da0594379fba88cb089ad59546691c"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/pdf_whole_set_renamed.png",
+      "bytes": 67438,
+      "sha256": "0728e0f0d90a6c4fc31dedf251852d65a1a12cfa20e6bfc330fe68957b53314f"
+    },
+    {
+      "path": "j112c2-terminology-browser/page-owned-scoped-identity-182e1-e-copy-and-draft-acceptance-chromium/stale_save_retains_recovered_work.png",
+      "bytes": 71734,
+      "sha256": "45e1b79a28ae29c0c700b1519cf26ed2dcad8b33d2b450712e3d216e94901149"
+    },
+    {
+      "path": "j112c2-terminology-readback.json",
+      "bytes": 2095,
+      "sha256": "7a043e58d4e59f8ca87dc1cab443ba140273e575884b2a71a60e3a2b3cc36400"
+    }
+  ],
+  "archive": {
+    "path": "docs/acceptance/2026-10-04-checkpoint.zip",
+    "bytes": 11851407,
+    "sha256": "366d9ee86211694ed0907d31a22f42877f463e731054c22dea946d396415f7ef"
+  }
+}

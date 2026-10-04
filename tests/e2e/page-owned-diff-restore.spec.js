@@ -210,7 +210,7 @@ test( 'diff pages show drawing changes, text-only diffs omit them, and viewer re
 
 		// =========================================================================
 		// Step 2: Open diff B against A:
-		//   - One "Drawing changes" section (.layers-drawing-diff)
+		//   - One "Layer set changes" section (.layers-drawing-diff)
 		//   - One pair, for "Diff probe" only (baseline drawing did not change)
 		//   - Left reads A, right reads B
 		//   - Centre pixel of left canvas is red and right blue

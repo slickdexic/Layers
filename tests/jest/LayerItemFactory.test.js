@@ -257,10 +257,10 @@ describe('LayerItemFactory', () => {
             expect(name).toBe('Line');
         });
 
-        test('should return "Drawing" for path layers', () => {
+        test('should return "Freehand layer" for path layers', () => {
             const layer = { type: 'path' };
             const name = factory.getDefaultLayerName(layer);
-            expect(name).toBe('Drawing');
+            expect(name).toBe('Freehand layer');
         });
 
         test('should return "Layer" for unknown types', () => {

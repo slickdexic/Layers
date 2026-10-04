@@ -708,13 +708,14 @@ class CanvasManager {
 		// Sync to this.currentStyle so new drawings use updated styles
 		this.currentStyle = next;
 
-		// Live-apply style updates to selected layers
+		// Apply only the requested changes. The merged tool defaults may differ
+		// from an existing layer's color, font or other unrelated properties.
 		const ids = this.getSelectedLayerIds();
 		if ( ids && ids.length && this.editor ) {
 			for ( let i = 0; i < ids.length; i++ ) {
 				const layer = this.editor.getLayerById( ids[ i ] );
 				if ( layer && typeof this.styleController.applyToLayer === 'function' ) {
-					this.styleController.applyToLayer( layer, next );
+					this.styleController.applyToLayer( layer, options );
 				}
 			}
 			this.renderLayers( this.editor.layers );

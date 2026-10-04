@@ -86,4 +86,162 @@ describe( 'PageOwnedDraftController', () => {
 		expect( () => controller.persist() ).toThrow( 'layers-draft-storage-failed' );
 		expect( state.canvas.backgroundOpacity ).toBe( 0 );
 	} );
+
+	describe( 'authorized alias for an unsaved file target', () => {
+		const oldWriter = 'a'.repeat( 32 );
+		const newWriter = 'b'.repeat( 32 );
+		let store, currentScope, legacyScope, options;
+
+		function envelope( scope, name = 'Recovered name' ) {
+			return JSON.stringify( { version: 1, scope, phase: 'ready', label: name, editorState: state } );
+		}
+
+		function oldRecord( writerId = oldWriter, name = 'Recovered name' ) {
+			const original = new Store( storage, writerId === null ? undefined : writerId );
+			original.write( legacyScope, envelope( legacyScope, name ) );
+			return original;
+		}
+
+		beforeEach( () => {
+			storage.key = jest.fn( ( index ) => Array.from( data.keys() )[ index ] ?? null );
+			Object.defineProperty( storage, 'length', { get: () => data.size } );
+			bridge.session.isUnsavedNew = jest.fn( () => true );
+			currentScope = { wiki: 'wiki', user: 'user', ...identity };
+			legacyScope = { ...currentScope, surfaceId: 'old-unsaved-file-target' };
+			options = { wiki: 'wiki', user: 'user',
+				legacySurface: { surfaceId: legacyScope.surfaceId, baseRevisionId: 12 } };
+			store = new Store( storage, newWriter );
+			controller = new Controller( bridge, store, new Adapter(), options );
+		} );
+
+		it.each( [ oldWriter, null ] )( 'explicitly reads an authorized alias written by %s', ( writerId ) => {
+			const original = oldRecord( writerId );
+			const bytes = original.read( legacyScope );
+			const candidates = controller.listCandidates();
+			expect( candidates ).toEqual( [ { surfaceId: legacyScope.surfaceId, writerId } ] );
+			expect( controller.inspectRecovery() ).toBeNull();
+			expect( controller.describeCandidates( candidates ) ).toEqual( [ {
+				editorState: state, label: 'Recovered name', publicationBlocked: false
+			} ] );
+			controller.selectRecovery( candidates[ 0 ] );
+			expect( controller.inspectRecovery().label ).toBe( 'Recovered name' );
+			state.layers.push( { id: 'edited', text: 'Retain subsequent work' } );
+			controller.persist();
+			expect( original.read( legacyScope ) ).toBe( bytes );
+			expect( data.size ).toBe( 2 );
+			const written = JSON.parse( new Store( storage, newWriter ).read( currentScope ) );
+			expect( written.scope ).toEqual( currentScope );
+			expect( written.editorState ).toEqual( state );
+			expect( identity.surfaceId ).toBe( 'selected' );
+		} );
+
+		it( 'keeps current and alias records separate even when their writer IDs match', () => {
+			const original = oldRecord();
+			original.write( currentScope, envelope( currentScope, 'Current target' ) );
+			const candidates = controller.listCandidates();
+			expect( candidates ).toEqual( [ oldWriter, { surfaceId: legacyScope.surfaceId, writerId: oldWriter } ] );
+			expect( controller.describeCandidates( candidates ).map( ( candidate ) => candidate.label ) )
+				.toEqual( [ 'Current target', 'Recovered name' ] );
+			controller.selectRecovery( candidates[ 1 ] );
+			expect( controller.inspectRecovery().label ).toBe( 'Recovered name' );
+			controller.selectRecovery( candidates[ 0 ] );
+			expect( controller.inspectRecovery().label ).toBe( 'Current target' );
+		} );
+
+		it( 'does not look up any alias without the authorized option', () => {
+			oldRecord();
+			controller = new Controller( bridge, store, new Adapter(), { wiki: 'wiki', user: 'user' } );
+			const list = jest.spyOn( store, 'listCandidates' );
+			const read = jest.spyOn( store, 'read' );
+			expect( controller.listCandidates() ).toEqual( [] );
+			expect( list.mock.calls ).toEqual( [ [ currentScope ] ] );
+			expect( controller.inspectRecovery() ).toBeNull();
+			expect( read.mock.calls ).toEqual( [ [ currentScope ] ] );
+			expect( data.size ).toBe( 1 );
+		} );
+
+		it.each( [ 'base', 'saved' ] )( 'invalidates an alias when its %s changes', ( change ) => {
+			const original = oldRecord();
+			const bytes = original.read( legacyScope );
+			const candidate = controller.listCandidates()[ 0 ];
+			controller.selectRecovery( candidate );
+			if ( change === 'base' ) {
+				identity.baseRevisionId = 13;
+			} else {
+				bridge.session.isUnsavedNew.mockReturnValue( false );
+			}
+			const list = jest.spyOn( store, 'listCandidates' );
+			const read = jest.spyOn( store, 'read' );
+			expect( controller.listCandidates() ).toEqual( [] );
+			expect( list.mock.calls ).toEqual( [ [ { ...currentScope, baseRevisionId: identity.baseRevisionId } ] ] );
+			expect( () => controller.selectRecovery( candidate ) ).toThrow( 'layers-invalid-page-owned-draft' );
+			expect( () => controller.inspectRecovery() ).toThrow( 'layers-invalid-page-owned-draft' );
+			expect( read ).not.toHaveBeenCalled();
+			controller.persist();
+			expect( original.read( legacyScope ) ).toBe( bytes );
+		} );
+
+		it( 'validates the recovered envelope against the selected legacy scope', () => {
+			const original = oldRecord();
+			original.write( legacyScope, envelope( currentScope ) );
+			const before = new Map( data );
+			controller.selectRecovery( controller.listCandidates()[ 0 ] );
+			expect( () => controller.inspectRecovery() ).toThrow( 'layers-invalid-page-owned-draft' );
+			expect( data ).toEqual( before );
+		} );
+
+		it( 'rejects spoofed, cloned or other-controller alias descriptors before reading storage', () => {
+			oldRecord();
+			const candidate = controller.listCandidates()[ 0 ];
+			const other = new Controller( bridge, store, new Adapter(), options );
+			const read = jest.spyOn( store, 'read' );
+			const select = jest.spyOn( store, 'selectRecovery' );
+			const getter = jest.fn( () => { throw new Error( 'private diagnostic' ); } );
+			const accessor = Object.defineProperty( {}, 'surfaceId', { get: getter } );
+			for ( const spoof of [ {}, { ...candidate }, { surfaceId: 'other', writerId: oldWriter },
+				accessor, other.listCandidates()[ 0 ], new Proxy( {}, { get: getter } ) ] ) {
+				expect( () => controller.selectRecovery( spoof ) ).toThrow( 'layers-invalid-page-owned-draft' );
+			}
+			expect( getter ).not.toHaveBeenCalled();
+			expect( read ).not.toHaveBeenCalled();
+			expect( select ).not.toHaveBeenCalled();
+			expect( Object.isFrozen( candidate ) ).toBe( true );
+		} );
+
+		it( 'copies authorized options and rejects malformed or accessor options without evaluating them', () => {
+			oldRecord();
+			options.legacySurface.surfaceId = 'changed-after-construction';
+			expect( controller.listCandidates() ).toEqual( [ { surfaceId: legacyScope.surfaceId, writerId: oldWriter } ] );
+			const getter = jest.fn( () => { throw new Error( 'private diagnostic' ); } );
+			const accessor = Object.defineProperty( { baseRevisionId: 12 }, 'surfaceId', { get: getter } );
+			const extraSymbol = { surfaceId: 'old', baseRevisionId: 12, [ Symbol( 'extra' ) ]: true };
+			for ( const value of [ null, [], {}, accessor, extraSymbol, { surfaceId: '', baseRevisionId: 12 },
+				{ surfaceId: 'old', baseRevisionId: '12' }, { surfaceId: 'old', baseRevisionId: 0 },
+				{ surfaceId: 'old', baseRevisionId: 2147483648 }, { surfaceId: 'old', baseRevisionId: 12, extra: true },
+				new Proxy( {}, { ownKeys: getter } ) ] ) {
+				expect( () => new Controller( bridge, store, new Adapter(),
+					{ wiki: 'wiki', user: 'user', legacySurface: value } ) ).toThrow( 'layers-invalid-page-owned-draft' );
+			}
+			expect( getter ).toHaveBeenCalledTimes( 1 ); // Proxy reflection is caught and redacted.
+			getter.mockClear();
+			const scopedAccessor = Object.defineProperty( { wiki: 'wiki', user: 'user' },
+				'legacySurface', { get: getter } );
+			expect( () => new Controller( bridge, store, new Adapter(), scopedAccessor ) )
+				.toThrow( 'layers-invalid-page-owned-draft' );
+			expect( getter ).not.toHaveBeenCalled();
+		} );
+
+		it( 'preserves both original records when writing recovered work fails', () => {
+			const original = oldRecord();
+			original.write( currentScope, envelope( currentScope, 'Other current writer' ) );
+			const before = new Map( data );
+			controller.selectRecovery( controller.listCandidates()[ 1 ] );
+			expect( controller.inspectRecovery().label ).toBe( 'Recovered name' );
+			storage.setItem.mockImplementation( () => { throw new Error( 'private quota diagnostic' ); } );
+			expect( () => controller.persist() ).toThrow( 'layers-draft-storage-failed' );
+			expect( data ).toEqual( before );
+			expect( controller.inspectRecovery().label ).toBe( 'Recovered name' );
+			expect( state.canvas.backgroundOpacity ).toBe( 0 );
+		} );
+	} );
 } );

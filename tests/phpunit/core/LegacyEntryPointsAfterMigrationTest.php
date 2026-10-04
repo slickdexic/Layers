@@ -123,7 +123,7 @@ class LegacyEntryPointsAfterMigrationTest extends \MediaWikiIntegrationTestCase 
 		$this->assertStringContainsString( 'moved into page history', $listed->getHTML() );
 		$none = $this->editLayers( $plain->getTitle() );
 		$this->assertSame( '', $none->getRedirect() );
-		$this->assertStringContainsString( 'has no drawings', $none->getHTML() );
+		$this->assertStringContainsString( 'has no layer sets', $none->getHTML() );
 
 		// The section lists the page's drawings with viewer links, and edit links for editors only.
 		$section = $this->section( $title, $this->actor );

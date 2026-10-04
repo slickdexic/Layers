@@ -86,10 +86,11 @@ class DirectEmbeddingRewriter {
 	 * @param int $pageId Owner page
 	 * @param string $name The drawing's final, canonical name
 	 * @param callable $resolveFile
+	 * @param bool $emitBareNames Emit a verified bare name instead of the explicit owner reference
 	 * @return string
 	 */
 	public function rewrite( string $text, int $start, string $expected, int $pageId, string $name,
-		callable $resolveFile
+		callable $resolveFile, bool $emitBareNames = false
 	): string {
 		$reference = $pageId . ':' . $name;
 		try {
@@ -100,6 +101,9 @@ class DirectEmbeddingRewriter {
 		}
 		if ( !$valid ) {
 			$this->reject();
+		}
+		if ( $emitBareNames ) {
+			$reference = $name;
 		}
 		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
 			if ( $candidate['start'] !== $start || $candidate['raw'] !== $expected ) {
@@ -130,18 +134,23 @@ class DirectEmbeddingRewriter {
 				$kept[] = 'layerset=' . $reference;
 			}
 			if ( !$file ) {
-				$head = preg_replace_callback( '/\A(#slide\s*:\s*).*?(\s*)\z/isD',
+				$pattern = $emitBareNames ? '/\A(\s*#slide\s*:\s*).*?(\s*)\z/isD' :
+					'/\A(#slide\s*:\s*).*?(\s*)\z/isD';
+				$head = preg_replace_callback( $pattern,
 					static fn ( $m ) => $m[1] . $reference . $m[2], $head );
 			}
 			$target = $file ? $candidate['target'] : trim( substr( $head, strpos( $head, ':' ) + 1 ) );
-			if ( PageOwnedBindingOptions::extract( $kept ) !== null ||
+			if ( !$emitBareNames && ( PageOwnedBindingOptions::extract( $kept ) !== null ||
 				PageOwnedBindingOptions::named( $kept, $candidate['kind'], $target ) !==
 					[ 'pageId' => $pageId, 'name' => $name ]
-			) {
+			) ) {
 				$this->reject();
 			}
 			$replacement = substr( $expected, 0, 2 ) . $head . ( $kept ? '|' . implode( '|', $kept ) : '' ) .
 				substr( $expected, -2 );
+			if ( $emitBareNames ) {
+				$this->assertBareReplacement( $replacement, $candidate, $pageId, $name, $resolveFile );
+			}
 			return substr( $text, 0, $start ) . $replacement . substr( $text, $start + strlen( $expected ) );
 		}
 		$this->reject();
@@ -202,6 +211,161 @@ class DirectEmbeddingRewriter {
 			$text = substr( $text, 0, $start ) . $replacement . substr( $text, $start + $length );
 		}
 		return $text;
+	}
+
+	/**
+	 * Rename only the specified file/slide layer-set identities in direct literal embeds.
+	 * @param string $text Original main-slot source
+	 * @param int $pageId Owner page
+	 * @param array $renames List of kind, fileTitle, oldName and canonical newName records
+	 * @param callable $resolveFile Native canonical file-title resolver
+	 * @param bool $bareNames Whether bare selectors mean this page's own layer sets
+	 * @param bool $emitBareNames Emit verified bare names without changing input eligibility
+	 * @return string
+	 * @throws \InvalidArgumentException For invalid instructions or unsupported source
+	 */
+	public function renameScopedReferences( string $text, int $pageId, array $renames, callable $resolveFile,
+		bool $bareNames = false, bool $emitBareNames = false
+	): string {
+		if ( $pageId < 1 || $pageId > 2147483647 || !array_is_list( $renames ) ) {
+			$this->reject();
+		}
+		$scopes = [];
+		$instructions = [];
+		foreach ( $renames as $rename ) {
+			if ( !is_array( $rename ) || count( $rename ) !== 4 ||
+				!isset( $rename['kind'] ) || !isset( $rename['oldName'] ) || !isset( $rename['newName'] ) ||
+				!array_key_exists( 'fileTitle', $rename ) ||
+				!in_array( $rename['kind'], [ 'file', 'slide' ], true ) ||
+				!is_string( $rename['oldName'] ) || !is_string( $rename['newName'] ) ||
+				DrawingName::normalize( $rename['newName'] ) !== $rename['newName']
+			) {
+				$this->reject();
+			}
+			$fileTitle = $rename['fileTitle'];
+			if ( $rename['kind'] === 'file' ) {
+				if ( !is_string( $fileTitle ) || !str_starts_with( $fileTitle, 'File:' ) ) {
+					$this->reject();
+				}
+				try {
+					$canonical = $resolveFile( $fileTitle );
+				} catch ( \InvalidArgumentException $exception ) {
+					$this->reject();
+				}
+				if ( $canonical !== $fileTitle ) {
+					$this->reject();
+				}
+			} elseif ( $fileTitle !== null ) {
+				$this->reject();
+			}
+			// Impossible old names must not select valid names such as "_" whose key is empty.
+			// Noncanonical but usable old spacing/case remains valid comparison input.
+			$matchable = DrawingName::normalize( $rename['oldName'] ) !== null;
+			$oldKey = DrawingName::key( $rename['oldName'] );
+			$previous = $instructions[$rename['kind']][$fileTitle ?? ''][(int)$matchable][$oldKey] ?? null;
+			if ( $previous !== null && $previous !== $rename['newName'] ) {
+				$this->reject();
+			}
+			$instructions[$rename['kind']][$fileTitle ?? ''][(int)$matchable][$oldKey] = $rename['newName'];
+			if ( $matchable ) {
+				$scopes[$rename['kind']][$fileTitle ?? ''][$oldKey] = $rename['newName'];
+			}
+		}
+
+		$edits = [];
+		foreach ( $this->scan( $text, $resolveFile ) as $candidate ) {
+			$selectors = 0;
+			$selectorIndex = null;
+			foreach ( $candidate['options'] as $index => $option ) {
+				$key = strtolower( trim( explode( '=', $option, 2 )[0], " \t\r\n\f" ) );
+				if ( $key === 'layersbinding' ) {
+					continue 2;
+				}
+				if ( in_array( $key, [ 'layerset', 'layers', 'layer', 'layersetid' ], true ) ) {
+					$selectors++;
+					$selectorIndex = $index;
+				}
+			}
+			if ( $candidate['kind'] === 'file' && $selectors !== 1 ) {
+				continue;
+			}
+			try {
+				$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+					$candidate['target'], $bareNames ? $pageId : null );
+			} catch ( \InvalidArgumentException $exception ) {
+				continue;
+			}
+			if ( $named === null || $named['pageId'] !== $pageId ) {
+				continue;
+			}
+			$fileTitle = $candidate['kind'] === 'file' ? $candidate['target'] : '';
+			$newName = $scopes[$candidate['kind']][$fileTitle][DrawingName::key( $named['name'] )] ?? null;
+			if ( $newName === null ) {
+				continue;
+			}
+			$reference = $emitBareNames ? $newName : $pageId . ':' . $newName;
+			$parts = explode( '|', substr( $candidate['raw'], 2, -2 ) );
+			$head = array_shift( $parts );
+			if ( $candidate['kind'] === 'slide' ) {
+				$head = preg_replace_callback( '/\A(\s*#slide\s*:\s*).*?(\s*)\z/isD',
+					static fn ( $match ) => $match[1] . $reference . $match[2], $head );
+			} else {
+				$equalsPos = strpos( $parts[$selectorIndex], '=' );
+				$parts[$selectorIndex] = substr( $parts[$selectorIndex], 0, $equalsPos + 1 ) . $reference;
+			}
+			$replacement = substr( $candidate['raw'], 0, 2 ) . $head .
+				( $parts ? '|' . implode( '|', $parts ) : '' ) . substr( $candidate['raw'], -2 );
+			if ( $emitBareNames ) {
+				$this->assertBareReplacement( $replacement, $candidate, $pageId, $newName, $resolveFile );
+			}
+			$edits[] = [ $candidate['start'], $candidate['length'], $replacement ];
+		}
+		foreach ( array_reverse( $edits ) as [ $start, $length, $replacement ] ) {
+			$text = substr( $text, 0, $start ) . $replacement . substr( $text, $start + $length );
+		}
+		return $text;
+	}
+
+	/**
+	 * @param string $replacement Actual complete replacement bytes
+	 * @param array $original Original scanner candidate
+	 * @param int $pageId Intended owner
+	 * @param string $name Requested canonical bare spelling
+	 * @param callable $resolveFile Native canonical file-title resolver
+	 */
+	private function assertBareReplacement( string $replacement, array $original, int $pageId, string $name,
+		callable $resolveFile
+	): void {
+		try {
+			$found = $this->scan( $replacement, $resolveFile );
+			if ( count( $found ) !== 1 || $found[0]['start'] !== 0 || $found[0]['raw'] !== $replacement ||
+				$found[0]['length'] !== strlen( $replacement ) || $found[0]['kind'] !== $original['kind']
+			) {
+				$this->reject();
+			}
+			$candidate = $found[0];
+			if ( $candidate['kind'] === 'slide' ) {
+				$bare = $candidate['target'] === $name;
+			} else {
+				$values = [];
+				foreach ( $candidate['options'] as $option ) {
+					$equalsPos = strpos( $option, '=' );
+					$key = $equalsPos === false ? '' : strtolower( trim( substr( $option, 0, $equalsPos ) ) );
+					if ( in_array( $key, [ 'layerset', 'layers' ], true ) ) {
+						$values[] = trim( substr( $option, $equalsPos + 1 ), " \t\r\n\f" );
+					}
+				}
+				$bare = $candidate['target'] === $original['target'] && $values === [ $name ];
+			}
+			if ( !$bare || PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ||
+				PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'], $candidate['target'],
+					$pageId ) !== [ 'pageId' => $pageId, 'name' => $name ]
+			) {
+				$this->reject();
+			}
+		} catch ( \InvalidArgumentException $exception ) {
+			$this->reject();
+		}
 	}
 
 	/** @param string $text @param int $offset @return string|null */

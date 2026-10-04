@@ -199,7 +199,7 @@ class LayersEditorPage {
 
 	/**
 	 * Open Special:EditLayersPage for the owner page's drawing.
-	 * Follows the "Edit page drawing" link if already visible,
+	 * Follows the "Edit layer set" link if already visible,
 	 * or navigates directly to Special:EditLayersPage for the drawing.
 	 *
 	 * @param {string} [owner='Layers_browser_acceptance']
