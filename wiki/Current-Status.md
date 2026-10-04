@@ -1,6 +1,46 @@
 # Current status and limitations
 
-## J113E/F accepted; first-pass whole-PDF migration implemented — October 4, 2026
+## J113G inactive foundation accepted; J113H evidence remains open — October 4, 2026
+
+Advances HIST-4/HIST-8 and DATA-1, prepares SRCH-1 and records OPS-2/OPS-3/OPS-4
+evidence. [J113G](../docs/J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md) is accepted
+after independent read-only review and lead strengthening of same-file/set page
+identity, exact sorted limit, page-1 normalization budget and escaped fragment
+coverage. Fresh lead focused host tests pass **29 tests / 57 assertions**; full
+standalone passes **1,542 / 3,810 / 1 existing skip**. Three-file PHP style/lint
+and reference/parallel-list/atomicity gates pass. Existing production callers
+remain unchanged; this optional metadata foundation stays inactive.
+
+Both negative controls remain JE2-reported executions. The current helper's
+SHA-256 matches the reported restored fingerprint
+`EC86DD69099CABA402735789D5D729B7A46365C1F2514D6A743F45E019F9E300`.
+JE1's partial J113H test preparation is host-only and native-unverified. The
+coordination hold is released on JE2's completed return after the lead's host
+checks. JE1 must pass a fresh idle native preflight, then finish the assigned
+controls, native tests and shared gates. No native/browser run occurred in this
+lead continuation. Earlier H full native **612 / 5,586 / 1 existing skip** remains
+the implementation baseline and does not verify JE1's new tests.
+
+Curated checkpoint **`8f309f4b26b367cae317eb3584ea14c2a83f8574` is pushed**,
+superseding the earlier preparing statement. The preceding pushed checkpoint
+and acceptance archives remain preserved. Another G-only curated checkpoint is
+prepared and excludes JE1's partial H test and packet, which remain local until
+the completed return; no future SHA or push is claimed.
+
+JE2's next assignment, [J113I](../docs/J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md),
+is ready and not started: a documentation-only producer/consumer, native-page,
+deduplication and search regression map. It may run during JE1's native window,
+with no source/test/control/native/browser/Git writes.
+
+Copy-pass allocation, proven prior/partial/historical reconciliation,
+numbered-alias bound-editor parity, native template/gallery page consumption,
+search deduplication, Default/show-intent and name-only output/tidy remain
+lead-owned. J111's exact-version/render/export contract and C2 owner screen
+approval remain outstanding. This entry supersedes earlier G assignments,
+coordination and checkpoint directions below; their dated evidence retains its
+original attribution. No migration or charter criterion is declared complete.
+
+## Earlier J113E/F acceptance and first-pass whole-PDF migration — October 4, 2026
 
 Advances HIST-4/HIST-8/HIST-9 and DATA-1, and records OPS-2/OPS-3/OPS-4 evidence.
 [J113E](../docs/J113E_LEGACY_PDF_SELECTION_PACKET.md#lead-acceptance-of-completed-evidence--october-4-2026)

@@ -1,0 +1,19 @@
+{
+  "archive": "docs/acceptance/2026-10-04-j113g.zip",
+  "bytes": 823,
+  "sha256": "47335014a0a2415c89b9e423da497936b2136997a2c1197037defa7640a72bd0",
+  "files": [
+    {
+      "original": "tmp/J113G-lead-unit.log",
+      "archivePath": "J113G-lead-unit.log",
+      "bytes": 260,
+      "sha256": "3fc1179a09936d0dc62082e2ceb04acead6a20793e8c886c3148e546871f5366"
+    },
+    {
+      "original": "tmp/J113G-lead-standalone.log",
+      "archivePath": "J113G-lead-standalone.log",
+      "bytes": 2371,
+      "sha256": "c268e993d3bcfd049c992b0405c59d540fada4e82a463f9a1396c1d7c571b72f"
+    }
+  ]
+}

@@ -7,7 +7,29 @@ tracks HIST-4/HIST-8/HIST-9, DATA-1 and UI-10. The
 
 ## Current state
 
-**Latest continuation October 4:** J113E's independent evidence and J113F's
+**Latest continuation October 4:** [J113G](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)
+is accepted as an inactive foundation after independent read-only review and
+lead strengthening of same-file/set page identity, exact sorted limit, page-1
+normalization budget and escaped fragment coverage. Fresh focused host tests
+pass **29 / 57**; full standalone passes **1,542 / 3,810 / one existing skip**.
+Three-file PHP style/lint and reference/parallel-list/atomicity gates pass.
+Existing production callers remain unchanged. Both controls remain JE2-reported;
+current helper SHA-256 matches the reported restoration fingerprint
+`EC86DD69099CABA402735789D5D729B7A46365C1F2514D6A743F45E019F9E300`.
+This advances HIST-4/HIST-8 and DATA-1 and prepares SRCH-1.
+
+JE1's partial H preparation is host-only/native-unverified. The coordination
+hold is released on JE2's completed return after lead host checks. JE1 must
+pass fresh idle native preflight and finish controls/native/shared gates.
+No native/browser run occurred in this lead continuation. Earlier H native
+**612 / 5,586 / one existing skip** remains the implementation baseline and
+does not verify JE1's new tests. JE2's documentation-only
+[J113I caller audit](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md) is ready and not
+started; it may run during JE1's native window, with no
+source/test/control/native/browser/Git writes. Copy-pass/reconciliation,
+Default/output and J111 remain open. No migration or charter completion is claimed.
+
+**Earlier October 4 continuation:** J113E's independent evidence and J113F's
 pure allocator are accepted. The lead's fresh unchanged E eight-class native
 gate passes **115 tests / 1,453 assertions**. F's junior focused tests pass
 **27 / 91**; fresh lead full standalone passes **1,513 / 3,753 / one existing
@@ -29,13 +51,14 @@ existing skip** passes on PHP 8.3.31 / PHPUnit 9.6.36, superseding the earlier
 nine-file PHP style/lint/reference/parallel-list/atomicity gates pass. Final
 lead guard verification is complete; independent junior H review remains pending.
 
-The next direct assignments are **JE1: independent H review and evidence
-strengthening**, with final lead gates passed, and **JE2: inactive
-[J113G PDF-page metadata](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)**. G leaves
-production callers unchanged. The copy pass, proven prior/partial/historical
-reconciliation, numbered-alias bound-editor parity, template/gallery consumers,
-search deduplication, Default/show-intent and name-only output/tidy remain
-lead-owned. J111 still awaits the architect's version/render/export contract.
+The direct assignments are **JE1: finish independent H evidence** after fresh
+idle preflight, and **JE2: ready documentation-only
+[J113I caller audit](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md)**, not started.
+G is accepted and leaves production callers unchanged. The copy pass, proven
+prior/partial/historical reconciliation, numbered-alias bound-editor parity,
+template/gallery consumers, search deduplication, Default/show-intent and
+name-only output/tidy remain lead-owned. J111 still awaits the architect's
+version/render/export contract.
 
 **Earlier environment-restoration evidence:** the existing Docker engine was
 restarted and passed a fresh idle native preflight. The lead's compatibility/
@@ -43,17 +66,19 @@ pilot **191 / 2,357**, standalone **1,486 / 3,662 / one existing skip**, full
 JavaScript/static **15,190 / 208 suites** and repository PHP syntax/style checks
 all passed. These retain their earlier scope; no new browser run is claimed.
 
-The already pushed curated development checkpoint
-**`ed3231c41495ab2f59a85baf257b2da4780443d5`** preserves
-[selected acceptance evidence](CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md),
-including the corrected gallery and original restoration receipts. Git's remote
-branch check succeeded using the Windows certificate store without changing
-configuration; the checked remote head is an ancestor of the local branch.
-Publication of a development checkpoint does not complete the charter. A new
-curated checkpoint is being prepared; no new SHA or push is claimed. No ordinary
-wiki migration/reconciliation command, Default/name-only output activation,
-release merge or deployment is included. The earlier inventory and outage
-observations below retain their original audit context.
+Curated development checkpoint
+**`8f309f4b26b367cae317eb3584ea14c2a83f8574` is pushed**, superseding the earlier
+preparing statement. The preceding pushed
+**`ed3231c41495ab2f59a85baf257b2da4780443d5`** and
+[selected acceptance evidence](CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md)
+remain preserved, including the corrected gallery and original restoration
+receipts. Another G-only curated checkpoint is prepared and excludes JE1's
+partial H test and packet; both remain local until the completed return.
+No future SHA or push is claimed. Publication of a development checkpoint
+does not complete the charter. No ordinary wiki migration/reconciliation
+command, Default/name-only output activation, release merge or deployment is
+included. The earlier inventory and outage observations below retain their
+original audit context.
 
 The page-history foundation is implemented. Scoped owner/file/name identity,
 native PDF-page selection, atomic whole-PDF rename, creation/copy/adoption and
@@ -62,9 +87,9 @@ layer set share one name. Search, native link tracking/searchable targets (J108)
 and opt-in per-layer Cargo rows (J109) are implemented and accepted for their
 documented scopes.
 
-J113A–F are accepted components: inactive name-only output support, effective
+J113A–G are accepted components: inactive name-only output support, effective
 PDF pages during direct migration, retained-row audit evidence, grouped parser
-name counting, exact legacy File-page selection and pure whole-set allocation.
+name counting, exact legacy File-page selection, pure whole-set allocation and inactive page metadata.
 E's later independent return completed redirect/current-editor/API journeys,
 another-owner migration-ID refusal, deterministic full-byte no-write comparisons
 and both restored controls. H's first-pass integration is separate lead work;
@@ -75,25 +100,26 @@ Last recorded results, rather than a fresh combined full-suite claim:
 
 | Verification | Result and scope |
 | --- | --- |
-| Native PHP | Fresh lead E eight-class group: **115 / 1,453**, passed. Final H full suite: **612 / 5,586 / one existing skip**, passed. The final H guard's same-filter regression passes **1 / 8** after its demonstrated failure. Earlier **611 / 5,581 / one skip** remains historical. |
-| Standalone PHP | Fresh lead full suite including F: **1,513 tests / 3,753 assertions / one existing skip**, passed. F junior focused: **27 / 91**, passed. |
-| JavaScript | Earlier full run: **15,190 tests / 208 suites**, passed. Not rerun for this E/F/H continuation. |
+| Native PHP | Earlier E eight-class group **115 / 1,453** and H full implementation baseline **612 / 5,586 / one existing skip** passed. The H guard's same-filter regression passes **1 / 8** after its demonstrated failure. JE1's new H tests remain native-unverified; no native run occurred in this lead continuation. Earlier **611 / 5,581 / one skip** remains historical. |
+| Standalone PHP | Fresh lead full suite including G: **1,542 tests / 3,810 assertions / one existing skip**, passed; focused G **29 / 57**, passed. Earlier F junior focused **27 / 91** and lead full **1,513 / 3,753 / one skip** retain their scope. |
+| JavaScript | Earlier full run: **15,190 tests / 208 suites**, passed. Not rerun for this G acceptance continuation. |
 | Browser | C2 minimum: **2 tests / 19 screenshots**, technically accepted; owner screen approval remains pending. This is not full-browser-suite acceptance. |
-| Host/static/docs | Final H nine-file PHP style/lint/reference/parallel-list/atomicity gates pass. E/F junior style/static/docs checks retain their attribution. Documentation refresh verification is recorded below. PHP coverage remains unmeasured. |
+| Host/static/docs | Fresh three-file PHP style/lint and reference/parallel-list/atomicity gates pass. Earlier H nine-file and E/F junior gates retain their original scope and attribution. The lead records this refresh's final documentation checks separately. PHP coverage remains unmeasured. |
 
 At the initial team review the existing Docker test engine was unavailable and
 its named pipe absent. The later continuation above supersedes that blocker.
 Docker remains only the development/test environment, not a Layers runtime
 dependency or a new architecture workstream.
 
-## Checkpoint state: one pushed; the next being prepared
+## Checkpoint state: two pushed; G-only checkpoint prepared
 
-Checkpoint **`ed3231c41495ab2f59a85baf257b2da4780443d5`** is already pushed on
-`codex/l01-publication-admission`. Preserve the newly accepted E/F work, H
-integration and current packets in another curated checkpoint after final
-verification and path review. That checkpoint is being prepared; its SHA and
-push are not yet recorded. Keep generated outputs excluded and selected
-acceptance evidence preserved. Neither checkpoint is release acceptance.
+Checkpoint **`8f309f4b26b367cae317eb3584ea14c2a83f8574`** is pushed on
+`codex/l01-publication-admission`, superseding the earlier preparing statement.
+The earlier **`ed3231c41495ab2f59a85baf257b2da4780443d5`** remains pushed.
+Another G-only curated checkpoint is prepared, with JE1's partial H test and
+packet excluded until the completed return. No future SHA or push is claimed.
+Keep generated outputs excluded and selected acceptance evidence preserved.
+Development checkpoints are not release acceptance.
 
 Historical read-only Git inventory before the first checkpoint:
 
@@ -140,7 +166,7 @@ issue list; and a preserved branch that the team can test together.
 
 | Milestone | Remaining deliverable | Lead / junior responsibility | Planning effort |
 | --- | --- | --- | --- |
-| 1. Independent review and inactive metadata | E/F acceptance and H's final lead gates are complete for their scopes. Independently review H and strengthen preservation/refusal/control evidence. Implement inactive G PDF-page tuples/accessor. | JE1 reviews H; JE2 implements G; lead reviews both and owns caller activation. Native/browser activity stays serial. | Earlier **0.5–1 working day** evidence estimate remains provisional; these are the updated immediate assignments. |
+| 1. Independent review and metadata caller map | G's inactive foundation is accepted with fresh host gates. Finish JE1's H controls/native/shared evidence after fresh idle preflight; partial preparation is native-unverified. J113I's documentation-only producer/consumer/native-page/dedup/search regression map is ready, not started. | JE1 finishes H; JE2 audits I during the native window; lead reviews returns and owns caller activation. Native/browser activity stays serial. | Earlier **0.5–1 working day** evidence estimate remains provisional; these are the updated immediate assignments. |
 | 2. Complete the coordinated J113 transition | First-pass whole-set naming is implemented. Finish copy-pass allocation, proven prior/partial/historical reconciliation, numbered-alias editor parity, template/gallery page consumption and search deduplication; preserve show intent before Default; activate name-only writers; tested tidy/reconciliation dry run, stale-plan refusal and undo. | Lead owns integration and source/payload provenance. Any actual content reconciliation/write still requires the owner-reviewed dry run. | **3–5 working days**, conditional planning estimate. |
 | 3. Restore the approved reader experience | J111 Edit/View overlays and full-size viewer; exact-version PDF navigation; complete print/download; editor access for missing sets; retain existing entry points until replacements pass acceptance. | Architect settles the remaining J111 version/render/export contract; lead owns server admission; junior implements the client against the tested response contract. | **3–5 working days**, after the contract is settled. |
 | 4. Consolidate integration testing | Repair unsafe cleanup in the older copy-list spec; run current native/standalone/client/browser gates, verify migration/undo on disposable fixtures, refresh examples/docs and present screens for owner review. | Lead sequences native/browser work; junior owns assigned regression/acceptance cases. Owner reviews screens. | **1–2 working days**. |
@@ -185,25 +211,27 @@ estimate.
 
 ## Immediate directions to the team
 
-**Lead engineer:** prepare the new curated checkpoint after H's passed final
-guard verification. Review JE1/JE2 returns, then integrate the copy pass and
-page metadata under native preservation/search gates. Retain proven historical
-reconciliation, Default/show-intent and name-only writer/tidy activation.
+**Lead engineer:** preserve the prepared G-only checkpoint, excluding JE1's
+partial H test and packet until the completed return. Review completed H and
+the ready I caller-map return, then integrate the copy pass and page metadata
+under native preservation/search gates. Retain proven historical reconciliation,
+Default/show-intent and name-only writer/tidy activation.
 
-**Junior engineer 1 (JE1):** independently review and strengthen
+**Junior engineer 1 (JE1):** finish the independent
 [J113H](J113H_WHOLE_SET_FILE_MIGRATION_PACKET.md#junior-assignment--independent-review-and-evidence-strengthening)
-with final lead gates passed. Work only in its allowed test/report scope, verify
-complete preservation and conservative refusal, demonstrate both restored
-controls, run the entire assigned native filter serially after idle preflight,
-and return evidence for lead review. Report production defects to the lead.
+test/report assignment after fresh idle native preflight. The coordination hold
+is released; partial host preparation is native-unverified. Work only in the
+allowed scope, verify complete preservation and conservative refusal,
+demonstrate both restored controls, run the entire assigned native filter
+serially and complete shared gates. Return evidence for lead review; report
+production defects to the lead.
 
-**Junior engineer 2 (JE2):** implement
-[J113G](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md), the inactive optional page
-representation and accessor. Preserve existing triple bytes and callers, add
-the bounded unit tests, demonstrate both restored controls and run the host
-gates. Return separately for lead review. Do not activate parser/search/migration
-callers or expand the shared bootstrap. Issuing these packets does not mean
-either junior has started.
+**Junior engineer 2 (JE2):** [J113I](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md)
+is ready, not started. Audit metadata producers/consumers, native effective-page
+values, migration deduplication and search regression gaps. Append only the
+bounded report to I; do not edit source/tests, apply controls, run native/browser
+work or change Git. This documentation-only assignment may run during JE1's
+native window. G's completed return is accepted and its callers remain inactive.
 
 **Project owner / architect:** retain the agreed owner/file/name model and larger
 design authority. The remaining architect input is the
@@ -222,13 +250,11 @@ release acceptance is claimed.
 
 That initial documentation verification passed for **85 maintained/policy
 documents and 53 historical records**; the status mirror matched and
-`git diff --check` passed. The latest documentation-only refresh records E/F
-acceptance, H lead integration and pending independent review, the JE1/JE2
-assignments and the known pushed checkpoint. Its own checks are recorded by
+`git diff --check` passed. This documentation-only refresh records G's inactive acceptance, JE1's host-only/native-unverified H preparation and released hold, ready I, and the known pushed checkpoint. Its own checks are recorded by
 the lead after this refresh; no native/browser run is attributed to the
 documentation editor.
 
-The lead's final documentation gate passes **90 maintained/policy documents /
+The earlier lead documentation gate passed **90 maintained/policy documents /
 53 historical records**. Both documentation mirrors match; `git diff --check`
 passes. The [continuation archive](J113EFH_CHECKPOINT_EVIDENCE_2026-10-04.md)
 preserves eleven lead logs with a verified manifest. Curated staging excludes

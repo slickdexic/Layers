@@ -1,6 +1,46 @@
 # Junior implementation review — J01–J113
 
-## October 4 continuation: J113E/F accepted; J113H independent review next
+## October 4 continuation: J113G accepted; J113H evidence remains open
+
+Advances HIST-4/HIST-8 and DATA-1, prepares SRCH-1 and records OPS-2/OPS-3/OPS-4
+evidence. The lead accepts [J113G's inactive metadata foundation](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)
+after independent read-only review found no production defect. The lead added
+same-file/set distinct-page deduplication and order, exact sorted 50-entry
+selection, stored page-1 quadruple/triple budget and escaped fragment coverage.
+Fresh focused host tests pass **29 / 57**; full standalone passes **1,542 /
+3,810 / 1 existing skip**. Three-file PHP style/lint and
+reference/parallel-list/atomicity gates pass. All production callers remain
+unchanged.
+
+JE2's two negative-control executions remain junior-reported evidence. Current
+helper SHA-256 matches the reported restoration fingerprint
+`EC86DD69099CABA402735789D5D729B7A46365C1F2514D6A743F45E019F9E300`;
+fingerprint readback does not claim to witness those executions. JE1's partial
+H test preparation is host-only and native-unverified. The coordination hold is
+released on JE2's completed return after the lead host checks. JE1 must pass a
+fresh idle native preflight and finish the assigned controls/native/shared
+gates. No native/browser run occurred in this lead continuation. The earlier H
+**612 / 5,586 / 1 existing skip** full-native result is the implementation
+baseline, not verification of JE1's new tests.
+
+Curated checkpoint **`8f309f4b26b367cae317eb3584ea14c2a83f8574` is pushed**,
+superseding the earlier preparing statement. Another G-only curated checkpoint
+is prepared and excludes JE1's partial H test and packet, which remain local
+until the completed return; no future SHA or push is claimed. This entry
+supersedes the G assignment and coordination directions below, preserving
+historical evidence.
+
+JE2's next assignment, [J113I](J113I_PDF_METADATA_CALLER_AUDIT_PACKET.md), is ready
+and not started: a documentation-only producer/consumer, native-page,
+deduplication and search regression map. It may run during JE1's native window,
+with no source/test/control/native/browser/Git writes.
+
+Copy-pass allocation, proven prior/partial/historical reconciliation,
+numbered-alias bound-editor parity, template/gallery consumption, search
+deduplication, Default/show-intent, name-only output/tidy and J111 remain open.
+No broader migration or charter acceptance is claimed.
+
+## Earlier October 4 continuation: J113E/F accepted; J113H independent review next
 
 Advances HIST-4/HIST-8/HIST-9, DATA-1 and OPS-2/OPS-3/OPS-4. The lead accepts
 [J113E's completed evidence](J113E_LEGACY_PDF_SELECTION_PACKET.md#lead-acceptance-of-completed-evidence--october-4-2026):
