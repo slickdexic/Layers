@@ -116,34 +116,80 @@ class FilePageMigration {
 				JSON_THROW_ON_ERROR ) :
 			(object)[ 'schemaVersion' => DocumentSchema::VERSION, 'surfaces' => [] ];
 		$existing = [];
-		$taken = [];
 		foreach ( $document->surfaces as $surface ) {
 			$existing[$surface->id] = true;
-			$taken[] = (string)$surface->label;
 		}
 
+		// Presence blocks automatic extension; it does not prove an unchanged payload or name.
+		$priorGroups = [];
+		foreach ( $this->legacy->listRetainedFileSetRows( $file->getName() ) as $row ) {
+			if ( isset( $existing[self::surfaceId( $row['id'], $pageId )] ) ) {
+				$priorGroups[JsonSnapshotCodec::encode( [ $row['name'] ] )] = true;
+			}
+		}
 		$current = [];
+		$groups = [];
 		foreach ( $this->legacy->listLatestSetRows( $file->getName(), $file->getSha1() ) as $row ) {
 			$current[$row['name'] . "\n" . $row['page']] = true;
-			$entry = [ 'set' => $row['name'], 'page' => $row['page'] ];
-			$surfaceId = self::surfaceId( $row['id'], $pageId );
-			if ( isset( $existing[$surfaceId] ) ) {
-				$plan['done'][] = $entry;
+			$key = JsonSnapshotCodec::encode( [ $row['name'] ] );
+			$groups[$key][] = $row;
+			if ( isset( $existing[self::surfaceId( $row['id'], $pageId )] ) ) {
+				$priorGroups[$key] = true;
+			}
+		}
+		$incoming = [];
+		foreach ( $groups as $key => $rows ) {
+			$members = [];
+			$failures = [];
+			foreach ( $rows as $row ) {
+				$entry = [ 'set' => $row['name'], 'page' => $row['page'] ];
+				$surfaceId = self::surfaceId( $row['id'], $pageId );
+				if ( isset( $existing[$surfaceId] ) ) {
+					$plan['done'][] = $entry;
+					continue;
+				}
+				if ( isset( $priorGroups[$key] ) ) {
+					$plan['notMoved'][] = $entry + [ 'reason' => 'existing-migration-group' ];
+					continue;
+				}
+				$reason = null;
+				$surface = $this->convert( $row['id'], $surfaceId, $file->getTimestamp(),
+					$file->getWidth( $row['page'] ), $file->getHeight( $row['page'] ), $authority, $reason );
+				if ( !$surface ) {
+					$failures[$row['id']] = $reason;
+				} else {
+					$members[] = $surface;
+				}
+			}
+			if ( isset( $priorGroups[$key] ) ) {
 				continue;
 			}
-			$reason = null;
-			$surface = $this->convert( $row['id'], $surfaceId, $file->getTimestamp(), $file->getWidth( $row['page'] ),
-				$file->getHeight( $row['page'] ), $authority, $reason );
-			if ( !$surface ) {
-				$plan['notMoved'][] = $entry + [ 'reason' => $reason ];
+			if ( $failures || DrawingName::normalize( $rows[0]['name'] ) === null ) {
+				foreach ( $rows as $row ) {
+					$plan['notMoved'][] = [ 'set' => $row['name'], 'page' => $row['page'],
+						'reason' => $failures[$row['id']] ?? ( $failures ?
+							'incomplete-layer-set' : 'invalid-layer-set-name' ) ];
+				}
 				continue;
 			}
-			$wanted = $row['page'] === 1 ? $row['name'] : wfMessage( 'layers-migration-pdf-page-name' )
-				->plaintextParams( $row['name'] )->numParams( $row['page'] )->inContentLanguage()->text();
-			$surface->label = DrawingName::unused( DrawingName::normalize( $wanted ) ?? $surfaceId, $taken );
-			$taken[] = $surface->label;
-			$document->surfaces[] = $surface;
-			$plan['add'][] = [ 'legacyId' => $row['id'], 'name' => $surface->label ] + $entry;
+			$incoming[] = [ 'key' => $key, 'wanted' => $rows[0]['name'], 'members' => $members ];
+		}
+		try {
+			$allocations = MigrationNameAllocator::allocate( $document->surfaces, $incoming );
+		} catch ( \InvalidArgumentException $e ) {
+			// A primary row may have changed since the metadata read; never repair or partly publish it.
+			$plan['problem'] = 'changed-legacy-group';
+			return $plan;
+		}
+		foreach ( $allocations as $index => $allocation ) {
+			$group = $incoming[$index];
+			foreach ( $group['members'] as $i => $surface ) {
+				$row = $groups[$allocation['key']][$i];
+				$surface->label = $allocation['name'];
+				$document->surfaces[] = $surface;
+				$plan['add'][] = [ 'legacyId' => $row['id'], 'name' => $surface->label,
+					'set' => $row['name'], 'page' => $row['page'] ];
+			}
 		}
 		foreach ( $this->legacy->listSetsOnOtherVersions( $file->getName(), $file->getSha1() ) as $row ) {
 			if ( !isset( $current[$row['name'] . "\n" . $row['page']] ) ) {
@@ -174,8 +220,8 @@ class FilePageMigration {
 		if ( $plan['problem'] !== null || $plan['document'] === null ) {
 			return null;
 		}
-		$names = array_map( static fn ( array $add ) => wfMessage( 'quotation-marks' )->plaintextParams( $add['name'] )
-			->inContentLanguage()->text(), $plan['add'] );
+		$names = array_values( array_unique( array_map( static fn ( array $add ) => wfMessage( 'quotation-marks' )
+			->plaintextParams( $add['name'] )->inContentLanguage()->text(), $plan['add'] ) ) );
 		$summary = wfMessage( 'layers-migration-file-summary' )->numParams( count( $names ) )
 			->plaintextParams( implode( wfMessage( 'comma-separator' )->inContentLanguage()->text(), $names ) )
 			->inContentLanguage()->text();

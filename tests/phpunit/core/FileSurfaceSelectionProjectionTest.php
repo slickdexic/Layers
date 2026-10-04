@@ -115,9 +115,11 @@ class FileSurfaceSelectionProjectionTest extends \MediaWikiIntegrationTestCase {
 			$this->owner->getArticleID( IDBAccessObject::READ_LATEST ) );
 		$this->assertSame( $laterId, $this->getServiceContainer()->getRevisionLookup()
 			->getRevisionByTitle( $this->owner, 0, IDBAccessObject::READ_LATEST )->getId() );
+		$before = $this->databaseState();
 		$this->assertSame( [ [ 'id' => 'later-slide', 'label' => 'Later layer set', 'kind' => 'slide' ] ],
 			$this->pilot->getFileSurfaceSelections( $this->owner, $laterId, $this->actor ) );
 		$this->assertSame( $old, $this->pilot->getFileSurfaceSelections( $this->owner, $oldId, $this->actor ) );
+		$this->assertSame( $before, $this->databaseState() );
 	}
 
 	public function testMissingSourcesAreNotResolvedOrAuthorizedDuringSelection(): void {
@@ -132,7 +134,9 @@ class FileSurfaceSelectionProjectionTest extends \MediaWikiIntegrationTestCase {
 		$authority = $this->createMock( Authority::class );
 		$authority->expects( $this->once() )->method( 'authorizeRead' )
 			->with( 'read', $this->owner )->willReturn( true );
+		$before = $this->databaseState();
 		$this->assertCount( 5, $this->pilot->getFileSurfaceSelections( $this->owner, $revisionId, $authority ) );
+		$this->assertSame( $before, $this->databaseState() );
 	}
 
 	/** @param string $reason @dataProvider provideUnavailable */
@@ -160,9 +164,14 @@ class FileSurfaceSelectionProjectionTest extends \MediaWikiIntegrationTestCase {
 			$this->assertFalse( $this->actor->isAllowed( 'deletedtext' ) );
 			$this->assertFalse( $this->actor->isAllowed( 'suppressrevision' ) );
 		}
-		$this->expectException( \DomainException::class );
-		$this->expectExceptionMessage( 'layers-revision-unavailable' );
-		$this->pilot->getFileSurfaceSelections( $owner, $revisionId, $authority );
+		$before = $this->databaseState();
+		try {
+			$this->pilot->getFileSurfaceSelections( $owner, $revisionId, $authority );
+			$this->fail( 'Unavailable revision must not fall back to a current selection' );
+		} catch ( \DomainException $exception ) {
+			$this->assertSame( 'layers-revision-unavailable', $exception->getMessage() );
+		}
+		$this->assertSame( $before, $this->databaseState() );
 	}
 
 	public static function provideUnavailable(): array {
@@ -176,30 +185,46 @@ class FileSurfaceSelectionProjectionTest extends \MediaWikiIntegrationTestCase {
 		$fragment = $this->getServiceContainer()->getTitleFactory()
 			->newFromText( $this->owner->getPrefixedDBkey() . '#Section' );
 		$outside = $this->getExistingTestPage( 'Unenrolled file selection owner' )->getTitle();
+		$before = $this->databaseState();
 		foreach ( [ [ $this->owner, 0 ], [ $this->owner, -1 ], [ $this->owner, 2147483648 ],
 			[ $fragment, $revisionId ], [ $outside, $revisionId ],
 			[ Title::newFromText( 'Special:Version' ), $revisionId ]
 		] as [ $owner, $id ] ) {
 			$this->assertSame( [], $this->pilot->getFileSurfaceSelections( $owner, $id, $authority ) );
 		}
+		$this->assertSame( $before, $this->databaseState() );
 	}
 
 	public function testReadableEmptySnapshotHasNoSelections(): void {
 		$revisionId = $this->historical( [] );
+		$before = $this->databaseState();
 		$this->assertSame( [], $this->pilot->getFileSurfaceSelections( $this->owner, $revisionId, $this->actor ) );
+		$this->assertSame( $before, $this->databaseState() );
 	}
 
-	/** @return array Revision, slot and owner-head state, proving selection does not write */
+	/** @return array Ordered persistent rows and exact slot text after deferred fixture writes */
 	private function databaseState(): array {
+		$this->runDeferredUpdates();
 		$db = $this->getDb();
-		return [
-			(int)$db->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'revision' )
-				->caller( __METHOD__ )->fetchField(),
-			(int)$db->newSelectQueryBuilder()->select( 'COUNT(*)' )->from( 'slots' )
-				->caller( __METHOD__ )->fetchField(),
-			(int)$db->newSelectQueryBuilder()->select( 'page_latest' )->from( 'page' )
-				->where( [ 'page_id' => $this->owner->getArticleID( IDBAccessObject::READ_LATEST ) ] )
-				->caller( __METHOD__ )->fetchField()
-		];
+		$state = [];
+		foreach ( [ 'revision' => 'rev_id', 'slots' => [ 'slot_revision_id', 'slot_role_id' ],
+			'page' => 'page_id', 'layer_sets' => 'ls_id', 'updatelog' => 'ul_key',
+			'content' => 'content_id', 'text' => 'old_id' ] as $table => $order ) {
+			$rows = [];
+			foreach ( $db->newSelectQueryBuilder()->select( '*' )->from( $table )->orderBy( $order )
+				->caller( __METHOD__ )->fetchResultSet() as $row
+			) {
+				$rows[] = (array)$row;
+			}
+			$state[$table] = $rows;
+		}
+		foreach ( $state['revision'] as $row ) {
+			$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( (int)$row['rev_id'] );
+			foreach ( [ 'main', 'layers' ] as $role ) {
+				$state['slotText'][$row['rev_id']][$role] = $revision->hasSlot( $role ) ?
+					$revision->getContent( $role, RevisionRecord::RAW )->getText() : null;
+			}
+		}
+		return $state;
 	}
 }

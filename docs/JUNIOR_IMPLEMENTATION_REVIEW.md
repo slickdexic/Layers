@@ -1,6 +1,53 @@
 # Junior implementation review — J01–J113
 
-## October 4 continuation: native environment restored; J113F ready
+## October 4 continuation: J113E/F accepted; J113H independent review next
+
+Advances HIST-4/HIST-8/HIST-9, DATA-1 and OPS-2/OPS-3/OPS-4. The lead accepts
+[J113E's completed evidence](J113E_LEGACY_PDF_SELECTION_PACKET.md#lead-acceptance-of-completed-evidence--october-4-2026):
+redirect/current-editor/API journeys, owner-derived ID refusal, deterministic
+full-byte no-write checks and both restored controls. A delegated read-only
+review found no actionable defect. The fresh lead unchanged eight-class native
+gate passes **115 tests / 1,453 assertions**. The controls remain the junior's
+reported executions; lead fingerprint readback does not claim to witness them.
+
+[J113F](J113F_MIGRATION_NAME_ALLOCATION_PACKET.md#lead-acceptance--october-4-2026)
+is accepted as a pure helper after lead and delegated read-only review. Junior
+focused tests pass **27 / 91**; fresh lead full standalone passes **1,513 /
+3,753 / 1 existing skip**. The helper's return activated no caller, and its
+three control executions remain attributed to the junior.
+
+The lead separately implemented [J113H](J113H_WHOLE_SET_FILE_MIGRATION_PACKET.md):
+one allocation across every member of a wholly new PDF group in the first file
+migration pass, with full source/layer retention and conservative refusal to
+extend a group identified by prior/current IDs, including when retained
+metadata is absent. Existing complete imports and
+historical split names stay unchanged. Conversion failures add no partial group;
+changed literal names or incompatible converted topology yield a structured
+refusal. The final current-row-ID guard failed **1 / 3 / 1 failure** before the
+correction and passes the identical filter **1 / 8** afterward. Final full
+native **612 / 5,586 / 1 existing skip**, standalone **1,513 / 3,753 / 1 existing
+skip** and nine-file PHP style/lint/reference/parallel-list/atomicity gates pass.
+The earlier full-native **611 / 5,581 / 1 skip** remains historical. Final lead
+guard verification is complete; independent junior review is still pending.
+
+**JE1** next reviews and strengthens H under its bounded test/report assignment
+with final lead gates passed. **JE2** implements the inactive
+[J113G metadata foundation](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md), preserving
+old tuple bytes and every production caller. Neither assignment is reported as
+started. The lead retains the copy pass, proven prior/partial/historical
+reconciliation, numbered-alias bound-editor parity, template/gallery activation,
+search deduplication, Default/show-intent and name-only output/tidy. J111's
+architect contract and C2 owner screens remain outstanding.
+
+Checkpoint **`ed3231c41495ab2f59a85baf257b2da4780443d5` is already pushed**;
+a new curated checkpoint is being prepared, with no new SHA or push claimed.
+The [selected acceptance archive](CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md)
+remains preserved. This entry supersedes the pending E/F directions below,
+while their dated evidence remains historical. No broader charter acceptance,
+ordinary migration/reconciliation command or Default/name-only activation is
+claimed.
+
+## Earlier October 4 continuation: native environment restored; J113F ready
 
 Advances HIST-4/HIST-8/HIST-9, DATA-1 and OPS-2/OPS-3/OPS-4. The existing
 environment passed idle preflight and the lead's fresh compatibility/pilot gate

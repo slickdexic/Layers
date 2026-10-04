@@ -1,7 +1,8 @@
 # J113F — Pure whole-layer-set migration name allocation
 
 **Date:** October 4, 2026. **Advances:** HIST-4/HIST-8/HIST-9 and DATA-1.
-**Status:** ready for the owner to dispatch; not implemented or accepted.
+**Status:** pure helper accepted by the lead October 4; first-pass integration
+is tracked separately in J113H. The junior return below was inactive.
 
 Junior engineer, implement this bounded helper and return it for lead review.
 Read the charter's “Read this first”, `AGENTS.md` and the active handoff queue
@@ -155,3 +156,170 @@ three control failures and restoration fingerprints, and remaining limitations.
 State explicitly that no production callers were activated, no stored records
 were renamed/merged and no wiki writes, commit or push occurred. Return for lead
 review; do not claim J113, migration or any charter criterion complete.
+
+## Junior implementation report — October 4, 2026
+
+**Role:** Junior engineer. **Status:** implemented and verified; pure component inactive; returned for lead review.
+**Advances:** HIST-4/HIST-8/HIST-9 and DATA-1.
+
+### 1. Changed paths
+
+- `src/Migration/MigrationNameAllocator.php` (new helper)
+- `tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php` (new unit regression suite)
+- `docs/J113F_MIGRATION_NAME_ALLOCATION_PACKET.md` (this report appended)
+
+No other files were created or modified.
+
+### 2. Implemented contract
+
+Implemented `MediaWiki\Extension\Layers\Migration\MigrationNameAllocator::allocate( array $existingSurfaces, array $newGroups ): array` matching the frozen specification:
+- Pure helper that allocates one name for an entire incoming PDF layer set within its file scope.
+- Accepts already-decoded `stdClass[]` destination snapshot without mutation or revalidation.
+- Performs destination preflight to record existing surface IDs and taken names per scope.
+- Validates all incoming groups and members before performing any allocation, rejecting with `InvalidArgumentException` on:
+  - Missing, empty, or duplicate group keys;
+  - Missing or non-string `wanted`, or invalid `wanted` according to `DrawingName::normalize()`;
+  - Empty or non-array `members`;
+  - Non-`stdClass` members, missing or non-string/empty member IDs;
+  - Duplicate member IDs anywhere in the incoming request or already present in destination;
+  - Invalid member kinds (must be `image`, `pdf`, or `slide`);
+  - Member labels not equal to literal group `wanted`;
+  - Image or slide groups with member counts other than 1;
+  - Slide members containing a `source` property;
+  - File members missing a `stdClass` source or nonempty string canonical `fileTitle`;
+  - File members with invalid source pages (image page != 1, PDF page <= 0 or non-integer);
+  - PDF groups with repeated page numbers;
+  - Mixed kinds or mixed file scopes within a single group.
+- Preserves input objects and arrays completely: never modifies incoming groups, members, or destination surfaces.
+- Scopes names using `LayerSetIdentity::scope()`, ensuring equal names on different canonical files or standalone slides do not conflict.
+- Allocates one name per group via `DrawingName::unused()` and reserves that allocated name within its scope before processing subsequent groups.
+- Preserves numeric-looking opaque group keys (such as `'0'`, `'007'`, `'123'`) as strings in the ordered result list.
+- An empty `$newGroups` request returns `[]`.
+
+### 3. Verification and gate results
+
+- **Focused unit class:**
+  `php vendor/bin/phpunit --configuration phpunit.xml tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+  `OK (27 tests, 91 assertions)`
+- **Full standalone suite:**
+  `php vendor/bin/phpunit --configuration phpunit.xml --testsuite Unit`
+  `OK, but incomplete, skipped, or risky tests! Tests: 1513, Assertions: 3753, Skipped: 1`
+  (Baseline 1,486 tests / 3,662 assertions / 1 skip + 27 new tests / 91 assertions = 1,513 / 3,753 / 1 skip).
+- **Changed-file PHPCS:**
+  `php vendor/bin/phpcs -sp --cache --runtime-set ignore_warnings_on_exit 1 src/Migration/MigrationNameAllocator.php tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+  `.. 2 / 2 (100%) - OK (0 errors, 0 warnings)`
+- **Parallel lint:**
+  `php -d error_reporting=8191 vendor/bin/parallel-lint src/Migration/MigrationNameAllocator.php tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+  `Checked 2 files in 0.1 seconds - No syntax error found`
+- **Minus-X whitespace check:**
+  `php vendor/bin/minus-x check src/Migration && php vendor/bin/minus-x check tests/phpunit/unit/Migration`
+  `All good!`
+- **PHP references gate:**
+  `node scripts/check-php-class-refs.js`
+  `PHP class references OK (127 files, 127 extension classes).`
+- **Parallel lists check:**
+  `node scripts/check-parallel-lists.js`
+  `Parallel lists agree (boolean properties, layer types, page-owned renderable types).`
+- **Atomicity check:**
+  `node scripts/check-atomicity.js`
+  `Atomic section usage OK.`
+- **Documentation check:**
+  `node scripts/verify-docs.js`
+  `Documentation checks passed: 87 maintained/policy documents, 53 historical records; mirrors, references and MediaWiki source checks agree.`
+- **Git diff whitespace check:**
+  `git diff --check`
+  Clean (exit code 0).
+
+### 4. Negative controls
+
+All three negative controls were demonstrated against focused tests, observed to fail as specified, and restored:
+
+1. **Control 1: Flatten reserved names across all file/slide scopes**
+   - Mutation: Temporarily flattened destination preflight and group allocation scopes into a single global key `__FLATTENED_SCOPE__`.
+   - Command: `php vendor/bin/phpunit --configuration phpunit.xml --filter testExistingNameOnDifferentFileAndSlideDoNotConflictWhileSameFileCollides tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+   - Observed failure:
+     ```text
+     1) MediaWiki\Extension\Layers\Tests\Unit\Migration\MigrationNameAllocatorTest::testExistingNameOnDifferentFileAndSlideDoNotConflictWhileSameFileCollides
+     Failed asserting that two arrays are identical.
+     --- Expected
+     +++ Actual
+     @@ @@
+      Array &0 (
+          0 => Array &1 (
+              'key' => 'g-target'
+     -        'name' => 'ABC'
+     +        'name' => 'ABC 2'
+          )
+      )
+     ```
+   - Restoration: Restored `LayerSetIdentity::scope()`. File SHA256 verified identical: `2BBFEE098592F58F2F497EA4B7BE0A29D7A5CA3EC6220EE86426ABA91FE4D71D`.
+   - Rerun filter: `OK (1 test, 4 assertions)`.
+
+2. **Control 2: Allocate and reserve separately for each PDF member, returning last member's allocation**
+   - Mutation: Retained group members in validated group data and looped over each member, allocating and reserving for each member and returning the final allocation.
+   - Command: `php vendor/bin/phpunit --configuration phpunit.xml --filter testOnePdfGroupWithMultiplePagesReceivesNameOnceAndPreservesInputBytes tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+   - Observed failure:
+     ```text
+     1) MediaWiki\Extension\Layers\Tests\Unit\Migration\MigrationNameAllocatorTest::testOnePdfGroupWithMultiplePagesReceivesNameOnceAndPreservesInputBytes
+     Failed asserting that two arrays are identical.
+     --- Expected
+     +++ Actual
+     @@ @@
+      Array &0 (
+          0 => Array &1 (
+              'key' => 'g-pdf'
+     -        'name' => 'ABC'
+     +        'name' => 'ABC 2'
+          )
+      )
+     ```
+   - Restoration: Restored single allocation per group. File SHA256 verified identical: `2BBFEE098592F58F2F497EA4B7BE0A29D7A5CA3EC6220EE86426ABA91FE4D71D`.
+   - Rerun filter: `OK (1 test, 5 assertions)`.
+
+3. **Control 3: Omit reservation of first incoming group's allocation**
+   - Mutation: Temporarily skipped `$takenByScope[$scope][] = $allocated` for the first group (`$isFirstGroup = true`).
+   - Command: `php vendor/bin/phpunit --configuration phpunit.xml --filter testTwoIncomingGroupsOnSameFileWithEquivalentNamesReserveSequentially tests/phpunit/unit/Migration/MigrationNameAllocatorTest.php`
+   - Observed failure:
+     ```text
+     1) MediaWiki\Extension\Layers\Tests\Unit\Migration\MigrationNameAllocatorTest::testTwoIncomingGroupsOnSameFileWithEquivalentNamesReserveSequentially
+     Failed asserting that two arrays are identical.
+     --- Expected
+     +++ Actual
+     @@ @@
+          )
+          1 => Array &2 (
+              'key' => 'k2'
+     -        'name' => 'pump_LABELS 2'
+     +        'name' => 'pump_LABELS'
+          )
+          2 => Array &3 (
+              'key' => 'k3'
+     -        'name' => 'Pump labels 3'
+     +        'name' => 'Pump labels 2'
+          )
+     ```
+   - Restoration: Restored unconditional per-group reservation. File SHA256 verified identical: `2BBFEE098592F58F2F497EA4B7BE0A29D7A5CA3EC6220EE86426ABA91FE4D71D`.
+   - Rerun filter: `OK (1 test, 3 assertions)`.
+
+### 5. Explicit declarations and remaining limitations
+
+- No production callers were activated.
+- No stored records were renamed or merged.
+- No changes to UI, translations, API routes, configurations, or fixtures.
+- No ordinary wiki writes, commit, or push occurred.
+- Component is inactive pending lead integration into migration passes. Source grouping, exact-revision selection, stable IDs, resume/partial-import handling, source provenance, publication, and undo remain with the lead.
+- This implementation does not claim J113, migration, or any charter criterion complete. Returned for lead review.
+
+## Lead acceptance — October 4, 2026
+
+Accepted against the frozen pure-helper contract after source/test review and
+a delegated read-only review. No actionable defect was found. Fresh full
+standalone **1,513 tests / 3,753 assertions / one existing skip** and four-file
+PHP style checks pass. The current raw helper SHA-256 matches the junior's
+recorded restoration value. All three control runs remain attributed to the
+junior; the lead did not repeat them or infer unobserved historical evidence.
+
+The return activated no caller. The subsequent lead-owned J113H first-pass
+integration is separate work; copying, provenance, partial imports and undo
+remain caller responsibilities. This is component acceptance, not complete
+migration or HIST-4/HIST-8/HIST-9/DATA-1 acceptance.

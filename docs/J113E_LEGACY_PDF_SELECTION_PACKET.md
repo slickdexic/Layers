@@ -354,3 +354,188 @@ the environment blocker; it does not complete the three independent evidence
 gaps or either negative control. Resume the assignment above and return the
 additional evidence separately for lead review. No new browser/wiki write or
 final J113E acceptance is claimed.
+
+## Junior runtime evidence return - October 4, 2026
+
+**Findings:** no actionable production defect found within this scope. The
+outstanding journeys, owner-ID refusal and full-byte no-write comparisons now
+pass. Both required controls produced the expected failures and were restored
+before further work. Returned for lead review, not lead/owner acceptance or
+broader HIST-4/HIST-8 or Layers 2.0 completion. Advances HIST-4/HIST-8 and DATA-1.
+Earlier lead and read-only reports above remain historical and unchanged.
+
+### Idle preflight and isolation
+
+The existing engine responds with **29.8.0**. No engine restart, alternate
+environment or configuration change was made by this continuation. Host process
+inspection found no competing PHP/Node/Docker test/maintenance process or
+automated-browser main process. Container `ps -eo pid,etime,args` showed only
+Apache and the inspection command. Native runs were serial, in `mediawiki-145`
+using `tests/phpunit/core.xml`, with isolated native fixtures and no browser run.
+
+Read-only SQL checked recent ordinary-wiki revisions. The first unprefixed query
+failed with table-not-found; `SHOW TABLES` identified the installed `T01` prefix,
+and the corrected query passed without any configuration change. At **15:33:08
+UTC**, immediately before the first native run, the latest ordinary revision was
+**20261003150345** and the last-ten-minute count was **0**. A refreshed host,
+container and wiki preflight before the full assigned filter, **15:38:45 UTC**,
+had the same idle result. Post-native readback at **15:42:33 UTC** still showed
+the same latest revision and zero recent revisions. No ordinary wiki write or
+browser/wiki acceptance was performed or observed overlapping these tests.
+
+### Added and strengthened cases
+
+- Added `testAnotherOwnerDerivedIdCannotQualifyAsRetainedAlias()` in
+  [LegacyPdfSelectionTest](../tests/phpunit/core/LegacyPdfSelectionTest.php#L268).
+  It derives the ID from the real retained page-two row and a different native
+  owner, preserving the original source metadata. The requested owner refuses
+  the old alias. The actual literal name remains directly selectable.
+- Added `testExactNameNormalizesCaseSpacesAndUnderscoresWithinPage()` (`:158`),
+  checking `FIELD_NOTES` and ` field notes ` against a two-page `Field Notes`
+  group without substituting page one.
+- Extended the grouped and evidence-backed split action cases (`:95`, `:234`)
+  through their actual redirect query, `prepareCurrentEditor()` and native
+  `ApiMain` execution of `layersread`. The shared journey assertion (`:111`)
+  checks current owner/page/revision/surface identity, exactly one selected
+  member, its complete stored surface, source page **2**, complete pin and all
+  layer properties. It rejects the distinct first-page payload and compares
+  the rendition URL and canvas dimensions with the prepared editor. The API
+  bundle may contain siblings; only the prepared editor's selected identity
+  is compared as its payload. Bootstrap identity is not misreported as payload.
+- Strengthened successful, missing, ambiguous, denied, foreign and unproven
+  selection checks, including the literal suffix and newer-retained-row cases.
+  Fixture uploads/publications/retained saves finish before each baseline;
+  a newer retained save starts a separate interval rather than masquerading
+  as a selector write.
+- Strengthened projection old/current, missing-source, invalid/out-of-scope,
+  empty and unavailable reads in
+  [FileSurfaceSelectionProjectionTest](../tests/phpunit/core/FileSurfaceSelectionProjectionTest.php#L105).
+  Unavailable cases now catch and assert the fixed exception, then compare
+  persistent state; denial, foreign owner, hidden/suppressed text, missing
+  revision and absent slot cannot skip the after-state assertion. Existing
+  history projection/order and no-name multi-entry listing behavior remain.
+
+### Deterministic full-byte no-write evidence
+
+Both local snapshot helpers (`LegacyPdfSelectionTest::state()`, `:346`, and
+`FileSurfaceSelectionProjectionTest::databaseState()`, `:206`) drain deferred
+updates before capturing each side. They compare complete native row arrays
+with strict `assertSame`, not counts or row hashes. Ordering is explicit:
+
+| Table | Order |
+| --- | --- |
+| `revision` | `rev_id` |
+| `slots` | `slot_revision_id`, `slot_role_id` |
+| `page` | `page_id` |
+| `layer_sets` | `ls_id` |
+| `updatelog` | `ul_key` |
+| `content` | `content_id` |
+| `text` | `old_id` |
+
+This captures every owner head, retained row/blob and migration marker, plus
+revision/slot/content pointers and the actual stored blob bytes/flags. Each
+stored revision's exact main/layers text is also captured using raw content
+access, with absent slots represented explicitly. Hidden/suppressed content is
+captured only for the test witness, not granted to the selection reader.
+Same-count blob changes cannot hide behind unchanged slot pointers. Passing
+comparisons cover both editor journeys and successful/refused metadata reads,
+including exact old reads after a later fixture publication. Shared fixture
+helpers and the legacy listing test file were not changed.
+
+### Negative controls and exact restoration
+
+Control 1 temporarily changed only the final alias evidence decision in
+`FilePageDrawings::select()` from the original proven-entry decision to
+`return self::identity( reset( $aliases ) );`. Exact-name, file/page and duplicate
+checks remained intact. The filter was:
+
+```text
+testLiteralSuffixNameDoesNotProveAnAlias|testAnotherOwnerDerivedIdCannotQualifyAsRetainedAlias|testUnprovenSuffixNeverRedirects
+```
+
+The native run exited **1**, **7 tests / 34 assertions / 5 failures**. Literal
+suffix, another-owner-derived ID, arbitrary `unproven-id`, wrong SHA and wrong
+retained MIME all returned a PDF identity instead of the required `null`.
+Other-file and wrong-page cases still refused, as their earlier filters remained
+active. Restoring the original decision and rerunning the **identical filter**
+passed **7 tests / 41 assertions**, exit **0**. The raw-byte fingerprint matched
+the pre-control value before starting control 2.
+
+Control 2 temporarily removed only `&& $entry['source']['page'] === $page` from
+the candidate predicate. The filter
+`testGroupedPdfActionSelectsSecondPageWithoutRenaming` exited **1**, **1 test /
+3 assertions / 1 failure**: expected the page-two current-editor URL, actual
+redirect was `''`. The two same-name PDF members had become ambiguous without
+the page restriction. Restoring that exact condition and rerunning the same
+filter passed **1 test / 24 assertions**, exit **0**.
+
+Raw SHA-256 fingerprints, captured before controls, after restoration and at
+final verification, were identical. These hash file bytes without Git filters:
+
+```text
+src/Migration/FilePageDrawings.php
+c7e68b8c81e1f86653b36dc9aafd0b44b6b2ee7eb277fbebe43e361ea81fe43f
+src/Action/EditLayersAction.php
+de08a069a846865ac07d9a73722d3de1d313754b7fcbfd5eda777df9ab1b0300
+src/Revision/PageOwnedPilot.php
+ce2f3cf5779bf3c305ab48ab2f83b1f0d6febd0d9f687d496ffcd7d728fceb22
+```
+
+No control remained active during final gates. No assertion was weakened to
+manufacture either the control failures or restored passes.
+
+### Final verification and limits
+
+Native runtime reports **PHP 8.3.31 / PHPUnit 9.6.36**. All gates ran serially:
+
+- Final focused two-class native run: **29 tests / 198 assertions**, passed.
+- Assigned standalone: **1,486 tests / 3,662 assertions / 1 existing skip**,
+  no failures/errors. The inherited missing coverage-driver warning remains;
+  no new coverage measurement is claimed.
+- Exact assigned five-file PHPCS command: passed, zero errors/warnings.
+- Complete assigned **eight-class native filter**, unchanged from the assignment
+  above: **115 tests / 1,453 assertions**, no failures/errors/skips. None of
+  `LegacyPdfSelectionTest`, `FileSurfaceSelectionProjectionTest`,
+  `GroupedPdfCompatibilityTest`, `LegacyEntryPointsAfterMigrationTest`,
+  `FileMigrationAuditTest`, `RetainedMigrationRowsTest`, `PdfPageRoutingTest` or
+  `PageOwnedPilotTest` was omitted. This is fresh independent evidence, not a
+  reattribution of the earlier fourteen-class lead result.
+- PHP class-reference gate: passed, **127 files / 127 extension classes** in
+  the current shared tree. Parallel-list and atomicity gates: passed.
+- Editor diagnostics: no errors in either touched test file.
+- Documentation and whitespace results are recorded after this append below.
+
+Permanent edits are confined to the two allowed test files and this appendix.
+Production behavior and unrelated work were preserved. No feature/Default/output
+activation, new configuration, ordinary wiki write, migration/audit/tidy/undo
+command, browser acceptance, commit or push occurred. Isolated fixture setup is
+not claimed as an ordinary-wiki operation or selector write. Full native,
+JavaScript, browser, MediaWiki 1.44 and owner screen acceptance were not rerun by
+this assignment. Return to the lead for bounded J113E review.
+
+### Post-append gates
+
+- `node.exe scripts/verify-docs.js`: passed, **87 maintained/policy documents /
+  53 historical records**; mirrors, references and MediaWiki source checks agree.
+- `git diff --check`: passed.
+- Packet diagnostics retain only the three inherited MD013 warnings in the
+  assignment's command block; no new report diagnostic is outstanding.
+
+## Lead acceptance of completed evidence — October 4, 2026
+
+The three outstanding gaps and both restored controls are now supplied. The
+lead reviewed the actual redirect/current-editor/API journeys, foreign-owner
+ID refusal and ordered full-byte no-write intervals. A delegated read-only
+review found no actionable defect. Raw production fingerprints match the
+junior's restoration report, and a fresh lead rerun of the complete unchanged
+eight-class filter passes **115 tests / 1,453 assertions**. Full standalone on
+the shared tree including J113F passes **1,513 / 3,753 / one existing skip**;
+changed-file PHP style checks pass. The controls are accepted as the junior's
+reported evidence, not newly witnessed lead executions.
+
+J113E is accepted for its bounded legacy selector/projection and evidence
+scope. It does not complete bound-editor numbered aliases, migration grouping,
+Default/output activation, browser or owner acceptance. Later J113H makes the
+old split-name fixture explicit so the same alias journey remains covered after
+new first-pass imports stop generating page suffixes. No production selection
+change was made for that fixture adjustment.

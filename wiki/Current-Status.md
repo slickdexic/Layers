@@ -1,6 +1,55 @@
 # Current status and limitations
 
-## Preservation checkpoint; native environment restored; J113F ready — October 4, 2026
+## J113E/F accepted; first-pass whole-PDF migration implemented — October 4, 2026
+
+Advances HIST-4/HIST-8/HIST-9 and DATA-1, and records OPS-2/OPS-3/OPS-4 evidence.
+[J113E](../docs/J113E_LEGACY_PDF_SELECTION_PACKET.md#lead-acceptance-of-completed-evidence--october-4-2026)
+is accepted after the actual redirect/current-editor/API journeys, foreign-owner
+ID refusal, ordered full-byte no-write comparisons and both restored controls.
+The lead's fresh unchanged eight-class native gate passes **115 tests / 1,453
+assertions**. Controls remain attributed to the junior's runs.
+
+[J113F](../docs/J113F_MIGRATION_NAME_ALLOCATION_PACKET.md#lead-acceptance--october-4-2026)
+is accepted as a pure allocator: junior focused **27 tests / 91 assertions**;
+fresh lead full standalone **1,513 / 3,753 / 1 existing skip**. Its return
+activated no caller. The lead separately integrated it into the first file
+migration pass in [J113H](../docs/J113H_WHOLE_SET_FILE_MIGRATION_PACKET.md).
+
+That first pass now gives every member of a wholly new PDF layer set one
+allocated name within its file. Complete existing imports, including historical
+split names, stay unchanged. Prior/current deterministic IDs block automatic
+extension, including when retained metadata is absent, rather than proving provenance. Failed
+conversion adds no partial group, and changed names or incompatible converted
+topology produce a structured refusal. The final current-row-ID guard failed
+**1 test / 3 assertions / 1 failure** before correction and passes the same
+filter **1 / 8** afterward. Final full native **612 tests / 5,586 assertions /
+1 existing skip**, standalone **1,513 / 3,753 / 1 existing skip** and nine-file
+PHP style/lint/reference/parallel-list/atomicity gates pass. The earlier full
+native **611 / 5,581 / 1 skip** remains historical. Final lead guard verification
+is complete; independent junior J113H review remains pending.
+
+The next direct junior assignments are **JE1: independent J113H review and
+evidence strengthening**, with final lead gates passed, and **JE2: inactive
+[J113G](../docs/J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md) PDF-page metadata**.
+G leaves all production callers emitting their existing metadata. The lead
+retains copy-pass allocation, proven prior/partial/historical reconciliation,
+numbered-alias bound-editor parity, template/gallery consumers and search
+deduplication, Default/show-intent and name-only output/tidy activation.
+The architect's J111 exact-version/render/export contract and C2 owner screen
+approval remain outstanding. No charter criterion is declared complete.
+
+The curated checkpoint **`ed3231c41495ab2f59a85baf257b2da4780443d5` is already
+pushed**. A new curated checkpoint is being prepared; no new SHA or push is
+claimed. [Selected acceptance evidence](../docs/CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md)
+is preserved. The [team update](../docs/TEAM_STATUS_2026-10-04.md) retains the
+conditional **8–13 working-day / 2–3-week** broad-testing estimate. No ordinary
+wiki migration/reconciliation command, new browser acceptance, configuration
+change or Default/name-only output activation is claimed by this continuation.
+
+The dated entries below retain their original evidence and limits; this entry
+supersedes their next-step directions and pending E/F statuses.
+
+## Earlier preservation checkpoint and environment restoration — October 4, 2026
 
 Advances OPS-2/OPS-3/OPS-4 and prepares HIST-4/HIST-8/HIST-9 and DATA-1.
 The existing test environment is running again. Fresh idle native compatibility

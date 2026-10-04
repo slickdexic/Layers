@@ -76,7 +76,7 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( [
 			[ 'anatomy', 'File:Copied photo.png', $imageRevision, 2 ],
 			[ 'labels', 'File:Copied photo.png', $imageRevision, 1 ],
-			[ 'notes (page 2)', 'File:Copied notes.pdf', $pdfRevision, 1 ]
+			[ 'notes', 'File:Copied notes.pdf', $pdfRevision, 1 ]
 		], array_map( static fn ( $c ) => [ $c['name'], $c['source'], $c['sourceRevision'], $c['embeds'] ],
 			$plan['copies'] ) );
 		$this->assertSame( $before->getId(), $this->latest( $title )->getId(), 'planning writes nothing' );
@@ -90,11 +90,11 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 			"C [[File:Copied_photo.png|layerset=$id:labels]]\n" .
 			"D [[File:Copied_photo.png|layerset=off]]\n" .
 			"E [[File:Copied_photo.png|120px]]\n" .
-			"F [[File:Copied_notes.pdf|page=2|layerset=$id:notes (page 2)]]",
+			"F [[File:Copied_notes.pdf|page=2|layerset=$id:notes]]",
 			$revision->getContent( 'main' )->getText() );
 		$this->assertSame( 'Copied 3 shared layer sets into this page: "anatomy" from [[:File:Copied photo.png]] ' .
 			"(revision $imageRevision), \"labels\" from [[:File:Copied photo.png]] (revision $imageRevision), " .
-			"\"notes (page 2)\" from [[:File:Copied notes.pdf]] (revision $pdfRevision)",
+			"\"notes\" from [[:File:Copied notes.pdf]] (revision $pdfRevision)",
 			$revision->getComment()->text );
 		$tags = $this->getServiceContainer()->getChangeTagsStore()->getTags( $this->getDb(), null, $revisionId );
 		$this->assertContains( PagePublicationService::MIGRATION_TAG, $tags );

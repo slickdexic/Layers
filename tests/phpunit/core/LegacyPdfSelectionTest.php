@@ -4,18 +4,22 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Tests\Core;
 
+use MediaWiki\Api\ApiMain;
 use MediaWiki\CommentStore\CommentStoreComment;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Action\EditLayersAction;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Migration\FilePageDrawings;
+use MediaWiki\Extension\Layers\Migration\FilePageMigration;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Page\Article;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Request\FauxRequest;
 use MediaWiki\Revision\MutableRevisionRecord;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\Title;
+use Wikimedia\Rdbms\IDBAccessObject;
 
 require_once __DIR__ . '/LegacyMigrationFixtures.php';
 
@@ -47,10 +51,12 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 		$migration = $this->pilot->newFilePageMigration();
 		$plan = $migration->plan( $file->getName(), $this->actor );
 		$this->assertNull( $plan['problem'] );
-		if ( $grouped ) {
+		if ( !$grouped ) {
+			// Explicit historical split fixture; current migration keeps one name.
 			$document = json_decode( $plan['document'], true );
-			$document['surfaces'][1]['label'] = 'Notes';
+			$document['surfaces'][1]['label'] = 'Notes (page 2)';
 			$plan['document'] = json_encode( $document );
+			$plan['add'][1]['name'] = 'Notes (page 2)';
 		}
 		$id = $migration->commit( $plan, $this->actor );
 		return [ $file, $id, $this->surfaces( $this->getServiceContainer()->getRevisionLookup()
@@ -89,14 +95,53 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 	}
 
 	public function testGroupedPdfActionSelectsSecondPageWithoutRenaming(): void {
-		[ $file, , $surfaces ] = $this->pdf();
+		[ $file, $id, $surfaces ] = $this->pdf();
 		$title = Title::makeTitle( NS_FILE, $file->getName() );
+		$before = $this->state();
 		foreach ( [ 'setname', 'layerset', 'layers' ] as $parameter ) {
 			$this->assertSame( FilePageDrawings::editUrl( $title, $surfaces[1]['id'] ),
 				$this->action( $title, [ $parameter => 'notes', 'page' => '2' ] )->getRedirect() );
 		}
 		$this->assertSame( FilePageDrawings::editUrl( $title, $surfaces[0]['id'] ),
 			$this->action( $title, [ 'setname' => 'Notes' ] )->getRedirect() );
+		$this->assertEditorJourney( $title, $id, $surfaces,
+			$this->action( $title, [ 'layerset' => 'notes', 'page' => '2' ] )->getRedirect() );
+		$this->assertSame( $before, $this->state() );
+	}
+
+	/** @param Title $owner @param int $revisionId @param array $surfaces @param string $redirect */
+	private function assertEditorJourney( Title $owner, int $revisionId, array $surfaces,
+		string $redirect
+	): void {
+		parse_str( parse_url( $redirect, PHP_URL_QUERY ), $params );
+		$this->assertSame( $owner->getPrefixedDBkey(), $params['owner'] );
+		$this->assertSame( 'current', $params['revid'] );
+		$this->assertSame( $surfaces[1]['id'], $params['surface'] );
+		$init = $this->pilot->prepareCurrentEditor( $params['owner'], $params['surface'], $this->actor );
+		$this->assertSame( $revisionId, $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionByTitle( $owner, 0, IDBAccessObject::READ_LATEST )->getId() );
+		$this->assertSame( $revisionId, $init['pageOwned']['revisionId'] );
+		$this->assertSame( $owner->getArticleID( IDBAccessObject::READ_LATEST ), $init['pageOwned']['pageId'] );
+		$this->assertSame( $params['surface'], $init['pageOwned']['surfaceId'] );
+		$context = new RequestContext();
+		$context->setUser( $this->actor );
+		$context->setRequest( new FauxRequest( [ 'action' => 'layersread',
+			'owner' => $init['pageOwned']['owner'], 'revid' => $init['pageOwned']['revisionId'] ] ) );
+		$api = new ApiMain( $context, true );
+		$api->execute();
+		$read = $api->getResult()->getResultData( null, [ 'Strip' => 'all' ] )['layersread'];
+		$selected = array_values( array_filter( $read['snapshot']['surfaces'],
+			static fn ( $surface ) => $surface['id'] === $init['pageOwned']['surfaceId'] ) );
+		$this->assertCount( 1, $selected );
+		$this->assertSame( $revisionId, $read['revisionId'] );
+		$this->assertSame( $surfaces[1], $selected[0] );
+		$this->assertSame( 2, $selected[0]['source']['page'] );
+		$this->assertSame( $surfaces[1]['source'], $selected[0]['source'] );
+		$this->assertSame( $surfaces[1]['layers'], $selected[0]['layers'] );
+		$this->assertNotSame( $surfaces[0]['layers'], $selected[0]['layers'] );
+		$this->assertSame( $read['sourceRenditions'][$selected[0]['id']]['url'], $init['imageUrl'] );
+		$this->assertSame( $surfaces[1]['canvas']['width'], $init['baseWidth'] );
+		$this->assertSame( $surfaces[1]['canvas']['height'], $init['baseHeight'] );
 	}
 
 	public function testActionClampsPdfPageAndRejectsNoncanonicalIntegers(): void {
@@ -112,10 +157,26 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 		}
 	}
 
+	public function testExactNameNormalizesCaseSpacesAndUnderscoresWithinPage(): void {
+		[ $file, , $surfaces ] = $this->pdf();
+		foreach ( $surfaces as &$surface ) {
+			$surface['label'] = 'Field Notes';
+		}
+		unset( $surface );
+		$id = $this->historical( $file->getTitle(), $surfaces );
+		$before = $this->state();
+		foreach ( [ 'FIELD_NOTES', ' field notes ' ] as $name ) {
+			$this->assertSame( $surfaces[1]['id'], FilePageDrawings::select( $file->getTitle(),
+				$id, $this->actor, $name, 2 )['id'] );
+		}
+		$this->assertSame( $before, $this->state() );
+	}
+
 	public function testMissingPageListsAllExistingEntriesInsteadOfSubstitution(): void {
 		[ $file, , $surfaces ] = $this->pdf();
 		$owner = $file->getTitle();
 		$id = $this->historical( $owner, [ $surfaces[0] ] );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 ) );
 		$this->assertNull( FilePageDrawings::select( $owner, $id, $this->actor, '', 2 ) );
 		$this->assertSame( $surfaces[0]['id'],
@@ -127,6 +188,7 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 				$surface['id'] ) ), $listed->getHTML() );
 		}
 		$this->assertStringNotContainsString( 'Private', $listed->getHTML() );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	public function testOtherFilesAndSlidesWithTheSameNameRemainSeparate(): void {
@@ -158,26 +220,36 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 		$duplicate['label'] = 'notes';
 		$owner = $file->getTitle();
 		$id = $this->historical( $owner, [ $surfaces[0], $exact, $duplicate, $surfaces[1] ] );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 ) );
+		$this->assertSame( $before, $this->state() );
 		$id = $this->historical( $owner, [ $surfaces[0], $exact, $surfaces[1] ] );
 		$this->assertSame( 'exact-one', FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 )['id'] );
 		$aliasDuplicate = $surfaces[1];
 		$aliasDuplicate['id'] = 'unproven-duplicate';
 		$id = $this->historical( $owner, [ $surfaces[0], $surfaces[1], $aliasDuplicate ] );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 ) );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	public function testRetainedSplitNameRemainsReachableWithExactEvidence(): void {
 		[ $file, $id, $surfaces ] = $this->pdf( false );
 		$owner = Title::makeTitle( NS_FILE, $file->getName() );
+		$before = $this->state();
 		$this->assertSame( FilePageDrawings::editUrl( $owner, $surfaces[1]['id'] ),
 			$this->action( $owner, [ 'setname' => 'Notes', 'page' => '2' ] )->getRedirect() );
 		$this->assertSame( $surfaces[1]['id'],
 			FilePageDrawings::select( $owner, $id, $this->actor, 'Notes (page 2)', 2 )['id'] );
+		$this->assertEditorJourney( $owner, $id, $surfaces,
+			$this->action( $owner, [ 'setname' => 'Notes', 'page' => '2' ] )->getRedirect() );
+		$this->assertSame( $before, $this->state() );
 		// Newer retained rows do not replace the exact migrated row.
 		$this->saveSet( $file, 'Notes', 2, 'Later legacy payload', 2 );
+		$before = $this->state();
 		$this->assertSame( $surfaces[1]['id'],
 			FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 )['id'] );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	public function testLiteralSuffixNameDoesNotProveAnAlias(): void {
@@ -188,9 +260,31 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 			$literalRow, $file->getTitle()->getArticleID() );
 		$owner = $file->getTitle();
 		$id = $this->historical( $owner, [ $surfaces[0], $literal ] );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $owner, $id, $this->actor, 'Notes', 2 ) );
 		$this->assertSame( $literal['id'],
 			FilePageDrawings::select( $owner, $id, $this->actor, 'Notes (page 2)', 2 )['id'] );
+		$this->assertSame( $before, $this->state() );
+	}
+
+	public function testAnotherOwnerDerivedIdCannotQualifyAsRetainedAlias(): void {
+		[ $file, , $surfaces ] = $this->pdf( false );
+		$otherOwner = $this->getExistingTestPage( 'Other legacy selection owner' )->getTitle();
+		$rowId = (int)$this->getDb()->newSelectQueryBuilder()->select( 'ls_id' )->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $file->getName(), 'ls_page' => 2 ] )
+			->caller( __METHOD__ )->fetchField();
+		$alias = $surfaces[1];
+		$this->assertSame( FilePageMigration::surfaceId( $rowId, $file->getTitle()->getArticleID() ),
+			$alias['id'] );
+		$alias['id'] = FilePageMigration::surfaceId( $rowId, $otherOwner->getArticleID() );
+		$this->assertNotSame( $surfaces[1]['id'], $alias['id'] );
+		$this->assertSame( $surfaces[1]['source'], $alias['source'] );
+		$id = $this->historical( $file->getTitle(), [ $surfaces[0], $alias ] );
+		$before = $this->state();
+		$this->assertNull( FilePageDrawings::select( $file->getTitle(), $id, $this->actor, 'Notes', 2 ) );
+		$this->assertSame( $alias['id'], FilePageDrawings::select( $file->getTitle(), $id,
+			$this->actor, 'Notes (page 2)', 2 )['id'] );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	/** @param string $change @dataProvider provideUnprovenAliases */
@@ -213,7 +307,9 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 			$alias['source']['fileTitle'] = 'File:' . $other->getName();
 		}
 		$id = $this->historical( $file->getTitle(), [ $surfaces[0], $alias ] );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $file->getTitle(), $id, $this->actor, 'Notes', 2 ) );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	public static function provideUnprovenAliases(): array {
@@ -224,10 +320,14 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 		[ $file, $id ] = $this->pdf();
 		$denied = $this->createMock( Authority::class );
 		$denied->method( 'authorizeRead' )->willReturn( false );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $file->getTitle(), $id, $denied, 'Notes', 2 ) );
+		$this->assertSame( $before, $this->state() );
 		$other = $this->upload( 'Foreign_selector_' . wfRandomString() . '.pdf', 'test-multipage.pdf' );
+		$before = $this->state();
 		$this->assertNull( FilePageDrawings::select( $other->getTitle(), $id, $this->actor, 'Notes', 2 ) );
 		$this->assertNull( FilePageDrawings::select( $file->getTitle(), 2147483647, $this->actor, 'Notes', 2 ) );
+		$this->assertSame( $before, $this->state() );
 	}
 
 	public function testImagePageQueryUsesItsOnlyPageAndSelectionWritesNothing(): void {
@@ -246,15 +346,26 @@ class LegacyPdfSelectionTest extends \MediaWikiIntegrationTestCase {
 
 	/** @return array Exact persistent row bytes, after fixture writes/deferred updates have completed */
 	private function state(): array {
+		$this->runDeferredUpdates();
 		$state = [];
-		foreach ( [ 'revision', 'slots', 'page', 'layer_sets', 'updatelog' ] as $table ) {
+		foreach ( [ 'revision' => 'rev_id', 'slots' => [ 'slot_revision_id', 'slot_role_id' ],
+			'page' => 'page_id', 'layer_sets' => 'ls_id', 'updatelog' => 'ul_key',
+			'content' => 'content_id', 'text' => 'old_id' ] as $table => $order ) {
 			$rows = [];
 			foreach ( $this->getDb()->newSelectQueryBuilder()->select( '*' )->from( $table )
+				->orderBy( $order )
 				->caller( __METHOD__ )->fetchResultSet() as $row
 			) {
 				$rows[] = (array)$row;
 			}
-			$state[$table] = hash( 'sha256', serialize( $rows ) );
+			$state[$table] = $rows;
+		}
+		foreach ( $state['revision'] as $row ) {
+			$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById( (int)$row['rev_id'] );
+			foreach ( [ 'main', 'layers' ] as $role ) {
+				$state['slotText'][$row['rev_id']][$role] = $revision->hasSlot( $role ) ?
+					$revision->getContent( $role, RevisionRecord::RAW )->getText() : null;
+			}
 		}
 		return $state;
 	}

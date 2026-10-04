@@ -87,7 +87,7 @@ class FilePageMigrationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( $revisionId, $this->latest( $file )->getId() );
 	}
 
-	public function testTakenNamesAreNumberedAndPdfPagesNamed(): void {
+	public function testTakenNamesAreNumberedOnceAcrossPdfPages(): void {
 		$file = $this->upload( 'Migrated_notes.pdf', 'test-multipage.pdf' );
 		$this->assertSame( 'application/pdf', $file->getMimeType() );
 		$first = $this->saveSet( $file, 'notes', 1, 'Page one' );
@@ -103,12 +103,12 @@ class FilePageMigrationTest extends \MediaWikiIntegrationTestCase {
 		$migration->commit( $existing, $this->actor );
 
 		$plan = $migration->plan( $file->getName(), $this->actor );
-		$this->assertSame( [ [ 'notes 2', 1, $first ], [ 'notes (page 2)', 2, $third ] ], array_map(
+		$this->assertSame( [ [ 'notes 2', 1, $first ], [ 'notes 2', 2, $third ] ], array_map(
 			static fn ( $add ) => [ $add['name'], $add['page'], $add['legacyId'] ], $plan['add'] ) );
 		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionById(
 			$migration->commit( $plan, $this->actor ) );
 		$surfaces = $this->surfaces( $revision );
-		$this->assertSame( [ 'notes', 'notes 2', 'notes (page 2)' ], array_column( $surfaces, 'label' ) );
+		$this->assertSame( [ 'notes', 'notes 2', 'notes 2' ], array_column( $surfaces, 'label' ) );
 		$this->assertSame( [ 'pdf', 2, $file->getWidth( 2 ), $file->getHeight( 2 ) ], [ $surfaces[2]['kind'],
 			$surfaces[2]['source']['page'], $surfaces[2]['canvas']['width'], $surfaces[2]['canvas']['height'] ] );
 	}

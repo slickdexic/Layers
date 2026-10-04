@@ -1,0 +1,73 @@
+{
+  "archive": "docs/acceptance/2026-10-04-j113efh.zip",
+  "bytes": 4809,
+  "sha256": "db46f7dc80cdabf83323de70d3bf3bab5cfee93941bdc4dea4bac501d962fa52",
+  "files": [
+    {
+      "original": "tmp/J113E-lead-return-native.log",
+      "archivePath": "J113E-lead-return-native.log",
+      "bytes": 313,
+      "sha256": "09da8df348e99308fdc5c8a5f1a1a6973dd243b656ad57044390ed864652c05a"
+    },
+    {
+      "original": "tmp/J113EF-lead-standalone.log",
+      "archivePath": "J113EF-lead-standalone.log",
+      "bytes": 2289,
+      "sha256": "25fd82272d6b04274c3b03cac453bcc3625c516a91b3d32a489296decc10f1f4"
+    },
+    {
+      "original": "tmp/J113H-before-native.log",
+      "archivePath": "J113H-before-native.log",
+      "bytes": 2594,
+      "sha256": "86f706d92c03338f653c8d029fcb25b7f0702aeb148f342a0ec4c08279c0ae48"
+    },
+    {
+      "original": "tmp/J113H-focused-native.log",
+      "archivePath": "J113H-focused-native.log",
+      "bytes": 312,
+      "sha256": "a7c010974d41cfb006bd129fa7252a270bcfa73c547664a77f31330454f747cc"
+    },
+    {
+      "original": "tmp/J113H-review-before.log",
+      "archivePath": "J113H-review-before.log",
+      "bytes": 1202,
+      "sha256": "55322375efb242f19896554e34b6f515b39e7bf7cbf13bb73e326088d9e11953"
+    },
+    {
+      "original": "tmp/J113H-current-id-before.log",
+      "archivePath": "J113H-current-id-before.log",
+      "bytes": 741,
+      "sha256": "2d6ecef4e101dc9969dc344f452b99d26b63f1d7123f6974ca33aaaed074e4b4"
+    },
+    {
+      "original": "tmp/J113H-current-id-after.log",
+      "archivePath": "J113H-current-id-after.log",
+      "bytes": 224,
+      "sha256": "2de41c4688db72dee63827c01f22ac35f993dfffc63c45ed6f6bcd0a4d80adcf"
+    },
+    {
+      "original": "tmp/J113H-full-native.log",
+      "archivePath": "J113H-full-native.log",
+      "bytes": 1025,
+      "sha256": "a9d65bd1fbefcde5a086f275e56bd997ecb39cecb6e93d10edb577c58156b656"
+    },
+    {
+      "original": "tmp/J113H-final-native.log",
+      "archivePath": "J113H-final-native.log",
+      "bytes": 1025,
+      "sha256": "bdd30c25def8ade8e3891f5df8303e83eeb6e526965fa8b18cbe9704e0d967c9"
+    },
+    {
+      "original": "tmp/J113EFH-final-standalone.log",
+      "archivePath": "J113EFH-final-standalone.log",
+      "bytes": 2289,
+      "sha256": "acaf7d52a3811a9efe8b49707c71b9fd10922ed0affa2feaf0366e906aae98ed"
+    },
+    {
+      "original": "tmp/J113EFH-final-style.log",
+      "archivePath": "J113EFH-final-style.log",
+      "bytes": 57,
+      "sha256": "5d015955d5e40f0e19e86e110ca99d37290dbc961269d5e74ebd0eeaf4b343d0"
+    }
+  ]
+}

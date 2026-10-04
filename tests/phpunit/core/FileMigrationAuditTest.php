@@ -43,6 +43,12 @@ class FileMigrationAuditTest extends \MediaWikiIntegrationTestCase {
 			$this->saveSet( $file, $name, 1, 'Private layer payload two', 2 ) ];
 		$plan = $this->pilot->newFilePageMigration()->plan( $file->getName(), $this->actor );
 		$this->assertNull( $plan['problem'] );
+		// Retain explicit old split-name evidence after the first-pass correction.
+		$document = json_decode( $plan['document'] );
+		$splitName = $name . ' (page 2)';
+		$document->surfaces[1]->label = $splitName;
+		$plan['document'] = json_encode( $document );
+		$plan['add'][1]['name'] = $splitName;
 		return [ $file, $ids, $plan ];
 	}
 

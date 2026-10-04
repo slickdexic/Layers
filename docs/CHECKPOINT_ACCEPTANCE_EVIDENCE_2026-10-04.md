@@ -3,6 +3,12 @@
 **Advances:** OPS-2/OPS-3/OPS-4. This preserves selected acceptance evidence for
 the reviewed J112/J113 components; it is not release or owner acceptance.
 
+This is the earlier checkpoint's historical boundary. J113E's outstanding
+evidence and J113F's helper have since been accepted, and J113H first-pass
+integration is under independent review. The later
+[J113E/F/H evidence](J113EFH_CHECKPOINT_EVIDENCE_2026-10-04.md) records that
+continuation separately; the archive below is unchanged.
+
 The [evidence archive](acceptance/2026-10-04-checkpoint.zip) copies selected
 files from the ignored local `tmp/` directory. The
 [SHA-256 manifest](acceptance/2026-10-04-checkpoint-manifest.json) records each
