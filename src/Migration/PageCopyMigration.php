@@ -7,23 +7,30 @@ namespace MediaWiki\Extension\Layers\Migration;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Hooks\BoundSlideHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Revision\DirectEmbeddingRewriter;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
-use MediaWiki\Extension\Layers\Revision\DrawingName;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\LegacySurfaceConverter;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
+use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions;
 use MediaWiki\Extension\Layers\Revision\PageOwnedRenderCapability;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
+use MediaWiki\Extension\Layers\Revision\PublicationException;
+use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\FileRepo\RepoGroup;
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Permissions\Authority;
+use MediaWiki\Revision\MutableRevisionRecord;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
@@ -54,6 +61,8 @@ class PageCopyMigration {
 	private $pendingFile = null;
 	/** @var callable|null */
 	private $sourcePages;
+	private array $snapshots = [];
+	private array $pendingDocuments = [];
 
 	/**
 	 * @param LayersDatabase $legacy
@@ -99,6 +108,8 @@ class PageCopyMigration {
 	 */
 	public function plan( int $pageId, Authority $authority, ?callable $pendingFile = null ): array {
 		$this->pendingFile = $pendingFile;
+		$this->snapshots = [];
+		$this->pendingDocuments = [];
 		$plan = [ 'title' => null, 'pageId' => $pageId, 'baseRevisionId' => 0, 'copies' => [], 'done' => [],
 			'notMoved' => [], 'problem' => null, 'document' => null, 'main' => null, 'slides' => [] ];
 		$title = $this->titles->newFromID( $pageId, IDBAccessObject::READ_LATEST );
@@ -129,12 +140,16 @@ class PageCopyMigration {
 			return $plan;
 		}
 		$pending = $title->getNamespace() === NS_FILE ? $this->pendingDocument( $title->getDBkey() ) : null;
+		if ( $pending !== null ) {
+			$this->access->assertCanPrepareEdit( $title, $authority );
+		}
 		$document = $pending !== null ? json_decode( $pending, false, 64, JSON_THROW_ON_ERROR ) :
 			$this->document( $title, $base, $authority );
-		$labels = [];
+		$existing = [];
 		foreach ( $document->surfaces as $surface ) {
-			$labels[$surface->id] = (string)$surface->label;
+			$existing[$surface->id] = $surface;
 		}
+		$indirect = $this->indirectSets( $main->getText(), $candidates, $title, $base->getId(), $shown );
 
 		$copies = [];
 		$rewrites = [];
@@ -170,14 +185,14 @@ class PageCopyMigration {
 				continue;
 			}
 			$copies[$source['key']] ??= $source;
-			$rewrites[] = [ $candidate, $source['key'] ];
+			$rewrites[] = [ $candidate, $source['key'], $source['legacyId'] ];
 		}
-		$latest = [];
 		foreach ( $shown as [ $kind, $name, $set ] ) {
 			if ( $kind === ShownLayerSets::SLIDE && self::validSlide( $name ) ) {
 				$plan['slides'][] = str_replace( ' ', '_', $name );
 			}
-			if ( isset( $direct[self::shownKey( $kind, $name, $set === '' ? null : $set )] ) ) {
+			$shownKey = self::shownKey( $kind, $name, $set === '' ? null : $set );
+			if ( isset( $direct[$shownKey] ) && !isset( $indirect[$shownKey] ) ) {
 				// The page's own text shows it; that embed was handled above.
 				continue;
 			}
@@ -192,36 +207,18 @@ class PageCopyMigration {
 				}
 				continue;
 			}
-			if ( isset( $copies[$source['key']] ) ) {
-				continue;
-			}
-			// Shown through a template or gallery: after the migration the bare name must find the copy.
-			if ( $set === '' && $kind === ShownLayerSets::FILE ) {
-				// "The latest set" becomes the page's only drawing of the file; decided once the others are known.
-				$latest[] = [ $what, $source, 'File:' . str_replace( ' ', '_', $name ) ];
-				continue;
-			}
-			$source['template'] = true;
-			$source['wanted'] = $kind === ShownLayerSets::FILE ? $set : $name;
-			$copies[$source['key']] = $source;
-		}
-		foreach ( $latest as [ $what, $source, $fileTitle ] ) {
-			if ( isset( $copies[$source['key']] ) ) {
-				continue;
-			}
-			if ( !isset( $labels[FilePageMigration::surfaceId( $source['legacyId'], $pageId )] ) &&
-				self::drawingsOf( $fileTitle, $document->surfaces, $copies ) > 0
-			) {
-				$plan['notMoved'][] = [ 'what' => $what, 'reason' => 'template-latest-set' ];
-				continue;
-			}
-			$source['template'] = true;
-			$copies[$source['key']] = $source;
+			// Every unchanged occurrence constrains the same group, including named and show-intent uses.
+			$key = $source['key'];
+			$copies[$key] ??= $source;
+			$copies[$key]['template'] = true;
+			$copies[$key]['constraints'][] = [ 'latest' => $set === '' && $kind === ShownLayerSets::FILE,
+				'name' => $kind === ShownLayerSets::FILE ? $set : $name, 'what' => $what ];
 		}
 		$plan['slides'] = array_values( array_unique( $plan['slides'] ) );
 
 		$names = [];
-		$taken = array_values( $labels );
+		$done = [];
+		$incoming = [];
 		$setsPerSlide = array_count_values( array_map( static fn ( $s ) => $s['source'],
 			array_filter( $copies, static fn ( $s ) => $s['kind'] === 'slide' && empty( $s['template'] ) ) ) );
 		foreach ( $copies as $key => $source ) {
@@ -230,39 +227,120 @@ class PageCopyMigration {
 				$source['wanted'] = wfMessage( 'layers-migration-slide-set-name' )
 					->plaintextParams( $source['source'], $source['set'] )->inContentLanguage()->text();
 			}
-			$copyId = FilePageMigration::surfaceId( $source['legacyId'], $pageId );
-			if ( isset( $labels[$copyId] ) ) {
-				// Made by an earlier run, or this is the file's own page, which already has it.
-				$names[$key] = $labels[$copyId];
-				$plan['done'][] = $labels[$copyId];
+			$copies[$key] = $source;
+			$present = [];
+			$members = [];
+			foreach ( $source['members'] as $member ) {
+				$id = FilePageMigration::surfaceId( $member['legacyId'], $pageId );
+				if ( isset( $existing[$id] ) ) {
+					if ( !self::sameMember( $existing[$id], $member['surface'] ) ) {
+						$plan['problem'] = 'changed-copy-scope';
+						return $plan;
+					}
+					$present[$member['legacyId']] = $existing[$id]->label;
+				}
+				$surface = clone $member['surface'];
+				$surface->id = $id;
+				if ( $source['kind'] === 'slide' ) {
+					$surface->label = $source['wanted'];
+				}
+				$members[] = $surface;
+			}
+			if ( count( $present ) === count( $members ) ) {
+				$names[$key] = $present;
+				$done[$key] = $present;
 				continue;
 			}
-			$wanted = DrawingName::normalize( $source['wanted'] ) ?? $copyId;
-			$name = DrawingName::unused( $wanted, $taken );
-			if ( !empty( $source['template'] ) && $name !== $wanted && $source['kind'] === 'slide' ) {
-				// A bare slide name finds only that exact name; a file's finds a numbered one of the same file.
-				$plan['notMoved'][] = [ 'what' => $source['source'] . ' ' . $wanted,
-					'reason' => 'template-name-taken' ];
+			$prior = $present !== [];
+			foreach ( $source['priorIds'] as $id ) {
+				$prior = $prior || isset( $existing[FilePageMigration::surfaceId( $id, $pageId )] );
+			}
+			if ( $prior ) {
+				$plan['notMoved'][] = [ 'what' => $source['source'], 'reason' => 'existing-migration-group',
+					'missing' => array_values( array_map( static fn ( $member ) => $member['legacyId'],
+						array_filter( $source['members'], static fn ( $member ) =>
+							!isset( $present[$member['legacyId']] ) ) ) ) ];
 				continue;
 			}
-			$surface = clone $source['surface'];
-			$surface->id = $copyId;
-			$surface->label = $name;
-			$document->surfaces[] = $surface;
-			$taken[] = $name;
-			$names[$key] = $name;
-			$plan['copies'][] = [ 'name' => $name, 'kind' => $source['kind'], 'source' => $source['source'],
-				'sourceRevision' => $source['sourceRevision'], 'legacyId' => $source['legacyId'],
-				'template' => !empty( $source['template'] ),
-				'embeds' => count( array_filter( $rewrites, static fn ( $r ) => $r[1] === $key ) ) ];
+			$incoming[] = [ 'key' => $key, 'wanted' => $source['wanted'], 'members' => $members ];
+		}
+		try {
+			$allocations = MigrationNameAllocator::allocate( $document->surfaces, $incoming );
+		} catch ( \InvalidArgumentException $e ) {
+			$plan['problem'] = 'invalid-source-group';
+			return $plan;
+		}
+		$allocated = [];
+		foreach ( $allocations as $index => $allocation ) {
+			$key = $allocation['key'];
+			foreach ( $incoming[$index]['members'] as $memberIndex => $surface ) {
+				$surface->label = $allocation['name'];
+				$allocated[$key][] = $surface;
+				$rowId = $copies[$key]['members'][$memberIndex]['legacyId'];
+				$names[$key][$rowId] = $surface->label;
+			}
+		}
+		// Removing a refused group can change bare-name resolution. Recheck each survivor against
+		// the document that will actually be saved, without reallocating or changing existing bytes.
+		do {
+			$proposed = $document->surfaces;
+			foreach ( $allocated as $key => $members ) {
+				if ( isset( $names[$key] ) ) {
+					array_push( $proposed, ...$members );
+				}
+			}
+			$refused = [];
+			foreach ( $names as $key => $memberNames ) {
+				$problem = $this->templateProblem( $copies[$key], $proposed, $pageId );
+				if ( $problem === null && !$this->directMatches( $copies[$key], $memberNames,
+					$rewrites, $proposed, $pageId ) ) {
+					$problem = [ 'what' => $copies[$key]['source'], 'reason' => 'ambiguous-copy-name' ];
+				}
+				if ( $problem !== null ) {
+					$refused[$key] = $problem;
+				}
+			}
+			foreach ( $refused as $key => $problem ) {
+				$plan['notMoved'][] = $problem;
+				unset( $names[$key], $done[$key] );
+			}
+		} while ( $refused );
+		$document->surfaces = $proposed;
+		foreach ( $done as $memberNames ) {
+			array_push( $plan['done'], ...array_values( $memberNames ) );
+		}
+		foreach ( $allocated as $key => $members ) {
+			if ( !isset( $names[$key] ) ) {
+				continue;
+			}
+			$source = $copies[$key];
+			foreach ( $members as $memberIndex => $surface ) {
+				$rowId = $source['members'][$memberIndex]['legacyId'];
+				$plan['copies'][] = [ 'name' => $surface->label, 'kind' => $source['kind'],
+					'source' => $source['source'], 'sourceRevision' => $source['sourceRevision'], 'legacyId' => $rowId,
+					'template' => !empty( $source['template'] ),
+					'embeds' => count( array_filter( $rewrites, static fn ( $r ) =>
+						$r[1] === $key && $r[2] === $rowId ) ) ];
+			}
+		}
+		$plan['sources'] = [];
+		foreach ( array_keys( $names ) as $key ) {
+			if ( isset( $copies[$key]['fileKey'] ) ) {
+				$fileKey = $copies[$key]['fileKey'];
+				$plan['sources'][$fileKey] = $this->snapshots[$fileKey];
+			}
 		}
 
 		$text = $main->getText();
 		// From the end, so that earlier offsets stay valid.
 		usort( $rewrites, static fn ( $a, $b ) => $b[0]['start'] <=> $a[0]['start'] );
 		try {
-			foreach ( $rewrites as [ $candidate, $key ] ) {
-				$text = $this->rewriter->rewrite( $text, $candidate['start'], $candidate['raw'], $pageId, $names[$key],
+			foreach ( $rewrites as [ $candidate, $key, $rowId ] ) {
+				if ( !isset( $names[$key][$rowId] ) ) {
+					continue;
+				}
+				$text = $this->rewriter->rewrite( $text, $candidate['start'], $candidate['raw'], $pageId,
+					$names[$key][$rowId],
 					$this->fileTargets );
 			}
 		} catch ( \InvalidArgumentException $e ) {
@@ -295,7 +373,35 @@ class PageCopyMigration {
 			return null;
 		}
 		$items = [];
+		$copiedIds = array_map( static fn ( $copy ) =>
+			FilePageMigration::surfaceId( $copy['legacyId'], $plan['pageId'] ), $plan['copies'] );
+		$content = new LayersDocumentContent( $plan['document'] );
+		$media = new SourceVersionResolver( $this->repos->getLocalRepo(), $this->titles );
+		$verifySources = function ( ?int $publishedRevision = null ) use (
+			$plan, $authority, $copiedIds, $content, $media
+		): void {
+			foreach ( $plan['sources'] ?? [] as $snapshot ) {
+				// A File page may only rewrite its own embeds. Its successful destination
+				// save advances that same source owner, while the admitted source is still the base.
+				$latest = $snapshot['pageId'] === $plan['pageId'] &&
+					$snapshot['baseRevisionId'] === $plan['baseRevisionId'] ? $publishedRevision : null;
+				$this->verifySnapshot( $snapshot, $authority, $latest );
+			}
+			try {
+				// Recheck only incoming members: unrelated retained historical pins remain unchanged.
+				$media->resolve( $content, $authority, $copiedIds );
+			} catch ( \DomainException $e ) {
+				throw new PublicationException( 'layers-source-unavailable', 0, $e );
+			}
+		};
+		$verifySources();
+		$groups = [];
 		foreach ( $plan['copies'] as $copy ) {
+			$key = JsonSnapshotCodec::encode( [ $copy['kind'], $copy['source'], $copy['name'] ] );
+			if ( isset( $groups[$key] ) ) {
+				continue;
+			}
+			$groups[$key] = true;
 			$name = wfMessage( 'quotation-marks' )->plaintextParams( $copy['name'] )->inContentLanguage()->text();
 			$items[] = $copy['kind'] === 'slide' ?
 				wfMessage( 'layers-migration-slide-item' )->params( $name )->plaintextParams( $copy['source'] )
@@ -307,9 +413,17 @@ class PageCopyMigration {
 			->params( implode( wfMessage( 'comma-separator' )->inContentLanguage()->text(), $items ) )
 			->inContentLanguage()->text() :
 			wfMessage( 'layers-migration-embeds-summary' )->inContentLanguage()->text();
-		return $this->publisher->publish( $plan['title'], $authority, $plan['baseRevisionId'], $plan['document'],
-			$summary, $plan['main'] === null ? null : new WikitextContent( $plan['main'] ), $plan['pageId'],
-			PagePublicationService::MIGRATION_TAG );
+		$dbw = $this->db->getPrimaryDatabase();
+		return $dbw->doAtomicSection( __METHOD__, function () use (
+			$plan, $authority, $summary, $verifySources
+		) {
+			$id = $this->publisher->publish( $plan['title'], $authority, $plan['baseRevisionId'], $plan['document'],
+				$summary, $plan['main'] === null ? null : new WikitextContent( $plan['main'] ), $plan['pageId'],
+				PagePublicationService::MIGRATION_TAG, $verifySources );
+			// Core's later save hooks still run inside this connection's outer atomic section.
+			$verifySources( $id );
+			return $id;
+		}, $dbw::ATOMIC_CANCELABLE );
 	}
 
 	/**
@@ -343,25 +457,83 @@ class PageCopyMigration {
 		$filePage = $file->getTitle();
 		$filePageId = $filePage->getArticleID( IDBAccessObject::READ_LATEST );
 		$surfaceId = FilePageMigration::surfaceId( (int)$row['id'], $filePageId );
-		$revision = null;
-		$pending = $this->pendingDocument( $file->getName() );
-		if ( $pending !== null ) {
-			$surfaces = json_decode( $pending, false, 64, JSON_THROW_ON_ERROR )->surfaces;
-		} else {
-			$revision = $filePageId > 0 ?
-				$this->revisions->getRevisionByPageId( $filePageId, 0, IDBAccessObject::READ_LATEST ) : null;
-			$surfaces = $revision ? $this->document( $filePage, $revision, $authority )->surfaces : [];
-		}
-		foreach ( $surfaces as $surface ) {
-			if ( $surface->id === $surfaceId ) {
-				return [ 'key' => 'row:' . $row['id'], 'legacyId' => (int)$row['id'], 'kind' => $surface->kind,
-					'surface' => $surface, 'wanted' => (string)$surface->label,
-					'source' => $filePage->getPrefixedText(),
-					'sourceRevision' => $revision ? $revision->getId() : null ];
+		$fileKey = 'File:' . $filePage->getDBkey();
+		if ( !array_key_exists( $fileKey, $this->snapshots ) ) {
+			try {
+				$revision = $filePageId > 0 ?
+					$this->revisions->getRevisionByPageId( $filePageId, 0, IDBAccessObject::READ_LATEST ) : null;
+				if ( !$revision || !$authority->authorizeRead( 'read', $filePage ) ||
+					!RevisionRecord::userCanBitfield( $revision->getVisibility(), RevisionRecord::DELETED_TEXT,
+						$authority, $revision->getPage() ) ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				$current = $this->document( $filePage, $revision, $authority );
+				$pending = $this->pendingDocument( $file->getName() );
+				$json = $pending ?? JsonSnapshotCodec::encode( $current );
+				$content = new LayersDocumentContent( $json );
+				if ( !$content->isReadable() ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				$this->snapshots[$fileKey] = [ 'title' => $filePage, 'pageId' => $filePageId,
+					'baseRevisionId' => $revision->getId(), 'pending' => $pending !== null,
+					'json' => $json, 'surfaces' => json_decode( $json, false, 64, JSON_THROW_ON_ERROR )->surfaces,
+					'rows' => $this->legacy->listRetainedFileSetRows( $file->getName() ) ];
+			} catch ( \DomainException $e ) {
+				$this->snapshots[$fileKey] = [ 'error' => 'source-unavailable' ];
 			}
 		}
-		$reason = 'file-not-migrated';
-		return null;
+		$snapshot = $this->snapshots[$fileKey];
+		if ( isset( $snapshot['error'] ) ) {
+			$reason = $snapshot['error'];
+			return null;
+		}
+		$selected = array_values( array_filter( $snapshot['surfaces'],
+			static fn ( $surface ) => $surface->id === $surfaceId ) );
+		if ( count( $selected ) !== 1 ) {
+			$reason = 'file-not-migrated';
+			return null;
+		}
+		$selected = $selected[0];
+		if ( ( $selected->source->fileTitle ?? null ) !== $fileKey ||
+			( $selected->source->page ?? null ) !== $page ) {
+			$reason = 'invalid-source-group';
+			return null;
+		}
+		$members = [];
+		$legacyNames = [];
+		foreach ( $snapshot['surfaces'] as $surface ) {
+			if ( $surface->label !== $selected->label || ( $surface->source->fileTitle ?? null ) !== $fileKey ) {
+				continue;
+			}
+			$matches = array_values( array_filter( $snapshot['rows'], static fn ( $retained ) =>
+				FilePageMigration::surfaceId( $retained['id'], $filePageId ) === $surface->id ) );
+			if ( count( $matches ) !== 1 ) {
+				$reason = 'unmapped-source-member';
+				return null;
+			}
+			$metadata = $matches[0];
+			$metadataTitle = $this->titles->makeTitleSafe( NS_FILE, $metadata['imgName'] );
+			$kind = $metadata['mime'] === 'application/pdf' ? 'pdf' :
+				( str_starts_with( $metadata['mime'], 'image/' ) ? 'image' : null );
+			if ( !$metadataTitle || 'File:' . $metadataTitle->getDBkey() !== $fileKey ||
+				$kind !== $surface->kind || $metadata['page'] !== ( $surface->source->page ?? null ) ) {
+				$reason = 'invalid-source-group';
+				return null;
+			}
+			$members[] = [ 'legacyId' => $metadata['id'], 'surface' => $surface ];
+			$legacyNames[$metadata['name']] = true;
+		}
+		$priorIds = [];
+		foreach ( $snapshot['rows'] as $metadata ) {
+			if ( isset( $legacyNames[$metadata['name']] ) ) {
+				$priorIds[] = $metadata['id'];
+			}
+		}
+		return [ 'key' => JsonSnapshotCodec::encode( [ $fileKey, $selected->label ] ),
+			'legacyId' => (int)$row['id'], 'kind' => $selected->kind, 'surface' => $selected,
+			'members' => $members, 'priorIds' => $priorIds, 'wanted' => (string)$selected->label,
+			'source' => $filePage->getPrefixedText(), 'fileKey' => $fileKey,
+			'sourceRevision' => $snapshot['pending'] ? null : $snapshot['baseRevisionId'] ];
 	}
 
 	/**
@@ -399,7 +571,171 @@ class PageCopyMigration {
 			return null;
 		}
 		return [ 'key' => 'row:' . $row['id'], 'legacyId' => (int)$row['id'], 'kind' => 'slide',
-			'surface' => $surface, 'wanted' => $slide, 'source' => $slide, 'set' => $set, 'sourceRevision' => null ];
+			'surface' => $surface, 'members' => [ [ 'legacyId' => (int)$row['id'], 'surface' => $surface ] ],
+			'priorIds' => [], 'wanted' => $slide, 'source' => $slide, 'set' => $set, 'sourceRevision' => null ];
+	}
+
+	/**
+	 * @param \stdClass $existing
+	 * @param \stdClass $source
+	 * @return bool
+	 */
+	private static function sameMember( \stdClass $existing, \stdClass $source ): bool {
+		return $existing->kind === $source->kind && ( $source->kind === 'slide' ||
+			( ( $existing->source->fileTitle ?? null ) === $source->source->fileTitle &&
+				( $existing->source->page ?? null ) === $source->source->page ) );
+	}
+
+	/**
+	 * @param array $source
+	 * @param array $surfaces
+	 * @param int $pageId
+	 * @return array|null Refusal for an unchanged occurrence that cannot select this group
+	 */
+	private function templateProblem( array $source, array $surfaces, int $pageId ): ?array {
+		foreach ( $source['constraints'] ?? [] as $constraint ) {
+			if ( !$this->constraintMatches( $source, $constraint, $surfaces, $pageId ) ) {
+				return [ 'what' => $constraint['latest'] ? $constraint['what'] : $source['source'],
+					'reason' => $constraint['latest'] ? 'template-latest-set' : 'template-name-taken' ];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @param array $source
+	 * @param array $constraint
+	 * @param array $surfaces
+	 * @param int $pageId
+	 * @return bool
+	 */
+	private function constraintMatches( array $source, array $constraint, array $surfaces, int $pageId ): bool {
+		$content = new LayersDocumentContent( JsonSnapshotCodec::encode(
+			(object)[ 'schemaVersion' => DocumentSchema::VERSION, 'surfaces' => $surfaces ] ) );
+		$title = $this->titles->newFromID( $pageId );
+		$revision = new MutableRevisionRecord( $title );
+		$revision->setId( 1 );
+		$revision->setTimestamp( wfTimestampNow() );
+		$revision->setContent( 'main', new WikitextContent( 'Fixture' ) );
+		$revision->setContent( PageRevisionWriter::SLOT, $content );
+		$parser = MediaWikiServices::getInstance()->getParserFactory()->create();
+		$options = ParserOptions::newFromAnon();
+		$options->setCurrentRevisionRecordCallback( static fn () => $revision );
+		$name = $constraint['name'];
+		if ( $source['kind'] !== 'slide' ) {
+			$parser->setHook( 'layers-migration-probe', static function ( $input, $args, Parser $active ) use (
+				$source, $constraint, &$name
+			) {
+				$name = $constraint['latest'] ? BoundSlideHooks::onlyDrawingOf( $active, $source['fileKey'] ) :
+					BoundSlideHooks::drawingOfFileNamed( $active, $source['fileKey'], $name );
+				return '';
+			} );
+			$parser->parse( '<layers-migration-probe/>', $title, $options, true, true, 1 );
+		}
+		if ( $name === null ) {
+			return false;
+		}
+		$decoded = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR )['surfaces'];
+		foreach ( $source['members'] as $member ) {
+			$id = PageOwnedBinding::resolveNamed( [ 'pageId' => $pageId, 'name' => $name ], $decoded,
+				$source['kind'] === 'slide' ? 'slide' : 'file', $source['fileKey'] ?? null,
+				$member['surface']->source->page ?? null );
+			if ( $id !== FilePageMigration::surfaceId( $member['legacyId'], $pageId ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @param array $source
+	 * @param array $names Names keyed by retained member ID
+	 * @param array $rewrites
+	 * @param array $surfaces
+	 * @param int $pageId
+	 * @return bool
+	 */
+	private function directMatches( array $source, array $names, array $rewrites, array $surfaces,
+		int $pageId
+	): bool {
+		$decoded = json_decode( JsonSnapshotCodec::encode( $surfaces ), true, 64, JSON_THROW_ON_ERROR );
+		$members = array_column( $source['members'], 'surface', 'legacyId' );
+		foreach ( $rewrites as [ , $key, $rowId ] ) {
+			if ( $key !== $source['key'] ) {
+				continue;
+			}
+			$id = PageOwnedBinding::resolveNamed( [ 'pageId' => $pageId, 'name' => $names[$rowId] ],
+				$decoded, $source['kind'] === 'slide' ? 'slide' : 'file', $source['fileKey'] ?? null,
+				$members[$rowId]->source->page ?? null );
+			if ( $id !== FilePageMigration::surfaceId( $rowId, $pageId ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * @param array $snapshot
+	 * @param Authority $authority
+	 * @param int|null $expectedLatest The returned destination revision, only for a source that is that owner
+	 */
+	private function verifySnapshot( array $snapshot, Authority $authority, ?int $expectedLatest = null ): void {
+		$title = $snapshot['title'];
+		// Preparation callbacks can change rows already memoized by Title/RevisionLookup.
+		// Recheck primary identity, latest revision and visibility without those object caches.
+		$stored = $this->db->getPrimaryDatabase()->newSelectQueryBuilder()
+			->select( [ 'page_id', 'page_namespace', 'page_title', 'page_latest', 'rev_page', 'rev_deleted' ] )
+			->from( 'page' )->join( 'revision', null, 'rev_page = page_id' )
+			->where( [ 'page_id' => $snapshot['pageId'], 'rev_id' => $snapshot['baseRevisionId'] ] )
+			->caller( __METHOD__ )->fetchRow();
+		if ( !$stored || (int)$stored->page_id !== $snapshot['pageId'] ||
+			(int)$stored->page_namespace !== $title->getNamespace() || $stored->page_title !== $title->getDBkey() ||
+			(int)$stored->page_latest !== ( $expectedLatest ?? $snapshot['baseRevisionId'] ) ||
+			(int)$stored->rev_page !== $snapshot['pageId'] ) {
+			throw new PublicationException( 'layers-edit-conflict' );
+		}
+		$revision = $this->revisions->getRevisionById( $snapshot['baseRevisionId'], IDBAccessObject::READ_LATEST );
+		if ( !$revision || $revision->getPageId() !== $snapshot['pageId'] ) {
+			throw new PublicationException( 'layers-edit-conflict' );
+		}
+		if ( !$authority->authorizeRead( 'read', $title ) ||
+			!RevisionRecord::userCanBitfield( (int)$stored->rev_deleted, RevisionRecord::DELETED_TEXT,
+				$authority, $revision->getPage() ) ) {
+			throw new PublicationException( 'layers-revision-unavailable' );
+		}
+		try {
+			$this->document( $title, $revision, $authority );
+		} catch ( \DomainException $e ) {
+			throw new PublicationException( 'layers-revision-unavailable', 0, $e );
+		}
+	}
+
+	/**
+	 * @param string $text
+	 * @param array $candidates
+	 * @param Title $title
+	 * @param int $revisionId
+	 * @param array $shown
+	 * @return array
+	 */
+	private function indirectSets( string $text, array $candidates, Title $title, int $revisionId,
+		array $shown
+	): array {
+		if ( !$shown ) {
+			return [];
+		}
+		usort( $candidates, static fn ( $left, $right ) => $right['start'] <=> $left['start'] );
+		foreach ( $candidates as $candidate ) {
+			$text = substr_replace( $text, str_repeat( ' ', strlen( $candidate['raw'] ) ),
+				$candidate['start'], strlen( $candidate['raw'] ) );
+		}
+		$output = MediaWikiServices::getInstance()->getParserFactory()->create()->parse( $text, $title,
+			ParserOptions::newFromAnon(), true, true, $revisionId );
+		$indirect = [];
+		foreach ( ShownLayerSets::decode( $output->getPageProperty( ShownLayerSets::PROPERTY ) ) as $entry ) {
+			$indirect[self::shownKey( $entry[0], $entry[1], $entry[2] === '' ? null : $entry[2] )] = true;
+		}
+		return $indirect;
 	}
 
 	/**
@@ -432,7 +768,10 @@ class PageCopyMigration {
 	 * @return string|null The document step 1 would write on the file's page, in a dry run
 	 */
 	private function pendingDocument( string $fileName ): ?string {
-		return $this->pendingFile ? ( $this->pendingFile )( $fileName ) : null;
+		if ( !array_key_exists( $fileName, $this->pendingDocuments ) ) {
+			$this->pendingDocuments[$fileName] = $this->pendingFile ? ( $this->pendingFile )( $fileName ) : null;
+		}
+		return $this->pendingDocuments[$fileName];
 	}
 
 	/**
@@ -445,18 +784,6 @@ class PageCopyMigration {
 		$name = str_replace( ' ', '_', preg_replace( '/^File:/', '', trim( $name ) ) );
 		$set = $selector === null || SetNameResolver::isShowIntent( $selector ) ? '' : trim( $selector );
 		return $kind . "\n" . $name . "\n" . $set;
-	}
-
-	/**
-	 * @param string $fileTitle 'File:<DB key>'
-	 * @param \stdClass[] $surfaces The page's drawings
-	 * @param array[] $copies Planned copies
-	 * @return int How many of them are drawings of that file
-	 */
-	private static function drawingsOf( string $fileTitle, array $surfaces, array $copies ): int {
-		$all = array_merge( $surfaces, array_column( $copies, 'surface' ) );
-		return count( array_filter( $all, static fn ( $surface ) =>
-			( $surface->source->fileTitle ?? null ) === $fileTitle ) );
 	}
 
 	/**

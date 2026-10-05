@@ -80,12 +80,14 @@ class PagePublicationService {
 	 * @param WikitextContent|null $main Optional simultaneous main-slot edit
 	 * @param int|null $expectedPageId Bound existing owner; required for future binding-based callers
 	 * @param string|null $botTag Makes this a bot edit of the migration script, with this tag as well
+	 * @param callable():void|null $verifySources Internal source-snapshot guard, run after core preparation
+	 *  and immediately before admission. The caller retains any required source transaction boundary.
 	 * @return int Committed revision ID, or unchanged ID for a successful no-op
 	 * @throws PublicationException With a stable internal error code
 	 */
 	public function publish( Title $owner, Authority $authority, int $baseRevisionId,
 		string $json, string $summary, ?WikitextContent $main = null, ?int $expectedPageId = null,
-		?string $botTag = null
+		?string $botTag = null, ?callable $verifySources = null
 	): int {
 		try {
 			$this->access->assertCanPrepareEdit( $owner, $authority );
@@ -168,7 +170,7 @@ class PagePublicationService {
 			$revision = $this->writer->save( $updater, $baseRevisionId,
 				$content, CommentStoreComment::newUnsavedComment( $summary ), $main,
 				function ( PreparedUpdate $prepared, callable $commit ) use (
-					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId
+					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId, $verifySources
 				) {
 					if ( $expectedPageId !== null ) {
 						$this->assertOwnerIdentity( $owner, $expectedPageId );
@@ -190,6 +192,9 @@ class PagePublicationService {
 						$preparedLayers->serialize() !== $content->getCanonicalText()
 					) {
 						throw new PublicationException( 'layers-admission-unauthorized' );
+					}
+					if ( $verifySources !== null ) {
+						$verifySources();
 					}
 					$intent = new PublicationAdmissionIntent(
 						$authority, $authority->getUser(), $prepared->getPage()->getId(),

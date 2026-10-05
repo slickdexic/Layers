@@ -219,6 +219,18 @@ class WikitextHooks {
 	 */
 	private static array $galleryHints = [];
 
+	/** @var \WeakMap<Parser, \stdClass>|null Native gallery state, keyed by actual parser. */
+	private static ?\WeakMap $galleryStates = null;
+
+	/** @var int Nesting depth of active native gallery tag hook invocations */
+	private static int $galleryDepth = 0;
+
+	/** @var \WeakMap<Parser, \Closure>|null The wrapper installed on each live parser. */
+	private static ?\WeakMap $wrappedParsers = null;
+
+	/** @var \WeakMap<\Closure, callable|null>|null Previous callbacks, including inherited clone wrappers. */
+	private static ?\WeakMap $galleryCallbacks = null;
+
 	/**
 	 * The parse that is fetching each file, by DB key. Core's galleries (native and Cargo's) run
 	 * BeforeParserFetchFileAndTitle just before rendering each image, so a gallery thumbnail can find the page
@@ -300,6 +312,9 @@ class WikitextHooks {
 		self::$fileParseCount = [];
 		self::$pendingRender = [];
 		self::$galleryHints = [];
+		if ( self::$galleryDepth === 0 ) {
+			self::$galleryStates = null;
+		}
 		self::$fetchingParsers = [];
 	}
 
@@ -319,6 +334,35 @@ class WikitextHooks {
 			// image hook. Discard staging left by an earlier failed transform.
 			unset( self::$fileRenderParams[$title->getDBkey()] );
 			self::$fetchingParsers[$title->getDBkey()] = $parser;
+
+			$state = self::$galleryStates[$parser] ?? null;
+			if ( $state !== null ) {
+				$state->staged = null;
+				unset( $state->fetchOwners[$title->getDBkey()] );
+				$fragment = (string)$title->getFragment();
+				if ( $title instanceof Title && isset( $state->tokens[$fragment] ) ) {
+					$desc = $state->tokens[$fragment];
+					if ( $desc['filename'] === $title->getDBkey() ) {
+						unset( $state->tokens[$fragment] );
+						$title->setFragment( $desc['origFrag'] );
+						$state->titles[$title] = $desc;
+						$state->fetchOwners[$title->getDBkey()] = $desc['invocation'];
+					}
+				} elseif ( isset( $state->titles[$title] ) ) {
+					$desc = $state->titles[$title];
+					if ( in_array( $desc['invocation'], $state->invocations, true ) ) {
+						$state->fetchOwners[$title->getDBkey()] = $desc['invocation'];
+						// Match the resolved file, including aliases, before consuming a thumbnail hint.
+						$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title, $options );
+						if ( $file ) {
+							$state->staged = $desc + [ 'actualFile' => $file->getName(),
+								'sha1' => $file->getSha1(), 'timestamp' => $file->getTimestamp() ];
+							self::$fetchingParsers[$file->getName()] = $parser;
+							$state->fetchOwners[$file->getName()] = $desc['invocation'];
+						}
+					}
+				}
+			}
 		}
 		return true;
 	}
@@ -499,7 +543,181 @@ class WikitextHooks {
 				Parser::SFH_OBJECT_ARGS );
 		}
 
+		if ( $parser instanceof Parser ) {
+			self::wrapGalleryHook( $parser );
+		}
+
 		return true;
+	}
+
+	/**
+	 * Wrap core's native <gallery> tag hook on a Parser instance if not already wrapped.
+	 *
+	 * Intercepts gallery blocks to cleanly associate exact Title objects with
+	 * explicit occurrence descriptors across both inline and template renders.
+	 *
+	 * @param Parser $parser
+	 */
+	public static function wrapGalleryHook( Parser $parser ): void {
+		self::$wrappedParsers ??= new \WeakMap();
+		self::$galleryCallbacks ??= new \WeakMap();
+		$oldHook = null;
+		$wrapper = static function ( ?string $content, array $attributes, Parser $p, ...$rest ) use ( &$oldHook ) {
+			return self::renderGalleryTag( $content, $attributes, $p, $oldHook, ...$rest );
+		};
+		$oldHook = $parser->setHook( 'gallery', $wrapper );
+		if ( isset( self::$wrappedParsers[$parser] ) && $oldHook === self::$wrappedParsers[$parser] ) {
+			$parser->setHook( 'gallery', $oldHook );
+			return;
+		}
+		// Cloned parsers inherit callbacks. Unwrap our inherited callback once rather than
+		// tagging the same body twice; preserve a different extension's callback chain.
+		while ( $oldHook instanceof \Closure && isset( self::$galleryCallbacks[$oldHook] ) ) {
+			$oldHook = self::$galleryCallbacks[$oldHook];
+		}
+		self::$galleryCallbacks[$wrapper] = $oldHook;
+		self::$wrappedParsers[$parser] = $wrapper;
+	}
+
+	/**
+	 * Wrapper for the native <gallery> tag hook.
+	 *
+	 * Intercepts the raw gallery body for both inline and template-expanded galleries.
+	 * Extracts layerset= per line, strips the option from line markup so it never appears
+	 * in captions or attributes, tags each line with an in-memory fragment token, and
+	 * executes the previous gallery hook in a try/finally block that cleans up invocation state.
+	 *
+	 * @param ?string $content Raw gallery tag content
+	 * @param array $attributes Tag attributes
+	 * @param Parser $parser Parser instance
+	 * @param ?callable $oldHook Previous gallery tag callback
+	 * @param mixed ...$rest Additional parameters passed by core
+	 * @return string|array Rendered HTML or the previous tag callback's flags
+	 */
+	public static function renderGalleryTag(
+		?string $content, array $attributes, Parser $parser, ?callable $oldHook = null, ...$rest
+	) {
+		if ( $content === null || $content === '' ) {
+			return $oldHook ? call_user_func( $oldHook, $content, $attributes, $parser, ...$rest ) : '';
+		}
+
+		self::$galleryStates ??= new \WeakMap();
+		$state = self::$galleryStates[$parser] ??= (object)[
+			'tokens' => [], 'titles' => new \WeakMap(), 'staged' => null, 'invocations' => [], 'fetchOwners' => [] ];
+		// Another extension may wrap our callback. Its chain must see one tagged invocation.
+		foreach ( $state->tokens as $token => $unused ) {
+			if ( str_contains( $content, '#' . $token ) ) {
+				return $oldHook ? call_user_func( $oldHook, $content, $attributes, $parser, ...$rest ) :
+					$parser->renderImageGallery( $content, $attributes );
+			}
+		}
+		$invocation = new \stdClass();
+		$tokensCreated = [];
+		$lines = explode( "\n", $content );
+		$modifiedLines = [];
+		$restorations = [];
+
+		foreach ( $lines as $line ) {
+			if ( trim( $line ) === '' ) {
+				$modifiedLines[] = $line;
+				continue;
+			}
+
+			$parts = explode( '|', $line, 2 );
+			$firstPart = $parts[0];
+			$restOpts = $parts[1] ?? null;
+
+			$setName = null;
+			if ( $restOpts !== null && preg_match( '/(?:^|\|)\s*layerset\s*=\s*([^|\n]+)/i',
+				$restOpts, $lsMatch )
+			) {
+				$setName = trim( $lsMatch[1] );
+				$restOpts = preg_replace( '/(?:^|\|)\s*layerset\s*=\s*[^|\n]*/i', '', $restOpts );
+				$restOpts = ( $restOpts !== '' ) ? '|' . ltrim( $restOpts, '|' ) : '';
+			} elseif ( $restOpts !== null ) {
+				$restOpts = '|' . $restOpts;
+			} else {
+				$restOpts = '';
+			}
+
+			$filePartTrimmed = trim( $firstPart );
+			if ( $filePartTrimmed === '' || str_starts_with( $filePartTrimmed, '<' ) ) {
+				$modifiedLines[] = $line;
+				continue;
+			}
+
+			// Follow core's decoding and namespace checks before changing any native title.
+			$nativeTitle = Title::newFromText( rawurldecode( $firstPart ), NS_FILE );
+			if ( !$nativeTitle || !$nativeTitle->inNamespace( NS_FILE ) || $nativeTitle->isExternal() ) {
+				$modifiedLines[] = $line;
+				continue;
+			}
+
+			$tok = 'layers-m2-' . bin2hex( random_bytes( 16 ) );
+			$state->tokens[$tok] = [
+				'setName' => $setName,
+				'origFrag' => $nativeTitle->getFragment(),
+				'filename' => $nativeTitle->getDBkey(),
+				'invocation' => $invocation,
+			];
+			$tokensCreated[] = $tok;
+			$taggedTitle = $nativeTitle->getPrefixedDBkey() . '#' . $tok;
+			$modifiedLines[] = $taggedTitle . $restOpts;
+			// A previous callback may echo its input instead of fetching a native title.
+			foreach ( [ $taggedTitle => $firstPart,
+				htmlspecialchars( $taggedTitle ) => htmlspecialchars( $firstPart ),
+				rawurlencode( $taggedTitle ) => rawurlencode( $firstPart ) ] as $from => $to ) {
+				$restorations[$from] = $to;
+			}
+		}
+
+		$modifiedContent = implode( "\n", $modifiedLines );
+		self::$galleryDepth++;
+		$state->invocations[] = $invocation;
+		$previousStaged = $state->staged;
+		$previousFetches = [];
+		foreach ( $state->fetchOwners as $filename => $owner ) {
+			if ( ( self::$fetchingParsers[$filename] ?? null ) === $parser ) {
+				$previousFetches[$filename] = $owner;
+			}
+		}
+
+		try {
+			$result = $oldHook ? call_user_func( $oldHook, $modifiedContent, $attributes, $parser, ...$rest ) :
+				$parser->renderImageGallery( $modifiedContent, $attributes );
+			if ( is_array( $result ) && isset( $result[0] ) && is_string( $result[0] ) ) {
+				$result[0] = strtr( $result[0], $restorations );
+			} elseif ( is_string( $result ) ) {
+				$result = strtr( $result, $restorations );
+			}
+			return $result;
+		} finally {
+			self::$galleryDepth--;
+			foreach ( $tokensCreated as $tok ) {
+				unset( $state->tokens[$tok] );
+			}
+			foreach ( $state->titles as $title => $desc ) {
+				if ( $desc['invocation'] === $invocation ) {
+					unset( $state->titles[$title] );
+				}
+			}
+			foreach ( $state->fetchOwners as $filename => $owner ) {
+				if ( $owner === $invocation ) {
+					if ( ( self::$fetchingParsers[$filename] ?? null ) === $parser ) {
+						unset( self::$fetchingParsers[$filename] );
+					}
+					unset( $state->fetchOwners[$filename] );
+				}
+			}
+			array_pop( $state->invocations );
+			foreach ( $previousFetches as $filename => $owner ) {
+				if ( !isset( self::$fetchingParsers[$filename] ) && in_array( $owner, $state->invocations, true ) ) {
+					self::$fetchingParsers[$filename] = $parser;
+					$state->fetchOwners[$filename] = $owner;
+				}
+			}
+			$state->staged = $previousStaged;
+		}
 	}
 
 	/**
@@ -623,7 +841,23 @@ class WikitextHooks {
 				return true;
 			}
 		} else {
-			$hint = $filename ? ( self::$galleryHints[$filename] ?? null ) : null;
+			$hint = null;
+			$galleryState = $parser ? ( self::$galleryStates[$parser] ?? null ) : null;
+			$desc = $galleryState ? $galleryState->staged : null;
+			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
+			if ( $desc !== null && $file && $desc['actualFile'] === $filename &&
+				$desc['sha1'] === $file->getSha1() && $desc['timestamp'] === $file->getTimestamp() &&
+				in_array( $desc['invocation'], $galleryState->invocations, true )
+			) {
+				$galleryState->staged = null;
+				if ( $desc['setName'] !== null ) {
+					$hint = $desc['setName'];
+				} elseif ( $filename !== null && isset( self::$galleryHints[$filename] ) ) {
+					$hint = self::$galleryHints[$filename];
+				}
+			} elseif ( $filename !== null && isset( self::$galleryHints[$filename] ) ) {
+				$hint = self::$galleryHints[$filename];
+			}
 			if ( $parser && ( MigrationState::forParser( $parser ) ||
 				( $hint !== null && preg_match( '/\A\s*[0-9]+:/', $hint ) ) )
 			) {
@@ -1116,25 +1350,9 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
-		if ( $text === null || !is_string( $text ) ) {
-			return true;
+		if ( $parser instanceof Parser ) {
+			self::wrapGalleryHook( $parser );
 		}
-
-		try {
-			// Pre-process <gallery> blocks: extract per-image layerset= hints and
-			// strip the option so it does not appear as visible caption text.
-			if ( stripos( $text, '<gallery' ) !== false && stripos( $text, 'layerset=' ) !== false ) {
-				$text = preg_replace_callback(
-					'/<gallery\b[^>]*>.*?<\/gallery>/si',
-					[ self::class, 'preprocessGalleryBlock' ],
-					$text
-				);
-				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
-			}
-		} catch ( \Throwable $e ) {
-			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
-		}
-
 		return true;
 	}
 
@@ -1398,55 +1616,6 @@ class WikitextHooks {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Callback for preg_replace_callback over native <gallery> blocks.
-	 *
-	 * For each image line that contains a |layerset=X option, registers a
-	 * gallery hint via registerGalleryHint() and strips the option from the
-	 * line so it does not appear as visible caption text in the rendered
-	 * gallery.
-	 *
-	 * @param array $matches Regex match; $matches[0] is the full <gallery> block
-	 * @return string Gallery block with layerset= stripped from image lines
-	 */
-	private static function preprocessGalleryBlock( array $matches ): string {
-		$block = $matches[0];
-		// Fast-path: skip blocks that contain no layerset= at all.
-		if ( stripos( $block, 'layerset=' ) === false ) {
-			return $block;
-		}
-		return preg_replace_callback(
-			// Match image lines: optional indent, optional namespace prefix, filename,
-			// then pipe options. The prefix is optional because a gallery line may be
-			// written either "File:X.jpg|..." or bare "X.jpg|..." - MediaWiki resolves
-			// both in NS_FILE. Requiring it meant a bare line kept its layerset=
-			// option, which then rendered as the visible caption and as alt/title text,
-			// and registered no hint at all so the image silently fell back to the
-			// most recent set instead of the one asked for.
-			'/^([ \t]*(?:' . self::fileNsPattern() . ':)?([^\|\n]+))(\|[^\n]*)$/mi',
-			static function ( $line ) {
-				// "  File:Name.jpg" (with any indent)
-				$prefix = $line[1];
-				// "Name.jpg"
-				$filename = trim( $line[2] );
-				// "|opt1|opt2|caption"
-				$rest = $line[3];
-				if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
-					// No layerset= on this line — leave untouched.
-					return $line[0];
-				}
-				$setname = trim( $lsMatch[1] );
-				self::registerGalleryHint( $filename, $setname );
-				// Strip the layerset= option (and its leading pipe) from the options string.
-				$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
-				// Re-normalise: ensure remaining options start with a single pipe.
-				$rest = ( $rest !== '' ) ? '|' . ltrim( $rest, '|' ) : '';
-				return $prefix . $rest;
-			},
-			$block
-		);
 	}
 
 	/**
