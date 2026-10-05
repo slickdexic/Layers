@@ -39,6 +39,7 @@
 	 * @constant {string}
 	 */
 	const SVG_NS = 'http://www.w3.org/2000/svg';
+	const hostOverlays = new WeakMap();
 
 	/**
 	 * ViewerOverlay class - manages hover overlay for layered images
@@ -48,15 +49,25 @@
 		 * Create a ViewerOverlay instance
 		 * @param {Object} config Configuration options
 		 * @param {HTMLElement} config.container The container element (positioned wrapper around image)
-		 * @param {HTMLImageElement} config.imageElement The image element
-		 * @param {string} config.filename The file name (for edit URL)
+		 * @param {HTMLImageElement} [config.imageElement] Image element, required for legacy routes
+		 * @param {string} [config.filename] File name, required for legacy routes
 		 * @param {string} [config.setname] The layer set name; omit for an unnamed set
 		 * @param {boolean} [config.canEdit=false] Whether user has edit permission
+		 * @param {Function} [config.onEdit] Admitted edit callback, receiving the opener button
+		 * @param {Function} [config.onView] View callback, receiving the opener button
 		 * @param {boolean} [config.debug=false] Enable debug logging
 		 */
 		constructor( config ) {
 			this.container = config.container;
 			this.imageElement = config.imageElement;
+			this.callbackMode = Object.prototype.hasOwnProperty.call( config, 'onEdit' ) ||
+				Object.prototype.hasOwnProperty.call( config, 'onView' );
+			this.onEdit = config.onEdit;
+			this.onView = config.onView;
+			this.destroyed = false;
+			this.listeners = [];
+			this.addedTabIndex = false;
+			this.originalTabIndex = null;
 			// Sanitize filename - strip any wikitext brackets that might have leaked through
 			this.filename = ( config.filename || '' ).replace( /[\x5B\x5D]/g, '' );
 			this.setname = config.setname || '';
@@ -68,7 +79,8 @@
 			if ( !( this.page > 1 ) ) {
 				this.page = 1;
 			}
-			this.canEdit = config.canEdit !== false && this._checkEditPermission();
+			this.canEdit = this.callbackMode ? config.canEdit === true && typeof this.onEdit === 'function' :
+				config.canEdit !== false && this._checkEditPermission();
 			this.debug = config.debug || false;
 			// Check if this is for a non-existent set that needs auto-creation
 			this.autoCreate = config.autoCreate ||
@@ -142,20 +154,36 @@
 		 * Initialize the overlay
 		 */
 		init() {
-			if ( !this.container || !this.imageElement ) {
+			if ( this.destroyed || this.overlay ) {
+				return;
+			}
+			if ( !this.container || ( !this.callbackMode && !this.imageElement ) ) {
 				this.debugLog( 'Missing container or image element' );
 				return;
 			}
 
 			// Don't add overlay if no filename
-			if ( !this.filename ) {
+			if ( !this.callbackMode && !this.filename ) {
 				this.debugLog( 'No filename provided, skipping overlay' );
 				return;
 			}
 
+			const previous = hostOverlays.get( this.container );
+			if ( previous && previous !== this ) {
+				previous.destroy();
+			}
+			hostOverlays.set( this.container, this );
+			if ( this.container.tabIndex < 0 ) {
+				this.originalTabIndex = this.container.getAttribute( 'tabindex' );
+				this.container.setAttribute( 'tabindex', '0' );
+				this.addedTabIndex = true;
+			}
 			this.createOverlay();
 			this.attachEventListeners();
 			this._attachPdfClickInterception();
+			if ( this.container.contains( document.activeElement ) ) {
+				this._showOverlay();
+			}
 
 			this.debugLog( 'Overlay initialized for', this.filename, 'canEdit:', this.canEdit );
 		}
@@ -168,7 +196,7 @@
 		 * @private
 		 */
 		_attachPdfClickInterception() {
-			if ( !/\.pdf$/i.test( this.filename ) ) {
+			if ( this.callbackMode || !/\.pdf$/i.test( this.filename ) ) {
 				return;
 			}
 			this._pdfClickTarget = this._findClickTarget();
@@ -186,7 +214,7 @@
 				e.stopPropagation();
 				this._handleViewClick();
 			};
-			this._pdfClickTarget.addEventListener( 'click', this._boundPdfClick );
+			this._listen( this._pdfClickTarget, 'click', this._boundPdfClick );
 		}
 
 		/**
@@ -221,7 +249,7 @@
 				const editBtn = this._createButton(
 					'edit',
 					this._msg( 'layers-viewer-edit', 'Edit layers' ),
-					() => this._handleEditClick()
+					( opener ) => this._handleEditClick( opener )
 				);
 				editBtn.appendChild( this._createPencilIcon() );
 				this.overlay.appendChild( editBtn );
@@ -231,7 +259,7 @@
 			const viewBtn = this._createButton(
 				'view',
 				this._msg( 'layers-viewer-view', 'View full size' ),
-				() => this._handleViewClick()
+				( opener ) => this._handleViewClick( opener )
 			);
 			viewBtn.appendChild( this._createExpandIcon() );
 			this.overlay.appendChild( viewBtn );
@@ -254,16 +282,28 @@
 			btn.setAttribute( 'type', 'button' );
 			btn.setAttribute( 'title', label );
 			btn.setAttribute( 'aria-label', label );
-			btn.addEventListener( 'click', ( e ) => {
+			this._listen( btn, 'click', ( e ) => {
 				e.preventDefault();
 				e.stopPropagation();
-				onClick();
+				onClick( e.currentTarget );
 			} );
 			// Prevent overlay from hiding when hovering over buttons
-			btn.addEventListener( 'mouseenter', ( e ) => {
+			this._listen( btn, 'mouseenter', ( e ) => {
 				e.stopPropagation();
 			} );
 			return btn;
+		}
+
+		/**
+		 * @private
+		 * @param {HTMLElement} element Listener target
+		 * @param {string} type Event type
+		 * @param {Function} handler Listener
+		 * @param {Object} [options] Listener options
+		 */
+		_listen( element, type, handler, options ) {
+			element.addEventListener( type, handler, options );
+			this.listeners.push( { element, type, handler, options } );
 		}
 
 		/**
@@ -307,18 +347,18 @@
 			this.boundTouchStart = ( e ) => this._handleTouchStart( e );
 			this.boundFocusOut = ( e ) => {
 				// Only hide if focus moves outside container
-				if ( !this.container.contains( e.relatedTarget ) ) {
-					this._hideOverlay();
+				if ( this.container && !this.container.contains( e.relatedTarget ) ) {
+					this._hideOverlay( true );
 				}
 			};
 
-			this.container.addEventListener( 'mouseenter', this.boundMouseEnter );
-			this.container.addEventListener( 'mouseleave', this.boundMouseLeave );
-			this.container.addEventListener( 'touchstart', this.boundTouchStart, { passive: true } );
+			this._listen( this.container, 'mouseenter', this.boundMouseEnter );
+			this._listen( this.container, 'mouseleave', this.boundMouseLeave );
+			this._listen( this.container, 'touchstart', this.boundTouchStart, { passive: true } );
 
 			// Keyboard accessibility - show on focus within
-			this.container.addEventListener( 'focusin', this.boundMouseEnter );
-			this.container.addEventListener( 'focusout', this.boundFocusOut );
+			this._listen( this.container, 'focusin', this.boundMouseEnter );
+			this._listen( this.container, 'focusout', this.boundFocusOut );
 		}
 
 		/**
@@ -334,8 +374,12 @@
 		/**
 		 * Hide the overlay
 		 * @private
+		 * @param {boolean} [force=false] Focus is leaving the host
 		 */
-		_hideOverlay() {
+		_hideOverlay( force = false ) {
+			if ( !force && this.container && this.container.contains( document.activeElement ) ) {
+				return;
+			}
 			if ( this.overlay ) {
 				this.overlay.classList.remove( 'layers-viewer-overlay--visible' );
 			}
@@ -347,6 +391,9 @@
 		 * @param {TouchEvent} _e Touch event (unused but required for event handler signature)
 		 */
 		_handleTouchStart( _e ) {
+			if ( this.destroyed ) {
+				return;
+			}
 			// Show overlay on touch
 			this._showOverlay();
 
@@ -365,8 +412,15 @@
 		/**
 		 * Handle edit button click
 		 * @private
+		 * @param {HTMLElement} [opener] Activating control
 		 */
-		_handleEditClick() {
+		_handleEditClick( opener ) {
+			if ( this.destroyed ) {
+				return;
+			}
+			if ( this.callbackMode ) {
+				return this.canEdit ? this._dispatchCallback( this.onEdit, opener ) : undefined;
+			}
 			this.debugLog( 'Edit clicked for', this.filename, 'autoCreate:', this.autoCreate );
 
 			// Check if modal editor is available and preferred
@@ -459,8 +513,15 @@
 		/**
 		 * Handle view/expand button click
 		 * @private
+		 * @param {HTMLElement} [opener] Activating control
 		 */
-		_handleViewClick() {
+		_handleViewClick( opener ) {
+			if ( this.destroyed ) {
+				return;
+			}
+			if ( this.callbackMode ) {
+				return this._dispatchCallback( this.onView, opener );
+			}
 			this.debugLog( 'View clicked for', this.filename );
 
 			// Use the singleton lightbox instance (avoids leaking DOM/listeners)
@@ -486,28 +547,54 @@
 		}
 
 		/**
+		 * @private
+		 * @param {Function} callback Caller-owned route
+		 * @param {HTMLElement} opener Activating control
+		 * @return {Promise|undefined} Settled callback, without legacy fallback
+		 */
+		_dispatchCallback( callback, opener ) {
+			if ( typeof callback !== 'function' ) {
+				return;
+			}
+			try {
+				return Promise.resolve( callback( opener ) ).catch( ( error ) => {
+					this.debugLog( 'Overlay callback failed', error );
+				} );
+			} catch ( error ) {
+				this.debugLog( 'Overlay callback failed', error );
+			}
+		}
+
+		/**
 		 * Clean up the overlay and event listeners
 		 */
 		destroy() {
+			this.destroyed = true;
 			if ( this.touchTimeout ) {
 				clearTimeout( this.touchTimeout );
 				this.touchTimeout = null;
 			}
 
-			if ( this.container && this.boundMouseEnter ) {
-				this.container.removeEventListener( 'mouseenter', this.boundMouseEnter );
-				this.container.removeEventListener( 'mouseleave', this.boundMouseLeave );
-				this.container.removeEventListener( 'touchstart', this.boundTouchStart );
-				this.container.removeEventListener( 'focusin', this.boundMouseEnter );
-				this.container.removeEventListener( 'focusout', this.boundFocusOut );
+			for ( const { element, type, handler, options } of this.listeners ) {
+				element.removeEventListener( type, handler, options );
 			}
+			this.listeners = [];
 
 			if ( this.overlay && this.overlay.parentNode ) {
 				this.overlay.parentNode.removeChild( this.overlay );
 			}
 
-			if ( this._pdfClickTarget && this._boundPdfClick ) {
-				this._pdfClickTarget.removeEventListener( 'click', this._boundPdfClick );
+			if ( this.container ) {
+				if ( this.addedTabIndex && this.container.getAttribute( 'tabindex' ) === '0' ) {
+					if ( this.originalTabIndex === null ) {
+						this.container.removeAttribute( 'tabindex' );
+					} else {
+						this.container.setAttribute( 'tabindex', this.originalTabIndex );
+					}
+				}
+				if ( hostOverlays.get( this.container ) === this ) {
+					hostOverlays.delete( this.container );
+				}
 			}
 			this._pdfClickTarget = null;
 			this._boundPdfClick = null;
@@ -517,6 +604,10 @@
 			this.boundMouseLeave = null;
 			this.boundTouchStart = null;
 			this.boundFocusOut = null;
+			this.container = null;
+			this.imageElement = null;
+			this.onEdit = null;
+			this.onView = null;
 		}
 	}
 
