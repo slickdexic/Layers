@@ -680,6 +680,40 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'touch support', () => {
+		function touch( target, type, x = 5, y = 5 ) {
+			const event = new TouchEvent( type, { bubbles: true, cancelable: true,
+				touches: type === 'touchend' || type === 'touchcancel' ? [] : [ { identifier: 1, clientX: x, clientY: y } ] } );
+			target.dispatchEvent( event ); return event;
+		}
+		function click( target, options = {}, pointer = 'touch' ) {
+			const event = new MouseEvent( 'click', { bubbles: true, cancelable: true, detail: 1, button: 0, ...options } );
+			Object.defineProperty( event, 'pointerType', { value: pointer } );
+			target.dispatchEvent( event ); return event;
+		}
+		it.each( [ true, false ] )( 'first host tap reveals; real controls preserve edit permission %s', canEdit => {
+			const edit = jest.fn(), view = jest.fn();
+			const overlay = new ViewerOverlay( { container, imageElement: img, canEdit, onEdit: edit, onView: view } );
+			touch( img, 'touchstart' ); touch( img, 'touchend' );
+			expect( click( img ).defaultPrevented ).toBe( true );
+			expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+			const viewButton = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--view' );
+			touch( viewButton, 'touchstart' ); touch( viewButton, 'touchend' ); click( viewButton );
+			expect( view ).toHaveBeenCalledTimes( 1 );
+			const editButton = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
+			if ( canEdit ) { touch( editButton, 'touchstart' ); touch( editButton, 'touchend' ); click( editButton ); expect( edit ).toHaveBeenCalledTimes( 1 ); }
+			else { expect( editButton ).toBeNull(); expect( edit ).not.toHaveBeenCalled(); }
+			overlay.destroy();
+		} );
+		it.each( [ 'scroll', 'cancel', 'keyboard', 'mouse', 'modified', 'second' ] )( 'does not swallow %s activation', kind => {
+			const overlay = new ViewerOverlay( { container, imageElement: img, filename: 'Test_image.jpg' } );
+			touch( img, 'touchstart' );
+			if ( kind === 'scroll' ) expect( touch( img, 'touchmove', 5, 120 ).defaultPrevented ).toBe( false );
+			if ( kind === 'cancel' ) touch( img, 'touchcancel' ); else touch( img, 'touchend' );
+			if ( kind === 'second' ) { click( img ); touch( img, 'touchstart' ); touch( img, 'touchend' ); }
+			expect( click( img, kind === 'keyboard' ? { detail: 0 } : kind === 'modified' ? { ctrlKey: true } : {}, kind === 'mouse' ? 'mouse' : 'touch' ).defaultPrevented ).toBe( false );
+			overlay.destroy();
+		} );
+
 		it( 'should show overlay on touchstart', () => {
 			jest.useFakeTimers();
 

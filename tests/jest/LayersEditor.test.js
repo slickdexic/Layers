@@ -14,6 +14,187 @@ const HistoryManager = require('../../resources/ext.layers.editor/HistoryManager
 require('../../resources/ext.layers.editor/PageBuffer.js');
 const PageBuffer = window.Layers.Editor.PageBuffer;
 
+describe( 'J114L2 close buttons with real page-owned drafts', () => {
+    let records, storage, opened;
+    beforeEach( () => {
+        jest.useFakeTimers();
+        document.body.innerHTML = '';
+        records = new Map(); opened = [];
+        storage = { getItem: jest.fn( key => records.get( key ) ?? null ),
+            setItem: jest.fn( ( key, value ) => { records.set( key, value ); } ),
+            removeItem: jest.fn( key => { records.delete( key ); } ),
+            get length() { return records.size; }, key: index => [ ...records.keys() ][ index ] ?? null };
+    } );
+    afterEach( () => {
+        opened.forEach( item => { item.lifecycle.dispose(); item.editor.dialogManager.destroy(); } );
+        jest.useRealTimers();
+    } );
+    async function open( digit, base = 12 ) {
+        const Store = require( '../../resources/ext.layers.editor/PageOwnedDraftStore.js' );
+        const Controller = require( '../../resources/ext.layers.editor/PageOwnedDraftController.js' );
+        const Adapter = require( '../../resources/ext.layers.editor/PageOwnedSnapshotAdapter.js' );
+        const Lifecycle = require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
+        require( '../../resources/ext.layers.editor/LayersEditor.js' );
+        require( '../../resources/ext.layers.editor/editor/DialogManager.js' );
+        const editor = Object.create( window.Layers.Core.Editor.prototype );
+        editor.filename = 'Synthetic_owner'; editor.stateManager = new StateManager( {} );
+        editor.stateManager.set( 'layers', [] ); editor.stateManager.set( 'isDirty', false );
+        editor.uiManager = { destroy: jest.fn() }; editor.navigateBackToFileWithName = jest.fn();
+        editor.dialogManager = new window.Layers.UI.DialogManager( { editor } );
+        const identity = { owner: 'Synthetic_owner', baseRevisionId: base, surfaceId: 'image' };
+        const bridge = { editor, getName: () => 'ABC', getLiveState: () => ( {
+            canvas: { width: 800, height: 600, backgroundOpacity: 1 }, layers: editor.stateManager.get( 'layers' )
+        } ), session: { getStatus: () => ( { phase: 'ready', readOnly: false } ), getDraft: () => identity,
+            getLabel: () => 'ABC', blockPublication: jest.fn(), revalidate: jest.fn().mockResolvedValue() },
+            restoreDraft: jest.fn() };
+        bridge.save = jest.fn( async ( summary, persist ) => {
+            persist(); identity.baseRevisionId++; editor.stateManager.set( 'isDirty', false );
+            return { revisionId: identity.baseRevisionId, dirty: false };
+        } );
+        const store = new Store( storage, digit.repeat( 32 ) );
+        const controller = new Controller( bridge, store, new Adapter(), { wiki: 'synthetic', user: 'editor' } );
+        const ui = { chooseDraft: jest.fn().mockResolvedValue( 0 ), confirmRecovery: jest.fn().mockResolvedValue( true ),
+            notifyFailure: jest.fn(), notifyBlocked: jest.fn() };
+        const lifecycle = new Lifecycle( bridge, controller, ui );
+        editor.apiManager = { pageOwnedDrafts: lifecycle };
+        editor.save = async () => { await lifecycle.save(); return true; };
+        const item = { editor, bridge, identity, store, controller, lifecycle, ui };
+        opened.push( item ); await lifecycle.initialize(); return item;
+    }
+    function edit( item ) {
+        const layers = [ { id: 'unsaved', type: 'rectangle', x: 31, y: 42, width: 70, height: 50 } ];
+        item.editor.stateManager.set( 'layers', layers ); item.editor.stateManager.set( 'isDirty', true );
+        expect( item.lifecycle.flush() ).toBe( true ); return layers;
+    }
+    async function button( item, index ) {
+        item.editor.cancel( true ); document.querySelectorAll( '.layers-modal-buttons button' )[ index ].click();
+        for ( let turn = 0; turn < 8; turn++ ) await Promise.resolve();
+    }
+    test( 'three Save/Close cycles and Discard/reopen reuse storage without recovery', async () => {
+        let base = 12;
+        for ( const digit of [ 'a', 'b', 'c' ] ) {
+            const item = await open( digit, base ); edit( item ); await item.editor.save(); base++;
+            expect( records.size ).toBe( 2 ); item.editor.cancel( true );
+            window.dispatchEvent( new Event( 'pagehide' ) ); item.lifecycle.dispose(); jest.runOnlyPendingTimers();
+            expect( records.size ).toBe( 0 ); expect( item.ui.confirmRecovery ).not.toHaveBeenCalled();
+        }
+        const discarded = await open( 'd', base ); edit( discarded ); await button( discarded, 1 );
+        window.dispatchEvent( new Event( 'pagehide' ) ); discarded.lifecycle.dispose(); jest.runOnlyPendingTimers();
+        expect( records.size ).toBe( 0 );
+        const again = await open( 'e', base ); expect( again.ui.chooseDraft ).not.toHaveBeenCalled();
+        expect( again.ui.confirmRecovery ).not.toHaveBeenCalled();
+    } );
+    test.each( [ 'cancel', 'failed', 'conflict', 'uncertain' ] )( '%s preserves live edits and drafts', async phase => {
+        const item = await open( 'a' ); const layers = edit( item ); const before = new Map( records );
+        if ( phase !== 'cancel' ) {
+            item.bridge.save.mockRejectedValue( new Error( phase ) );
+            item.editor.save = async () => { try { await item.lifecycle.save(); } catch ( error ) { return false; } };
+        }
+        await button( item, phase === 'cancel' ? 0 : 2 );
+        expect( records ).toEqual( before ); expect( item.editor.stateManager.get( 'layers' ) ).toEqual( layers );
+        expect( item.editor.hasUnsavedChanges() ).toBe( true ); expect( item.editor.uiManager.destroy ).not.toHaveBeenCalled();
+    } );
+    test( 'foreign recovery, legacy records and every different exact scope remain byte-exact', async () => {
+        const item = await open( 'a' ); edit( item );
+        const Store = require( '../../resources/ext.layers.editor/PageOwnedDraftStore.js' );
+        const scope = { wiki: 'synthetic', user: 'editor', ...item.identity };
+        new Store( storage, 'b'.repeat( 32 ) ).write( scope, JSON.stringify( { foreign: true } ) );
+        for ( const change of [ { wiki: 'other' }, { user: 'other' }, { owner: 'other' }, { baseRevisionId: 11 }, { surfaceId: 'other' } ] ) {
+            new Store( storage, 'b'.repeat( 32 ) ).write( { ...scope, ...change }, JSON.stringify( change ) );
+        }
+        new Store( storage ).write( scope, '{"legacy":true}' );
+        item.controller.selectRecovery( 'b'.repeat( 32 ) );
+        const foreign = new Map( [ ...records ].filter( ( [ key ] ) => !key.endsWith( '#'+ 'a'.repeat( 32 ) ) ) );
+        await button( item, 1 ); expect( records ).toEqual( foreign );
+        item.editor.cancel( true ); item.lifecycle.onPageHide(); jest.runOnlyPendingTimers(); item.lifecycle.dispose();
+        expect( records ).toEqual( foreign ); expect( item.editor.uiManager.destroy ).toHaveBeenCalledTimes( 1 );
+    } );
+    test.each( [ 'missing-remove', 'throw-remove', 'read', 'write', 'changed-raw', 'partial-remove', 'noop-remove' ] )(
+        '%s refuses cleanup before dirty clearing or teardown', async failure => {
+            const item = await open( 'a' ); const layers = edit( item );
+            if ( failure === 'partial-remove' ) { await item.editor.save(); edit( item ); }
+            const before = new Map( records );
+            if ( failure === 'missing-remove' ) delete storage.removeItem;
+            if ( failure === 'throw-remove' ) storage.removeItem.mockImplementation( () => { throw new Error( 'private' ); } );
+            if ( failure === 'noop-remove' ) storage.removeItem.mockImplementation( () => {} );
+            if ( failure === 'read' ) storage.getItem.mockImplementation( () => { throw new Error( 'private' ); } );
+            if ( failure === 'write' ) {
+                storage.setItem.mockImplementation( () => { throw new Error( 'private' ); } );
+                expect( item.lifecycle.flush() ).toBe( false );
+                delete storage.removeItem;
+            }
+            if ( failure === 'changed-raw' ) { records.set( [ ...records.keys() ][0], '{"newer":true}' ); }
+            if ( failure === 'partial-remove' ) storage.removeItem.mockImplementationOnce( key => { records.delete( key ); } )
+                .mockImplementationOnce( () => { throw new Error( 'private' ); } );
+            const protectedBytes = new Map( records );
+            await button( item, 1 );
+            expect( item.ui.notifyFailure ).toHaveBeenCalled(); expect( item.lifecycle.finalized ).toBe( false );
+            expect( item.editor.hasUnsavedChanges() ).toBe( true ); expect( item.editor.stateManager.get( 'layers' ) ).toEqual( layers );
+            expect( item.editor.uiManager.destroy ).not.toHaveBeenCalled(); expect( item.editor.navigateBackToFileWithName ).not.toHaveBeenCalled();
+            expect( records ).toEqual( failure === 'changed-raw' ? protectedBytes : before );
+            if ( failure === 'changed-raw' ) { item.lifecycle.onPageHide(); expect( records ).toEqual( protectedBytes ); }
+        }
+    );
+    test( 'newer edits during Save prevent close; late persist and repeated close cannot resurrect drafts', async () => {
+        const item = await open( 'a' ); edit( item ); let finish, latePersist;
+        item.bridge.save.mockImplementation( ( summary, persist ) => {
+            persist(); latePersist = persist; return new Promise( resolve => { finish = resolve; } );
+        } );
+        item.editor.cancel( true ); document.querySelectorAll( '.layers-modal-buttons button' )[2].click();
+        await Promise.resolve();
+        expect( item.lifecycle.finalizeClose( true ) ).toBe( false );
+        const newer = [ { id: 'newer', type: 'text', text: 'Still unsaved' } ];
+        item.editor.stateManager.set( 'layers', newer );
+        finish( { revisionId: 13, dirty: true } ); for ( let turn = 0; turn < 8; turn++ ) await Promise.resolve();
+        expect( item.editor.uiManager.destroy ).not.toHaveBeenCalled(); expect( item.editor.hasUnsavedChanges() ).toBe( true );
+        await button( item, 1 ); expect( records.size ).toBe( 0 );
+        expect( latePersist ).toThrow( 'layers-editor-session-unavailable' );
+        item.lifecycle.onPageHide(); item.lifecycle.dispose(); item.editor.cancel( true ); jest.runOnlyPendingTimers();
+        expect( records.size ).toBe( 0 ); expect( item.editor.uiManager.destroy ).toHaveBeenCalledTimes( 1 );
+    } );
+    test( 'unload/disposal alone retains an interrupted own draft', async () => {
+        const item = await open( 'a' ); edit( item ); const before = new Map( records );
+        window.dispatchEvent( new Event( 'pagehide' ) ); item.lifecycle.dispose();
+        expect( records ).toEqual( before ); expect( item.lifecycle.finalized ).toBe( false );
+    } );
+} );
+
+describe( 'J114L1 button-driven close dialog', () => {
+    let editor;
+    let layers;
+    beforeEach( () => {
+        jest.resetModules();
+        require( '../../resources/ext.layers.editor/LayersEditor.js' );
+        require( '../../resources/ext.layers.editor/editor/DialogManager.js' );
+        editor = Object.create( window.Layers.Core.Editor.prototype );
+        layers = [ { id: 'unsaved', type: 'rectangle', x: 31, y: 42, width: 70, height: 50 } ];
+        editor.filename = 'Return.png';
+        editor.stateManager = new StateManager( {} );
+        editor.stateManager.set( 'layers', layers );
+        editor.stateManager.set( 'isDirty', true );
+        editor.uiManager = { destroy: jest.fn() };
+        editor.navigateBackToFileWithName = jest.fn();
+        editor.dialogManager = new window.Layers.UI.DialogManager( { editor } );
+        editor.save = jest.fn().mockImplementation( async () => {
+            editor.stateManager.set( 'isDirty', false ); return true;
+        } );
+    } );
+    afterEach( () => editor.dialogManager.destroy() );
+    test.each( [ 'cancel', 'discard', 'save', 'refused-save' ] )( '%s retains or closes the exact layer state', async ( choice ) => {
+        if ( choice === 'refused-save' ) editor.save.mockResolvedValue( false );
+        editor.cancel( true );
+        const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+        buttons[ choice === 'cancel' ? 0 : choice === 'discard' ? 1 : 2 ].click();
+        await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+        const closes = choice === 'discard' || choice === 'save';
+        expect( editor.uiManager.destroy ).toHaveBeenCalledTimes( closes ? 1 : 0 );
+        expect( editor.navigateBackToFileWithName ).toHaveBeenCalledTimes( closes ? 1 : 0 );
+        expect( editor.stateManager.get( 'layers' ) ).toEqual( layers );
+        expect( editor.stateManager.get( 'isDirty' ) ).toBe( !closes );
+        expect( editor.save ).toHaveBeenCalledTimes( choice.includes( 'save' ) ? 1 : 0 );
+    } );
+} );
+
 describe('LayersEditor utility methods', () => {
     let LayersEditor;
 

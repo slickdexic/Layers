@@ -355,6 +355,13 @@
 			this._listen( this.container, 'mouseenter', this.boundMouseEnter );
 			this._listen( this.container, 'mouseleave', this.boundMouseLeave );
 			this._listen( this.container, 'touchstart', this.boundTouchStart, { passive: true } );
+			this._listen( this.container, 'touchmove', ( e ) => this._handleTouchMove( e ), { passive: true } );
+			this._listen( this.container, 'touchend', () => this._handleTouchEnd(), { passive: true } );
+			this._listen( this.container, 'touchcancel', () => {
+				this.touchGesture = null;
+				this.pendingTouchClick = 0;
+			}, { passive: true } );
+			this._listen( this.container, 'click', ( e ) => this._handleTouchClick( e ), { capture: true } );
 
 			// Keyboard accessibility - show on focus within
 			this._listen( this.container, 'focusin', this.boundMouseEnter );
@@ -388,12 +395,19 @@
 		/**
 		 * Handle touch start for mobile
 		 * @private
-		 * @param {TouchEvent} _e Touch event (unused but required for event handler signature)
+		 * @param {TouchEvent} e Touch event
 		 */
-		_handleTouchStart( _e ) {
+		_handleTouchStart( e ) {
 			if ( this.destroyed ) {
 				return;
 			}
+			const touch = e && e.touches && e.touches.length === 1 ? e.touches[ 0 ] : null;
+			this.pendingTouchClick = 0;
+			this.touchGesture = touch ? {
+				id: touch.identifier, x: touch.clientX, y: touch.clientY,
+				reveal: this.overlay && !this.overlay.classList.contains( 'layers-viewer-overlay--visible' ) &&
+					!this.overlay.contains( e.target )
+			} : null;
 			// Show overlay on touch
 			this._showOverlay();
 
@@ -407,6 +421,37 @@
 				this._hideOverlay();
 				this.touchTimeout = null;
 			}, 3000 );
+		}
+
+		/** @param {TouchEvent} e Passive movement tracking; never prevents scrolling. */
+		_handleTouchMove( e ) {
+			if ( !this.touchGesture ) {
+				return;
+			}
+			const touch = Array.from( e.touches ).find( ( item ) => item.identifier === this.touchGesture.id );
+			if ( !touch || e.touches.length !== 1 ||
+				Math.hypot( touch.clientX - this.touchGesture.x, touch.clientY - this.touchGesture.y ) > 10 ) {
+				this.touchGesture = null;
+			}
+		}
+
+		/** Suppress only the compatibility click from an unmoved first host tap. */
+		_handleTouchEnd() {
+			this.pendingTouchClick = this.touchGesture && this.touchGesture.reveal ? Date.now() + 800 : 0;
+			this.touchGesture = null;
+		}
+
+		/** @param {MouseEvent} e Preserve overlay controls, keyboard and mouse/modified activation. */
+		_handleTouchClick( e ) {
+			if ( this.destroyed || !this.pendingTouchClick || Date.now() > this.pendingTouchClick ||
+				this.overlay.contains( e.target ) || e.detail === 0 || e.button !== 0 ||
+				e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.pointerType === 'mouse' ||
+				( e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents === false ) ) {
+				return;
+			}
+			this.pendingTouchClick = 0;
+			e.preventDefault();
+			e.stopPropagation();
 		}
 
 		/**

@@ -102,6 +102,11 @@
 			this.store.write( scope, json );
 		}
 
+		/** Explicit close permission never transfers ownership of a recovery source. */
+		retireOwned() {
+			this.store.retireOwned();
+		}
+
 		/**
 		 * Inspect only the exact loaded base. Does not apply edits, advance the base, or retry a POST.
 		 * @return {?Object} Candidate for explicit recovery; publicationBlocked requires reconciliation

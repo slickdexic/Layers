@@ -28,6 +28,8 @@
 			this.ui = ui;
 			this.ready = false;
 			this.checking = false;
+			this.saving = false;
+			this.finalized = false;
 			this.disposed = false;
 			this.timer = null;
 			this.unsubscribers = [];
@@ -76,6 +78,9 @@
 			this.ready = true;
 			for ( const key of keys ) {
 				this.unsubscribers.push( this.bridge.editor.stateManager.subscribe( key, () => {
+					if ( this.finalized || this.disposed ) {
+						return;
+					}
 					clearTimeout( this.timer );
 					this.timer = setTimeout( () => this.flush(), 1000 );
 				} ) );
@@ -86,7 +91,7 @@
 		/** @return {boolean} A failed backup never replaces or clears current editor data */
 		flush() {
 			clearTimeout( this.timer );
-			if ( !this.ready || this.disposed ) {
+			if ( !this.ready || this.disposed || this.finalized ) {
 				return false;
 			}
 			try {
@@ -96,6 +101,34 @@
 				this.ui.notifyFailure();
 				return false;
 			}
+		}
+
+		/**
+		 * @param {boolean} discard Explicit Discard, rather than a completed clean close
+		 * @return {boolean} Failure keeps the editor and its unsaved state open
+		 */
+		finalizeClose( discard = false ) {
+			if ( this.finalized ) {
+				return true;
+			}
+			if ( this.disposed || this.saving || this.checking ||
+				this.bridge.session.getStatus().phase === 'saving' ||
+				( !discard && this.bridge.session.getStatus().phase !== 'ready' ) ) {
+				return false;
+			}
+			try {
+				this.controller.retireOwned();
+			} catch ( error ) {
+				this.ui.notifyFailure();
+				return false;
+			}
+			this.finalized = true;
+			this.ready = false;
+			clearTimeout( this.timer );
+			this.unsubscribers.forEach( ( unsubscribe ) => unsubscribe() );
+			this.unsubscribers = [];
+			window.removeEventListener( 'pagehide', this.onPageHide );
+			return true;
 		}
 
 		/**
@@ -113,13 +146,20 @@
 
 		/** @param {string} summary History summary @return {Promise<Object>} */
 		async save( summary = '' ) {
-			if ( !this.ready || this.disposed || this.checking ) {
+			if ( !this.ready || this.disposed || this.checking || this.saving ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
+			this.saving = true;
 			let result;
 			try {
-				result = await this.bridge.save( summary, () => this.controller.persist() );
+				result = await this.bridge.save( summary, () => {
+					if ( this.finalized || this.disposed ) {
+						throw new Error( 'layers-editor-session-unavailable' );
+					}
+					this.controller.persist();
+				} );
 			} finally {
+				this.saving = false;
 				// Persist the confirmed new base or the conflict/uncertain state plus latest edits.
 				const persisted = this.flush();
 				if ( result ) {

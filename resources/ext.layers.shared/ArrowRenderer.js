@@ -63,6 +63,7 @@
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
 			this.effectsRenderer = this.config.effectsRenderer || null;
+			this.gradientRenderer = this.config.gradientRenderer || null;
 
 			// Initialize ArrowGeometry for pure geometry calculations
 			this.arrowGeometry = ArrowGeometry ? new ArrowGeometry() : null;
@@ -84,6 +85,64 @@
 		 */
 		setEffectsRenderer( effectsRenderer ) {
 			this.effectsRenderer = effectsRenderer;
+		}
+
+		/** @param {Object} gradientRenderer Shared gradient renderer */
+		setGradientRenderer( gradientRenderer ) {
+			this.gradientRenderer = gradientRenderer;
+		}
+
+		/**
+		 * Bounds of the unrotated filled path; coordinates already match the target canvas.
+		 * @param {Function} drawPath Path builder accepting a context
+		 * @return {Object|null} Bounds including quadratic extrema and every head vertex
+		 */
+		_gradientBounds( drawPath ) {
+			const points = [];
+			let current;
+			const point = ( x, y ) => {
+				points.push( { x, y } );
+				current = { x, y };
+			};
+			drawPath( {
+				beginPath: () => {}, closePath: () => {}, moveTo: point, lineTo: point,
+				quadraticCurveTo: ( cx, cy, x, y ) => {
+					const start = current;
+					for ( const axis of [ 'x', 'y' ] ) {
+						const control = axis === 'x' ? cx : cy;
+						const end = axis === 'x' ? x : y;
+						const denominator = start[ axis ] - 2 * control + end;
+						const t = denominator === 0 ? -1 : ( start[ axis ] - control ) / denominator;
+						if ( t > 0 && t < 1 ) {
+							points.push( {
+								x: ( 1 - t ) ** 2 * start.x + 2 * ( 1 - t ) * t * cx + t * t * x,
+								y: ( 1 - t ) ** 2 * start.y + 2 * ( 1 - t ) * t * cy + t * t * y
+							} );
+						}
+					}
+					point( x, y );
+				}
+			} );
+			if ( !points.length ) {
+				return null;
+			}
+			const xs = points.map( ( value ) => value.x );
+			const ys = points.map( ( value ) => value.y );
+			const x = Math.min( ...xs );
+			const y = Math.min( ...ys );
+			return { x, y, width: Math.max( ...xs ) - x, height: Math.max( ...ys ) - y };
+		}
+
+		/** @param {Object} layer Layer fill @param {Function} drawPath Filled path builder */
+		_applyFillStyle( layer, drawPath ) {
+			if ( this.gradientRenderer && layer.gradient ) {
+				const bounds = this._gradientBounds( drawPath );
+				this.gradientRenderer.setContext( this.ctx );
+				if ( bounds && this.gradientRenderer.applyFill( layer, bounds ) ) {
+					return;
+				}
+			}
+			this.ctx.fillStyle = layer.fill;
 		}
 
 		/**
@@ -421,8 +480,8 @@
 			}
 
 			// Build the unified arrow path
-			const drawUnifiedArrowPath = () => {
-				this.ctx.beginPath();
+			const drawUnifiedArrowPath = ( ctx = this.ctx ) => {
+				ctx.beginPath();
 
 				// Calculate shaft edge points
 				const startTopX = curveStartX + Math.cos( startPerp ) * ( halfShaft + tailExtra );
@@ -467,23 +526,23 @@
 					const frontFirstVertex = frontHeadVertices[ 0 ];
 
 					// Start at tail's TOP side (first vertex due to inverted perpendicular)
-					this.ctx.moveTo( tailFirstVertex.x, tailFirstVertex.y );
+					ctx.moveTo( tailFirstVertex.x, tailFirstVertex.y );
 
 					// Curve along TOP edge to front head's TOP side (first vertex)
-					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, frontFirstVertex.x, frontFirstVertex.y );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, frontFirstVertex.x, frontFirstVertex.y );
 
 					// Draw front head vertices (skip first since we curved to it)
 					for ( let i = 1; i < frontHeadVertices.length; i++ ) {
-						this.ctx.lineTo( frontHeadVertices[ i ].x, frontHeadVertices[ i ].y );
+						ctx.lineTo( frontHeadVertices[ i ].x, frontHeadVertices[ i ].y );
 					}
 
 					// Curve along BOTTOM edge to tail's BOTTOM side (last vertex)
-					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, tailLastVertex.x, tailLastVertex.y );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, tailLastVertex.x, tailLastVertex.y );
 
 					// Draw tail head vertices in REVERSE (from last-1 down to 0)
 					// This completes the path from BOTTOM back to TOP where we started
 					for ( let i = tailHeadVertices.length - 2; i >= 0; i-- ) {
-						this.ctx.lineTo( tailHeadVertices[ i ].x, tailHeadVertices[ i ].y );
+						ctx.lineTo( tailHeadVertices[ i ].x, tailHeadVertices[ i ].y );
 					}
 				} else if ( arrowStyle === 'single' ) {
 					// Get head vertices (left-to-right order)
@@ -496,27 +555,27 @@
 					const headFirstVertex = headVertices[ 0 ];
 
 					// Start at top edge of shaft tail
-					this.ctx.moveTo( startTopX, startTopY );
+					ctx.moveTo( startTopX, startTopY );
 
 					// Curve to head's first vertex (top shaft connection)
-					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, headFirstVertex.x, headFirstVertex.y );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, headFirstVertex.x, headFirstVertex.y );
 
 					// Draw remaining head vertices (skip first since we curved to it)
 					for ( let i = 1; i < headVertices.length; i++ ) {
-						this.ctx.lineTo( headVertices[ i ].x, headVertices[ i ].y );
+						ctx.lineTo( headVertices[ i ].x, headVertices[ i ].y );
 					}
 
 					// Return along bottom edge - curve from last head vertex back to tail
-					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
 				} else {
 					// No head (arrowStyle === 'none')
-					this.ctx.moveTo( startTopX, startTopY );
-					this.ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
-					this.ctx.lineTo( endBotX, endBotY );
-					this.ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
+					ctx.moveTo( startTopX, startTopY );
+					ctx.quadraticCurveTo( ctrlTopX, ctrlTopY, endTopX, endTopY );
+					ctx.lineTo( endBotX, endBotY );
+					ctx.quadraticCurveTo( ctrlBotX, ctrlBotY, startBotX, startBotY );
 				}
 
-				this.ctx.closePath();
+				ctx.closePath();
 			};
 
 			// Helper to build expanded path for spread shadow (includes heads)
@@ -640,13 +699,13 @@
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.effectsRenderer.drawBlurFill(
 						layer,
-						drawUnifiedArrowPath,
+						() => drawUnifiedArrowPath(),
 						{ x: minX, y: minY, width: maxX - minX, height: maxY - minY },
 						opts
 					);
 				} else if ( !isBlurFill ) {
 					drawUnifiedArrowPath();
-					this.ctx.fillStyle = layer.fill;
+					this._applyFillStyle( layer, drawUnifiedArrowPath );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
@@ -889,7 +948,7 @@
 					);
 				} else if ( !isBlurFill ) {
 					drawArrowPath();
-					this.ctx.fillStyle = layer.fill;
+					this._applyFillStyle( layer, drawArrowPath );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.ctx.fill();
 				}
@@ -917,6 +976,7 @@
 			this.config = null;
 			this.shadowRenderer = null;
 			this.effectsRenderer = null;
+			this.gradientRenderer = null;
 		}
 	}
 

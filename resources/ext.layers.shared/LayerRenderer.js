@@ -147,6 +147,10 @@ class LayerRenderer {
 			this.gradientRenderer = null;
 		}
 
+		if ( this.arrowRenderer && this.gradientRenderer ) {
+			this.arrowRenderer.setGradientRenderer( this.gradientRenderer );
+		}
+
 		// Create TextBoxRenderer instance for text box shape operations
 		if ( TextBoxRenderer ) {
 			this.textBoxRenderer = new TextBoxRenderer( ctx, { shadowRenderer: this.shadowRenderer } );

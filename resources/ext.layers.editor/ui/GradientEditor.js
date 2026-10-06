@@ -568,6 +568,12 @@
 		 * @param {Event} e - Change event
 		 */
 		_onFillTypeChange( e ) {
+			// Type selection is discrete: publish it before the parent rebuilds this control.
+			// Keep slider/stop updates debounced, but never let an old timer undo the selection.
+			if ( this._notifyTimeout ) {
+				clearTimeout( this._notifyTimeout );
+				this._notifyTimeout = null;
+			}
 			const newType = e.target.value;
 			const previousType = this.fillType;
 			this.fillType = newType;
@@ -598,7 +604,9 @@
 				} else {
 					this.currentGradient.type = newType;
 				}
-				this._notifyChange();
+				if ( this.onChange ) {
+					this.onChange( { gradient: this._cloneGradient( this.currentGradient ) } );
+				}
 			}
 
 			// Notify parent to refresh UI if switching between solid and gradient

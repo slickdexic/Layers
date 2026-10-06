@@ -32,6 +32,7 @@
 			this._writerId = writerId;
 			this._readWriterId = writerId;
 			this._storage = storage;
+			this._ownedRecords = new Map();
 			try {
 				const read = storage && storage.getItem;
 				const write = storage && storage.setItem;
@@ -70,10 +71,69 @@
 			}
 
 			try {
-				this._write( this._recordKey( key, this._writerId ), draftJson );
+				const recordKey = this._recordKey( key, this._writerId );
+				const previous = this._ownedRecords.get( recordKey );
+				if ( previous !== undefined ) {
+					const current = this._read( recordKey );
+					if ( current !== null && current !== undefined && current !== previous ) {
+						throw new Error();
+					}
+				}
+				this._write( recordKey, draftJson );
+				if ( this._writerId !== undefined ) {
+					this._ownedRecords.set( recordKey, draftJson );
+				}
 			} catch ( e ) {
 				throw failure( 'layers-draft-storage-failed' );
 			}
+		}
+
+		/** Retire only this instance's successful writes, including previous exact bases. */
+		retireOwned() {
+			if ( this._writerId === undefined ) {
+				throw failure( 'layers-invalid-draft-storage-request' );
+			}
+			if ( this._ownedRecords.size === 0 ) {
+				return;
+			}
+			const removed = [];
+			try {
+				const remove = this._storage.removeItem;
+				if ( typeof remove !== 'function' ) {
+					throw new Error();
+				}
+				for ( const [ key, raw ] of this._ownedRecords ) {
+					const current = this._read( key );
+					if ( current !== null && current !== raw ) {
+						throw new Error();
+					}
+				}
+				for ( const [ key, raw ] of this._ownedRecords ) {
+					const current = this._read( key );
+					if ( current !== null ) {
+						if ( current !== raw ) {
+							throw new Error();
+						}
+						removed.push( [ key, raw ] );
+						remove.call( this._storage, key );
+						if ( this._read( key ) !== null ) {
+							throw new Error();
+						}
+					}
+				}
+			} catch ( error ) {
+				for ( const [ key, raw ] of removed ) {
+					try {
+						if ( this._read( key ) === null ) {
+							this._write( key, raw );
+						}
+					} catch ( restoreError ) {
+						break;
+					}
+				}
+				throw failure( 'layers-draft-storage-failed' );
+			}
+			this._ownedRecords.clear();
 		}
 
 		/**

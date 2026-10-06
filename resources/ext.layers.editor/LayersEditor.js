@@ -2225,19 +2225,33 @@ class LayersEditor {
 	 * @param {boolean} navigateBack Whether to navigate back
 	 */
 	cancel ( navigateBack ) {
+		if ( this._closeCompleted ) {
+			return;
+		}
 		const savedFilename = this.filename;
+		const finalize = ( discard = false ) => {
+			const drafts = this.apiManager && this.apiManager.pageOwnedDrafts;
+			return !this._closeCompleted && ( !drafts || drafts.finalizeClose( discard ) );
+		};
 
 		const close = () => {
+			if ( !finalize() ) {
+				return;
+			}
 			if ( this.draftManager ) {
 				this.draftManager.clearDraft();
 			}
+			this._closeCompleted = true;
 			this.uiManager.destroy();
 			if ( navigateBack ) {
 				this.navigateBackToFileWithName( savedFilename );
 			}
 		};
 
-		const discardAndClose = () => {
+		const discardAndClose = ( discard = true ) => {
+			if ( !finalize( discard ) ) {
+				return;
+			}
 			if ( this.stateManager ) {
 				this.stateManager.set( 'isDirty', false );
 			}
@@ -2279,6 +2293,9 @@ class LayersEditor {
 		) {
 			this.dialogManager.showSaveDiscardDialog( { message: message } )
 				.then( ( choice ) => {
+					if ( this._closeCompleted ) {
+						return;
+					}
 					if ( choice === 'discard' ) {
 						discardAndClose();
 						return;
@@ -2286,7 +2303,7 @@ class LayersEditor {
 					if ( choice === 'save' ) {
 						Promise.resolve( this.save() ).then( ( ok ) => {
 							if ( ok === true && !this.hasUnsavedChanges() ) {
-								discardAndClose();
+								discardAndClose( false );
 							}
 						} );
 					}
