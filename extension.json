@@ -19,6 +19,20 @@
 	"ServiceWiringFiles": [
 		"services.php"
 	],
+	"RestRoutes": [
+		{
+			"path": "/layers/v0/pdf",
+			"method": "GET",
+			"class": "MediaWiki\\Extension\\Layers\\Rest\\PinnedPdfHandler",
+			"services": [ "LayersPinnedPdfSource", "TitleFactory", "UserFactory", "LayersRateLimiter" ]
+		},
+		{
+			"path": "/layers/v0/pdf",
+			"method": "HEAD",
+			"class": "MediaWiki\\Extension\\Layers\\Rest\\PinnedPdfHandler",
+			"services": [ "LayersPinnedPdfSource", "TitleFactory", "UserFactory", "LayersRateLimiter" ]
+		}
+	],
 	"AutoloadClasses": {
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave": "src/Api/ApiLayersSave.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo": "src/Api/ApiLayersInfo.php",
@@ -202,6 +216,9 @@
 		}
 	],
 	"HookHandlers": {
+		"LayersPinnedPdfPrivacy": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\PinnedPdfPrivacyHooks"
+		},
 		"LayersPageOwnedPilotRegistration": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks\\PageOwnedPilotRegistration"
 		},
@@ -226,6 +243,7 @@
 		}
 	},
 	"Hooks": {
+		"SetupAfterCache": "LayersPinnedPdfPrivacy",
 		"MediaWikiServices": "LayersPageOwnedPilotRegistration",
 		"APIQuerySiteInfoGeneralInfo": "LayersHooks",
 		"BeforePageDisplay": "LayersHooks",

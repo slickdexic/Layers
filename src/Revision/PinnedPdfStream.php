@@ -4,6 +4,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Revision;
 
+use MediaWiki\Extension\Layers\Rest\PinnedPdfResponseBody;
+
 /**
  * Verified, request-local PDF capture. No path is reopened when delivering bytes.
  * Owner/revision/source authorization belongs to the caller and must be rechecked
@@ -15,16 +17,20 @@ final class PinnedPdfStream {
 	private $stream;
 	private int $length;
 	private ?\Closure $cleanup;
+	private ?\Closure $admission;
+	private bool $bodyCreated = false;
 
 	/**
 	 * @param resource $stream Verified readable resource, owned by this object
 	 * @param int $length Exact verified byte count
 	 * @param \Closure $cleanup Releases the native temporary copy
+	 * @param \Closure|null $admission Rechecks the original reader and stored source
 	 */
-	private function __construct( $stream, int $length, \Closure $cleanup ) {
+	private function __construct( $stream, int $length, \Closure $cleanup, ?\Closure $admission ) {
 		$this->stream = $stream;
 		$this->length = $length;
 		$this->cleanup = $cleanup;
+		$this->admission = $admission;
 	}
 
 	/**
@@ -33,10 +39,13 @@ final class PinnedPdfStream {
 	 * @param resource $stream Private immutable copy, never a mutable current-file reference
 	 * @param string $expectedSha1Hex Source hash derived from the authorized revision
 	 * @param \Closure $cleanup Releases the native copy; runs on refusal and close
+	 * @param \Closure|null $admission Internal authorization callback for final response admission
 	 * @return self
 	 * @throws \DomainException Generic unavailable result, without paths or hashes
 	 */
-	public static function capture( $stream, string $expectedSha1Hex, \Closure $cleanup ): self {
+	public static function capture( $stream, string $expectedSha1Hex, \Closure $cleanup,
+		?\Closure $admission = null
+	): self {
 		try {
 			if ( gettype( $stream ) !== 'resource' || get_resource_type( $stream ) !== 'stream' ||
 				!preg_match( '/^[0-9a-f]{40}$/D', $expectedSha1Hex ) ||
@@ -55,7 +64,7 @@ final class PinnedPdfStream {
 			) {
 				throw new \DomainException( 'layers-revision-unavailable' );
 			}
-			return new self( $stream, $count, $cleanup );
+			return new self( $stream, $count, $cleanup, $admission );
 		} catch ( \Throwable $e ) {
 			if ( gettype( $stream ) === 'resource' ) {
 				fclose( $stream );
@@ -68,6 +77,31 @@ final class PinnedPdfStream {
 	/** @return int Byte count for Content-Length, not a file metadata estimate */
 	public function getLength(): int {
 		return $this->length;
+	}
+
+	/** Recheck access immediately before headers; refusal destroys the owned capture. */
+	public function assertCanDeliver(): void {
+		try {
+			if ( gettype( $this->stream ) !== 'resource' ) {
+				throw new \DomainException( 'layers-revision-unavailable' );
+			}
+			if ( $this->admission ) {
+				( $this->admission )();
+			}
+		} catch ( \Throwable $exception ) {
+			$this->close();
+			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+	}
+
+	/** Attach the verified handle to exactly one native response body, without reopening a path. */
+	public function toResponseBody(): PinnedPdfResponseBody {
+		$this->assertCanDeliver();
+		if ( $this->bodyCreated ) {
+			throw new \LogicException( 'PDF response body already attached' );
+		}
+		$this->bodyCreated = true;
+		return new PinnedPdfResponseBody( $this->stream, $this );
 	}
 
 	/**
@@ -92,6 +126,7 @@ final class PinnedPdfStream {
 		$this->stream = null;
 		$cleanup = $this->cleanup;
 		$this->cleanup = null;
+		$this->admission = null;
 		if ( $cleanup ) {
 			$cleanup();
 		}

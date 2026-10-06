@@ -12,12 +12,24 @@ declare( strict_types=1 );
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
 use MediaWiki\Extension\Layers\Logging\LayersLogger;
+use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
+use MediaWiki\Extension\Layers\Revision\PinnedPdfSource;
+use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 use MediaWiki\Extension\Layers\Search\DrawingSearchText;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
 
 return [
+	'LayersPinnedPdfSource' => static function ( MediaWikiServices $services ): PinnedPdfSource {
+		return new PinnedPdfSource( new PageHistoryAccess( $services->getRevisionLookup() ),
+			new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() ),
+			$services->getService( 'LayersPageOwnedPilot' )->getScope() );
+	},
+	'LayersRateLimiter' => static function ( MediaWikiServices $services ): RateLimiter {
+		return new RateLimiter( $services->getMainConfig() );
+	},
 	// Drawings are kept in page history on every page of the configured namespaces (D2).
 	'LayersPageOwnedPilot' => static function ( MediaWikiServices $services ): PageOwnedPilot {
 		return new PageOwnedPilot( $services, [], PageOwnedScope::configuredNamespaces( $services->getMainConfig() ) );

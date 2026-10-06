@@ -43,7 +43,14 @@ class PinnedPdfSource {
 			$hex = \Wikimedia\base_convert( $surface['source']['sha1'], 36, 16, 40 );
 			$copy = $this->copyFile( $file );
 			$handle = AtEase::quietCall( static fn () => fopen( $copy->getPath(), 'rb' ) );
-			$capture = PinnedPdfStream::capture( $handle, $hex, static fn () => $copy->purge() );
+			$expectedSource = $surface['source'];
+			$admission = function () use ( $owner, $revisionId, $binding, $authority, $expectedSource ) {
+				[ $selected ] = $this->select( $owner, $revisionId, $binding, $authority );
+				if ( $selected['source'] !== $expectedSource ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+			};
+			$capture = PinnedPdfStream::capture( $handle, $hex, static fn () => $copy->purge(), $admission );
 			[ $again ] = $this->select( $owner, $revisionId, $binding, $authority );
 			if ( $again['source'] !== $surface['source'] ) {
 				throw new \DomainException( 'layers-revision-unavailable' );
