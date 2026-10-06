@@ -305,15 +305,19 @@
 		 * Load (and cache) a PDF document proxy for a URL.
 		 *
 		 * @param {string} url URL of the PDF file.
+		 * @param {Object} [options] Transport options.
+		 * @param {boolean} [options.exactVersion=false] Require complete credentialed transport.
 		 * @return {Promise<Object>} Resolves to a pdf.js PDFDocumentProxy.
 		 */
-		getDocument( url ) {
-			if ( this._docCache.has( url ) ) {
+		getDocument( url, options = {} ) {
+			const exactVersion = options.exactVersion === true;
+			const key = this._documentKey( url, exactVersion );
+			if ( this._docCache.has( key ) ) {
 				// Refresh LRU position: Map preserves insertion order, so deleting
 				// and re-setting moves this entry to the most-recent end.
-				const cached = this._docCache.get( url );
-				this._docCache.delete( url );
-				this._docCache.set( url, cached );
+				const cached = this._docCache.get( key );
+				this._docCache.delete( key );
+				this._docCache.set( key, cached );
 				return cached;
 			}
 			const promise = this.ensureLibrary().then( ( lib ) => {
@@ -322,20 +326,49 @@
 				// CVE-2024-4367, but viewer PDFs are user-uploaded and untrusted,
 				// so the eval path stays off as defence in depth and to keep the
 				// viewer usable under a script-src CSP without 'unsafe-eval'.
-				const task = lib.getDocument( {
+				const parameters = {
 					url: url,
 					isEvalSupported: false,
 					maxImageSize: MAX_DECODED_IMAGE_PIXELS,
 					verbosity: this._verbosity( lib )
-				} );
+				};
+				if ( exactVersion ) {
+					Object.assign( parameters, {
+						disableRange: true,
+						disableStream: true,
+						disableAutoFetch: true,
+						withCredentials: true
+					} );
+				}
+				const task = lib.getDocument( parameters );
 				return task.promise;
 			} ).catch( ( err ) => {
-				this._docCache.delete( url );
+				if ( this._docCache.get( key ) === promise ) {
+					this._docCache.delete( key );
+				}
 				throw err;
 			} );
-			this._docCache.set( url, promise );
+			this._docCache.set( key, promise );
 			this._evictOldestDocuments();
 			return promise;
+		}
+
+		/**
+		 * @param {string} url Opaque document URL.
+		 * @param {boolean} exactVersion Exact-version transport mode.
+		 * @return {string|Object} Key within the single bounded document cache.
+		 * @private
+		 */
+		_documentKey( url, exactVersion ) {
+			if ( exactVersion !== true ) {
+				return url;
+			}
+			for ( const key of this._docCache.keys() ) {
+				if ( typeof key === 'object' && key.url === url ) {
+					return key;
+				}
+			}
+			return { url: url };
 		}
 
 		/**
@@ -400,6 +433,7 @@
 		 * @param {Object} [options] Rendering options.
 		 * @param {number} [options.targetWidth=1600] Desired rendered width in px.
 		 * @param {number} [options.maxDimension=4000] Cap on the largest side.
+		 * @param {boolean} [options.exactVersion=false] Require complete credentialed transport.
 		 * @return {Promise<Object>} Resolves to
 		 *   `{ dataUrl, width, height, pageCount }`.
 		 */
@@ -413,7 +447,9 @@
 			const timeoutMs = options.timeoutMs > 0 ?
 				options.timeoutMs : RENDER_TIMEOUT_MS;
 
-			const work = this.getDocument( url ).then( ( doc ) => {
+			const documentPromise = this.getDocument( url, { exactVersion: options.exactVersion === true } );
+			const key = this._documentKey( url, options.exactVersion === true );
+			const work = documentPromise.then( ( doc ) => {
 				const pageCount = doc.numPages || 1;
 				const page = Math.min( Math.max( 1, requested ), pageCount );
 				return doc.getPage( page ).then( ( pdfPage ) => {
@@ -469,7 +505,9 @@
 				// On timeout the cached document promise is still pending, so a
 				// retry would queue behind the same stall. getDocument() only
 				// self-evicts on rejection, so drop it here too.
-				this._docCache.delete( url );
+				if ( this._docCache.get( key ) === documentPromise ) {
+					this._docCache.delete( key );
+				}
 				this.debugLog( 'renderPage failed:', err && err.message );
 				throw err;
 			} );

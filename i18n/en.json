@@ -1076,6 +1076,8 @@
 	"apihelp-layersread-param-owner": "Owning wiki page title.",
 	"apihelp-layersread-param-revid": "Exact revision ID to read; the latest revision is never substituted.",
 	"apihelp-layersread-param-binding": "Return only these layer-set surfaces, identified by their layersbinding values. Surfaces that are unavailable to you are omitted.",
+	"apihelp-layersread-param-viewer": "Return full-size viewer data for one selected binding at the exact requested revision. This response is private and is never publicly cached.",
+	"apihelp-layersread-param-controls": "Include this reader's admitted edit link with binding results. This response is private and is never publicly cached.",
 	"apihelp-layersdrawings-summary": "List other pages' current layer sets that you may copy into the page you are editing. Only layer sets you can read are listed.",
 	"apihelp-layersdrawings-param-search": "Start of a page title, optionally with a namespace. Empty lists the pages edited last.",
 	"apihelp-layersdrawings-param-exclude": "ID of the page being edited, whose own layer sets are not listed.",

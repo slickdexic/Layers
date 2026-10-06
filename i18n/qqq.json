@@ -1070,6 +1070,8 @@
 	"apihelp-layersread-param-owner": "{{doc-apihelp-param|layersread|owner}}",
 	"apihelp-layersread-param-revid": "{{doc-apihelp-param|layersread|revid}}",
 	"apihelp-layersread-param-binding": "{{doc-apihelp-param|layersread|binding}}",
+	"apihelp-layersread-param-viewer": "{{doc-apihelp-param|layersread|viewer}}",
+	"apihelp-layersread-param-controls": "{{doc-apihelp-param|layersread|controls}}",
 	"apihelp-layersdrawings-summary": "{{doc-apihelp-summary|layersdrawings}}",
 	"apihelp-layersdrawings-param-search": "{{doc-apihelp-param|layersdrawings|search}}",
 	"apihelp-layersdrawings-param-exclude": "{{doc-apihelp-param|layersdrawings|exclude}}",

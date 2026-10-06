@@ -24,6 +24,7 @@ use MediaWiki\Page\MergeHistoryFactory;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
+use MediaWiki\SpecialPage\SpecialPage;
 use OldRevisionImporter;
 use Wikimedia\Rdbms\IDBAccessObject;
 
@@ -82,7 +83,8 @@ class PageOwnedPilot {
 		$config = $this->services->getMainConfig();
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
 			$this->scope, [ $this, 'prepareBoundViewers' ],
-			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0 );
+			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0,
+			[ $this, 'prepareFullSizeViewer' ] );
 	}
 
 	/**
@@ -1095,10 +1097,11 @@ class PageOwnedPilot {
 	 * @param int $revisionId Exact displayed revision
 	 * @param string[] $bindings Canonical PageID bindings
 	 * @param Authority $authority Actual reader
+	 * @param bool $includeControls Include reader-specific edit admission; always private/zero-age
 	 * @return array[] Authorized slide bundles keyed by binding, for uncached response output only
 	 */
 	public function prepareBoundViewers( \MediaWiki\Title\Title $owner, int $revisionId,
-		array $bindings, Authority $authority
+		array $bindings, Authority $authority, bool $includeControls = false
 	): array {
 		if ( !$this->scope->includes( $owner ) ) {
 			return [];
@@ -1109,9 +1112,82 @@ class PageOwnedPilot {
 			// Image/PDF entries need a rendition; the client matches each host to its surface kind.
 			if ( $bundle['surface']['kind'] === 'slide' || isset( $bundle['source'] ) ) {
 				$result[$binding] = $bundle + [ 'owner' => $owner->getPrefixedDBkey() ];
+				if ( $includeControls ) {
+					$result[$binding]['editUrl'] = $this->viewerEditUrl( $owner, $revisionId,
+						$bundle['surface']['id'], $authority );
+				}
+			}
+		}
+		if ( $includeControls && $result ) {
+			// Editor preparation can produce renditions and run hooks. Admit read data again afterwards.
+			$access = new PageHistoryAccess( $this->services->getRevisionLookup() );
+			$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+				$this->services->getTitleFactory() );
+			try {
+				$content = $access->read( $owner, $revisionId, $authority );
+			} catch ( \DomainException $e ) {
+				return [];
+			}
+			$surfaces = array_column( json_decode( $content->getText(), true )['surfaces'], null, 'id' );
+			foreach ( $result as $binding => $bundle ) {
+				$id = $bundle['surface']['id'];
+				try {
+					if ( ( $surfaces[$id] ?? null ) !== $bundle['surface'] ) {
+						throw new \DomainException( 'layers-revision-unavailable' );
+					}
+					$sources->resolve( $content, $authority, [ $id ] );
+				} catch ( \DomainException $e ) {
+					unset( $result[$binding] );
+				}
 			}
 		}
 		return $result;
+	}
+
+	/**
+	 * Private full-size viewer response for one exact displayed owner/revision/binding.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param string $binding
+	 * @param Authority $authority
+	 * @return array
+	 */
+	public function prepareFullSizeViewer( \MediaWiki\Title\Title $owner, int $revisionId,
+		string $binding, Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) ) {
+			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+		try {
+			$id = PageOwnedBinding::parse( $binding )['surfaceId'];
+		} catch ( \InvalidArgumentException $e ) {
+			throw new \DomainException( 'layers-revision-unavailable', 0, $e );
+		}
+		$editUrl = $this->viewerEditUrl( $owner, $revisionId, $id, $authority );
+		$access = new PageHistoryAccess( $this->services->getRevisionLookup() );
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		$config = $this->services->getMainConfig();
+		$path = rtrim( (string)$config->get( 'RestPath' ), '/' ) . '/layers/v0/pdf';
+		$viewer = ( new PageViewerReadService( $access, $sources,
+			new SourceRenditions( $this->services->getUrlUtils() ), $path ) )
+			->read( $owner, $revisionId, $binding, $authority );
+		$viewer['editUrl'] = $editUrl;
+		return $viewer;
+	}
+
+	/** Exact current editor admission; a denied edit never prevents an authorized view. */
+	private function viewerEditUrl( \MediaWiki\Title\Title $owner, int $revisionId, string $surfaceId,
+		Authority $authority
+	): ?string {
+		try {
+			$this->prepareEditor( $owner->getPrefixedDBkey(), $revisionId, $surfaceId, $authority );
+			return SpecialPage::getTitleFor( 'EditLayersPage' )->getLocalURL( [
+				'owner' => $owner->getPrefixedDBkey(), 'revid' => $revisionId, 'surface' => $surfaceId
+			] );
+		} catch ( \DomainException $e ) {
+			return null;
+		}
 	}
 
 	/**

@@ -20,6 +20,8 @@ class ApiLayersRead extends ApiBase {
 	private ?PageOwnedScope $scope;
 	/** @var callable|null (Title, int, string[], Authority): array Authorized bound surfaces keyed by binding */
 	private $boundReader;
+	/** @var callable|null Authorized full-size viewer reader */
+	private $viewerReader;
 	private int $bindingMaxAge;
 
 	/**
@@ -30,10 +32,11 @@ class ApiLayersRead extends ApiBase {
 	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
 	 * @param int $bindingMaxAge Seconds anonymous binding reads of a current revision may be cached; 0 never
+	 * @param callable|null $viewerReader Exact owner/revision/anchor viewer composition
 	 */
 	public function __construct( ApiMain $main, string $name, PageReadService $reader,
 		TitleFactory $titles, ?PageOwnedScope $scope = null, ?callable $boundReader = null,
-		int $bindingMaxAge = 0
+		int $bindingMaxAge = 0, ?callable $viewerReader = null
 	) {
 		parent::__construct( $main, $name );
 		$this->reader = $reader;
@@ -41,6 +44,7 @@ class ApiLayersRead extends ApiBase {
 		$this->scope = $scope;
 		$this->boundReader = $boundReader;
 		$this->bindingMaxAge = max( 0, $bindingMaxAge );
+		$this->viewerReader = $viewerReader;
 	}
 
 	public function execute() {
@@ -55,18 +59,30 @@ class ApiLayersRead extends ApiBase {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}
 		try {
+			if ( $params['viewer'] ) {
+				if ( !$this->viewerReader || count( $params['binding'] ?? [] ) !== 1 ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				$viewer = ( $this->viewerReader )( $owner, $params['revid'], $params['binding'][0],
+					$this->getAuthority() );
+				$this->getResult()->addValue( null, $this->getModuleName(), [ 'viewer' => $viewer ] );
+				return;
+			}
+			if ( $params['controls'] && $params['binding'] === null ) {
+				throw new \DomainException( 'layers-revision-unavailable' );
+			}
 			if ( $params['binding'] !== null ) {
 				if ( !$this->boundReader ) {
 					throw new \DomainException( 'layers-revision-unavailable' );
 				}
 				// Unavailable, foreign and malformed bindings are omitted rather than distinguished.
 				$bindings = ( $this->boundReader )( $owner, $params['revid'], $params['binding'],
-					$this->getAuthority() );
+					$this->getAuthority(), $params['controls'] );
 				$bindings[ApiResult::META_TYPE] = 'assoc';
 				$this->getResult()->addValue( null, $this->getModuleName(), [ 'bindings' => $bindings ] );
 				// Page views read the current revision, which cannot be hidden while it is current, and every
 				// anonymous reader has the same rights. Older revisions can be hidden later, so they stay private.
-				if ( $this->bindingMaxAge > 0 &&
+				if ( !$params['controls'] && $this->bindingMaxAge > 0 &&
 					$params['revid'] === $owner->getLatestRevID( IDBAccessObject::READ_LATEST )
 				) {
 					$this->getMain()->setCacheMode( 'anon-public-user-private' );
@@ -91,7 +107,9 @@ class ApiLayersRead extends ApiBase {
 			'revid' => [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
 				self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
 			'binding' => [ self::PARAM_TYPE => 'string', self::PARAM_ISMULTI => true,
-				self::PARAM_ISMULTI_LIMIT1 => 50, self::PARAM_ISMULTI_LIMIT2 => 50, self::PARAM_MAX_BYTES => 128 ]
+				self::PARAM_ISMULTI_LIMIT1 => 50, self::PARAM_ISMULTI_LIMIT2 => 50, self::PARAM_MAX_BYTES => 128 ],
+			'viewer' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
+			'controls' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ]
 		];
 	}
 }

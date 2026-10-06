@@ -73,6 +73,212 @@ function makeMockPdfjs( opts = {} ) {
 }
 
 describe( 'PdfRenderer', () => {
+	describe( 'exact-version transport', () => {
+		it.each( [ false, true ] )( 'isolates cache in both call orders (exact first: %s)', async ( exactFirst ) => {
+			const mock = makeMockPdfjs();
+			const firstDocument = { destroy: jest.fn() };
+			const secondDocument = { destroy: jest.fn() };
+			mock.getDocument.mockReturnValueOnce( { promise: Promise.resolve( firstDocument ) } )
+				.mockReturnValueOnce( { promise: Promise.resolve( secondDocument ) } );
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const url = '/rest.php/layers/v0/pdf?owner=opaque&revision=old&binding=a%2Fb';
+			const first = renderer.getDocument( url, { exactVersion: exactFirst } );
+			const second = renderer.getDocument( url, { exactVersion: !exactFirst } );
+			expect( second ).not.toBe( first );
+			await expect( first ).resolves.toBe( firstDocument );
+			await expect( second ).resolves.toBe( secondDocument );
+			expect( renderer.getDocument( url, { exactVersion: exactFirst } ) ).toBe( first );
+			expect( renderer.getDocument( url, { exactVersion: !exactFirst } ) ).toBe( second );
+			expect( mock.getDocument ).toHaveBeenCalledTimes( 2 );
+			for ( const [ index, exactVersion ] of [ exactFirst, !exactFirst ].entries() ) {
+				const parameters = mock.getDocument.mock.calls[ index ][ 0 ];
+				expect( parameters ).toEqual( exactVersion ? {
+					url, isEvalSupported: false, maxImageSize: 64 * 1024 * 1024, verbosity: 0,
+					disableRange: true, disableStream: true, disableAutoFetch: true, withCredentials: true
+				} : { url, isEvalSupported: false, maxImageSize: 64 * 1024 * 1024, verbosity: 0 } );
+			}
+			renderer.destroy();
+		} );
+
+		it.each( [ undefined, false, 'true', 1, {}, null ] )(
+			'keeps non-true exactVersion values on legacy transport (%p)', async ( exactVersion ) => {
+				const mock = makeMockPdfjs();
+				const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+				const url = '/rest.php/layers/v0/pdf?binding=not-a-mode-selector';
+				const legacy = renderer.getDocument( url );
+				expect( renderer.getDocument( url, { exactVersion } ) ).toBe( legacy );
+				await legacy;
+				expect( mock.getDocument ).toHaveBeenCalledWith( {
+					url, isEvalSupported: false, maxImageSize: 64 * 1024 * 1024, verbosity: 0
+				} );
+				renderer.destroy();
+			}
+		);
+
+		it.each( [ false, true, 'true', 1 ] )( 'forwards strict renderPage mode (%s)', async ( exactVersion ) => {
+			const mock = makeMockPdfjs();
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const url = '/opaque?revision=archived&binding=x%2By';
+			const result = await renderer.renderPage( url, 99, {
+				exactVersion, targetWidth: 2000, maxDimension: 1000
+			} );
+			expect( result ).toEqual( { dataUrl: 'data:image/png;base64,test',
+				width: 1000, height: 750, pageCount: 3 } );
+			expect( mock.getPage ).toHaveBeenCalledWith( 3 );
+			expect( mock.pageCleanup ).toHaveBeenCalledTimes( 1 );
+			const parameters = mock.getDocument.mock.calls[ 0 ][ 0 ];
+			expect( parameters ).toEqual( exactVersion === true ? {
+				url, isEvalSupported: false, maxImageSize: 64 * 1024 * 1024, verbosity: 0,
+				disableRange: true, disableStream: true, disableAutoFetch: true, withCredentials: true
+			} : { url, isEvalSupported: false, maxImageSize: 64 * 1024 * 1024, verbosity: 0 } );
+			renderer.destroy();
+		} );
+
+		it.each( [ false, true ] )( 'retries refusals without removing the other mode (%s)', async ( exactVersion ) => {
+			const mock = makeMockPdfjs();
+			const refusal = new Error( 'opaque refusal' );
+			let reject;
+			mock.getDocument.mockReturnValueOnce( { promise: new Promise( ( resolve, fail ) => {
+				reject = fail;
+			} ) } );
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const failed = renderer.getDocument( 'opaque.pdf', { exactVersion } );
+			const assertion = expect( failed ).rejects.toBe( refusal );
+			const other = renderer.getDocument( 'opaque.pdf', { exactVersion: !exactVersion } );
+			await other;
+			reject( refusal );
+			await assertion;
+			expect( renderer.getDocument( 'opaque.pdf', { exactVersion: !exactVersion } ) ).toBe( other );
+			const retry = renderer.getDocument( 'opaque.pdf', { exactVersion } );
+			expect( retry ).not.toBe( failed );
+			await retry;
+			expect( mock.getDocument ).toHaveBeenCalledTimes( 3 );
+			expect( mock.getDocument.mock.calls.map( ( call ) => call[ 0 ].url ) )
+				.toEqual( [ 'opaque.pdf', 'opaque.pdf', 'opaque.pdf' ] );
+			renderer.destroy();
+		} );
+
+		it( 'propagates library failure in both modes and retries without a fallback', async () => {
+			const mock = makeMockPdfjs();
+			const failure = new Error( 'library unavailable' );
+			const loadLibrary = jest.fn().mockRejectedValueOnce( failure ).mockResolvedValueOnce( mock.lib );
+			const renderer = new PdfRenderer( { loadLibrary } );
+			await Promise.all( [
+				expect( renderer.getDocument( 'opaque.pdf' ) ).rejects.toBe( failure ),
+				expect( renderer.getDocument( 'opaque.pdf', { exactVersion: true } ) ).rejects.toBe( failure )
+			] );
+			expect( mock.getDocument ).not.toHaveBeenCalled();
+			await renderer.getDocument( 'opaque.pdf', { exactVersion: true } );
+			expect( loadLibrary ).toHaveBeenCalledTimes( 2 );
+			expect( mock.getDocument ).toHaveBeenCalledWith( expect.objectContaining( {
+				url: 'opaque.pdf', disableRange: true, disableStream: true,
+				disableAutoFetch: true, withCredentials: true
+			} ) );
+			renderer.destroy();
+		} );
+
+		it( 'releases a pending exact document after cross-mode eviction and destroy', async () => {
+			const mock = makeMockPdfjs();
+			let resolve;
+			const documentProxy = { destroy: jest.fn() };
+			mock.getDocument.mockReturnValueOnce( { promise: new Promise( ( complete ) => {
+				resolve = complete;
+			} ) } );
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const pending = renderer.getDocument( 'pending.pdf', { exactVersion: true } );
+			for ( let index = 0; index < 8; index++ ) {
+				await renderer.getDocument( 'legacy-' + index );
+			}
+			renderer.destroy();
+			renderer.destroy();
+			resolve( documentProxy );
+			await pending;
+			await Promise.resolve();
+			expect( documentProxy.destroy ).toHaveBeenCalledTimes( 1 );
+			expect( mock.docDestroy ).toHaveBeenCalledTimes( 8 );
+		} );
+
+		it.each( [ false, true ] )( 'an evicted rejection cannot remove a newer task (%s)', async ( exactVersion ) => {
+			const mock = makeMockPdfjs();
+			let reject;
+			mock.getDocument.mockReturnValueOnce( { promise: new Promise( ( resolve, fail ) => {
+				reject = fail;
+			} ) } );
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const stale = renderer.getDocument( 'old.pdf', { exactVersion } );
+			const assertion = expect( stale ).rejects.toThrow( 'old failure' );
+			for ( let index = 0; index < 8; index++ ) {
+				await renderer.getDocument( 'filler-' + index, { exactVersion: index % 2 === 0 } );
+			}
+			const replacement = renderer.getDocument( 'old.pdf', { exactVersion } );
+			await replacement;
+			reject( new Error( 'old failure' ) );
+			await assertion;
+			expect( renderer.getDocument( 'old.pdf', { exactVersion } ) ).toBe( replacement );
+			expect( mock.getDocument ).toHaveBeenCalledTimes( 10 );
+			renderer.destroy();
+		} );
+
+		it( 'shares one cross-mode LRU budget and disposes evicted and destroyed documents', async () => {
+			const documents = [];
+			const mock = makeMockPdfjs();
+			mock.getDocument.mockImplementation( () => {
+				const documentProxy = { destroy: jest.fn() };
+				documents.push( documentProxy );
+				return { promise: Promise.resolve( documentProxy ) };
+			} );
+			const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+			const legacy = renderer.getDocument( 'same.pdf' );
+			const exact = renderer.getDocument( 'same.pdf', { exactVersion: true } );
+			await Promise.all( [ legacy, exact ] );
+			for ( let index = 0; index < 6; index++ ) {
+				await renderer.getDocument( 'mixed-' + index, { exactVersion: index % 2 === 0 } );
+			}
+			expect( renderer.getDocument( 'same.pdf' ) ).toBe( legacy );
+			await renderer.getDocument( 'ninth.pdf', { exactVersion: true } );
+			await Promise.resolve();
+			expect( documents[ 1 ].destroy ).toHaveBeenCalledTimes( 1 );
+			expect( documents[ 0 ].destroy ).not.toHaveBeenCalled();
+			expect( renderer.getDocument( 'same.pdf' ) ).toBe( legacy );
+			const reloaded = renderer.getDocument( 'same.pdf', { exactVersion: true } );
+			expect( reloaded ).not.toBe( exact );
+			await reloaded;
+			expect( mock.getDocument ).toHaveBeenCalledTimes( 10 );
+			renderer.destroy();
+			await Promise.resolve();
+			for ( const documentProxy of documents ) {
+				expect( documentProxy.destroy ).toHaveBeenCalledTimes( 1 );
+			}
+		} );
+
+		it.each( [ false, true ] )( 'a stale render timeout leaves newer and other-mode tasks intact (%s)',
+			async ( exactVersion ) => {
+				jest.useFakeTimers();
+				const mock = makeMockPdfjs();
+				mock.getDocument.mockReturnValueOnce( { promise: new Promise( () => {} ) } );
+				const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+				try {
+					const rendering = renderer.renderPage( 'stalled.pdf', 1, { exactVersion, timeoutMs: 100 } );
+					const assertion = expect( rendering ).rejects.toThrow( /timed out/ );
+					for ( let index = 0; index < 8; index++ ) {
+						await renderer.getDocument( 'filler-' + index );
+					}
+					const replacement = renderer.getDocument( 'stalled.pdf', { exactVersion } );
+					const other = renderer.getDocument( 'stalled.pdf', { exactVersion: !exactVersion } );
+					await Promise.all( [ replacement, other ] );
+					jest.advanceTimersByTime( 100 );
+					await assertion;
+					expect( renderer.getDocument( 'stalled.pdf', { exactVersion } ) ).toBe( replacement );
+					expect( renderer.getDocument( 'stalled.pdf', { exactVersion: !exactVersion } ) ).toBe( other );
+					expect( mock.getDocument ).toHaveBeenCalledTimes( 11 );
+				} finally {
+					renderer.destroy();
+					jest.useRealTimers();
+				}
+			}
+		);
+	} );
+
 	describe( 'isAvailable', () => {
 		it( 'is true when a library is injected', () => {
 			const { lib } = makeMockPdfjs();

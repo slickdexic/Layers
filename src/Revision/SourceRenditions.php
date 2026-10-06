@@ -26,11 +26,17 @@ class SourceRenditions {
 	/**
 	 * @param File $file Exact resolved version from SourceVersionResolver
 	 * @param array $surface Decoded image or PDF surface
+	 * @param bool $fullSize Use the file's native width for the full-size image viewer
 	 * @return array{url:string,width:int,height:int}
 	 * @throws \DomainException layers-source-unavailable when core cannot produce a rendition
 	 */
-	public function forSurface( File $file, array $surface ): array {
-		$params = [ 'width' => min( (int)$surface['canvas']['width'], self::MAX_WIDTH ) ];
+	public function forSurface( File $file, array $surface, bool $fullSize = false ): array {
+		$width = $fullSize ? $file->getWidth( (int)$surface['source']['page'] ) :
+			min( (int)$surface['canvas']['width'], self::MAX_WIDTH );
+		if ( !is_int( $width ) || $width < 1 ) {
+			throw new \DomainException( 'layers-source-unavailable' );
+		}
+		$params = [ 'width' => $width ];
 		if ( $surface['kind'] === 'pdf' ) {
 			$params['page'] = (int)$surface['source']['page'];
 		}
