@@ -1002,10 +1002,12 @@ class PageOwnedPilot {
 		) {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
-		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [ $surfaceId ] );
+		$pageId = $owner->getArticleID( IDBAccessObject::READ_LATEST );
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, $pageId, [ $surfaceId ] );
 		foreach ( $bundle['snapshot']['surfaces'] as $surface ) {
 			if ( $surface['id'] === $surfaceId ) {
-				$view = [ 'owner' => $owner->getPrefixedDBkey(), 'revisionId' => $revisionId, 'surface' => $surface ];
+				$view = [ 'owner' => $owner->getPrefixedDBkey(), 'pageId' => $pageId,
+					'revisionId' => $revisionId, 'surface' => $surface ];
 				if ( $surface['kind'] === 'slide' ) {
 					return $view;
 				}
