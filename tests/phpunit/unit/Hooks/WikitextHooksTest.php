@@ -348,6 +348,10 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 		$flag->setAccessible( true );
 		$flag->setValue( null, true );
 
+		$states = $reflection->getProperty( 'galleryStates' );
+		$states->setAccessible( true );
+		$states->setValue( null, new \WeakMap() );
+
 		$hooks::onParserClearState( null );
 
 		foreach ( $arrayProperties as $name ) {
@@ -356,6 +360,7 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			$this->assertSame( [], $property->getValue(), "$name must be cleared between parses" );
 		}
 		$this->assertFalse( $flag->getValue(), 'pageHasLayers must be cleared between parses' );
+		$this->assertNull( $states->getValue(), 'galleryStates must be cleared between parses' );
 	}
 
 	/**
@@ -566,10 +571,9 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 	 * A `<gallery>` image line may be written with or without the namespace
 	 * prefix - MediaWiki resolves both in NS_FILE.
 	 *
-	 * Requiring the prefix meant a bare line kept its layerset= option, which
-	 * then rendered as the visible caption *and* as the img alt and link title,
-	 * and registered no hint at all, so the image silently fell back to the most
-	 * recently saved set instead of the one that was asked for.
+	 * renderGalleryTag strips layerset=, tags each line with an in-memory token,
+	 * records the exact layer set and canonical DB key in parser-owned state during
+	 * invocation, and cleans up token state in finally.
 	 *
 	 * @dataProvider provideGalleryLines
 	 */
@@ -579,22 +583,70 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
 		$hooks::onParserClearState( null );
 
-		$text = "<gallery>\n" . $line . "\n</gallery>";
-		$hooks::onParserBeforeInternalParse( null, $text, null );
+		$capturedTokens = [];
+		$capturedContent = '';
+		$dummyParser = $this->createMock( \MediaWiki\Parser\Parser::class );
+		$oldHook = function ( $content ) use ( &$capturedTokens, &$capturedContent, $dummyParser ) {
+			$capturedContent = $content;
+			$capturedTokens = $this->getStaticState( 'galleryStates' )[$dummyParser]->tokens;
+			return '<div>' . $content . '</div>';
+		};
 
-		$this->assertSame(
-			[ 'X.jpg' => 'anatomy' ],
-			$this->getStaticState( 'galleryHints' ),
-			$description . ': hint must be keyed by the canonical file DB key'
-		);
-		$this->assertStringNotContainsString(
-			'layerset=', $text, $description . ': option must be stripped'
-		);
-		$this->assertStringContainsString(
-			$expectedCaption === '' ? '</gallery>' : $expectedCaption,
-			$text,
-			$description . ': caption must survive'
-		);
+		$result = $hooks::renderGalleryTag( $line, [], $dummyParser, $oldHook );
+
+		$this->assertCount( 1, $capturedTokens, $description . ': exactly one token must be active during render' );
+		$firstToken = array_values( $capturedTokens )[0];
+		$this->assertSame( 'anatomy', $firstToken['setName'], $description . ': layer set name must match' );
+		$this->assertSame( 'X.jpg', $firstToken['filename'], $description . ': file DB key must be canonical' );
+
+		$this->assertStringNotContainsString( 'layerset=', $capturedContent,
+			$description . ': layerset= option must be stripped' );
+		if ( $expectedCaption !== '' ) {
+			$this->assertStringContainsString( $expectedCaption, $capturedContent,
+				$description . ': caption must survive' );
+		}
+
+		$this->assertSame( [], $this->getStaticState( 'galleryStates' )[$dummyParser]->tokens,
+			$description . ': tokens must be cleared in finally' );
+		$this->assertStringNotContainsString( 'layers-m2-', $result );
+	}
+
+	/** The previous hook's supported flags and raw output must pass through unchanged. */
+	public function testGalleryCallbackArrayFlagsAndEmptyBodyArePreserved(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$parser = $this->createMock( \MediaWiki\Parser\Parser::class );
+		$expected = [ '<b>Callback output</b>', 'markerType' => 'nowiki', 'isRawHTML' => true ];
+		$callback = static function ( $content, $attributes, $actualParser, $frame ) use ( $expected, $parser ) {
+			self::assertNull( $content );
+			self::assertSame( [ 'mode' => 'packed' ], $attributes );
+			self::assertSame( $parser, $actualParser );
+			self::assertSame( 'frame argument', $frame );
+			return $expected;
+		};
+		$this->assertSame( $expected, $hooks::renderGalleryTag(
+			null, [ 'mode' => 'packed' ], $parser, $callback, 'frame argument' ) );
+	}
+
+	/** A callback failure must clear only its invocation and keep the parser reusable. */
+	public function testGalleryCallbackExceptionClearsInvocationState(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$parser = $this->createMock( \MediaWiki\Parser\Parser::class );
+		try {
+			$hooks::renderGalleryTag( 'File:X.jpg|layerset=Alpha', [], $parser,
+				static function () {
+					throw new \RuntimeException( 'Gallery callback refused' );
+				} );
+			$this->fail( 'Expected the callback exception' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'Gallery callback refused', $e->getMessage() );
+		}
+		$state = $this->getStaticState( 'galleryStates' )[$parser];
+		$this->assertSame( [], $state->tokens );
+		$this->assertCount( 0, $state->titles );
+		$this->assertSame( [], $state->invocations );
+		$this->assertNull( $state->staged );
+		$this->assertSame( 0, $this->getStaticState( 'galleryDepth' ) );
 	}
 
 	public static function provideGalleryLines(): array {

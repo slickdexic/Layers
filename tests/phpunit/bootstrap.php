@@ -87,6 +87,9 @@ namespace {
 			/** @var string */
 			private $text;
 
+			/** @var string */
+			private $fragment = '';
+
 			public function __construct( int $namespace = 0, string $text = '' ) {
 				$this->namespace = $namespace;
 				$this->text = $text;
@@ -101,7 +104,16 @@ namespace {
 			}
 
 			public static function newFromText( string $text, ?int $defaultNamespace = null ): self {
-				return new self( $defaultNamespace ?? 0, $text );
+				$namespace = $defaultNamespace ?? 0;
+				$text = trim( $text );
+				if ( preg_match( '/^(File|Image):\s*(.*)$/i', $text, $match ) ) {
+					$namespace = NS_FILE;
+					$text = $match[2];
+				}
+				[ $name, $fragment ] = array_pad( explode( '#', $text, 2 ), 2, '' );
+				$title = new self( $namespace, $name );
+				$title->setFragment( $fragment );
+				return $title;
 			}
 
 			public function getNamespace(): int {
@@ -120,6 +132,22 @@ namespace {
 				// Mirror MediaWiki's default normalization ($wgCapitalLinks = true):
 				// trim, spaces -> underscores, and upper-case the first letter.
 				return str_replace( ' ', '_', ucfirst( trim( $this->text ) ) );
+			}
+
+			public function getPrefixedDBkey(): string {
+				return ( $this->namespace === NS_FILE ? 'File:' : '' ) . $this->getDBkey();
+			}
+
+			public function isExternal(): bool {
+				return false;
+			}
+
+			public function getFragment(): string {
+				return $this->fragment;
+			}
+
+			public function setFragment( string $fragment ): void {
+				$this->fragment = str_replace( '_', ' ', ltrim( $fragment, '#' ) );
 			}
 
 			public function getLocalURL(): string {
