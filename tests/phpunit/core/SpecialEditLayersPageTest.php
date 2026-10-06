@@ -24,6 +24,60 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class SpecialEditLayersPageTest extends \MediaWiki\Tests\Api\ApiTestCase {
+	public function testReturnPageUsesAdmittedOwnerAcrossEditorEntryRoutes(): void {
+		$title = $this->getNonexistingTestPage()->getTitle();
+		$actor = $this->getTestUser()->getUser();
+		$init = [
+			'filename' => 'Unrelated_image.png',
+			'pageOwned' => [ 'owner' => $title->getPrefixedDBkey() ],
+		];
+		$routes = [
+			'prepareEditor' => [
+				'owner' => 'Request_alias', 'revid' => '12', 'surface' => 'annotation',
+			],
+			'prepareCurrentEditor' => [
+				'owner' => 'Request_alias', 'revid' => 'current', 'surface' => 'annotation',
+			],
+			'prepareBoundEditor' => [
+				'pageid' => '150', 'revid' => '12', 'start' => '0',
+				'expected' => '[[File:Unrelated_image.png|layerset=ABC]]',
+			],
+		];
+		foreach ( $routes as $method => $params ) {
+			$pilot = $this->createMock( PageOwnedPilot::class );
+			$pilot->expects( $this->once() )->method( $method )->willReturn( $init );
+			foreach ( array_diff( array_keys( $routes ), [ $method ] ) as $otherMethod ) {
+				$pilot->expects( $this->never() )->method( $otherMethod );
+			}
+			$context = $this->newPageContext( $actor, $params + [
+				'returnto' => 'https://external.invalid/redirect',
+			] );
+			$entry = new SpecialEditLayersPage( $pilot );
+			$entry->setContext( $context );
+			$entry->execute( null );
+			$config = $context->getOutput()->getJsConfigVars();
+			$this->assertSame( $init, $config['wgLayersEditorInit'], $method );
+			$this->assertSame( $title->getLocalURL(), $config['wgLayersReturnToUrl'], $method );
+		}
+	}
+
+	public function testDeniedEntryDoesNotEmitReturnPage(): void {
+		$pilot = $this->createMock( PageOwnedPilot::class );
+		$pilot->expects( $this->once() )->method( 'prepareEditor' )
+			->willThrowException( new \DomainException( 'denied' ) );
+		$context = $this->newPageContext( $this->getTestUser()->getUser(), [
+			'owner' => 'Owner', 'revid' => '12', 'surface' => 'annotation',
+			'returnto' => 'Other_page',
+		] );
+		$entry = new SpecialEditLayersPage( $pilot );
+		$entry->setContext( $context );
+		$entry->execute( null );
+		$config = $context->getOutput()->getJsConfigVars();
+		$this->assertArrayNotHasKey( 'wgLayersEditorInit', $config );
+		$this->assertArrayNotHasKey( 'wgLayersReturnToUrl', $config );
+		$this->assertNotContains( 'ext.layers.editor', $context->getOutput()->getModules() );
+	}
+
 	public function testMalformedBoundRequestCannotFallBackToOwnerRoute(): void {
 		$pilot = $this->createMock( PageOwnedPilot::class );
 		$pilot->expects( $this->never() )->method( 'prepareBoundEditor' );

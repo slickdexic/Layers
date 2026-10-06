@@ -2,8 +2,22 @@
  * Scoped styling for page-owned accessible historical revision view host.
  */
 .ext-layers-historical-view {
+	position: relative;
 	margin: 0;
 	padding: 0;
+}
+
+.layers-bound-slide,
+.layers-bound-file-view,
+.layers-drawing-diff-view,
+.layers-bound-controls {
+	position: relative;
+}
+
+.layers-bound-controls:focus-within > .layers-viewer-overlay {
+	opacity: 1;
+	visibility: visible;
+	transition: none;
 }
 
 .ext-layers-historical-view .ext-layers-historical-caption {

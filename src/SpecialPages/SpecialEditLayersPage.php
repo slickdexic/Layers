@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\SpecialPage\SpecialPage;
+use MediaWiki\Title\Title;
 
 /** Protected page-owned editor entry; the shared pilot is disabled by default. */
 class SpecialEditLayersPage extends SpecialPage {
@@ -63,6 +64,13 @@ class SpecialEditLayersPage extends SpecialPage {
 					$this->pilot->prepareCurrentEditor( $owner, $surface, $this->getAuthority() ) :
 					$this->pilot->prepareEditor( $owner, (int)$revision, $surface, $this->getAuthority() );
 			}
+			// The admitted owner is the return page, independent of the edited file.
+			$returnTitle = Title::newFromText( $init['pageOwned']['owner'] );
+			if ( !$returnTitle || !$returnTitle->canExist() || $returnTitle->isExternal() ||
+				$returnTitle->hasFragment() ) {
+				throw new \DomainException( 'layers-editor-unavailable' );
+			}
+			$returnToUrl = $returnTitle->getLocalURL();
 		} catch ( \DomainException $e ) {
 			$out->addWikiMsg( 'layers-editor-unavailable' );
 			return;
@@ -73,7 +81,10 @@ class SpecialEditLayersPage extends SpecialPage {
 			return;
 		}
 		$out->setPageTitle( $this->msg( 'layers-editor-title' )->text() );
-		$out->addJsConfigVars( 'wgLayersEditorInit', $init );
+		$out->addJsConfigVars( [
+			'wgLayersEditorInit' => $init,
+			'wgLayersReturnToUrl' => $returnToUrl,
+		] );
 		$out->addModules( [ 'ext.layers.editor', 'ext.layers.editor.pageOwned' ] );
 		$out->addHTML( '<div id="layers-editor-container"></div>' );
 	}

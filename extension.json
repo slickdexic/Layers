@@ -390,15 +390,58 @@
 		"ext.layers.history": {
 			"localBasePath": "resources",
 			"remoteExtPath": "Layers/resources",
-			"dependencies": [ "jquery", "mediawiki.api", "ext.layers.shared" ],
+			"dependencies": [ "jquery", "mediawiki.api", "ext.layers.shared", "ext.layers.viewer.core" ],
 			"scripts": [
 				"ext.layers.editor/PageOwnedSnapshotAdapter.js",
 				"ext.layers/viewer/PageOwnedRevisionView.js",
 				"ext.layers/viewer/PageOwnedRevisionRenderer.js",
+				"ext.layers/viewer/PageOwnedViewerAdapter.js",
 				"ext.layers/viewer/PageOwnedRevisionBootstrap.js"
 			],
 			"styles": [ "ext.layers/viewer/PageOwnedRevisionView.css" ],
 			"messages": [ "layers-page-history-caption", "layers-page-history-render-failed" ]
+		},
+		"ext.layers.viewer.core": {
+			"localBasePath": "resources/ext.layers",
+			"remoteExtPath": "Layers/resources/ext.layers",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared" ],
+			"styles": [ "viewer/LayersLightbox.css" ],
+			"scripts": [
+				"LayersViewer.js",
+				"viewer/UrlParser.js",
+				"viewer/ViewerOverlay.js",
+				"viewer/PdfRenderer.js",
+				"viewer/PdfBuilder.js",
+				"viewer/LayersLightbox.js"
+			],
+			"messages": [
+				"layers-lightbox-close",
+				"layers-lightbox-close-tooltip",
+				"layers-lightbox-loading",
+				"layers-lightbox-alt",
+				"layers-lightbox-print",
+				"layers-lightbox-print-tooltip",
+				"layers-lightbox-print-preparing",
+				"layers-lightbox-download",
+				"layers-lightbox-download-tooltip",
+				"layers-lightbox-fit",
+				"layers-lightbox-export-generating",
+				"layers-export-incomplete",
+				"layers-page-history-render-failed",
+				"layers-link-viewer-title",
+				"layers-export-pdf-failed",
+				"layers-zoom-in",
+				"layers-zoom-out",
+				"layers-zoom-reset",
+				"layers-zoom-fit",
+				"layers-page-prev",
+				"layers-page-next",
+				"layers-page-indicator",
+				"layers-viewer-overlay-label",
+				"layers-viewer-edit",
+				"layers-viewer-view"
+			]
 		},
 		"ext.layers.shared": {
 			"localBasePath": "resources/ext.layers.shared",
@@ -446,22 +489,15 @@
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [ "jquery", "jquery.makeCollapsible", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
+			"dependencies": [ "jquery", "jquery.makeCollapsible", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal", "ext.layers.viewer.core" ],
 			"styles": [
-				"viewer/LayersLightbox.css",
 				"viewer/SlideViewer.css"
 			],
 			"scripts": [
-				"LayersViewer.js",
-				"viewer/UrlParser.js",
 				"viewer/FreshnessChecker.js",
-				"viewer/ViewerOverlay.js",
 				"viewer/SlideController.js",
 				"viewer/ViewerManager.js",
 				"viewer/ApiFallback.js",
-				"viewer/PdfRenderer.js",
-				"viewer/PdfBuilder.js",
-				"viewer/LayersLightbox.js",
 				"init.js"
 			],
 			"messages": [

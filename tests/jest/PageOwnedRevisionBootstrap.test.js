@@ -5,6 +5,101 @@ require( '../../resources/ext.layers/viewer/PageOwnedRevisionView.js' );
 const mount = require( '../../resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js' );
 const fixture = require( '../fixtures/revisions/slide-document-v1.json' );
 
+describe( 'Page-owned callback overlays', () => {
+	let root, bundle, oldConfig, api;
+	beforeEach( () => {
+		require( '../../resources/ext.layers/viewer/ViewerOverlay.js' );
+		require( '../../resources/ext.layers/viewer/PageOwnedViewerAdapter.js' );
+		root = document.createElement( 'div' ); document.body.append( root );
+		bundle = { owner: 'Owner', pageId: 10, revisionId: 42, surface: fixture.surfaces[ 0 ], editUrl: '/edit-exact' };
+		api = { get: jest.fn() };
+		window.Layers.Viewer.renderPageOwnedRevision = jest.fn( () => jest.fn() );
+		window.Layers.lightbox = { open: jest.fn(), close: jest.fn() };
+		oldConfig = mw.config.get;
+		mw.config.get = jest.fn( ( key ) => ( { wgAction: 'view', wgRevisionId: 42, wgCurRevisionId: 42 } )[ key ] );
+		mw.msg = jest.fn( ( key ) => key );
+	} );
+	afterEach( () => { mw.config.get = oldConfig; root.remove(); } );
+	function host() {
+		const node = document.createElement( 'div' ); node.className = 'layers-bound-slide';
+		node.dataset.layersBinding = 'v1:10:presentation'; node.dataset.layersRevision = '42';
+		root.append( node ); return node;
+	}
+	it( 'mounts both controls on duplicate embeds without duplicate mounts and opens the exact context', () => {
+		const first = host(); host();
+		const dispose = mount.mountInline( root, { 'v1:10:presentation': bundle }, {}, api );
+		mount.mountInline( root, { 'v1:10:presentation': bundle }, {}, api );
+		expect( root.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 2 );
+		expect( root.querySelectorAll( '.layers-viewer-overlay-btn--edit' ) ).toHaveLength( 2 );
+		const button = first.querySelector( '.layers-viewer-overlay-btn--view' ); button.click();
+		const config = window.Layers.lightbox.open.mock.calls[ 0 ][ 0 ];
+		expect( config.opener ).toBe( button ); expect( config.pageOwned.bundle ).toBe( bundle );
+		expect( config.pageOwned.binding ).toBe( 'v1:10:presentation' ); expect( config.pageOwned.api ).toBe( api );
+		dispose(); dispose(); expect( root.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 0 );
+	} );
+	it.each( [ 'denied', 'anonymous', 'historical', 'noedit', 'diff' ] )( 'keeps View but never grants Edit for %s', ( constraint ) => {
+		const node = host();
+		if ( constraint === 'denied' || constraint === 'anonymous' ) { bundle.editUrl = null; }
+		if ( constraint === 'historical' ) { mw.config.get = ( key ) => ( { wgAction: 'view', wgRevisionId: 42, wgCurRevisionId: 43 } )[ key ]; }
+		if ( constraint === 'noedit' ) { node.dataset.layersNoedit = '1'; }
+		const dispose = mount.mountControls( node, bundle, 'v1:10:presentation', {}, api, constraint === 'diff' );
+		expect( node.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+		expect( node.querySelector( '.layers-viewer-overlay-btn--view' ) ).not.toBeNull();
+		dispose();
+	} );
+	it( 'reveals the existing overlay on keyboard focus and tap and releases it on disposal', () => {
+		const node = host(); const dispose = mount.mountInline( root, { 'v1:10:presentation': bundle }, {}, api );
+		node.focus(); expect( node.querySelector( '.layers-viewer-overlay--visible' ) ).not.toBeNull();
+		node.dispatchEvent( new Event( 'touchstart' ) ); expect( node.querySelector( '.layers-viewer-overlay--visible' ) ).not.toBeNull();
+		dispose(); expect( node.hasAttribute( 'tabindex' ) ).toBe( false );
+	} );
+	it( 'can dispose/remount without an old disposer removing the new controls', () => {
+		host(); const first = mount.mountInline( root, { 'v1:10:presentation': bundle }, {}, api );
+		first(); const second = mount.mountInline( root, { 'v1:10:presentation': bundle }, {}, api );
+		first(); expect( root.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 1 );
+		second(); expect( root.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 0 );
+	} );
+	it( 'treats an explicit oldid at the current revision as historical, not as Edit admission', () => {
+		const node = host(); window.history.replaceState( {}, '', '?oldid=42' );
+		const dispose = mount.mountControls( node, bundle, 'v1:10:presentation', {}, api );
+		expect( node.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+		dispose(); window.history.replaceState( {}, '', '/' );
+	} );
+	it( 'opens the exact historical Special page bundle through its read-only full-size overlay', () => {
+		const container = document.createElement( 'div' );
+		container.id = 'layers-history-container'; root.append( container );
+		// This is prepareViewer's read-only shape, without an Edit admission.
+		const historical = { owner: 'Owner', pageId: 10, revisionId: 41,
+			surface: fixture.surfaces[ 0 ] };
+		mw.config.get = ( key ) => ( { wgLayersRevisionView: historical,
+			wgAction: 'view', wgRevisionId: 41, wgCurRevisionId: 42 } )[ key ];
+		const oldReady = global.$;
+		const oldApi = mw.Api;
+		mw.Api = jest.fn( () => api );
+		let ready;
+		global.$ = ( callback ) => { ready = callback; };
+		try {
+			jest.isolateModules( () => {
+				require( '../../resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js' );
+			} );
+			ready();
+			const button = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			expect( button ).not.toBeNull();
+			expect( container.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+			button.click();
+			const config = window.Layers.lightbox.open.mock.calls[ 0 ][ 0 ];
+			expect( config.pageOwned.bundle ).toBe( historical );
+			expect( config.pageOwned.binding ).toBe( 'v1:10:presentation' );
+			expect( config.opener ).toBe( button );
+			window.dispatchEvent( new Event( 'pagehide' ) );
+			expect( container.querySelector( '.layers-viewer-overlay-btn--view' ) ).toBeNull();
+		} finally {
+			global.$ = oldReady;
+			mw.Api = oldApi;
+		}
+	} );
+} );
+
 describe( 'Historical viewer bootstrap', () => {
 	let container, cleanup, bundle;
 	beforeEach( () => {
@@ -195,7 +290,7 @@ describe( 'Historical viewer bootstrap', () => {
 			const dispose = await mount.loadInline( container, api, 'Owner', 42 );
 			expect( api.get ).toHaveBeenCalledTimes( 1 );
 			expect( api.get ).toHaveBeenCalledWith( { action: 'layersread', formatversion: 2, owner: 'Owner',
-				revid: 42, binding: [ 'v1:10:a' ] } );
+				revid: 42, binding: [ 'v1:10:a' ], controls: 1 } );
 			expect( container.querySelectorAll( 'canvas' ) ).toHaveLength( 2 );
 			expect( container.children[ 2 ].textContent ).toBe( 'Unavailable' );
 			dispose();

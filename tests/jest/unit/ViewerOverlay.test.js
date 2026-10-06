@@ -76,7 +76,337 @@ describe( 'ViewerOverlay', () => {
 		delete global.mw;
 	} );
 
+	describe( 'callback routing and lifecycle', () => {
+		let routing;
+		let originalLightbox;
+		let originalModal;
+
+		beforeEach( () => {
+			originalLightbox = window.Layers.lightbox;
+			originalModal = window.Layers.Modal;
+			window.Layers.lightbox = { open: jest.fn() };
+			window.Layers.Modal = { LayersEditorModal: jest.fn() };
+			mw.Api = jest.fn();
+			routing = [
+				jest.spyOn( ViewerOverlay.prototype, '_buildEditUrl' ),
+				jest.spyOn( ViewerOverlay.prototype, '_shouldUseModal' ),
+				jest.spyOn( ViewerOverlay.prototype, '_findClickTarget' ),
+				jest.spyOn( ViewerOverlay.prototype, '_checkEditPermission' ),
+				jest.spyOn( window, 'open' ).mockImplementation( () => null ),
+				window.Layers.lightbox.open,
+				window.Layers.Modal.LayersEditorModal,
+				mw.Api,
+				mw.util.getUrl,
+				mw.config.get
+			];
+		} );
+
+		afterEach( () => {
+			for ( const spy of routing ) {
+				expect( spy ).not.toHaveBeenCalled();
+			}
+			jest.restoreAllMocks();
+			window.Layers.lightbox = originalLightbox;
+			window.Layers.Modal = originalModal;
+		} );
+
+		it.each( [ 'host', 'descendant' ] )( 'initial focus shows controls for a pre-focused %s without moving focus', ( target ) => {
+			container.tabIndex = 0;
+			const anchor = document.createElement( 'a' );
+			anchor.href = '#existing';
+			container.appendChild( anchor );
+			const focused = target === 'host' ? container : anchor;
+			focused.focus();
+			expect( document.activeElement ).toBe( focused );
+			const focus = jest.spyOn( focused, 'focus' );
+			const focusIn = jest.fn();
+			container.addEventListener( 'focusin', focusIn );
+			const overlay = new ViewerOverlay( {
+				container, canEdit: false, onEdit: jest.fn(), onView: jest.fn()
+			} );
+			try {
+				expect( document.activeElement ).toBe( focused );
+				expect( focus ).not.toHaveBeenCalled();
+				expect( focusIn ).not.toHaveBeenCalled();
+				expect( container.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+				expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+			} finally {
+				overlay.destroy();
+				container.removeEventListener( 'focusin', focusIn );
+			}
+		} );
+
+		it( 'initial focus remains visible when replacing an overlay on a focused host', () => {
+			const oldView = jest.fn();
+			const previous = new ViewerOverlay( { container, onView: oldView } );
+			container.focus();
+			expect( previous.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+			const oldButton = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			const focus = jest.spyOn( container, 'focus' );
+			const focusIn = jest.fn();
+			container.addEventListener( 'focusin', focusIn );
+			const onView = jest.fn();
+			const overlay = new ViewerOverlay( { container, onView } );
+			try {
+				expect( document.activeElement ).toBe( container );
+				expect( focus ).not.toHaveBeenCalled();
+				expect( focusIn ).not.toHaveBeenCalled();
+				expect( previous.container ).toBeNull();
+				expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 1 );
+				expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+				oldButton.click();
+				expect( oldView ).not.toHaveBeenCalled();
+				const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+				view.click();
+				expect( onView ).toHaveBeenCalledTimes( 1 );
+				expect( onView ).toHaveBeenCalledWith( view );
+			} finally {
+				overlay.destroy();
+				container.removeEventListener( 'focusin', focusIn );
+			}
+		} );
+
+		it( 'initial focus outside the host leaves new controls hidden', () => {
+			const outside = document.createElement( 'button' );
+			document.body.appendChild( outside );
+			outside.focus();
+			const overlay = new ViewerOverlay( { container, onView: jest.fn() } );
+			try {
+				expect( document.activeElement ).toBe( outside );
+				expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( false );
+			} finally {
+				overlay.destroy();
+			}
+		} );
+
+		it( 'dispatches admitted image callbacks once without intercepting the PDF anchor', () => {
+			const anchor = document.createElement( 'a' );
+			anchor.href = '#pdf';
+			container.appendChild( anchor );
+			anchor.appendChild( img );
+			const onEdit = jest.fn();
+			const onView = jest.fn();
+			const location = window.location.href;
+			mw.config.get.mockReturnValue( false );
+			const overlay = new ViewerOverlay( {
+				container, imageElement: img, filename: 'Current.pdf', canEdit: true, onEdit, onView
+			} );
+			const edit = container.querySelector( '.layers-viewer-overlay-btn--edit' );
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			edit.click();
+			view.click();
+			expect( onEdit ).toHaveBeenCalledTimes( 1 );
+			expect( onEdit ).toHaveBeenCalledWith( edit );
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			expect( onView ).toHaveBeenCalledWith( view );
+			expect( window.location.href ).toBe( location );
+			const click = new MouseEvent( 'click', { bubbles: true, cancelable: true, button: 0 } );
+			img.dispatchEvent( click );
+			expect( click.defaultPrevented ).toBe( false );
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			overlay.destroy();
+		} );
+
+		it.each( [ false, undefined ] )( 'hides Edit on a named PDF host with admission %p', ( canEdit ) => {
+			const onEdit = jest.fn();
+			const onView = jest.fn();
+			const overlay = new ViewerOverlay( {
+				container, imageElement: img, filename: 'Current.pdf', canEdit, onEdit, onView
+			} );
+			expect( container.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			view.click();
+			expect( onView ).toHaveBeenCalledWith( view );
+			overlay._handleEditClick( view );
+			expect( onEdit ).not.toHaveBeenCalled();
+			overlay.destroy();
+		} );
+
+		it( 'never falls back when a callback is missing or not callable', () => {
+			for ( const options of [ { onEdit: null }, { onView: 'invalid' }, { onEdit: jest.fn() } ] ) {
+				const overlay = new ViewerOverlay( {
+					container, imageElement: img, filename: 'Current.pdf', canEdit: true, ...options
+				} );
+				container.querySelector( '.layers-viewer-overlay-btn--view' ).click();
+				overlay.destroy();
+			}
+		} );
+
+		it.each( [ 'throws', 'rejects' ] )( 'does not fall back or duplicate controls when a callback %s', async ( failure ) => {
+			const callback = jest.fn( () => {
+				const error = new Error( 'Caller route unavailable' );
+				if ( failure === 'throws' ) {
+					throw error;
+				}
+				return Promise.reject( error );
+			} );
+			const overlay = new ViewerOverlay( {
+				container, imageElement: img, filename: 'Current.pdf', canEdit: true,
+				onEdit: callback, onView: callback
+			} );
+			const edit = container.querySelector( '.layers-viewer-overlay-btn--edit' );
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			edit.click();
+			view.click();
+			await Promise.resolve();
+			expect( callback.mock.calls ).toEqual( [ [ edit ], [ view ] ] );
+			expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 1 );
+			overlay.destroy();
+		} );
+
+		it( 'keeps controls visible through actual focus, mouseleave and the tap timeout', () => {
+			jest.useFakeTimers();
+			const onView = jest.fn();
+			const overlay = new ViewerOverlay( { container, onView } );
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			const visible = () => overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' );
+			expect( container.tabIndex ).toBe( 0 );
+			container.focus();
+			expect( document.activeElement ).toBe( container );
+			expect( visible() ).toBe( true );
+			view.focus();
+			expect( document.activeElement ).toBe( view );
+			container.dispatchEvent( new MouseEvent( 'mouseleave' ) );
+			expect( visible() ).toBe( true );
+			container.dispatchEvent( new TouchEvent( 'touchstart', { bubbles: true } ) );
+			jest.advanceTimersByTime( 3000 );
+			expect( visible() ).toBe( true );
+			for ( const key of [ 'Enter', ' ' ] ) {
+				view.dispatchEvent( new KeyboardEvent( 'keydown', { key, bubbles: true } ) );
+				view.dispatchEvent( new KeyboardEvent( 'keyup', { key, bubbles: true } ) );
+			}
+			expect( onView ).not.toHaveBeenCalled();
+			view.dispatchEvent( new MouseEvent( 'click', { bubbles: true, detail: 0 } ) );
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			expect( onView ).toHaveBeenCalledWith( view );
+			expect( view.type ).toBe( 'button' );
+			const outside = document.createElement( 'button' );
+			document.body.appendChild( outside );
+			outside.focus();
+			expect( visible() ).toBe( false );
+			overlay.destroy();
+			expect( container.hasAttribute( 'tabindex' ) ).toBe( false );
+			jest.useRealTimers();
+		} );
+
+		it( 'shows on tap and times out when focus is outside', () => {
+			jest.useFakeTimers();
+			const overlay = new ViewerOverlay( { container, onView: jest.fn() } );
+			container.dispatchEvent( new TouchEvent( 'touchstart', { bubbles: true } ) );
+			expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+			jest.advanceTimersByTime( 3000 );
+			expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( false );
+			overlay.destroy();
+			jest.useRealTimers();
+		} );
+
+		it.each( [ '-1', '2' ] )( 'preserves caller tabindex %s on dispose', ( tabindex ) => {
+			container.setAttribute( 'tabindex', tabindex );
+			const overlay = new ViewerOverlay( { container, onView: jest.fn() } );
+			expect( container.tabIndex ).toBe( tabindex === '-1' ? 0 : 2 );
+			container.focus();
+			expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
+			overlay.destroy();
+			expect( container.getAttribute( 'tabindex' ) ).toBe( tabindex );
+		} );
+
+		it( 'removes every listener and pending timer across mount/dispose cycles', () => {
+			jest.useFakeTimers();
+			for ( let cycle = 0; cycle < 3; cycle++ ) {
+				const onView = jest.fn();
+				const overlay = new ViewerOverlay( { container, onView } );
+				overlay.init();
+				expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 1 );
+				const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+				const listeners = overlay.listeners.slice();
+				const removers = new Map();
+				for ( const { element } of listeners ) {
+					if ( !removers.has( element ) ) {
+						removers.set( element, jest.spyOn( element, 'removeEventListener' ) );
+					}
+				}
+				container.dispatchEvent( new TouchEvent( 'touchstart', { bubbles: true } ) );
+				expect( jest.getTimerCount() ).toBe( 1 );
+				overlay.destroy();
+				for ( const { element, type, handler, options } of listeners ) {
+					expect( removers.get( element ) ).toHaveBeenCalledWith( type, handler, options );
+				}
+				for ( const remover of removers.values() ) {
+					remover.mockRestore();
+				}
+				expect( jest.getTimerCount() ).toBe( 0 );
+				container.dispatchEvent( new TouchEvent( 'touchstart', { bubbles: true } ) );
+				view.click();
+				overlay.init();
+				expect( onView ).not.toHaveBeenCalled();
+				expect( jest.getTimerCount() ).toBe( 0 );
+				expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 0 );
+				expect( overlay.container ).toBeNull();
+				expect( overlay.imageElement ).toBeNull();
+				expect( overlay.onView ).toBeNull();
+				expect( overlay.listeners ).toEqual( [] );
+			}
+			jest.useRealTimers();
+		} );
+	} );
+
 	describe( 'constructor', () => {
+		it( 'supports a canvas host with admitted callbacks and no image or filename', () => {
+			const canvas = document.createElement( 'canvas' );
+			container.replaceChildren( canvas );
+			const onEdit = jest.fn();
+			const onView = jest.fn();
+			const overlay = new ViewerOverlay( { container, canEdit: true, onEdit, onView } );
+			const edit = container.querySelector( '.layers-viewer-overlay-btn--edit' );
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			expect( overlay.overlay ).not.toBeNull();
+			expect( edit ).not.toBeNull();
+			expect( view ).not.toBeNull();
+			edit.click();
+			view.click();
+			expect( onEdit ).toHaveBeenCalledTimes( 1 );
+			expect( onEdit ).toHaveBeenCalledWith( edit );
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			expect( onView ).toHaveBeenCalledWith( view );
+			overlay.destroy();
+		} );
+
+		it.each( [ false, undefined, 'true', 1 ] )( 'fails closed for callback edit admission %p', ( canEdit ) => {
+			const onEdit = jest.fn();
+			const onView = jest.fn();
+			const overlay = new ViewerOverlay( { container, canEdit, onEdit, onView } );
+			expect( overlay.canEdit ).toBe( false );
+			expect( container.querySelector( '.layers-viewer-overlay-btn--edit' ) ).toBeNull();
+			const view = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			expect( view ).not.toBeNull();
+			view.click();
+			overlay._handleEditClick( view );
+			expect( onEdit ).not.toHaveBeenCalled();
+			expect( onView ).toHaveBeenCalledWith( view );
+			expect( mw.config.get ).not.toHaveBeenCalled();
+			overlay.destroy();
+		} );
+
+		it( 'replaces the previous host instance and makes detached controls inert', () => {
+			const oldView = jest.fn();
+			const first = new ViewerOverlay( { container, onView: oldView } );
+			const oldButton = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			const onView = jest.fn();
+			const second = new ViewerOverlay( { container, onView } );
+			expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 1 );
+			expect( first.container ).toBeNull();
+			oldButton.click();
+			expect( oldView ).not.toHaveBeenCalled();
+			const button = container.querySelector( '.layers-viewer-overlay-btn--view' );
+			button.click();
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			second.destroy();
+			second.destroy();
+			button.click();
+			expect( onView ).toHaveBeenCalledTimes( 1 );
+			expect( container.querySelectorAll( '.layers-viewer-overlay' ) ).toHaveLength( 0 );
+		} );
+
 		it( 'should create an overlay with edit and view buttons when user has editlayers right', () => {
 			const overlay = new ViewerOverlay( {
 				container: container,
@@ -273,6 +603,56 @@ describe( 'ViewerOverlay', () => {
 
 			// 'default' is an ordinary user-chosen name, so it is passed through
 			expect( editUrl ).toContain( 'setname=default' );
+		} );
+	} );
+
+	describe( 'editor return page', () => {
+		let overlay;
+
+		beforeEach( () => {
+			overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Test_image.jpg',
+				setname: 'ABC & details',
+				page: 2
+			} );
+		} );
+
+		afterEach( () => {
+			overlay.destroy();
+		} );
+
+		it( 'returns a full-page editor to the originating owner page', () => {
+			const url = new URL( overlay._buildEditUrl(), 'https://wiki.example' );
+			expect( url.pathname ).toBe( '/wiki/File:Test_image.jpg' );
+			expect( url.searchParams.get( 'returnto' ) ).toBe( 'Main_Page' );
+			expect( url.searchParams.get( 'setname' ) ).toBe( 'ABC & details' );
+			expect( url.searchParams.get( 'page' ) ).toBe( '2' );
+		} );
+
+		it( 'preserves the owner title with the fallback URL builder', () => {
+			mw.config.get = jest.fn( ( key ) => key === 'wgPageName' ?
+				'User:Example/Annotations & notes' : null );
+			delete mw.util;
+			const url = new URL( overlay._buildEditUrl(), 'https://wiki.example' );
+			expect( url.searchParams.get( 'returnto' ) ).toBe( 'User:Example/Annotations & notes' );
+			expect( url.searchParams.get( 'setname' ) ).toBe( 'ABC & details' );
+			expect( url.searchParams.get( 'page' ) ).toBe( '2' );
+		} );
+
+		it( 'keeps the existing File-page return fallback', () => {
+			mw.config.get = jest.fn( ( key ) => ( {
+				wgPageName: 'File:Test_image.jpg', wgCanonicalNamespace: 'File'
+			} )[ key ] );
+			const url = new URL( overlay._buildEditUrl(), 'https://wiki.example' );
+			expect( url.searchParams.has( 'returnto' ) ).toBe( false );
+		} );
+
+		it( 'omits a missing origin without adding an invalid title', () => {
+			mw.config.get = jest.fn( () => null );
+			const url = new URL( overlay._buildEditUrl(), 'https://wiki.example' );
+			expect( url.searchParams.has( 'returnto' ) ).toBe( false );
 		} );
 	} );
 

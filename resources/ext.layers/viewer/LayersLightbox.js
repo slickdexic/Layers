@@ -152,6 +152,11 @@
 			// Track viewing context so multi-page (PDF) navigation can reload
 			// the correct page image + that page's layer set.
 			this.filename = config.filename;
+			this.pageOwned = config.pageOwned || null;
+			this.opener = config.opener || document.activeElement;
+			this._sessionToken = ( this._sessionToken || 0 ) + 1;
+			this._pageOwnedViewerData = null;
+			this._exporting = null;
 			this.setName = config.setName || null;
 			this.currentPage = parseInt( config.page, 10 ) > 1 ? parseInt( config.page, 10 ) : 1;
 			this.pageCount = 1;
@@ -168,6 +173,10 @@
 			// native, in-wiki) is only attempted for PDFs; all other files use
 			// the server-provided page image.
 			this.isPdf = /\.pdf$/i.test( String( config.filename || '' ) );
+			if ( this.pageOwned ) {
+				this.isPdf = this.pageOwned.bundle.surface.kind === 'pdf';
+				this.isSlide = this.pageOwned.bundle.surface.kind === 'slide';
+			}
 			// Rebuild the pdf.js renderer (and its per-document cache) for this
 			// open() so switching files does not reuse a stale document.
 			this._pdfRendererResolved = false;
@@ -187,7 +196,11 @@
 			this.showLoading();
 
 			// If we have layer data, render immediately
-			if ( config.layerData && config.imageUrl ) {
+			this.isOpen = true;
+			if ( this.pageOwned ) {
+				this._loadPromise = this.loadPageOwned( null );
+				this.overlay.querySelector( '.layers-lightbox-close' ).focus();
+			} else if ( config.layerData && config.imageUrl ) {
 				this.renderViewer( config.imageUrl, config.layerData );
 			} else {
 				// Fetch via API
@@ -195,6 +208,34 @@
 			}
 
 			this.isOpen = true;
+		}
+
+		loadPageOwned( page, targetWidth = 1600 ) {
+			const context = this.pageOwned;
+			const session = this._sessionToken;
+			const token = this._fetchToken = ( this._fetchToken || 0 ) + 1;
+			const current = () => this.isOpen && this.pageOwned === context &&
+				this._sessionToken === session && this._fetchToken === token;
+			return ( page === null ? context.read() : Promise.resolve( this._pageOwnedViewerData ) )
+				.then( ( viewer ) => {
+					if ( !current() ) {
+						return null;
+					}
+					this._pageOwnedViewerData = viewer;
+					this.pageCount = viewer.pageCount;
+					this.currentPage = page === null ? viewer.initialPage : page;
+					this.updateToolbar();
+					return context.loadPage( viewer, this.currentPage, targetWidth );
+				} ).then( ( result ) => {
+					if ( current() && result ) {
+						this._pageOwnedWidth = targetWidth;
+						this.renderViewer( result.imageUrl, result.layerData );
+					}
+				} ).catch( () => {
+					if ( current() ) {
+						this.showError( this.getMessage( 'layers-page-history-render-failed', 'Failed to load layer data' ) );
+					}
+				} );
 		}
 
 		/**
@@ -619,6 +660,9 @@
 		 * @private
 		 */
 		goToPage( targetPage ) {
+			if ( this.pageOwned && this._exporting ) {
+				return;
+			}
 			const p = parseInt( targetPage, 10 );
 			if ( !p || p < 1 || p > this.pageCount || p === this.currentPage ) {
 				return;
@@ -627,7 +671,11 @@
 			// A new page is a fresh view: reset zoom/pan.
 			this.resetZoom();
 			this.showLoading();
-			this.fetchAndRender( this.filename, this.setName, p );
+			if ( this.pageOwned ) {
+				this._loadPromise = this.loadPageOwned( p );
+			} else {
+				this.fetchAndRender( this.filename, this.setName, p );
+			}
 		}
 
 		/**
@@ -709,6 +757,12 @@
 				this.panY = 0;
 			}
 			this.applyTransform();
+			if ( this.pageOwned && this.isPdf && this._pageOwnedViewerData && !this._exporting ) {
+				const targetWidth = Math.min( 4096, Math.ceil( 1600 * this.zoom ) );
+				if ( targetWidth > ( this._pageOwnedWidth || 1600 ) ) {
+					this._loadPromise = this.loadPageOwned( this.currentPage, targetWidth );
+				}
+			}
 		}
 
 		/**
@@ -851,6 +905,9 @@
 		 * @private
 		 */
 		printDocument() {
+			if ( this.pageOwned ) {
+				return this.exportPageOwned( 'print' );
+			}
 			if ( !this.filename ) {
 				return;
 			}
@@ -903,6 +960,9 @@
 		 * @private
 		 */
 		downloadPdf() {
+			if ( this.pageOwned ) {
+				return this.exportPageOwned( 'download' );
+			}
 			if ( !this.filename ) {
 				return;
 			}
@@ -946,10 +1006,11 @@
 		 * Wrap composited pages in a PDF.
 		 *
 		 * @param {Array<Object|null>} composited Results from composePage
+		 * @param {boolean} [strict=false] Refuse any required page's final decoding failure
 		 * @return {Blob|null} PDF blob, or null if no page could be encoded
 		 * @private
 		 */
-		buildPdfBlob( composited ) {
+		buildPdfBlob( composited, strict = false ) {
 			const PdfBuilder = getClass( 'Viewer.PdfBuilder', 'LayersPdfBuilder' );
 			if ( typeof PdfBuilder !== 'function' ) {
 				return null;
@@ -957,14 +1018,114 @@
 			const pages = [];
 			composited.forEach( ( entry ) => {
 				if ( !entry ) {
+					if ( strict ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
 					return;
 				}
 				const data = PdfBuilder.decodeJpegDataUrl( entry.src );
 				if ( data ) {
 					pages.push( { data: data, width: entry.width, height: entry.height } );
+				} else if ( strict ) {
+					throw new Error( 'layers-revision-unavailable' );
 				}
 			} );
 			return pages.length ? PdfBuilder.build( pages ) : null;
+		}
+
+		exportPageOwned( mode ) {
+			if ( this._exporting ) {
+				return this._exporting;
+			}
+			const context = this.pageOwned;
+			const session = this._sessionToken;
+			const active = document.activeElement;
+			const current = () => this.isOpen && this.pageOwned === context && this._sessionToken === session;
+			const controls = [ this.printBtn, this.downloadBtn ].filter( Boolean );
+			const labels = controls.map( ( button ) => button.textContent );
+			controls.forEach( ( button ) => {
+				button.disabled = true;
+				button.textContent = this.getMessage( 'layers-lightbox-print-preparing', 'Preparing pages...' );
+			} );
+			this.prevBtn.disabled = true;
+			this.nextBtn.disabled = true;
+			const work = async () => {
+				await this._loadPromise;
+				const viewer = await context.read();
+				if ( !current() || !this._pageOwnedViewerData ||
+					JSON.stringify( viewer.pages ) !== JSON.stringify( this._pageOwnedViewerData.pages ) ||
+					JSON.stringify( viewer.source ) !== JSON.stringify( this._pageOwnedViewerData.source ) ||
+					viewer.pageCount !== this._pageOwnedViewerData.pageCount ) {
+					throw new Error( 'layers-revision-unavailable' );
+				}
+				const pages = [];
+				for ( let page = 1; page <= viewer.pageCount; page++ ) {
+					if ( !current() ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
+					const supplied = await context.loadPage( viewer, page );
+					if ( !current() ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
+					const entry = await this.flattenPage( supplied.imageUrl, supplied.layerData, 'image/jpeg', 0.92 );
+					if ( !entry ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
+					await this.validatePageOwnedEncoding( entry );
+					pages.push( entry );
+				}
+				if ( !current() ) {
+					throw new Error( 'layers-revision-unavailable' );
+				}
+				if ( mode === 'print' ) {
+					await this.printImages( pages.map( ( entry ) => entry.src ), current );
+				} else {
+					const blob = this.buildPdfBlob( pages, true );
+					if ( !blob ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
+					this.saveBlob( blob, this.exportFileName() );
+				}
+			};
+			this._exporting = work().catch( () => {
+				if ( current() ) {
+					this.showExportError();
+				}
+			} ).finally( () => {
+				if ( current() ) {
+					controls.forEach( ( button, index ) => {
+						button.disabled = false;
+						button.textContent = labels[ index ];
+					} );
+					this._exporting = null;
+					this.updateToolbar();
+					if ( active && active.isConnected && this.overlay.contains( active ) ) {
+						active.focus();
+					}
+				}
+			} );
+			return this._exporting;
+		}
+
+		async validatePageOwnedEncoding( entry ) {
+			const Builder = getClass( 'Viewer.PdfBuilder', 'LayersPdfBuilder' );
+			const bytes = Builder && Builder.decodeJpegDataUrl( entry.src );
+			if ( !bytes || bytes.length < 4 || bytes[ 0 ] !== 255 || bytes[ 1 ] !== 216 ||
+				bytes[ bytes.length - 2 ] !== 255 || bytes[ bytes.length - 1 ] !== 217 ||
+				!Number.isInteger( entry.width ) || entry.width < 1 ||
+				!Number.isInteger( entry.height ) || entry.height < 1 ) {
+				throw new Error( 'layers-revision-unavailable' );
+			}
+			const image = new Image();
+			try {
+				image.src = entry.src;
+				await image.decode();
+				if ( image.naturalWidth !== entry.width || image.naturalHeight !== entry.height ) {
+					throw new Error( 'layers-revision-unavailable' );
+				}
+			} finally {
+				image.src = '';
+			}
 		}
 
 		/**
@@ -1113,6 +1274,7 @@
 		 * @private
 		 */
 		flattenPage( imageUrl, layerData, type, quality ) {
+			const strict = !!this.pageOwned;
 			layerData = this.withPageFields( layerData );
 			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' ) ||
 				( window.Layers && window.Layers.Viewer );
@@ -1172,6 +1334,10 @@
 							} catch ( e ) {
 								result = null;
 							}
+							if ( strict && canvas ) {
+								canvas.width = 0;
+								canvas.height = 0;
+							}
 							if ( viewer && typeof viewer.destroy === 'function' ) {
 								viewer.destroy();
 							}
@@ -1179,6 +1345,12 @@
 								host.parentNode.removeChild( host );
 							}
 							done( result );
+						} ).catch( () => {
+							if ( viewer && typeof viewer.destroy === 'function' ) {
+								viewer.destroy();
+							}
+							host.remove();
+							done( null );
 						} );
 					} catch ( e ) {
 						if ( viewer && typeof viewer.destroy === 'function' ) {
@@ -1230,7 +1402,7 @@
 		 * @param {string[]} images Ordered page image data URLs
 		 * @private
 		 */
-		printImages( images ) {
+		printImages( images, isCurrent ) {
 			this.destroyPrintFrame();
 
 			const frame = document.createElement( 'iframe' );
@@ -1252,6 +1424,16 @@
 			doc.close();
 
 			const triggerPrint = () => {
+				if ( isCurrent && ( !isCurrent() || this.printFrame !== frame ||
+					Array.from( doc.images ).some( ( image ) => !image.complete || image.naturalWidth < 1 ) ) ) {
+					if ( this.printFrame === frame ) {
+						this.destroyPrintFrame();
+					}
+					if ( isCurrent() ) {
+						this.showExportError();
+					}
+					return;
+				}
 				try {
 					win.focus();
 					win.print();
@@ -1261,14 +1443,18 @@
 				// The frame has to outlive the (modal, but asynchronous in some
 				// browsers) print dialog, so tear it down on afterprint with a
 				// generous timer as a backstop.
-				const cleanup = () => this.destroyPrintFrame();
+				const cleanup = () => {
+					if ( this.printFrame === frame ) {
+						this.destroyPrintFrame();
+					}
+				};
 				if ( typeof win.addEventListener === 'function' ) {
 					win.addEventListener( 'afterprint', cleanup );
 				}
 				setTimeout( cleanup, 60000 );
 			};
 
-			this.whenImagesReady( doc ).then( triggerPrint );
+			return this.whenImagesReady( doc ).then( triggerPrint );
 		}
 
 		/**
@@ -1515,6 +1701,9 @@
 		 * @private
 		 */
 		withPageFields( layerData ) {
+			if ( this.pageOwned ) {
+				return layerData;
+			}
 			const fields = window.Layers && window.Layers.DrawingFields;
 			if ( !fields || this.isSlide || !this.filename || !layerData || !Array.isArray( layerData.layers ) ) {
 				return layerData;
@@ -1631,6 +1820,18 @@
 		 * @private
 		 */
 		handleKeyDown( e ) {
+			if ( this.pageOwned && e.key === 'Tab' ) {
+				const buttons = Array.from( this.overlay.querySelectorAll( 'button:not([disabled])' ) )
+					.filter( ( button ) => button.style.display !== 'none' );
+				const first = buttons[ 0 ];
+				const last = buttons[ buttons.length - 1 ];
+				if ( !this.overlay.contains( document.activeElement ) ||
+					( e.shiftKey ? document.activeElement === first : document.activeElement === last ) ) {
+					e.preventDefault();
+					( e.shiftKey ? last : first ).focus();
+				}
+				return;
+			}
 			switch ( e.key ) {
 				case 'Escape':
 					e.preventDefault();
@@ -1695,6 +1896,12 @@
 			}
 
 			this.debugLog( 'Closing lightbox' );
+			const opener = this.pageOwned && this.opener;
+			this._sessionToken = ( this._sessionToken || 0 ) + 1;
+			if ( this.pageOwned ) {
+				this.pageOwned.dispose();
+				this.pageOwned = null;
+			}
 			this._fetchToken = ( this._fetchToken || 0 ) + 1;
 			this._renderToken = ( this._renderToken || 0 ) + 1;
 
@@ -1780,6 +1987,21 @@
 			}
 
 			this.isOpen = false;
+			if ( opener && opener.isConnected ) {
+				const controls = opener.closest( '.layers-viewer-overlay' );
+				if ( controls && controls.parentElement ) {
+					controls.parentElement.focus();
+				}
+				opener.focus();
+				if ( document.activeElement !== opener ) {
+					const session = this._sessionToken;
+					window.requestAnimationFrame( () => {
+						if ( !this.isOpen && this._sessionToken === session && opener.isConnected ) {
+							opener.focus();
+						}
+					} );
+				}
+			}
 		}
 
 		/**

@@ -170,7 +170,7 @@ class SlideHooks {
 			}
 		}
 		if ( $binding !== null ) {
-			return BoundSlideHooks::placeholder( $parser, $binding );
+			return BoundSlideHooks::placeholder( $parser, $binding, isset( $params['noedit'] ) );
 		}
 		BoundSlideHooks::noteSharedSlide( $parser );
 		self::log( 'Parsed params: ' . json_encode( array_keys( $params ) ) );

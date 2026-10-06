@@ -134,6 +134,245 @@ afterEach( () => {
 	}
 } );
 
+describe( 'Page-owned lightbox integration', () => {
+	function supplied() {
+		const viewer = { initialPage: 2, pageCount: 3, pages: [], source: { url: '/exact', exactVersion: true } };
+		const context = { bundle: { surface: { kind: 'pdf' } }, read: jest.fn( () => Promise.resolve( viewer ) ),
+			loadPage: jest.fn( () => Promise.resolve( { imageUrl: 'exact-page', layerData: { layers: [] } } ) ), dispose: jest.fn() };
+		const lightbox = new LayersLightbox();
+		jest.spyOn( lightbox, 'renderViewer' ).mockImplementation( () => {} );
+		return { lightbox, context, viewer };
+	}
+	it( 'opens page 2, navigates exact empty pages and never calls the legacy API or redirect', async () => {
+		const { lightbox, context, viewer } = supplied();
+		lightbox.open( { filename: 'Set', pageOwned: context } );
+		await lightbox._loadPromise;
+		expect( context.loadPage ).toHaveBeenCalledWith( viewer, 2, 1600 );
+		lightbox.goToPage( 3 );
+		await lightbox._loadPromise;
+		expect( context.loadPage ).toHaveBeenLastCalledWith( viewer, 3, 1600 );
+		expect( mockApi.get ).not.toHaveBeenCalled();
+		expect( mw.util.getUrl ).not.toHaveBeenCalled();
+		lightbox.close( true );
+	} );
+	it.each( [ false, true ] )( 'ignores stale load success or failure after close/reopen (%s)', async ( fail ) => {
+		const { lightbox, context } = supplied();
+		let complete, reject;
+		context.read.mockReturnValueOnce( new Promise( ( resolve, refusal ) => { complete = resolve; reject = refusal; } ) );
+		lightbox.open( { filename: 'First', pageOwned: context } );
+		const oldLoad = lightbox._loadPromise;
+		const next = supplied();
+		lightbox.open( { filename: 'Second', pageOwned: next.context } );
+		await lightbox._loadPromise;
+		if ( fail ) { reject( new Error( 'private' ) ); } else { complete( next.viewer ); }
+		await oldLoad;
+		expect( lightbox.renderViewer ).toHaveBeenCalledTimes( 1 );
+		expect( lightbox.imageWrapper.textContent ).not.toContain( 'private' );
+		expect( context.dispose ).toHaveBeenCalledTimes( 1 );
+		lightbox.close( true );
+	} );
+	it( 'returns Escape focus to the exact opener', async () => {
+		const { lightbox, context } = supplied();
+		const opener = document.createElement( 'button' ); document.body.append( opener );
+		lightbox.open( { filename: 'Set', pageOwned: context, opener } );
+		await lightbox._loadPromise;
+		lightbox.handleKeyDown( { key: 'Escape', preventDefault: jest.fn() } );
+		expect( document.activeElement ).toBe( opener );
+		lightbox.close( true );
+		opener.remove();
+	} );
+	it( 'keeps Tab focus in the supplied modal and sharpens from the exact context', async () => {
+		const { lightbox, context, viewer } = supplied();
+		lightbox.open( { filename: 'Set', pageOwned: context } ); await lightbox._loadPromise;
+		const buttons = Array.from( lightbox.overlay.querySelectorAll( 'button:not([disabled])' ) )
+			.filter( ( button ) => button.style.display !== 'none' );
+		buttons[ buttons.length - 1 ].focus();
+		lightbox.handleKeyDown( { key: 'Tab', preventDefault: jest.fn() } );
+		expect( document.activeElement ).toBe( buttons[ 0 ] );
+		lightbox.setZoom( 2 ); await lightbox._loadPromise;
+		expect( context.loadPage ).toHaveBeenLastCalledWith( viewer, 2, 3200 );
+		expect( mockApi.get ).not.toHaveBeenCalled(); expect( mw.util.getUrl ).not.toHaveBeenCalled();
+		lightbox.close( true );
+	} );
+	it( 'reveals a hidden overlay through its keyboard host before returning exact button focus', async () => {
+		const { lightbox, context } = supplied();
+		const host = document.createElement( 'span' ); host.tabIndex = 0;
+		const controls = document.createElement( 'span' ); controls.className = 'layers-viewer-overlay';
+		const opener = document.createElement( 'button' ); controls.append( opener ); host.append( controls ); document.body.append( host );
+		const order = []; host.addEventListener( 'focus', () => order.push( 'host' ) ); opener.addEventListener( 'focus', () => order.push( 'button' ) );
+		lightbox.open( { filename: 'Set', pageOwned: context, opener } ); await lightbox._loadPromise;
+		lightbox.close( true ); expect( order ).toEqual( [ 'host', 'button' ] ); expect( document.activeElement ).toBe( opener );
+		host.remove();
+	} );
+	it( 'does not return deferred focus to an old opener after reopening', async () => {
+		const { lightbox, context } = supplied();
+		const opener = document.createElement( 'button' ); document.body.append( opener );
+		let callback;
+		const oldFrame = window.requestAnimationFrame;
+		window.requestAnimationFrame = jest.fn( ( next ) => { callback = next; } );
+		const focus = jest.spyOn( opener, 'focus' ).mockImplementation( () => {} );
+		lightbox.open( { filename: 'First', pageOwned: context, opener } ); await lightbox._loadPromise;
+		lightbox.close( true ); expect( callback ).toBeDefined();
+		const next = supplied(); lightbox.open( { filename: 'Next', pageOwned: next.context } ); await lightbox._loadPromise;
+		callback(); expect( focus ).toHaveBeenCalledTimes( 1 );
+		window.requestAnimationFrame = oldFrame; lightbox.close( true ); opener.remove();
+	} );
+	it.each( [ false, true ] )( 'cannot emit an old export after close/reopen (failure: %s)', async ( fail ) => {
+		const { lightbox, context } = supplied();
+		lightbox.open( { filename: 'First', pageOwned: context } ); await lightbox._loadPromise;
+		let complete, reject;
+		context.loadPage.mockReturnValueOnce( new Promise( ( resolve, refusal ) => { complete = resolve; reject = refusal; } ) );
+		jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		jest.spyOn( lightbox, 'showExportError' ).mockImplementation( () => {} );
+		const exporting = lightbox.downloadPdf(); await Promise.resolve(); await Promise.resolve();
+		const next = supplied(); lightbox.open( { filename: 'Next', pageOwned: next.context } ); await lightbox._loadPromise;
+		if ( fail ) { reject( new Error( 'private' ) ); } else { complete( { imageUrl: 'old', layerData: { layers: [] } } ); }
+		await exporting;
+		expect( lightbox.saveBlob ).not.toHaveBeenCalled(); expect( lightbox.showExportError ).not.toHaveBeenCalled();
+		expect( lightbox.filename ).toBe( 'Next' ); expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+		lightbox.close( true );
+	} );
+	it.each( [ 'print', 'download' ] )( 'reauthorizes and serially composes every page for %s', async ( mode ) => {
+		const { lightbox, context } = supplied();
+		lightbox.open( { filename: 'Set', pageOwned: context } ); await lightbox._loadPromise;
+		const order = []; let active = 0, maximum = 0;
+		jest.spyOn( lightbox, 'flattenPage' ).mockImplementation( async () => {
+			maximum = Math.max( maximum, ++active ); order.push( order.length + 1 );
+			await Promise.resolve(); active--; return { src: 'jpeg', width: 10, height: 20 };
+		} );
+		jest.spyOn( lightbox, 'validatePageOwnedEncoding' ).mockResolvedValue();
+		jest.spyOn( lightbox, 'buildPdfBlob' ).mockReturnValue( new Blob( [ 'pdf' ] ) );
+		jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		jest.spyOn( lightbox, 'printImages' ).mockResolvedValue();
+		await lightbox.exportPageOwned( mode );
+		expect( context.read ).toHaveBeenCalledTimes( 2 );
+		expect( order ).toEqual( [ 1, 2, 3 ] ); expect( maximum ).toBe( 1 );
+		expect( context.loadPage.mock.calls.slice( 1 ).map( ( call ) => call[ 1 ] ) ).toEqual( [ 1, 2, 3 ] );
+		expect( mode === 'print' ? lightbox.printImages : lightbox.saveBlob ).toHaveBeenCalledTimes( 1 );
+		expect( mockApi.get ).not.toHaveBeenCalled(); expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+		expect( lightbox.printBtn.disabled ).toBe( false ); expect( lightbox.downloadBtn.disabled ).toBe( false );
+		lightbox.close( true );
+	} );
+	it( 'refuses a failed required export page without filtering, emission or server fallback', async () => {
+		const { lightbox, context } = supplied();
+		lightbox.open( { filename: 'Set', pageOwned: context } ); await lightbox._loadPromise;
+		jest.spyOn( lightbox, 'flattenPage' ).mockResolvedValue( { src: 'jpeg', width: 10, height: 20 } )
+			.mockResolvedValueOnce( { src: 'jpeg', width: 10, height: 20 } ).mockResolvedValueOnce( null );
+		jest.spyOn( lightbox, 'validatePageOwnedEncoding' ).mockResolvedValue();
+		jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		jest.spyOn( lightbox, 'buildPdfBlob' ).mockReturnValue( new Blob( [ 'pdf' ] ) );
+		jest.spyOn( lightbox, 'showExportError' ).mockImplementation( () => {} );
+		await lightbox.downloadPdf();
+		expect( lightbox.saveBlob ).not.toHaveBeenCalled(); expect( lightbox.buildPdfBlob ).not.toHaveBeenCalled();
+		expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+		expect( lightbox.showExportError ).toHaveBeenCalledTimes( 1 );
+		expect( lightbox.downloadBtn.disabled ).toBe( false );
+		lightbox.close( true );
+	} );
+	it( 'rejects invalid JPEG bytes before PDF construction', async () => {
+		const { lightbox } = supplied();
+		const Builder = require( '../../resources/ext.layers/viewer/PdfBuilder.js' );
+		window.Layers.Viewer.PdfBuilder = Builder;
+		await expect( lightbox.validatePageOwnedEncoding( { src: 'data:image/jpeg;base64,dGVzdA==', width: 10, height: 20 } ) )
+			.rejects.toThrow( 'layers-revision-unavailable' );
+	} );
+	it.each( [ false, true ] )( 'final assembly preserves all three pages or refuses a required decode failure (%s)', async ( fail ) => {
+		const { lightbox, context } = supplied();
+		const Builder = require( '../../resources/ext.layers/viewer/PdfBuilder.js' );
+		window.Layers.Viewer.PdfBuilder = Builder;
+		const OriginalImage = window.Image;
+		window.Image = class {
+			constructor() { this.naturalWidth = 10; this.naturalHeight = 20; }
+			decode() { return Promise.resolve(); }
+		};
+		const realDecode = Builder.decodeJpegDataUrl; let calls = 0;
+		const decode = jest.spyOn( Builder, 'decodeJpegDataUrl' ).mockImplementation( ( url ) =>
+			fail && ++calls === 5 ? null : realDecode( url ) );
+		const build = jest.spyOn( Builder, 'build' );
+		jest.spyOn( lightbox, 'flattenPage' ).mockResolvedValue( { src: 'data:image/jpeg;base64,/9j/2Q==', width: 10, height: 20 } );
+		const save = jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		const print = jest.spyOn( lightbox, 'printImages' ).mockResolvedValue();
+		const error = jest.spyOn( lightbox, 'showExportError' ).mockImplementation( () => {} );
+		try {
+			lightbox.open( { filename: 'Exact', pageOwned: context } ); await lightbox._loadPromise;
+			lightbox.downloadBtn.focus(); await lightbox.downloadPdf();
+			if ( fail ) {
+				expect( build ).not.toHaveBeenCalled(); expect( save ).not.toHaveBeenCalled(); expect( error ).toHaveBeenCalledTimes( 1 );
+			} else {
+				expect( build ).toHaveBeenCalledTimes( 1 ); expect( build.mock.calls[ 0 ][ 0 ] ).toHaveLength( 3 );
+				expect( build.mock.calls[ 0 ][ 0 ].map( ( page ) => [ page.width, page.height ] ) ).toEqual( [ [ 10, 20 ], [ 10, 20 ], [ 10, 20 ] ] );
+				expect( save ).toHaveBeenCalledTimes( 1 ); expect( error ).not.toHaveBeenCalled();
+			}
+			expect( context.loadPage.mock.calls.slice( 1 ).map( ( call ) => call[ 1 ] ) ).toEqual( [ 1, 2, 3 ] );
+			expect( print ).not.toHaveBeenCalled();
+			expect( lightbox.printBtn.disabled ).toBe( false ); expect( lightbox.downloadBtn.disabled ).toBe( false );
+			expect( document.activeElement ).toBe( lightbox.downloadBtn );
+			expect( mockApi.get ).not.toHaveBeenCalled(); expect( mockApi.postWithToken ).not.toHaveBeenCalled(); expect( mw.util.getUrl ).not.toHaveBeenCalled();
+		} finally { window.Image = OriginalImage; decode.mockRestore(); build.mockRestore(); lightbox.close( true ); }
+	} );
+	it( 'recovers viewer and export controls after bounded original loads with the real renderer', async () => {
+		jest.useFakeTimers();
+		const Adapter = require( '../../resources/ext.layers/viewer/PageOwnedViewerAdapter.js' );
+		const Renderer = require( '../../resources/ext.layers/viewer/PdfRenderer.js' );
+		require( '../../resources/ext.layers.shared/DrawingFields.js' );
+		const { lightbox } = supplied();
+		const surface = { id: 'pdf', kind: 'pdf', label: 'Exact', canvas: { width: 320, height: 240 },
+			layers: [], source: { repository: 'local', fileTitle: 'File:Exact.pdf', timestamp: '20261006120000', sha1: 'exact', page: 2 } };
+		const bundle = { owner: 'Owner', pageId: 10, revisionId: 42, surface };
+		const viewer = { ...bundle, binding: 'v1:10:pdf', kind: 'pdf', label: 'Exact', initialPage: 2,
+			pageCount: 3, pages: [ { page: 2, surface } ], source: { url: '/exact', exactVersion: true } };
+		const pdfPage = { getViewport: ( { scale } ) => ( { width: 320 * scale, height: 240 * scale } ),
+			render: () => ( { promise: Promise.resolve() } ), cleanup: jest.fn() };
+		const doc = { numPages: 3, getPage: jest.fn( () => Promise.resolve( pdfPage ) ), destroy: jest.fn() };
+		const library = { getDocument: jest.fn().mockReturnValueOnce( { promise: new Promise( () => {} ) } )
+			.mockReturnValue( { promise: Promise.resolve( doc ) } ) };
+		const renderer = new Renderer( { pdfjsLib: library } );
+		const api = { get: jest.fn( () => Promise.resolve( { layersread: { viewer } } ) ) };
+		const context = new Adapter( { api, bundle, binding: viewer.binding, pdfRenderer: renderer } );
+		const error = jest.spyOn( lightbox, 'showExportError' ).mockImplementation( () => {} );
+		const save = jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		try {
+			lightbox.open( { filename: 'Exact', pageOwned: context } );
+			await jest.advanceTimersByTimeAsync( 30000 ); await lightbox._loadPromise;
+			expect( lightbox.imageWrapper.querySelector( '.layers-lightbox-error' ) ).not.toBeNull();
+			expect( lightbox.downloadBtn.disabled ).toBe( false );
+			await lightbox.loadPageOwned( 2 ); expect( lightbox.renderViewer ).toHaveBeenCalledTimes( 1 );
+			expect( doc.getPage ).toHaveBeenCalledWith( 2 );
+			renderer.destroy(); library.getDocument.mockReturnValueOnce( { promise: new Promise( () => {} ) } );
+			lightbox.downloadBtn.focus(); const exporting = lightbox.downloadPdf();
+			expect( lightbox.downloadBtn.disabled ).toBe( true );
+			await jest.advanceTimersByTimeAsync( 30000 ); await exporting;
+			expect( error ).toHaveBeenCalledTimes( 1 ); expect( save ).not.toHaveBeenCalled();
+			expect( lightbox.printBtn.disabled ).toBe( false ); expect( lightbox.downloadBtn.disabled ).toBe( false );
+			expect( document.activeElement ).toBe( lightbox.downloadBtn );
+			await context.loadPage( viewer, 2 ); expect( library.getDocument ).toHaveBeenCalledTimes( 4 );
+			expect( mockApi.get ).not.toHaveBeenCalled(); expect( mockApi.postWithToken ).not.toHaveBeenCalled(); expect( mw.util.getUrl ).not.toHaveBeenCalled();
+		} finally { lightbox.close( true ); jest.useRealTimers(); }
+	} );
+	it.each( [ 'print', 'download' ] )( 'a genuinely invalid required JPEG refuses the complete %s', async ( mode ) => {
+		const { lightbox, context } = supplied();
+		const Builder = require( '../../resources/ext.layers/viewer/PdfBuilder.js' ); window.Layers.Viewer.PdfBuilder = Builder;
+		const OriginalImage = window.Image;
+		window.Image = class {
+			constructor() { this.naturalWidth = 10; this.naturalHeight = 20; }
+			decode() { return Promise.resolve(); }
+		};
+		jest.spyOn( lightbox, 'flattenPage' ).mockResolvedValueOnce( { src: 'data:image/jpeg;base64,/9j/2Q==', width: 10, height: 20 } )
+			.mockResolvedValueOnce( { src: 'data:image/jpeg;base64,dGVzdA==', width: 10, height: 20 } );
+		const save = jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+		const print = jest.spyOn( lightbox, 'printImages' ).mockResolvedValue();
+		const error = jest.spyOn( lightbox, 'showExportError' ).mockImplementation( () => {} );
+		try {
+			lightbox.open( { filename: 'Exact', pageOwned: context } ); await lightbox._loadPromise;
+			const trigger = mode === 'print' ? lightbox.printBtn : lightbox.downloadBtn;
+			trigger.focus(); await lightbox.exportPageOwned( mode );
+			expect( save ).not.toHaveBeenCalled(); expect( print ).not.toHaveBeenCalled(); expect( error ).toHaveBeenCalledTimes( 1 );
+			expect( document.activeElement ).toBe( trigger ); expect( lightbox.printBtn.disabled ).toBe( false ); expect( lightbox.downloadBtn.disabled ).toBe( false );
+			expect( mockApi.get ).not.toHaveBeenCalled(); expect( mockApi.postWithToken ).not.toHaveBeenCalled(); expect( mw.util.getUrl ).not.toHaveBeenCalled();
+		} finally { window.Image = OriginalImage; lightbox.close( true ); }
+	} );
+} );
+
 describe( 'LayersLightbox', () => {
 	describe( 'page field values', () => {
 		it( 'fills {{name}} tokens for this file, but not for slides, which arrive filled', () => {

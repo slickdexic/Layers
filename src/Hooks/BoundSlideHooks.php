@@ -30,12 +30,14 @@ class BoundSlideHooks {
 	/**
 	 * @param Parser $parser
 	 * @param array $binding Validated canonical identity
+	 * @param bool $noEdit Embed-local edit suppression
 	 * @return array Parser-function output
 	 */
-	public static function placeholder( Parser $parser, array $binding ): array {
+	public static function placeholder( Parser $parser, array $binding, bool $noEdit = false ): array {
 		[ $value, $revisionId ] = self::register( $parser, $binding );
 		$html = Html::element( 'div', [ 'class' => 'layers-bound-slide', 'data-layers-binding' => $value,
-			'data-layers-revision' => $revisionId ], $parser->msg( 'layers-revision-unavailable' )->text() );
+			'data-layers-revision' => $revisionId, 'data-layers-noedit' => $noEdit ? '1' : null ],
+			$parser->msg( 'layers-revision-unavailable' )->text() );
 		return [ $html, 'noparse' => true, 'isHTML' => true ];
 	}
 

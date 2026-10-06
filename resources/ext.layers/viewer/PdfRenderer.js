@@ -434,6 +434,8 @@
 		 * @param {number} [options.targetWidth=1600] Desired rendered width in px.
 		 * @param {number} [options.maxDimension=4000] Cap on the largest side.
 		 * @param {boolean} [options.exactVersion=false] Require complete credentialed transport.
+			 * @param {number} [options.expectedPageCount] Refuse a count mismatch before page selection.
+			 * @param {Function} [options.isCurrent] Opt-in render admission for the supplied viewer session.
 		 * @return {Promise<Object>} Resolves to
 		 *   `{ dataUrl, width, height, pageCount }`.
 		 */
@@ -447,12 +449,22 @@
 			const timeoutMs = options.timeoutMs > 0 ?
 				options.timeoutMs : RENDER_TIMEOUT_MS;
 
-			const documentPromise = this.getDocument( url, { exactVersion: options.exactVersion === true } );
+			const exactVersion = options.exactVersion === true;
+			const strict = options.expectedPageCount !== undefined;
+			let active = true;
+			const current = () => active && ( typeof options.isCurrent !== 'function' || options.isCurrent() );
+			const documentPromise = this.getDocument( url, { exactVersion: exactVersion } );
 			const key = this._documentKey( url, options.exactVersion === true );
 			const work = documentPromise.then( ( doc ) => {
+				if ( strict && ( !current() || doc.numPages !== options.expectedPageCount ) ) {
+					throw new Error( 'layers-revision-unavailable' );
+				}
 				const pageCount = doc.numPages || 1;
 				const page = Math.min( Math.max( 1, requested ), pageCount );
 				return doc.getPage( page ).then( ( pdfPage ) => {
+					if ( strict && !current() ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
 					const base = pdfPage.getViewport( { scale: 1 } );
 					let scale = targetWidth / ( base.width || targetWidth );
 					if ( !( scale > 0 ) ) {
@@ -502,11 +514,15 @@
 				'pdf.js render timed out after ' + timeoutMs + 'ms',
 				timeoutMs
 			).catch( ( err ) => {
+				active = false;
 				// On timeout the cached document promise is still pending, so a
 				// retry would queue behind the same stall. getDocument() only
 				// self-evicts on rejection, so drop it here too.
 				if ( this._docCache.get( key ) === documentPromise ) {
 					this._docCache.delete( key );
+				}
+				if ( strict ) {
+					this.constructor.destroyDocument( documentPromise );
 				}
 				this.debugLog( 'renderPage failed:', err && err.message );
 				throw err;

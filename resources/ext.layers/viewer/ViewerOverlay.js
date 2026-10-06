@@ -476,6 +476,11 @@
 		 * @return {string} Editor URL
 		 */
 		_buildEditUrl() {
+			// Full-page editing returns to the embedding page; File-page entry keeps its own fallback.
+			const returnTitle = typeof mw !== 'undefined' && mw.config &&
+				typeof mw.config.get === 'function' && mw.config.get( 'wgCanonicalNamespace' ) !== 'File' ?
+				mw.config.get( 'wgPageName' ) : null;
+			const hasReturnTitle = typeof returnTitle === 'string' && returnTitle.length > 0;
 			if ( typeof mw === 'undefined' || !mw.util ) {
 				// Fallback URL construction
 				let url = '/wiki/File:' + encodeURIComponent( this.filename ) +
@@ -485,6 +490,9 @@
 				}
 				if ( this.autoCreate ) {
 					url += '&autocreate=1';
+				}
+				if ( hasReturnTitle ) {
+					url += '&returnto=' + encodeURIComponent( returnTitle );
 				}
 				return url;
 			}
@@ -501,6 +509,10 @@
 			// Include autocreate flag for non-existent sets
 			if ( this.autoCreate ) {
 				params.set( 'autocreate', '1' );
+			}
+
+			if ( hasReturnTitle ) {
+				params.set( 'returnto', returnTitle );
 			}
 
 			// mw.util.getUrl may return URL with query string (e.g., index.php?title=...)

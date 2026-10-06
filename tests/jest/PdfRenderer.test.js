@@ -73,6 +73,15 @@ function makeMockPdfjs( opts = {} ) {
 }
 
 describe( 'PdfRenderer', () => {
+	it( 'validates an opt-in document count before page selection while preserving large legacy page numbers', async () => {
+		const mock = makeMockPdfjs( { numPages: 150 } );
+		const renderer = new PdfRenderer( { pdfjsLib: mock.lib } );
+		await expect( renderer.renderPage( '/exact', 130, { exactVersion: true, expectedPageCount: 149 } ) )
+			.rejects.toThrow( 'layers-revision-unavailable' );
+		expect( mock.getPage ).not.toHaveBeenCalled();
+		await renderer.renderPage( '/legacy', 130 ); expect( mock.getPage ).toHaveBeenCalledWith( 130 );
+		renderer.destroy();
+	} );
 	describe( 'exact-version transport', () => {
 		it.each( [ false, true ] )( 'isolates cache in both call orders (exact first: %s)', async ( exactFirst ) => {
 			const mock = makeMockPdfjs();
