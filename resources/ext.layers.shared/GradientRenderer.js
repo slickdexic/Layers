@@ -55,6 +55,29 @@
 		);
 	}
 
+	static hasValidGradient( layer ) {
+		if ( !GradientRenderer.hasGradient( layer ) ) {
+			return false;
+		}
+		const gradient = layer.gradient;
+		if ( gradient.colors.length > 10 || !gradient.colors.every( stop => stop &&
+			Number.isFinite( stop.offset ) && typeof stop.color === 'string' ) ||
+			!GradientRenderer.validate( gradient ).valid ) {
+			return false;
+		}
+		for ( const key of [ 'angle', 'centerX', 'centerY', 'radius' ] ) {
+			if ( gradient[ key ] !== undefined && !Number.isFinite( gradient[ key ] ) ) {
+				return false;
+			}
+		}
+		const style = document.createElement( 'span' ).style;
+		return gradient.colors.every( stop => {
+			style.color = '';
+			style.color = stop.color;
+			return style.color !== '' && !/^(?:var\(|currentcolor$|inherit$|initial$|unset$)/i.test( stop.color );
+		} );
+	}
+
 	/**
 	 * Create a canvas gradient from a layer's gradient definition
 	 * @param {Object} layer - Layer with gradient property

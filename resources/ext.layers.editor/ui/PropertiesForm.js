@@ -880,9 +880,26 @@
 						gradientContainer.className = 'property-field property-field--wide';
 
 						// Create gradient editor instance
+						const ownerConfig = editor.config;
+						let refreshTimer;
+						let expectedGradient = layer.gradient;
+						const ownsGradient = () => {
+							const layers = editor.stateManager && editor.stateManager.get( 'layers' );
+							if ( !Array.isArray( layers ) ) {
+								return true;
+							}
+							const current = layers.find( item => item.id === layer.id );
+							return current && current.gradient === expectedGradient;
+						};
+						const isCurrent = () => !editor._closeCompleted && editor.config === ownerConfig &&
+							ownsGradient() &&
+							gradientContainer._gradientEditor === gradientEditorInstance &&
+							( !editor.layerPanel || !editor.layerPanel.propertiesPanel ||
+								editor.layerPanel.propertiesPanel.contains( gradientContainer ) );
 						const gradientEditorInstance = new GradientEditor( {
 							layer: layer,
 							container: gradientContainer,
+							isCurrent: isCurrent,
 							onChange: function ( updates ) {
 								// When gradient changes, update layer
 								if ( updates.gradient ) {
@@ -891,19 +908,29 @@
 									// Switching to solid - remove gradient property
 									editor.updateLayer( layer.id, { gradient: null } );
 								}
+								const layers = editor.stateManager && editor.stateManager.get( 'layers' );
+								const current = Array.isArray( layers ) && layers.find( item => item.id === layer.id );
+								expectedGradient = current ? current.gradient : updates.gradient;
 							},
 							onFillTypeChange: function () {
 								// Refresh properties panel when switching between solid/gradient
-							setTimeout( function () {
-								if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-									editor.layerPanel.updatePropertiesPanel( layer.id );
-								}
-							}, 0 );
+								clearTimeout( refreshTimer );
+								refreshTimer = setTimeout( function () {
+									if ( isCurrent() && editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+										editor.layerPanel.updatePropertiesPanel( layer.id );
+									}
+								}, 0 );
 							}
 						} );
 
 						// Store instance for cleanup (optional)
 						gradientContainer._gradientEditor = gradientEditorInstance;
+						if ( registerCleanup ) {
+							registerCleanup( () => {
+								clearTimeout( refreshTimer );
+								gradientEditorInstance.destroy();
+							} );
+						}
 
 						form.appendChild( gradientContainer );
 

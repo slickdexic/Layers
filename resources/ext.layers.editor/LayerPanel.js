@@ -749,6 +749,7 @@
 		 * Clean up resources and destroy the panel
 		 */
 		destroy() {
+			this.settleGradientControls( false, true );
 			// Unsubscribe from state changes
 			if ( this.stateSubscriptions && this.stateSubscriptions.length > 0 ) {
 				this.stateSubscriptions.forEach( ( unsubscribe ) => {
@@ -2000,7 +2001,25 @@
 		 *
 		 * @param {string|null} layerId Layer ID to show properties for
 		 */
+		settleGradientControls( commit, dispose = false ) {
+			if ( !this.propertiesPanel ) {
+				return false;
+			}
+			let committed = false;
+			this.propertiesPanel.querySelectorAll( '.gradient-editor' ).forEach( ( container ) => {
+				const instance = container._gradientEditor;
+				if ( instance && typeof instance.settle === 'function' ) {
+					committed = instance.settle( commit ) || committed;
+					if ( dispose ) {
+						instance.destroy();
+					}
+				}
+			} );
+			return committed;
+		}
+
 		updatePropertiesPanel( layerId ) {
+			this.settleGradientControls( true, true );
 			const contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
 			const t = this.msg.bind( this );
 			if ( !layerId ) {

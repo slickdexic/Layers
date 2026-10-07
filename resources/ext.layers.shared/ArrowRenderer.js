@@ -92,6 +92,13 @@
 			this.gradientRenderer = gradientRenderer;
 		}
 
+		_hasFill( layer ) {
+			const solid = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+			const Renderer = this.gradientRenderer && this.gradientRenderer.constructor;
+			return solid || ( layer.fill !== 'blur' && Renderer &&
+				typeof Renderer.hasValidGradient === 'function' && Renderer.hasValidGradient( layer ) );
+		}
+
 		/**
 		 * Bounds of the unrotated filled path; coordinates already match the target canvas.
 		 * @param {Function} drawPath Path builder accepting a context
@@ -454,7 +461,7 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			const hasFill = this._hasFill( layer ) && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Calculate perpendicular angles at key points
@@ -851,7 +858,7 @@
 
 			// Shadow handling - always use drawSpreadShadow (consistent with ShapeRenderer)
 			if ( this.hasShadowEnabled( layer ) ) {
-				const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
+				const hasFill = this._hasFill( layer );
 				const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
 				// Draw fill shadow at fill opacity
@@ -924,7 +931,7 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
+			const hasFill = this._hasFill( layer ) && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
 			// Draw fill (blur fill or regular)

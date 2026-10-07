@@ -2099,6 +2099,11 @@ class LayersEditor {
 	 * @private
 	 */
 	saveCurrentPage () {
+		const gradientPanel = this.layerPanel;
+		const gradientOwner = this.config;
+		if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
+			this.layerPanel.settleGradientControls( true );
+		}
 		// Debug logging (controlled by extension config)
 		const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
 
@@ -2153,11 +2158,14 @@ class LayersEditor {
 		// it is safe to leave, and an unhandled rejection is not an answer.
 		return this.apiManager.saveLayers()
 			.then( ( result ) => {
+				const newerGradient = this.layerPanel === gradientPanel && this.config === gradientOwner &&
+					gradientPanel && typeof gradientPanel.settleGradientControls === 'function' &&
+					gradientPanel.settleGradientControls( true );
 				if ( this.config.pageOwned ) {
-					return !result.dirty && result.editorStateValid && result.draftPersisted !== false;
+					return !newerGradient && !result.dirty && result.editorStateValid && result.draftPersisted !== false;
 				}
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
-				return true;
+				return !newerGradient;
 			} )
 			.catch( ( error ) => {
 				// APIManager hides the spinner and shows error in production;
@@ -2228,6 +2236,9 @@ class LayersEditor {
 		if ( this._closeCompleted ) {
 			return;
 		}
+		if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
+			this.layerPanel.settleGradientControls( true );
+		}
 		const savedFilename = this.filename;
 		const finalize = ( discard = false ) => {
 			const drafts = this.apiManager && this.apiManager.pageOwnedDrafts;
@@ -2242,6 +2253,9 @@ class LayersEditor {
 				this.draftManager.clearDraft();
 			}
 			this._closeCompleted = true;
+			if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
+				this.layerPanel.settleGradientControls( false, true );
+			}
 			this.uiManager.destroy();
 			if ( navigateBack ) {
 				this.navigateBackToFileWithName( savedFilename );

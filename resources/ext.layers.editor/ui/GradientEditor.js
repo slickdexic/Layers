@@ -61,6 +61,8 @@
 			this.layer = options.layer;
 			this.onChange = options.onChange;
 			this.onFillTypeChange = options.onFillTypeChange || null;
+			this.isCurrent = options.isCurrent || ( () => true );
+			this._destroyed = false;
 			this.container = options.container;
 			this.currentGradient = this.layer.gradient ? this._cloneGradient( this.layer.gradient ) : null;
 			this.fillType = this._determineFillType();
@@ -115,10 +117,16 @@
 		 * @param {Function} handler - Handler function
 		 */
 		_addListener( element, type, handler ) {
+			const generation = this._controlGeneration;
+			const activeHandler = ( event ) => {
+				if ( !this._destroyed && generation === this._controlGeneration && this.isCurrent() ) {
+					handler( event );
+				}
+			};
 			if ( this.eventTracker ) {
-				this.eventTracker.add( element, type, handler );
+				this.eventTracker.add( element, type, activeHandler );
 			} else {
-				element.addEventListener( type, handler );
+				element.addEventListener( type, activeHandler );
 			}
 		}
 
@@ -127,6 +135,7 @@
 		 * @private
 		 */
 		_build() {
+			this._controlGeneration = ( this._controlGeneration || 0 ) + 1;
 			// Clean up tracked listeners before destroying DOM
 			if ( this.eventTracker ) {
 				this.eventTracker.destroy();
@@ -337,7 +346,8 @@
 			input.min = 0;
 			input.max = 360;
 			input.step = 15;
-			input.value = ( this.currentGradient && this.currentGradient.angle ) || 90;
+			input.value = this.currentGradient && this.currentGradient.angle !== undefined ?
+				this.currentGradient.angle : 90;
 			input.className = 'gradient-angle-slider';
 
 			const valueDisplay = document.createElement( 'span' );
@@ -632,18 +642,28 @@
 					clearTimeout( this._notifyTimeout );
 				}
 				this._notifyTimeout = setTimeout( () => {
-					this._notifyTimeout = null;
-					if ( this.onChange ) {
-						this.onChange( { gradient: this._cloneGradient( this.currentGradient ) } );
-					}
+					this.settle( true );
 				}, 150 );
 			}
+		}
+
+		settle( commit ) {
+			const pending = this._notifyTimeout;
+			clearTimeout( pending );
+			this._notifyTimeout = null;
+			if ( pending && commit && !this._destroyed && this.isCurrent() && this.onChange ) {
+				this.onChange( { gradient: this._cloneGradient( this.currentGradient ) } );
+				return true;
+			}
+			return false;
 		}
 
 		/**
 		 * Destroy the editor
 		 */
 		destroy() {
+			this.settle( false );
+			this._destroyed = true;
 			// Clear pending debounce timer
 			if ( this._notifyTimeout ) {
 				clearTimeout( this._notifyTimeout );
