@@ -104,6 +104,13 @@
 			this._reader = dependencies.reader;
 			this._publisher = dependencies.publisher;
 			this._adapter = dependencies.adapter;
+			this._pdfContext = options.pdfContext === undefined ? null : this._pdfCopy( options.pdfContext );
+			if ( options.pdfContext !== undefined && ( !this._pdfContext ||
+				this._readOnly || this._newSurface || this._pageId === undefined ) ) {
+				throw failure( 'layers-invalid-editor-session' );
+			}
+			this._pdf = null;
+			this._pdfRecovery = null;
 			this._phase = 'unloaded';
 			this._snapshot = null;
 			this._savedJson = null;
@@ -141,11 +148,25 @@
 				const state = this._adapter.toEditorState( snapshot, this._surfaceId );
 				this._snapshot = this._adapter.withEditorState( snapshot, this._surfaceId, state );
 				this._savedJson = JSON.stringify( saved || this._snapshot );
+				if ( this._pdfContext !== null ) {
+					const context = this._pdfAdmit( this._pdfContext );
+					if ( !context.stored || context.page !== context.initialPage || context.surface.id !== this._surfaceId ) {
+						throw failure( 'layers-editor-session-unavailable' );
+					}
+					this._pdf = { pageCount: context.pageCount, initialPage: context.initialPage,
+						activeSurfaceId: this._surfaceId, page: context.page,
+						original: this._pdfPin( context.surface ), temporary: new Map(), admissions: new Map() };
+				}
 				this._phase = 'ready';
 				return state;
 			} catch ( error ) {
 				if ( this._phase !== 'disposed' ) {
 					this._phase = 'unloaded';
+					if ( this._pdfContext !== null ) {
+						this._snapshot = null;
+						this._savedJson = null;
+						this._pdf = null;
+					}
 				}
 				throw error;
 			}
@@ -170,6 +191,9 @@
 		/** @return {Object} Isolated copy for rendering */
 		getEditorState() {
 			this._requireLoaded();
+			if ( this._pdf ) {
+				return this._adapter.toEditorState( this._pdfView(), this._pdf.activeSurfaceId );
+			}
 			return this._adapter.toEditorState( this._snapshot, this._surfaceId );
 		}
 
@@ -181,6 +205,16 @@
 			this._requireLoaded();
 			if ( this._readOnly ) {
 				throw failure( 'layers-editor-read-only' );
+			}
+			if ( this._pdf ) {
+				const next = this._adapter.withEditorState( this._pdfView(), this._pdf.activeSurfaceId, state );
+				const blank = this._pdfBlank( this._pdf.activeSurfaceId );
+				if ( blank && !JSON.parse( this._savedJson ).surfaces.some( ( surface ) => surface.id === blank.id ) &&
+					comparable( next.surfaces.find( ( surface ) => surface.id === blank.id ) ) === comparable( blank ) ) {
+					next.surfaces = next.surfaces.filter( ( surface ) => surface.id !== blank.id );
+				}
+				this._snapshot = next;
+				return;
 			}
 			this._snapshot = this._adapter.withEditorState( this._snapshot, this._surfaceId, state );
 		}
@@ -199,6 +233,9 @@
 		 */
 		rename( name ) {
 			this._requireLoaded();
+			if ( this._pdfRecovery ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
 			if ( this._readOnly ) {
 				throw failure( 'layers-editor-read-only' );
 			}
@@ -235,12 +272,423 @@
 		/** @return {Object} Draft envelope; returned objects share no mutable references */
 		getDraft() {
 			this._requireLoaded();
+			if ( this._pdf ) {
+				const baseIds = new Set( JSON.parse( this._savedJson ).surfaces.map( surface => surface.id ) );
+				const admissions = Array.from( this._pdf.admissions.values() ).filter( record =>
+					record.revisionId < this._revisionId && !baseIds.has( record.surface.id ) &&
+					this._snapshot.surfaces.some( surface => surface.id === record.surface.id ) &&
+					this._pdfNativeId( record ) === record.surface.id );
+				return this._pdfCopy( { owner: this._owner, baseRevisionId: this._revisionId,
+					surfaceId: this._surfaceId, snapshot: this._snapshot, pdf: {
+						...( admissions.length ? { admissions } : {} ),
+						version: 1, pageId: this._pageId, binding: 'v1:' + this._pageId + ':' + this._surfaceId,
+						initialPage: this._pdf.initialPage, pageCount: this._pdf.pageCount,
+						activePage: this._pdf.page, original: this._pdf.original,
+						baseSnapshot: JSON.parse( this._savedJson )
+					} } );
+			}
 			return {
 				owner: this._owner,
 				baseRevisionId: this._revisionId,
 				surfaceId: this._surfaceId,
 				snapshot: this._adapter.withEditorState( this._snapshot, this._surfaceId, this.getEditorState() )
 			};
+		}
+
+		_pdfCopy( value ) {
+			return this._adapter.toEditorState( { schemaVersion: 1, surfaces: [ {
+				id: 'json-copy', kind: 'slide', canvas: { value }, layers: []
+			} ] }, 'json-copy' ).canvas.value;
+		}
+
+		_pdfPin( surface ) {
+			const pin = Object.assign( {}, surface.source );
+			delete pin.page;
+			return pin;
+		}
+
+		_pdfGroup( snapshot, anchor, count ) {
+			const members = snapshot.surfaces.filter( ( surface ) => sameSet( surface, anchor ) );
+			const pages = new Set();
+			for ( const member of members ) {
+				if ( member.kind !== 'pdf' || !Number.isInteger( member.source.page ) ||
+					member.source.page < 1 || member.source.page > count || pages.has( member.source.page ) ||
+					member.label !== anchor.label ||
+					comparable( this._pdfPin( member ) ) !== comparable( this._pdfPin( anchor ) ) ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+				pages.add( member.source.page );
+			}
+			return members;
+		}
+
+		_pdfAdmit( input ) {
+			const context = this._pdfCopy( input );
+			const base = JSON.parse( this._savedJson );
+			const anchor = this._selected( base );
+			if ( !context || !anchor || anchor.kind !== 'pdf' || context.kind !== 'pdf' ||
+				context.owner !== this._owner || context.pageId !== this._pageId ||
+				context.revisionId !== this._revisionId || context.binding !== 'v1:' + this._pageId + ':' + this._surfaceId ||
+				context.initialPage !== anchor.source.page || context.label !== anchor.label ||
+				!Number.isInteger( context.pageCount ) || context.pageCount < 1 || context.pageCount > 2147483647 ||
+				!Number.isInteger( context.page ) || context.page < 1 || context.page > context.pageCount ||
+				( this._pdf && ( context.pageCount !== this._pdf.pageCount ||
+					comparable( this._pdfPin( anchor ) ) !== comparable( this._pdf.original ) ) ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const group = this._pdfGroup( base, anchor, context.pageCount );
+			const inventory = group.slice().sort( ( left, right ) => left.source.page - right.source.page )
+				.map( ( surface ) => ( { page: surface.source.page, surfaceId: surface.id } ) );
+			const stored = group.find( ( surface ) => surface.source.page === context.page );
+			const surface = context.surface;
+			const geometry = context.sourceGeometry;
+			const rendition = context.rendition;
+			if ( comparable( context.members ) !== comparable( inventory ) || !surface || surface.kind !== 'pdf' ||
+				!sameSet( surface, anchor ) || surface.label !== anchor.label || surface.source.page !== context.page ||
+				comparable( this._pdfPin( surface ) ) !== comparable( this._pdfPin( anchor ) ) ||
+				context.stored !== Boolean( stored ) || ( stored && comparable( surface ) !== comparable( stored ) ) ||
+				( !stored && ( !isNewSurface( surface, surface.id ) || base.surfaces.some( ( member ) =>
+					member.id === surface.id ) ) ) || !geometry || geometry.page !== context.page ||
+				geometry.units !== 'file-handler-pixels' || !Number.isInteger( geometry.width ) || geometry.width < 1 ||
+				!Number.isInteger( geometry.height ) || geometry.height < 1 || !rendition ||
+				typeof rendition.url !== 'string' || !rendition.url || !Number.isInteger( rendition.width ) ||
+				rendition.width < 1 || !Number.isInteger( rendition.height ) || rendition.height < 1 ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			this._adapter.toEditorState( { schemaVersion: 1, surfaces: [ surface ] }, surface.id );
+			if ( this._pdf && !stored ) {
+				for ( const temporary of this._pdf.temporary.values() ) {
+					if ( temporary.source.page === context.page || temporary.id === surface.id ) {
+						const record = this._pdf.admissions.get( temporary.id );
+						if ( !record || temporary.source.page !== context.page ||
+							( record.revisionId === this._revisionId ? comparable( temporary ) !== comparable( surface ) :
+								!this._pdfAssociation( record, context ) ) ) {
+							throw failure( 'layers-editor-session-unavailable' );
+						}
+					}
+				}
+			}
+			return context;
+		}
+
+		_pdfBlank( id ) {
+			const blank = this._pdf.temporary.get( id );
+			return blank ? Object.assign( {}, this._pdfCopy( blank ), { label: this.getLabel() } ) : null;
+		}
+
+		_pdfView() {
+			if ( this._snapshot.surfaces.some( ( surface ) => surface.id === this._pdf.activeSurfaceId ) ) {
+				return this._snapshot;
+			}
+			const blank = this._pdfBlank( this._pdf.activeSurfaceId );
+			if ( !blank ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			return Object.assign( {}, this._snapshot, { surfaces: this._snapshot.surfaces.concat( [ blank ] ) } );
+		}
+
+		_pdfReady() {
+			this._requireLoaded();
+			if ( !this._pdf || this._phase !== 'ready' || this._reconciling || this._pdfRecovery ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+		}
+
+		getPdfStatus() {
+			return this._pdf ? { page: this._pdf.page, pageCount: this._pdf.pageCount,
+				initialPage: this._pdf.initialPage, anchorSurfaceId: this._surfaceId,
+				activeSurfaceId: this._pdf.activeSurfaceId } : null;
+		}
+
+		selectPdfPage( context ) {
+			this._pdfReady();
+			const admitted = this._pdfAdmit( context );
+			let selectedId = admitted.surface.id;
+			if ( !admitted.stored ) {
+				const retained = this._snapshot.surfaces.find( surface => surface.kind === 'pdf' &&
+					sameSet( surface, this._selected( this._snapshot ) ) && surface.source.page === admitted.page );
+				if ( retained ) {
+					selectedId = retained.id;
+				} else {
+					for ( const [ id, temporary ] of this._pdf.temporary ) {
+						if ( temporary.source.page === admitted.page ) {
+							this._pdf.temporary.delete( id );
+							this._pdf.admissions.delete( id );
+						}
+					}
+					this._pdf.temporary.set( selectedId, admitted.surface );
+					this._pdf.admissions.set( selectedId, { revisionId: this._revisionId, surface: admitted.surface } );
+				}
+			}
+			this._pdf.activeSurfaceId = selectedId;
+			this._pdf.page = admitted.page;
+			return this.getEditorState();
+		}
+
+		_pdfNativeId( record ) {
+			const helper = typeof module !== 'undefined' && module.exports ?
+				require( './PageOwnedPdfWorkingSet.js' ) : window.Layers.Editor.PageOwnedPdfWorkingSet;
+			return helper.surfaceId( this._pageId, record.revisionId, record.surface.source.fileTitle,
+				record.surface.label, record.surface.source.page );
+		}
+
+		_pdfOriginShape( record, context ) {
+			if ( !record || comparable( Object.keys( record ).sort() ) !== comparable( [ 'revisionId', 'surface' ] ) ||
+				!Number.isInteger( record.revisionId ) || record.revisionId < 1 || record.revisionId >= this._revisionId ||
+				!record.surface || !isNewSurface( record.surface, record.surface.id ) || record.surface.kind !== 'pdf' ) {
+				return false;
+			}
+			const equivalent = surface => Object.assign( {}, surface, { id: context.surface.id, label: context.label } );
+			return comparable( equivalent( record.surface ) ) === comparable( context.surface );
+		}
+
+		_pdfAssociation( record, context ) {
+			if ( !this._pdfOriginShape( record, context ) ) {
+				return false;
+			}
+			return ( this._pdfNativeId( record ) === record.surface.id ?
+				this._pdfNativeId( { revisionId: this._revisionId, surface: context.surface } ) === context.surface.id :
+				record.surface.id === context.surface.id );
+		}
+
+		_pdfFixed( surface ) {
+			const fixed = this._pdfCopy( surface );
+			delete fixed.canvas;
+			delete fixed.layers;
+			delete fixed.label;
+			return fixed;
+		}
+
+		restorePdfDraft( input, preparedPages ) {
+			this._pdfReady();
+			const plan = this._pdfRestorePlan( input, preparedPages );
+			if ( plan.records.length ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			this._snapshot = plan.snapshot;
+			this._pdf.temporary = plan.temporary;
+			this._pdf.admissions = plan.admissions;
+			return this.getEditorState();
+		}
+
+		_pdfRestorePlan( input, preparedPages ) {
+			const draft = this._pdfCopy( input );
+			preparedPages = this._pdfCopy( preparedPages );
+			const expected = this.getDraft();
+			const draftPdf = Object.assign( {}, draft && draft.pdf, { activePage: expected.pdf.activePage } );
+			const expectedPdf = Object.assign( {}, expected.pdf );
+			delete draftPdf.admissions;
+			delete expectedPdf.admissions;
+			if ( !draft || !draft.pdf || draft.owner !== expected.owner ||
+				draft.surfaceId !== expected.surfaceId || draft.baseRevisionId !== expected.baseRevisionId ||
+				!Number.isInteger( draft.pdf.activePage ) || draft.pdf.activePage < 1 ||
+				draft.pdf.activePage > this._pdf.pageCount || !Array.isArray( preparedPages ) ||
+				comparable( draftPdf ) !== comparable( expectedPdf ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const next = draft.snapshot;
+			this._adapter.toEditorState( next, this._surfaceId );
+			const base = JSON.parse( this._savedJson );
+			const root = snapshot => {
+				const result = Object.assign( {}, snapshot );
+				delete result.surfaces;
+				return result;
+			};
+			if ( comparable( root( next ) ) !== comparable( root( base ) ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const anchor = this._selected( base );
+			const group = this._pdfGroup( base, anchor, this._pdf.pageCount );
+			const ids = new Set( group.map( surface => surface.id ) );
+			const nextById = new Map( next.surfaces.map( surface => [ surface.id, surface ] ) );
+			for ( const member of base.surfaces ) {
+				const local = nextById.get( member.id );
+				if ( !local || comparable( ids.has( member.id ) ? this._pdfFixed( local ) : local ) !==
+					comparable( ids.has( member.id ) ? this._pdfFixed( member ) : member ) ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+			}
+			const temporary = new Map( this._pdf.temporary );
+			const admissions = new Map( this._pdf.admissions );
+			const provenance = draft.pdf.admissions === undefined ? [] : draft.pdf.admissions;
+			if ( !Array.isArray( provenance ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const recordById = new Map();
+			for ( const record of provenance ) {
+				if ( !record || !record.surface || recordById.has( record.surface.id ) ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+				recordById.set( record.surface.id, record );
+			}
+			const admittedById = new Map();
+			const pages = new Set();
+			const preparedIds = new Set();
+			for ( const inputPage of preparedPages ) {
+				const admitted = this._pdfAdmit( inputPage );
+				if ( pages.has( admitted.page ) || preparedIds.has( admitted.surface.id ) ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+				pages.add( admitted.page );
+				preparedIds.add( admitted.surface.id );
+				admittedById.set( admitted.page, admitted );
+			}
+			const baseIds = new Set( base.surfaces.map( surface => surface.id ) );
+			for ( const member of next.surfaces.filter( surface => !baseIds.has( surface.id ) ) ) {
+				const admitted = member.source && admittedById.get( member.source.page );
+				const record = recordById.get( member.id );
+				const blank = record ? record.surface : admitted && admitted.surface;
+				if ( !admitted || admitted.stored || !sameSet( member, this._selected( next ) ) ||
+					member.label !== this._selected( next ).label || ( record ?
+						!this._pdfOriginShape( record, admitted ) ||
+							this._pdfNativeId( { revisionId: this._revisionId, surface: admitted.surface } ) !== admitted.surface.id :
+						member.id !== admitted.surface.id ) || comparable( this._pdfFixed( member ) ) !==
+					comparable( this._pdfFixed( blank ) ) ||
+					comparable( { canvas: member.canvas, layers: member.layers } ) ===
+					comparable( { canvas: blank.canvas, layers: blank.layers } ) ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+				temporary.set( member.id, blank );
+				admissions.set( member.id, record || { revisionId: this._revisionId, surface: blank } );
+				recordById.delete( member.id );
+			}
+			if ( recordById.size ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const localAnchor = this._selected( next );
+			const restored = this._pdfGroup( next, localAnchor, this._pdf.pageCount );
+			const restoredIds = new Set( restored.map( surface => surface.id ) );
+			if ( restored.some( member => baseIds.has( member.id ) && !ids.has( member.id ) ) ||
+				normalizeName( localAnchor.label ) !== localAnchor.label || next.surfaces.some( surface =>
+				!restoredIds.has( surface.id ) && sameSet( surface, localAnchor ) ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			return { snapshot: next, temporary, admissions, records: provenance };
+		}
+
+		async restorePdfDraftWithHistory( input, preparedPages ) {
+			this._pdfReady();
+			const plan = this._pdfRestorePlan( input, preparedPages );
+			const operation = { revisionId: this._revisionId, base: this._savedJson,
+				snapshot: this._snapshot, pdf: this._pdf, selection: comparable( this.getPdfStatus() ) };
+			this._pdfRecovery = operation;
+			try {
+				const histories = new Map();
+				for ( const record of plan.records ) {
+					if ( !histories.has( record.revisionId ) ) {
+						const bundle = await this._reader.read( { owner: this._owner, revisionId: record.revisionId } );
+						if ( !bundle || bundle.revisionId !== record.revisionId ) {
+							throw failure( 'layers-invalid-read-response' );
+						}
+						const historical = this._pdfCopy( bundle.snapshot );
+						this._adapter.toEditorState( historical, this._surfaceId );
+						histories.set( record.revisionId, historical );
+					}
+					this._pdfHistoricalOrigin( record, histories.get( record.revisionId ) );
+				}
+				const current = await this._reader.read( { owner: this._owner, revisionId: operation.revisionId } );
+				if ( !current || current.revisionId !== operation.revisionId ||
+					comparable( this._pdfCopy( current.snapshot ) ) !== comparable( JSON.parse( operation.base ) ) ) {
+					throw failure( 'layers-invalid-read-response' );
+				}
+				this._requireLoaded();
+				if ( this._pdfRecovery !== operation || this._phase !== 'ready' || this._reconciling ||
+					this._revisionId !== operation.revisionId || this._savedJson !== operation.base ||
+					this._snapshot !== operation.snapshot || this._pdf !== operation.pdf ||
+					comparable( this.getPdfStatus() ) !== operation.selection ) {
+					throw failure( 'layers-editor-session-unavailable' );
+				}
+				this._snapshot = plan.snapshot;
+				this._pdf.temporary = plan.temporary;
+				this._pdf.admissions = plan.admissions;
+				return this.getEditorState();
+			} finally {
+				if ( this._pdfRecovery === operation ) {
+					this._pdfRecovery = null;
+				}
+			}
+		}
+
+		_pdfHistoricalOrigin( record, snapshot ) {
+			const anchor = this._selected( snapshot );
+			if ( !anchor || anchor.kind !== 'pdf' || !anchor.source || anchor.source.page !== this._pdf.initialPage ||
+				comparable( this._pdfPin( anchor ) ) !== comparable( this._pdf.original ) ||
+				anchor.label !== record.surface.label || this._pdfGroup( snapshot, anchor, this._pdf.pageCount )
+					.some( member => member.source.page === record.surface.source.page ) ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const actual = { revisionId: record.revisionId, surface: Object.assign( {}, record.surface, {
+				label: anchor.label, source: Object.assign( {}, anchor.source, { page: record.surface.source.page } )
+			} ) };
+			if ( this._pdfNativeId( actual ) !== record.surface.id ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+		}
+
+		_pdfReconcile( input, revisionId ) {
+			const server = this._pdfCopy( input );
+			this._adapter.toEditorState( server, this._surfaceId );
+			const base = JSON.parse( this._savedJson );
+			const baseAnchor = this._selected( base );
+			const localAnchor = this._selected( this._snapshot );
+			const remoteAnchor = this._selected( server );
+			if ( remoteAnchor.kind !== 'pdf' || remoteAnchor.source.page !== this._pdf.initialPage ||
+				comparable( this._pdfPin( remoteAnchor ) ) !== comparable( this._pdf.original ) ) {
+				throw failure( 'layers-editor-reconciliation-required' );
+			}
+			const baseGroup = this._pdfGroup( base, baseAnchor, this._pdf.pageCount );
+			const localGroup = this._pdfGroup( this._snapshot, localAnchor, this._pdf.pageCount );
+			const remoteGroup = this._pdfGroup( server, remoteAnchor, this._pdf.pageCount );
+			const baseById = new Map( baseGroup.map( member => [ member.id, member ] ) );
+			const localById = new Map( localGroup.map( member => [ member.id, member ] ) );
+			const remoteById = new Map( server.surfaces.map( member => [ member.id, member ] ) );
+			const merged = this._pdfCopy( server );
+			for ( const member of baseGroup ) {
+				const local = localById.get( member.id );
+				const remote = remoteById.get( member.id );
+				const dirty = comparable( member ) !== comparable( local );
+				if ( !local || ( !remote && ( dirty || member.id === this._pdf.activeSurfaceId ) ) ||
+					( remote && ( remote.kind !== 'pdf' || remote.source.page !== member.source.page ||
+						comparable( this._pdfPin( remote ) ) !== comparable( this._pdf.original ) ||
+						remote.label !== remoteAnchor.label ) ) ||
+					( dirty && comparable( remote ) !== comparable( member ) && comparable( remote ) !== comparable( local ) ) ) {
+					throw failure( 'layers-editor-reconciliation-required' );
+				}
+				if ( dirty ) {
+					merged.surfaces[ merged.surfaces.findIndex( surface => surface.id === member.id ) ] = this._pdfCopy( local );
+				}
+			}
+			for ( const local of localGroup.filter( member => !baseById.has( member.id ) ) ) {
+				const remote = remoteById.get( local.id );
+				if ( remote && comparable( remote ) !== comparable( local ) ) {
+					throw failure( 'layers-editor-reconciliation-required' );
+				}
+				if ( !remote ) {
+					merged.surfaces.push( this._pdfCopy( local ) );
+				}
+			}
+			const label = localAnchor.label !== baseAnchor.label ? localAnchor.label : remoteAnchor.label;
+			const ids = new Set( [ ...baseGroup, ...localGroup, ...remoteGroup ].map( member => member.id ) );
+			if ( server.surfaces.some( member => !ids.has( member.id ) && sameScope( baseAnchor, member ) &&
+				nameKey( labelOf( member ) ) === nameKey( label ) ) ) {
+				throw failure( 'layers-editor-reconciliation-required' );
+			}
+			merged.surfaces.forEach( member => {
+				if ( ids.has( member.id ) ) {
+					member.label = label;
+				}
+			} );
+			this._adapter.toEditorState( merged, this._surfaceId );
+			this._pdfGroup( merged, this._selected( merged ), this._pdf.pageCount );
+			const active = merged.surfaces.find( member => member.id === this._pdf.activeSurfaceId );
+			if ( !active && remoteGroup.some( member => member.source.page === this._pdf.page ) ) {
+				throw failure( 'layers-editor-reconciliation-required' );
+			}
+			this._snapshot = merged;
+			this._savedJson = JSON.stringify( server );
+			this._revisionId = revisionId;
+			this._phase = 'ready';
+			return this.getStatus();
 		}
 
 		/** @return {Object} UI state; conflict/uncertain requires explicit reconciliation */
@@ -263,7 +711,7 @@
 			if ( this._readOnly ) {
 				throw failure( 'layers-editor-read-only' );
 			}
-			if ( this._phase !== 'ready' || this._reconciling ) {
+			if ( this._phase !== 'ready' || this._reconciling || this._pdfRecovery ) {
 				throw failure( 'layers-editor-session-unavailable' );
 			}
 			if ( typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) {
@@ -319,7 +767,7 @@
 		 */
 		async reconcile( revisionId ) {
 			this._requireLoaded();
-			if ( this._readOnly || this._reconciling ||
+			if ( this._readOnly || this._reconciling || this._pdfRecovery ||
 				![ 'ready', 'conflict', 'uncertain' ].includes( this._phase ) ||
 				!Number.isInteger( revisionId ) || revisionId < this._revisionId || revisionId > 2147483647 ) {
 				throw failure( 'layers-editor-session-unavailable' );
@@ -330,6 +778,9 @@
 				this._requireLoaded();
 				if ( bundle.revisionId !== revisionId ) {
 					throw failure( 'layers-invalid-read-response' );
+				}
+				if ( this._pdf ) {
+					return this._pdfReconcile( bundle.snapshot, revisionId );
 				}
 				if ( !bundle.snapshot.surfaces.some( ( surface ) => surface.id === this._surfaceId ) ) {
 					return this._reconcileUnsavedNew( bundle.snapshot, revisionId );
@@ -447,6 +898,7 @@
 		/** Stop late results from changing this session. Export any draft before disposal. */
 		dispose() {
 			this._phase = 'disposed';
+			this._pdfRecovery = null;
 			this._snapshot = null;
 			this._savedJson = null;
 		}
