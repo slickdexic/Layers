@@ -22,6 +22,8 @@ class ApiLayersRead extends ApiBase {
 	private $boundReader;
 	/** @var callable|null Authorized full-size viewer reader */
 	private $viewerReader;
+	/** @var callable|null Exact PDF editor page preparation */
+	private $pdfEditorReader;
 	private int $bindingMaxAge;
 
 	/**
@@ -33,18 +35,24 @@ class ApiLayersRead extends ApiBase {
 	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
 	 * @param int $bindingMaxAge Seconds anonymous binding reads of a current revision may be cached; 0 never
 	 * @param callable|null $viewerReader Exact owner/revision/anchor viewer composition
+	 * @param callable|null $pdfEditorReader Exact owner/revision/anchor/target editor preparation
 	 */
 	public function __construct( ApiMain $main, string $name, PageReadService $reader,
 		TitleFactory $titles, ?PageOwnedScope $scope = null, ?callable $boundReader = null,
-		int $bindingMaxAge = 0, ?callable $viewerReader = null
+		int $bindingMaxAge = 0, ?callable $viewerReader = null, ?callable $pdfEditorReader = null
 	) {
 		parent::__construct( $main, $name );
+		if ( $main->getRequest()->getVal( 'editorpage' ) !== null ) {
+			$main->setCacheMode( 'private' );
+			$main->setCacheMaxAge( 0 );
+		}
 		$this->reader = $reader;
 		$this->titles = $titles;
 		$this->scope = $scope;
 		$this->boundReader = $boundReader;
 		$this->bindingMaxAge = max( 0, $bindingMaxAge );
 		$this->viewerReader = $viewerReader;
+		$this->pdfEditorReader = $pdfEditorReader;
 	}
 
 	public function execute() {
@@ -59,6 +67,17 @@ class ApiLayersRead extends ApiBase {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}
 		try {
+			if ( $params['editorpage'] !== null ) {
+				if ( !$this->pdfEditorReader || count( $params['binding'] ?? [] ) !== 1 ||
+					$params['viewer'] || $params['controls']
+				) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				$editor = ( $this->pdfEditorReader )( $owner, $params['revid'], $params['binding'][0],
+					$params['editorpage'], $this->getAuthority() );
+				$this->getResult()->addValue( null, $this->getModuleName(), [ 'editor' => $editor ] );
+				return;
+			}
 			if ( $params['viewer'] ) {
 				if ( !$this->viewerReader || count( $params['binding'] ?? [] ) !== 1 ) {
 					throw new \DomainException( 'layers-revision-unavailable' );
@@ -109,7 +128,9 @@ class ApiLayersRead extends ApiBase {
 			'binding' => [ self::PARAM_TYPE => 'string', self::PARAM_ISMULTI => true,
 				self::PARAM_ISMULTI_LIMIT1 => 50, self::PARAM_ISMULTI_LIMIT2 => 50, self::PARAM_MAX_BYTES => 128 ],
 			'viewer' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
-			'controls' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ]
+			'controls' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
+			'editorpage' => [ self::PARAM_TYPE => 'integer', self::PARAM_MIN => 1,
+				self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ]
 		];
 	}
 }

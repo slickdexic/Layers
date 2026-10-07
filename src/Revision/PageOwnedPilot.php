@@ -84,7 +84,30 @@ class PageOwnedPilot {
 		return new ApiLayersRead( $main, $name, $this->reader, $this->services->getTitleFactory(),
 			$this->scope, [ $this, 'prepareBoundViewers' ],
 			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0,
-			[ $this, 'prepareFullSizeViewer' ] );
+			[ $this, 'prepareFullSizeViewer' ], [ $this, 'preparePdfEditorPage' ] );
+	}
+
+	/**
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param string $binding
+	 * @param int $targetPage
+	 * @param Authority $authority
+	 * @return array
+	 */
+	public function preparePdfEditorPage( \MediaWiki\Title\Title $owner, int $revisionId,
+		string $binding, int $targetPage, Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) ) {
+			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+		require_once __DIR__ . '/PagePdfEditorReadService.php';
+		$revisions = $this->services->getRevisionLookup();
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		return ( new PagePdfEditorReadService( new PageHistoryAccess( $revisions ), $sources,
+			new SourceRenditions( $this->services->getUrlUtils() ), $this->newDrawings, $revisions ) )
+			->read( $owner, $revisionId, $binding, $targetPage, $authority );
 	}
 
 	/**
