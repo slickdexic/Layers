@@ -108,13 +108,16 @@ class SourceRenditionsTest extends RealAssetTestCase {
 		$this->setService( 'RepoGroup', $repos );
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $page->getTitle()->getPrefixedDBkey() ] );
 		$expected = $this->reader()->read( $page->getTitle(), $revisionId, $actor )['sourceRenditions'];
+		$pageId = $page->getTitle()->getArticleID( IDBAccessObject::READ_LATEST );
 		foreach ( [ 'image', 'pdf' ] as $surfaceId ) {
 			$view = $pilot->prepareViewer( $page->getTitle()->getPrefixedText(), $revisionId, $surfaceId, $actor );
-			$this->assertSame( [ 'owner', 'revisionId', 'surface', 'source' ], array_keys( $view ) );
+			$this->assertSame( [ 'owner', 'pageId', 'revisionId', 'surface', 'source' ], array_keys( $view ) );
+			$this->assertSame( $pageId, $view['pageId'] );
 			$this->assertSame( $expected[$surfaceId], $view['source'] );
 		}
 		$slide = $pilot->prepareViewer( $page->getTitle()->getPrefixedText(), $revisionId, 'presentation', $actor );
 		$this->assertArrayNotHasKey( 'source', $slide );
+		$this->assertSame( $pageId, $slide['pageId'] );
 		// Page history links to every drawing kind the viewer can show.
 		$this->assertSame( [ 'presentation', 'image', 'pdf' ], array_column(
 			$pilot->getHistorySurfaces( $page->getTitle(), $revisionId, $actor ), 'id' ) );
