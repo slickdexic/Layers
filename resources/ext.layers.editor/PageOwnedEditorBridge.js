@@ -29,6 +29,7 @@
 			this.disposed = false;
 			this.loaded = false;
 			this.saving = false;
+			this.reconciling = false;
 			this.isSlide = true;
 		}
 
@@ -52,6 +53,9 @@
 			this._applyState( state );
 			this.editor.stateManager.set( 'isDirty', false );
 			this.loaded = true;
+			if ( this.pdfCoordinator ) {
+				this.pdfCoordinator.initialize();
+			}
 			return state;
 		}
 
@@ -64,6 +68,12 @@
 			if ( !this.loaded || this.session.getStatus().readOnly || this.session.getStatus().phase !== 'ready' ) {
 				throw this._error( 'layers-editor-session-unavailable' );
 			}
+			if ( candidate.pdfDraft ) {
+				if ( !this.pdfCoordinator ) {
+					throw this._error( 'layers-editor-session-unavailable' );
+				}
+				return this.pdfCoordinator.restoreDraft( candidate );
+			}
 			this._applyState( candidate.editorState );
 			if ( typeof candidate.label === 'string' && candidate.label !== this.session.getLabel() ) {
 				this.session.rename( candidate.label );
@@ -75,7 +85,7 @@
 		}
 
 		/** @param {Object} state Canvas/layers pair @private */
-		_applyState( state ) {
+		_applyState( state, resetHistory = true ) {
 			const store = this.editor.stateManager;
 			store.set( 'isSlide', this.isSlide );
 			for ( const [ field, key ] of Object.entries( this._fields() ) ) {
@@ -91,7 +101,7 @@
 			if ( this.editor.layerPanel ) {
 				this.editor.layerPanel.updateLayers( state.layers );
 			}
-			if ( this.editor.historyManager ) {
+			if ( resetHistory && this.editor.historyManager ) {
 				this.editor.historyManager.saveInitialState();
 			}
 		}
@@ -149,6 +159,9 @@
 		 */
 		async save( summary = '', beforePublish ) {
 			this._requireActive();
+			if ( this.pdfCoordinator ) {
+				this.pdfCoordinator.invalidate();
+			}
 			if ( this.saving || this.session.getStatus().phase !== 'ready' ) {
 				throw this._error( 'layers-editor-session-unavailable' );
 			}
@@ -168,6 +181,9 @@
 						editorStateValid = false;
 					}
 					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
+					if ( editorStateValid && this.pdfCoordinator ) {
+						this.pdfCoordinator.confirmBase();
+					}
 				}
 			}
 			this._requireActive();
@@ -183,11 +199,16 @@
 		 * @return {Promise<Object>} Reconciled status; newer live edits remain dirty
 		 */
 		async reconcile( revisionId ) {
+			if ( this.pdfCoordinator ) {
+				this.pdfCoordinator.invalidate();
+			}
 			this.capture();
+			this.reconciling = true;
 			let editorStateValid = true;
 			try {
 				await this.session.reconcile( revisionId );
 			} finally {
+				this.reconciling = false;
 				if ( !this.disposed ) {
 					try {
 						this.capture();
@@ -195,6 +216,9 @@
 						editorStateValid = false;
 					}
 					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
+					if ( editorStateValid && this.pdfCoordinator ) {
+						this.pdfCoordinator.confirmBase();
+					}
 				}
 			}
 			this._requireActive();
@@ -203,6 +227,9 @@
 
 		/** Call only after the owning UI has preserved any draft it needs. */
 		dispose() {
+			if ( this.pdfCoordinator ) {
+				this.pdfCoordinator.dispose();
+			}
 			this.disposed = true;
 			this.loaded = false;
 			this.session.dispose();

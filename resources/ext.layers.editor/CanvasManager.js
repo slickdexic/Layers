@@ -565,6 +565,77 @@ class CanvasManager {
 		this.loadBackgroundImage();
 	}
 
+	stageExactBackground ( url ) {
+		const Loader = getClass( 'Utils.ImageLoader', 'ImageLoader' );
+		if ( this.isDestroyed || !Loader || typeof url !== 'string' || !url ) {
+			throw new Error( 'layers-page-load-failed' );
+		}
+		this.exactStages = this.exactStages || new Set();
+		let rejectStage, timer, loader, settled = false;
+		const stage = { ready: false, image: null, info: null, url };
+		stage.dispose = () => {
+			clearTimeout( timer );
+			this.exactStages.delete( stage );
+			if ( loader ) {
+				loader.destroy();
+			}
+			if ( !settled ) {
+				settled = true;
+				rejectStage( new Error( 'layers-page-load-failed' ) );
+			}
+		};
+		stage.promise = new Promise( ( resolve, reject ) => {
+			rejectStage = reject;
+			const timeout = window.Layers && window.Layers.Constants && window.Layers.Constants.TIMING ?
+				window.Layers.Constants.TIMING.IMAGE_LOAD_TIMEOUT : 5000;
+			timer = setTimeout( () => stage.dispose(), timeout );
+			loader = new Loader( { filename: this.editor.filename, backgroundImageUrl: url, exact: true,
+				onError: () => stage.dispose(),
+				onLoad: ( image, info ) => {
+					Promise.resolve().then( () => typeof image.decode === 'function' ? image.decode() : null )
+						.then( () => {
+							if ( settled || this.isDestroyed || !Number.isFinite( info.width ) || info.width <= 0 ||
+								!Number.isFinite( info.height ) || info.height <= 0 ) {
+								stage.dispose();
+								return;
+							}
+							settled = true;
+							stage.ready = true;
+							stage.image = image;
+							stage.info = info;
+							clearTimeout( timer );
+							resolve( stage );
+						} ).catch( () => stage.dispose() );
+				} } );
+			stage.detach = () => { loader.image = null; };
+		} );
+		this.exactStages.add( stage );
+		loader.load();
+		return stage;
+	}
+
+	preflightStagedBackground ( stage ) {
+		if ( this.isDestroyed || !stage || !stage.ready || !stage.image || !stage.info ||
+			!Number.isFinite( stage.info.width ) || stage.info.width <= 0 ||
+			!Number.isFinite( stage.info.height ) || stage.info.height <= 0 ||
+			typeof stage.detach !== 'function' || typeof stage.dispose !== 'function' ||
+			!this.exactStages || !this.exactStages.has( stage ) ) {
+			throw new Error( 'layers-page-load-failed' );
+		}
+	}
+
+	commitStagedBackground ( stage ) {
+		this.preflightStagedBackground( stage );
+		if ( this.imageLoader ) {
+			this.imageLoader.destroy();
+			this.imageLoader = null;
+		}
+		stage.detach();
+		this.config.backgroundImageUrl = stage.url;
+		this.handleImageLoaded( stage.image, stage.info );
+		stage.dispose();
+	}
+
 	/**
 	 * Load background image using ImageLoader module
 	 * Delegates to ImageLoader for URL detection and loading with fallbacks
@@ -2050,6 +2121,9 @@ class CanvasManager {
 	destroy () {
 		// Set destroyed flag first to prevent async callbacks from running
 		this.isDestroyed = true;
+		if ( this.exactStages ) {
+			Array.from( this.exactStages ).forEach( stage => stage.dispose() );
+		}
 
 		// Cancel any pending animation frame to prevent memory leaks
 		if ( this.animationFrameId ) {

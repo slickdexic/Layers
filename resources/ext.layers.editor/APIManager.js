@@ -54,6 +54,13 @@
 				adapter: new classes.PageOwnedSnapshotAdapter()
 			} );
 			this.pageOwnedBridge = new classes.PageOwnedEditorBridge( editor, session );
+			if ( editor.config.pageOwned.pdfContext ) {
+				if ( !classes.PageOwnedPdfEditorCoordinator || !classes.PageOwnedPdfEditorReadClient ) {
+					throw new Error( 'layers-editor-session-unavailable' );
+				}
+				this.pageOwnedBridge.pdfCoordinator = new classes.PageOwnedPdfEditorCoordinator(
+					this.pageOwnedBridge, new classes.PageOwnedPdfEditorReadClient( this.api ) );
+			}
 		}
 
 		this.maxRetries = 3;

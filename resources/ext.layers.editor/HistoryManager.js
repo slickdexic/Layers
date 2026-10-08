@@ -89,6 +89,49 @@
 			return this.canvasManager || null;
 		}
 
+		copyTimeline( value ) {
+			const Adapter = typeof module !== 'undefined' && module.exports ?
+				require( './PageOwnedSnapshotAdapter.js' ) : window.Layers.Editor.PageOwnedSnapshotAdapter;
+			const carrier = { id: 'timeline', kind: 'slide', canvas: {}, layers: [] };
+			const timeline = new Adapter().withEditorState( { schemaVersion: 1, surfaces: [ carrier ],
+				timeline: value }, carrier.id, { canvas: {}, layers: [] } ).timeline;
+			if ( !timeline || !Array.isArray( timeline.history ) ||
+				!Number.isInteger( timeline.maxHistorySteps ) || timeline.maxHistorySteps < 1 ||
+				!Number.isInteger( timeline.historyIndex ) || timeline.historyIndex < -1 ||
+				timeline.historyIndex >= timeline.history.length ||
+				( timeline.history.length > 0 && timeline.historyIndex < 0 ) ||
+				!Number.isInteger( timeline.lastSaveHistoryIndex ) || timeline.lastSaveHistoryIndex < -1 ||
+				timeline.lastSaveHistoryIndex >= timeline.history.length ||
+				timeline.history.some( state => !state || !Array.isArray( state.layers ) ) ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			return timeline;
+		}
+
+		captureTimeline() {
+			if ( this.isDestroyed || this.batchMode ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			return this.copyTimeline( { history: this.history, historyIndex: this.historyIndex,
+				maxHistorySteps: this.maxHistorySteps, lastSaveHistoryIndex: this.lastSaveHistoryIndex } );
+		}
+
+		preflightTimeline( input ) {
+			if ( this.isDestroyed || this.batchMode ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
+			return this.copyTimeline( input );
+		}
+
+		restoreTimeline( input ) {
+			const timeline = this.preflightTimeline( input );
+			this.history = timeline.history;
+			this.historyIndex = timeline.historyIndex;
+			this.maxHistorySteps = timeline.maxHistorySteps;
+			this.lastSaveHistoryIndex = timeline.lastSaveHistoryIndex;
+			this.updateUndoRedoButtons();
+		}
+
 		/**
 		 * Save current state to history
 		 *
@@ -334,6 +377,10 @@
 			// Mark editor as dirty (when available)
 			if ( editor && typeof editor.markDirty === 'function' ) {
 				editor.markDirty();
+			}
+			const bridge = editor && editor.apiManager && editor.apiManager.pageOwnedBridge;
+			if ( bridge && bridge.pdfCoordinator ) {
+				bridge.pdfCoordinator.syncDirty();
 			}
 		}
 

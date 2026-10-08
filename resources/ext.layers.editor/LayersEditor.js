@@ -1585,6 +1585,9 @@ class LayersEditor {
 		if ( page === this.page ) {
 			return Promise.resolve( false );
 		}
+		if ( this.apiManager && this.apiManager.pageOwnedBridge && this.apiManager.pageOwnedBridge.pdfCoordinator ) {
+			return this.apiManager.pageOwnedBridge.pdfCoordinator.turn( page );
+		}
 
 		return this.performPageNavigation( page ).then( () => true );
 	}
@@ -1699,7 +1702,16 @@ class LayersEditor {
 	 * @return {Promise} Resolves when the new page is displayed
 	 * @private
 	 */
+	notifyPdfPageNavigationFailure ( page ) {
+		this.notifyUser( this.getMessage( 'layers-page-load-failed',
+			'Could not open page $1. You are still on page $2, and your unsaved work is safe.' )
+			.replace( '$1', String( page ) ).replace( '$2', String( this.page ) ), 'error' );
+	}
+
 	performPageNavigation ( page ) {
+		if ( this.apiManager && this.apiManager.pageOwnedBridge && this.apiManager.pageOwnedBridge.pdfCoordinator ) {
+			return this.apiManager.pageOwnedBridge.pdfCoordinator.turn( page );
+		}
 		const generation = ( this.pageNavigationGeneration || 0 ) + 1;
 		this.pageNavigationGeneration = generation;
 		const isCurrent = () => !this.isDestroyed && this.pageNavigationGeneration === generation;

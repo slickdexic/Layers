@@ -90,10 +90,15 @@
 			const scope = this._scope();
 			let json;
 			try {
+				const pdf = typeof this.bridge.session.getPdfStatus === 'function' && this.bridge.session.getPdfStatus();
+				if ( pdf ) {
+					this.bridge.capture();
+				}
 				json = JSON.stringify( {
 					version: 1, scope,
 					phase: this.bridge.session.getStatus().phase,
 					label: this.bridge.session.getLabel(),
+					...( pdf ? { pdfDraft: this.bridge.session.getDraft() } : {} ),
 					editorState: this._copyState( this.bridge.getLiveState() )
 				} );
 			} catch ( error ) {
@@ -136,6 +141,20 @@
 				// Drafts written before drawings could be renamed have no name.
 				if ( typeof envelope.label === 'string' ) {
 					candidate.label = envelope.label;
+				}
+				if ( envelope.pdfDraft !== undefined ) {
+					if ( typeof this.bridge.session.getPdfStatus !== 'function' || !this.bridge.session.getPdfStatus() ) {
+						throw this._error();
+					}
+					const carrier = { id: 'pdf-draft', kind: 'slide', canvas: {}, layers: [] };
+					candidate.pdfDraft = this.adapter.withEditorState( { schemaVersion: 1, surfaces: [ carrier ],
+						pdfDraft: envelope.pdfDraft }, carrier.id, { canvas: {}, layers: [] } ).pdfDraft;
+					if ( !candidate.pdfDraft || candidate.pdfDraft.owner !== scope.owner ||
+						candidate.pdfDraft.baseRevisionId !== scope.baseRevisionId ||
+						candidate.pdfDraft.surfaceId !== scope.surfaceId || !candidate.pdfDraft.pdf ||
+						candidate.pdfDraft.pdf.version !== 1 ) {
+						throw this._error();
+					}
 				}
 				return candidate;
 			} catch ( error ) {

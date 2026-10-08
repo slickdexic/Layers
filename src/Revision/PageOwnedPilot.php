@@ -162,10 +162,46 @@ class PageOwnedPilot {
 			if ( $surface['kind'] !== 'slide' && !isset( $bundle['sourceRenditions'][$surfaceId] ) ) {
 				break;
 			}
-			return $this->editorInit( $owner, $revisionId, $current->getPageId(), $surface,
+			$init = $this->editorInit( $owner, $revisionId, $current->getPageId(), $surface,
 				$bundle['sourceRenditions'][$surfaceId] ?? null, $authority );
+			if ( $surface['kind'] === 'pdf' && $this->isWholePdfGroup( $bundle['snapshot'], $surface ) ) {
+				try {
+					$context = $this->preparePdfEditorPage( $owner, $revisionId,
+						'v1:' . $current->getPageId() . ':' . $surfaceId, $surface['source']['page'], $authority );
+				} catch ( \Throwable $error ) {
+					throw new \DomainException( 'layers-editor-unavailable', 0, $error );
+				}
+				$init['pageOwned']['pdfContext'] = $context;
+				$init['page'] = $context['page'];
+				$init['pageCount'] = $context['pageCount'];
+				$init['imageUrl'] = $context['rendition']['url'];
+			}
+			return $init;
 		}
 		throw new \DomainException( 'layers-editor-unavailable' );
+	}
+
+	/** @param array $snapshot @param array $selected @return bool */
+	private function isWholePdfGroup( array $snapshot, array $selected ): bool {
+		$document = json_decode( JsonSnapshotCodec::encode( $snapshot ) );
+		$anchor = json_decode( JsonSnapshotCodec::encode( $selected ) );
+		$key = LayerSetIdentity::key( $anchor );
+		$pages = [];
+		foreach ( $document->surfaces as $member ) {
+			if ( LayerSetIdentity::key( $member ) !== $key ) {
+				continue;
+			}
+			$page = $member->source->page ?? null;
+			if ( $member->kind !== 'pdf' || !is_int( $page ) || $page < 1 || isset( $pages[$page] ) ||
+				$member->label !== $anchor->label || $member->source->repository !== $anchor->source->repository ||
+				$member->source->timestamp !== $anchor->source->timestamp ||
+				$member->source->sha1 !== $anchor->source->sha1
+			) {
+				return false;
+			}
+			$pages[$page] = true;
+		}
+		return (bool)$pages;
 	}
 
 	/**

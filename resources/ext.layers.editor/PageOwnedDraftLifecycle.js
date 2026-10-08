@@ -54,17 +54,30 @@
 			const candidate = this.controller.inspectRecovery();
 			if ( candidate && ( candidate.publicationBlocked ||
 				( typeof candidate.label === 'string' && candidate.label !== this.bridge.getName() ) ||
+				( candidate.pdfDraft && canonical( candidate.pdfDraft.snapshot ) !==
+					canonical( this.bridge.session.getDraft().snapshot ) ) ||
 				canonical( candidate.editorState ) !== canonical( this.bridge.getLiveState() ) ) ) {
+				const coordinator = this.bridge.pdfCoordinator;
+				const witness = coordinator ? coordinator.witness() : null;
+				const version = coordinator ? coordinator.version : null;
 				const recover = await this.ui.confirmRecovery( candidate );
 				if ( this.disposed ) {
 					return;
 				}
 				if ( recover ) {
-					await this.bridge.session.revalidate();
+					if ( coordinator && ( coordinator.version !== version || coordinator.witness() !== witness ) ) {
+						throw new Error( 'layers-editor-session-unavailable' );
+					}
+					if ( !candidate.pdfDraft ) {
+						await this.bridge.session.revalidate();
+					}
 					if ( this.disposed ) {
 						return;
 					}
-					this.bridge.restoreDraft( candidate );
+					await this.bridge.restoreDraft( candidate );
+					if ( this.disposed || this.finalized ) {
+						return;
+					}
 					if ( candidate.publicationBlocked ) {
 						this.ui.notifyBlocked();
 					}
@@ -123,6 +136,9 @@
 				return false;
 			}
 			this.finalized = true;
+			if ( this.bridge.pdfCoordinator && this.bridge.pdfCoordinator.recoveryOperation ) {
+				this.bridge.pdfCoordinator.invalidate();
+			}
 			this.ready = false;
 			clearTimeout( this.timer );
 			this.unsubscribers.forEach( ( unsubscribe ) => unsubscribe() );
@@ -204,6 +220,9 @@
 		dispose() {
 			this.flush();
 			this.disposed = true;
+			if ( this.bridge.pdfCoordinator && this.bridge.pdfCoordinator.recoveryOperation ) {
+				this.bridge.pdfCoordinator.invalidate();
+			}
 			clearTimeout( this.timer );
 			this.unsubscribers.forEach( ( unsubscribe ) => unsubscribe() );
 			window.removeEventListener( 'pagehide', this.onPageHide );

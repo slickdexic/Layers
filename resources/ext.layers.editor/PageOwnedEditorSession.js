@@ -5,6 +5,9 @@
 ( function () {
 	'use strict';
 
+	const preparedPdfDrafts = new WeakMap();
+	const pendingPdfDrafts = new WeakMap();
+
 	function failure( code ) {
 		const error = new Error( code );
 		error.code = code;
@@ -566,17 +569,36 @@
 			return { snapshot: next, temporary, admissions, records: provenance };
 		}
 
-		async restorePdfDraftWithHistory( input, preparedPages ) {
+		preparePdfDraftWithHistory( input, preparedPages ) {
+			try {
+				return this._preparePdfDraftWithHistory( input, preparedPages );
+			} catch ( error ) {
+				return Promise.reject( error );
+			}
+		}
+
+		_preparePdfDraftWithHistory( input, preparedPages ) {
 			this._pdfReady();
 			const plan = this._pdfRestorePlan( input, preparedPages );
+			const handle = Object.freeze( Object.create( null ) );
 			const operation = { revisionId: this._revisionId, base: this._savedJson,
-				snapshot: this._snapshot, pdf: this._pdf, selection: comparable( this.getPdfStatus() ) };
-			this._pdfRecovery = operation;
+				snapshot: this._snapshot, pdf: this._pdf, selection: comparable( this.getPdfStatus() ),
+				work: this._pdfRecoveryWitness(), session: this, plan, ready: false };
+			const activeId = this._pdf.activeSurfaceId;
+			const view = plan.snapshot.surfaces.some( surface => surface.id === activeId ) ? plan.snapshot :
+				Object.assign( {}, plan.snapshot, { surfaces: plan.snapshot.surfaces.concat( [
+					Object.assign( {}, plan.temporary.get( activeId ), { label: this._selected( plan.snapshot ).label } )
+				] ) } );
+			operation.state = this._adapter.toEditorState( view, activeId );
+			preparedPdfDrafts.set( handle, operation );
+			this._pdfRecovery = handle;
+			const preparation = ( async () => {
 			try {
 				const histories = new Map();
 				for ( const record of plan.records ) {
 					if ( !histories.has( record.revisionId ) ) {
 						const bundle = await this._reader.read( { owner: this._owner, revisionId: record.revisionId } );
+						this._checkPreparedPdfDraft( handle );
 						if ( !bundle || bundle.revisionId !== record.revisionId ) {
 							throw failure( 'layers-invalid-read-response' );
 						}
@@ -591,21 +613,70 @@
 					comparable( this._pdfCopy( current.snapshot ) ) !== comparable( JSON.parse( operation.base ) ) ) {
 					throw failure( 'layers-invalid-read-response' );
 				}
-				this._requireLoaded();
-				if ( this._pdfRecovery !== operation || this._phase !== 'ready' || this._reconciling ||
-					this._revisionId !== operation.revisionId || this._savedJson !== operation.base ||
-					this._snapshot !== operation.snapshot || this._pdf !== operation.pdf ||
-					comparable( this.getPdfStatus() ) !== operation.selection ) {
-					throw failure( 'layers-editor-session-unavailable' );
-				}
-				this._snapshot = plan.snapshot;
-				this._pdf.temporary = plan.temporary;
-				this._pdf.admissions = plan.admissions;
-				return this.getEditorState();
-			} finally {
-				if ( this._pdfRecovery === operation ) {
+				await Promise.resolve();
+				this._checkPreparedPdfDraft( handle );
+				operation.ready = true;
+				return handle;
+			} catch ( error ) {
+				this.cancelPreparedPdfDraft( handle );
+				throw error;
+			}
+			} )();
+			operation.preparation = preparation;
+			pendingPdfDrafts.set( preparation, handle );
+			return preparation;
+		}
+
+		_pdfRecoveryWitness() {
+			return comparable( { draft: this.getDraft(), selection: this.getPdfStatus(),
+				temporary: Array.from( this._pdf.temporary ), admissions: Array.from( this._pdf.admissions ) } );
+		}
+
+		_checkPreparedPdfDraft( handle ) {
+			this._requireLoaded();
+			const operation = preparedPdfDrafts.get( handle );
+			if ( !operation || operation.session !== this || this._pdfRecovery !== handle ||
+				this._phase !== 'ready' || this._reconciling || this._readOnly ||
+				this._revisionId !== operation.revisionId || this._savedJson !== operation.base ||
+				this._snapshot !== operation.snapshot || this._pdf !== operation.pdf ||
+				comparable( this.getPdfStatus() ) !== operation.selection || this._pdfRecoveryWitness() !== operation.work ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			return operation;
+		}
+
+		commitPreparedPdfDraft( handle ) {
+			const operation = this._checkPreparedPdfDraft( handle );
+			if ( !operation.ready ) {
+				throw failure( 'layers-editor-session-unavailable' );
+			}
+			const state = this._pdfCopy( operation.state );
+			this.cancelPreparedPdfDraft( handle );
+			this._snapshot = operation.plan.snapshot;
+			this._pdf.temporary = operation.plan.temporary;
+			this._pdf.admissions = operation.plan.admissions;
+			return state;
+		}
+
+		cancelPreparedPdfDraft( handle ) {
+			handle = pendingPdfDrafts.get( handle ) || handle;
+			const operation = preparedPdfDrafts.get( handle );
+			if ( operation && operation.session === this ) {
+				preparedPdfDrafts.delete( handle );
+				pendingPdfDrafts.delete( operation.preparation );
+				if ( this._pdfRecovery === handle ) {
 					this._pdfRecovery = null;
 				}
+			}
+		}
+
+		async restorePdfDraftWithHistory( input, preparedPages ) {
+			let handle;
+			try {
+				handle = await this.preparePdfDraftWithHistory( input, preparedPages );
+				return this.commitPreparedPdfDraft( handle );
+			} finally {
+				this.cancelPreparedPdfDraft( handle );
 			}
 		}
 
@@ -897,6 +968,7 @@
 
 		/** Stop late results from changing this session. Export any draft before disposal. */
 		dispose() {
+			this.cancelPreparedPdfDraft( this._pdfRecovery );
 			this._phase = 'disposed';
 			this._pdfRecovery = null;
 			this._snapshot = null;
