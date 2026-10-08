@@ -95,6 +95,65 @@
 			} );
 		}
 
+		captureDraftHistory() {
+			const session = this.bridge.session, draft = session.getDraft();
+			const anchor = draft.snapshot.surfaces.find( member => member.id === draft.surfaceId );
+			const timelines = new Map( this.timelines );
+			timelines.set( session.getPdfStatus().page, this.bridge.editor.historyManager.captureTimeline() );
+			const members = Array.from( timelines, ( [ page, timeline ] ) => {
+				const member = draft.snapshot.surfaces.find( surface => surface.kind === 'pdf' &&
+					surface.label === anchor.label && surface.source.fileTitle === anchor.source.fileTitle &&
+					surface.source.page === page ) || Array.from( session._pdf.temporary.values() )
+					.find( surface => surface.source.page === page );
+				if ( !member ) throw new Error( 'layers-invalid-page-owned-draft' );
+				return { page, surfaceId: member.id, source: member.source,
+					timeline: this.bridge.editor.historyManager.copyTimeline( timeline ) };
+			} );
+			return this.copyDraftHistory( { version: 1, owner: draft.owner,
+				baseRevisionId: draft.baseRevisionId, surfaceId: draft.surfaceId,
+				binding: draft.pdf.binding, pageCount: draft.pdf.pageCount, members }, draft );
+		}
+
+		copyDraftHistory( input, draft, contexts = null ) {
+			const history = this.bridge.session._pdfCopy( input );
+			const shape = ( value, keys ) => value && typeof value === 'object' && !Array.isArray( value ) &&
+				Object.keys( value ).length === keys.length && keys.every( key =>
+					Object.prototype.hasOwnProperty.call( value, key ) );
+			const fail = () => { throw new Error( 'layers-invalid-page-owned-draft' ); };
+			if ( !shape( history, [ 'version', 'owner', 'baseRevisionId', 'surfaceId', 'binding', 'pageCount', 'members' ] ) ||
+				!draft.pdf || history.version !== 1 || history.owner !== draft.owner ||
+				history.baseRevisionId !== draft.baseRevisionId || history.surfaceId !== draft.surfaceId ||
+				history.binding !== draft.pdf.binding || history.pageCount !== draft.pdf.pageCount ||
+				!Number.isInteger( history.pageCount ) || history.pageCount < 1 ||
+				!Array.isArray( history.members ) || !history.members.length ) fail();
+			const anchor = draft.snapshot.surfaces.find( member => member.id === draft.surfaceId );
+			if ( !anchor || anchor.kind !== 'pdf' ) fail();
+			const pages = new Set(), ids = new Set();
+			for ( const member of history.members ) {
+				if ( !shape( member, [ 'page', 'surfaceId', 'source', 'timeline' ] ) ||
+					!Number.isInteger( member.page ) || member.page < 1 || member.page > history.pageCount ||
+					pages.has( member.page ) || typeof member.surfaceId !== 'string' || !member.surfaceId ||
+					ids.has( member.surfaceId ) || canonical( member.source ) !==
+					canonical( { ...draft.pdf.original, page: member.page } ) ) fail();
+				const stored = draft.snapshot.surfaces.find( surface => surface.kind === 'pdf' &&
+					surface.label === anchor.label && surface.source.fileTitle === anchor.source.fileTitle &&
+					surface.source.page === member.page );
+				if ( stored && ( stored.id !== member.surfaceId || canonical( stored.source ) !== canonical( member.source ) ) ) fail();
+				if ( !stored && contexts ) {
+					const context = contexts.find( value => value.page === member.page );
+					if ( !context || context.surface.id !== member.surfaceId ||
+						canonical( context.surface.source ) !== canonical( member.source ) ) fail();
+				}
+				if ( !shape( member.timeline, [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ] ) ) fail();
+				member.timeline = this.bridge.editor.historyManager.copyTimeline( member.timeline );
+				if ( !member.timeline.history.length ) fail();
+				pages.add( member.page );
+				ids.add( member.surfaceId );
+			}
+			if ( !pages.has( draft.pdf.initialPage ) ) fail();
+			return history;
+		}
+
 		async turn( page ) {
 			let generation = this.generation;
 			let stage;
@@ -207,7 +266,12 @@
 			this.bridge.capture();
 			const witness = this.witness( true );
 			const anchor = candidate.pdfDraft.snapshot.surfaces.find( member => member.id === candidate.pdfDraft.surfaceId );
+			const history = candidate.pdfHistory === undefined ? null :
+				this.copyDraftHistory( candidate.pdfHistory, candidate.pdfDraft );
+			const preparedTimelines = new Map( history ? history.members.map( member => [ member.page,
+				editor.historyManager.preflightTimeline( member.timeline ) ] ) : [] );
 			const pages = new Set( [ pdf.initialPage ] );
+			if ( history ) history.members.forEach( member => pages.add( member.page ) );
 			for ( const member of candidate.pdfDraft.snapshot.surfaces ) {
 				if ( member.kind === 'pdf' && member.label === anchor.label &&
 					member.source.fileTitle === anchor.source.fileTitle ) {
@@ -245,10 +309,13 @@
 				if ( stage.info.width !== initial.rendition.width || stage.info.height !== initial.rendition.height ) {
 					throw new Error( 'layers-page-load-failed' );
 				}
-				const timeline = this.freshTimeline( { layers: anchor.layers }, false );
+				if ( history ) this.copyDraftHistory( history, candidate.pdfDraft, contexts );
+				const timeline = history ? preparedTimelines.get( pdf.initialPage ) :
+					this.freshTimeline( { layers: anchor.layers }, false );
 				operation.preparation = session.preparePdfDraftWithHistory( candidate.pdfDraft, contexts );
 				handle = await operation.preparation;
 				operation.handle = handle;
+				for ( const value of preparedTimelines.values() ) editor.historyManager.preflightTimeline( value );
 				editor.historyManager.preflightTimeline( timeline );
 				editor.canvasManager.preflightStagedBackground( stage );
 				if ( stage.url !== initial.rendition.url || stage.info.width !== initial.rendition.width ||
@@ -259,7 +326,7 @@
 				this.committing = true;
 				try {
 					const state = session.commitPreparedPdfDraft( handle );
-					this.timelines.clear();
+					this.timelines = preparedTimelines;
 					this.bridge._applyState( state, false );
 					editor.historyManager.restoreTimeline( timeline );
 					editor.canvasManager.commitStagedBackground( stage );

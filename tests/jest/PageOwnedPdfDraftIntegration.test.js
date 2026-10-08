@@ -38,7 +38,9 @@ describe( 'Complete PDF drafts through actual storage and lifecycle', () => {
 			expect( controls.confirmRecovery.mock.calls[ 0 ][ 0 ].editorState ).toStrictEqual( work.bridge.getLiveState() );
 			expect( work.session.getDraft().snapshot ).toStrictEqual( expected.snapshot );
 			expect( work.editor.page ).toBe( 2 );
-			expect( work.editor.historyManager.lastSaveHistoryIndex ).toBe( -1 );
+			expect( work.editor.historyManager.lastSaveHistoryIndex ).toBe(
+				controls.confirmRecovery.mock.calls[ 0 ][ 0 ].pdfHistory.members.find( member => member.page === 2 )
+					.timeline.lastSaveHistoryIndex );
 			expect( work.api.get.mock.calls.map( call => call[ 0 ] ).filter( params => params.editorpage )
 				.map( params => [ params.revid, params.binding, params.editorpage ] ) )
 				.toStrictEqual( [ [ oldId ? 13 : 12, 'v1:7:anchor', 2 ], [ oldId ? 13 : 12, 'v1:7:anchor', 1 ] ] );

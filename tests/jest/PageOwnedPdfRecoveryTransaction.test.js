@@ -295,7 +295,7 @@ describe( 'Authorized PDF recovery transactions through actual components', () =
 	} );
 	it( 'old selected-page PDF records recover explicitly without rewriting the independent source', async () => {
 		await recoveredDraft();
-		for ( const [ key, raw ] of records ) { const envelope = JSON.parse( raw ); delete envelope.pdfDraft; records.set( key, JSON.stringify( envelope ) ); }
+		for ( const [ key, raw ] of records ) { const envelope = JSON.parse( raw ); delete envelope.pdfDraft; delete envelope.pdfHistory; records.set( key, JSON.stringify( envelope ) ); }
 		const source = stored(), work = await fixture(), controls = ui( true );
 		const drafts = new Lifecycle( work.bridge, controller( work ), controls );
 		try {

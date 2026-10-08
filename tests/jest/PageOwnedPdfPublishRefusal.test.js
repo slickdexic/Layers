@@ -104,13 +104,16 @@ describe( 'Complete PDF native publication refusal', () => {
 			await lifecycle.initialize();
 			await editBoth( work );
 			const source = await fixture();
+			let sourceHistory;
 			try {
 				await editBoth( source );
+				sourceHistory = source.bridge.pdfCoordinator.captureDraftHistory();
 				controller( source, backing.storage, 'a' ).persist();
 			} finally { source.close(); }
 			const sourceBytes = Object.fromEntries( backing.records );
 			work.bridge.capture();
 			const before = witness( work );
+			const historyBefore = work.bridge.pdfCoordinator.captureDraftHistory();
 			const background = work.editor.canvasManager.backgroundImage;
 			const success = jest.fn();
 			const request = location === 'root' ? () => Promise.resolve( { error: { code: 'layers-invalid-snapshot' } } ) :
@@ -146,7 +149,13 @@ describe( 'Complete PDF native publication refusal', () => {
 			expect( ownedKeys ).toStrictEqual( [ ownedKey ] );
 			const owned = backing.records.get( ownedKey );
 			expect( JSON.parse( owned ).scope ).toStrictEqual( scope );
-			expect( owned ).toBe( sourceBytes[ scopedKey + '#' + 'a'.repeat( 32 ) ] );
+			const ownedEnvelope = JSON.parse( owned );
+			const sourceEnvelope = JSON.parse( sourceBytes[ scopedKey + '#' + 'a'.repeat( 32 ) ] );
+			expect( ownedEnvelope.pdfHistory ).toStrictEqual( historyBefore );
+			expect( sourceEnvelope.pdfHistory ).toStrictEqual( sourceHistory );
+			delete ownedEnvelope.pdfHistory;
+			delete sourceEnvelope.pdfHistory;
+			expect( ownedEnvelope ).toStrictEqual( sourceEnvelope );
 			expect( JSON.parse( owned ).pdfDraft ).toStrictEqual( before.draft );
 			expect( work.editor.historyManager.undo() ).toBe( true );
 			expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );

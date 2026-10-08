@@ -98,7 +98,8 @@
 					version: 1, scope,
 					phase: this.bridge.session.getStatus().phase,
 					label: this.bridge.session.getLabel(),
-					...( pdf ? { pdfDraft: this.bridge.session.getDraft() } : {} ),
+					...( pdf ? { pdfDraft: this.bridge.session.getDraft(),
+						pdfHistory: this.bridge.pdfCoordinator.captureDraftHistory() } : {} ),
 					editorState: this._copyState( this.bridge.getLiveState() )
 				} );
 			} catch ( error ) {
@@ -155,6 +156,10 @@
 						candidate.pdfDraft.pdf.version !== 1 ) {
 						throw this._error();
 					}
+				}
+				if ( Object.prototype.hasOwnProperty.call( envelope, 'pdfHistory' ) ) {
+					if ( !candidate.pdfDraft || !this.bridge.pdfCoordinator ) throw this._error();
+					candidate.pdfHistory = this.bridge.pdfCoordinator.copyDraftHistory( envelope.pdfHistory, candidate.pdfDraft );
 				}
 				return candidate;
 			} catch ( error ) {
