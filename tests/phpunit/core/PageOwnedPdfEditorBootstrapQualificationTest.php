@@ -89,7 +89,14 @@ class PageOwnedPdfEditorBootstrapQualificationTest extends RealAssetTestCase {
 		$this->assertSame( $context['rendition']['url'], $init['imageUrl'] );
 		$this->assertStringContainsString( 'page2-333px-', $init['imageUrl'] );
 		$this->assertSame( 333, $context['rendition']['width'] );
-		$this->assertSame( 666, $context['rendition']['height'] );
+		$bitmap = $file->transform( [ 'width' => 333, 'page' => 2 ],
+			\MediaWiki\FileRepo\File\File::RENDER_NOW );
+		$this->assertInstanceOf( \MediaTransformOutput::class, $bitmap );
+		$reference = $bitmap->getLocalCopyPath();
+		$this->assertIsString( $reference );
+		$pixels = getimagesize( $reference );
+		$this->assertIsArray( $pixels );
+		$this->assertSame( $pixels[1], $context['rendition']['height'] );
 		$this->assertSame( [ 'page' => 2, 'width' => $file->getWidth( 2 ), 'height' => $file->getHeight( 2 ),
 			'units' => 'file-handler-pixels' ], $context['sourceGeometry'] );
 		$this->assertSame( $storedFirst ? [ [ 'page' => 1, 'surfaceId' => 'first' ],

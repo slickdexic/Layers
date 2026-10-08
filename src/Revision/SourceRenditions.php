@@ -39,12 +39,31 @@ class SourceRenditions {
 		$params = [ 'width' => $width ];
 		if ( $surface['kind'] === 'pdf' ) {
 			$params['page'] = (int)$surface['source']['page'];
+			try {
+				$thumb = $file->transform( $params, File::RENDER_NOW );
+				if ( !$thumb || $thumb->isError() ) {
+					throw new \DomainException( 'layers-source-unavailable' );
+				}
+				$reference = $thumb->getLocalCopyPath();
+				$pixels = is_string( $reference ) && is_file( $reference ) && is_readable( $reference ) ?
+					\Wikimedia\AtEase\AtEase::quietCall( 'getimagesize', $reference ) : false;
+				if ( !$pixels || !is_int( $pixels[0] ) || !is_int( $pixels[1] ) ||
+					$pixels[0] < 1 || $pixels[1] < 1
+				) {
+					throw new \DomainException( 'layers-source-unavailable' );
+				}
+				$width = $pixels[0];
+				$height = $pixels[1];
+			} catch ( \Throwable $exception ) {
+				throw new \DomainException( 'layers-source-unavailable' );
+			}
+		} else {
+			$thumb = $file->transform( $params );
+			$width = $thumb ? $thumb->getWidth() : 0;
+			$height = $thumb ? $thumb->getHeight() : 0;
 		}
-		$thumb = $file->transform( $params );
 		$url = $thumb && !$thumb->isError() ? $thumb->getUrl() : false;
 		$expanded = is_string( $url ) && $url !== '' ? $this->urls->expand( $url, PROTO_CURRENT ) : null;
-		$width = $thumb ? $thumb->getWidth() : 0;
-		$height = $thumb ? $thumb->getHeight() : 0;
 		if ( $expanded === null || !preg_match( '#^https?://#i', $expanded ) ||
 			!is_int( $width ) || !is_int( $height ) || $width < 1 || $height < 1
 		) {

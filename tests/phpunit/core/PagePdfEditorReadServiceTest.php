@@ -132,7 +132,13 @@ class PagePdfEditorReadServiceTest extends RealAssetTestCase {
 		$this->assertSame( 2, $result['page'] );
 		$this->assertSame( 'pdf', $result['kind'] );
 		$this->assertSame( 333, $result['rendition']['width'] );
-		$this->assertSame( 666, $result['rendition']['height'] );
+		$bitmap = $file->transform( [ 'width' => 333, 'page' => 2 ], File::RENDER_NOW );
+		$this->assertInstanceOf( \MediaTransformOutput::class, $bitmap );
+		$reference = $bitmap->getLocalCopyPath();
+		$this->assertIsString( $reference );
+		$pixels = getimagesize( $reference );
+		$this->assertIsArray( $pixels );
+		$this->assertSame( $pixels[1], $result['rendition']['height'] );
 		$this->assertStringContainsString( 'page2-333px-', $result['rendition']['url'] );
 		$this->assertSame( $file->getWidth( 2 ), $result['sourceGeometry']['width'] );
 		$this->assertSame( $file->getHeight( 2 ), $result['sourceGeometry']['height'] );
