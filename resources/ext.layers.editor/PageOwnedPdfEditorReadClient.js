@@ -51,8 +51,11 @@
 				if ( response && response.error ) {
 					throw response;
 				}
-				const Adapter = typeof module !== 'undefined' && module.exports ?
-					require( './PageOwnedSnapshotAdapter.js' ) : window.Layers.Editor.PageOwnedSnapshotAdapter;
+				// Prefer the registered browser dependency; only CommonJS modules can require a file.
+				const Adapter = ( typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
+					window.Layers.Editor.PageOwnedSnapshotAdapter ) ||
+					( typeof module !== 'undefined' && module && typeof module.require === 'function' ?
+						require( './PageOwnedSnapshotAdapter.js' ) : null );
 				const adapter = new Adapter();
 				const carrier = { id: 'context', kind: 'slide', canvas: {}, layers: [] };
 				const data = adapter.withEditorState( { schemaVersion: 1, surfaces: [ carrier ],

@@ -90,8 +90,14 @@
 		}
 
 		copyTimeline( value ) {
-			const Adapter = typeof module !== 'undefined' && module.exports ?
-				require( './PageOwnedSnapshotAdapter.js' ) : window.Layers.Editor.PageOwnedSnapshotAdapter;
+			// Classic ResourceLoader scripts also have module.exports; their require cannot load files.
+			const Adapter = ( typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
+				window.Layers.Editor.PageOwnedSnapshotAdapter ) ||
+				( typeof module !== 'undefined' && module && typeof module.require === 'function' ?
+					require( './PageOwnedSnapshotAdapter.js' ) : null );
+			if ( typeof Adapter !== 'function' ) {
+				throw new Error( 'layers-editor-session-unavailable' );
+			}
 			const carrier = { id: 'timeline', kind: 'slide', canvas: {}, layers: [] };
 			const timeline = new Adapter().withEditorState( { schemaVersion: 1, surfaces: [ carrier ],
 				timeline: value }, carrier.id, { canvas: {}, layers: [] } ).timeline;
