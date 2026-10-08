@@ -168,8 +168,10 @@
 			this.capture();
 			this.saving = true;
 			let editorStateValid = true;
+			let publicationConfirmed = false;
 			try {
 				await this.session.save( summary, beforePublish );
+				publicationConfirmed = true;
 			} finally {
 				this.saving = false;
 				if ( !this.disposed ) {
@@ -181,7 +183,7 @@
 						editorStateValid = false;
 					}
 					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
-					if ( editorStateValid && this.pdfCoordinator ) {
+					if ( publicationConfirmed && editorStateValid && this.pdfCoordinator ) {
 						this.pdfCoordinator.confirmBase();
 					}
 				}
@@ -205,8 +207,10 @@
 			this.capture();
 			this.reconciling = true;
 			let editorStateValid = true;
+			let reconciliationConfirmed = false;
 			try {
 				await this.session.reconcile( revisionId );
+				reconciliationConfirmed = true;
 			} finally {
 				this.reconciling = false;
 				if ( !this.disposed ) {
@@ -216,7 +220,7 @@
 						editorStateValid = false;
 					}
 					this.editor.stateManager.set( 'isDirty', !editorStateValid || this.session.getStatus().dirty );
-					if ( editorStateValid && this.pdfCoordinator ) {
+					if ( reconciliationConfirmed && editorStateValid && this.pdfCoordinator ) {
 						this.pdfCoordinator.confirmBase();
 					}
 				}
