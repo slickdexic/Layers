@@ -101,8 +101,8 @@ class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$bound = array_keys( $output->getExtensionData( BoundSlideHooks::DATA_KEY ) ?? [] );
 		$this->assertEqualsCanonicalizing( [ 'v1:' . $page->getArticleID() . ':' . $ids['anatomy'],
 			'v1:' . $page->getArticleID() . ':' . $ids['Bare_slide'] ], $bound,
-			'the named set and `on` find the one drawing of the file, the slide its own drawing' );
-		$this->assertSame( 2, substr_count( $output->getRawText(),
+			'the named set finds anatomy; on targets missing Default; the slide finds its own layer set' );
+		$this->assertSame( 1, substr_count( $output->getRawText(),
 			'data-layers-binding="v1:' . $page->getArticleID() . ':' . $ids['anatomy'] . '"' ) );
 		// "missing" names a drawing the page does not have: nothing is shown, and editors may create it.
 		$this->assertTrue( $output->getExtensionData( BoundSlideHooks::CREATABLE_KEY ) );

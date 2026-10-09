@@ -14,6 +14,9 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
+use MediaWiki\Extension\Layers\Revision\CreationOverlayControls;
+use MediaWiki\Extension\Layers\Revision\ExpandedFileOptions;
+use MediaWiki\Extension\Layers\Revision\PageOwnedBindingOptions;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
@@ -45,10 +48,14 @@ class WikitextHooks {
 		if ( $pageId <= 0 || str_starts_with( $value, 'id:' ) ) {
 			return null;
 		}
-		$name = SetNameResolver::isShowIntent( $value ) ?
-			BoundSlideHooks::onlyDrawingOf( $parser, 'File:' . $filename ) :
-			BoundSlideHooks::drawingOfFileNamed( $parser, 'File:' . $filename,
-				trim( (string)preg_replace( '/^name:/', '', $value ) ) );
+		if ( MigrationState::forParser( $parser ) && strtolower( trim( $value ) ) === 'on' ) {
+			$name = BoundSlideHooks::drawingOfFileNamed( $parser, 'File:' . $filename, 'Default' );
+		} else {
+			$name = SetNameResolver::isShowIntent( $value ) ?
+				BoundSlideHooks::onlyDrawingOf( $parser, 'File:' . $filename ) :
+				BoundSlideHooks::drawingOfFileNamed( $parser, 'File:' . $filename,
+					trim( (string)preg_replace( '/^name:/', '', $value ) ) );
+		}
 		return $name === null || $name === '' ? null : $pageId . ':' . $name;
 	}
 
@@ -384,8 +391,15 @@ class WikitextHooks {
 		if ( $value === null || SetNameResolver::isHideIntent( $value ) ) {
 			return;
 		}
-		$own = preg_match( '/\A\s*[0-9]+:/', $value ) ? trim( $value ) :
-			self::ownDrawingReference( $parser, $filename, $value );
+		if ( $hint === null && MigrationState::forParser( $parser ) ) {
+			$revision = $parser->getRevisionRecordObject();
+			$name = BoundSlideHooks::onlyDrawingOf( $parser, 'File:' . $filename );
+			$own = $revision && $revision->getPageId() > 0 && $name !== null && $name !== '' ?
+				$revision->getPageId() . ':' . $name : null;
+		} else {
+			$own = preg_match( '/\A\s*[0-9]+:/', $value ) ? trim( $value ) :
+				self::ownDrawingReference( $parser, $filename, $value );
+		}
 		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename, $sourcePage );
 		if ( $bound !== false ) {
 			BoundFileHooks::markImage( $attribs, $bound );
@@ -790,6 +804,11 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, &$linkAttribs ): bool {
+		$creation = CreationOverlayControls::renderedImage( $thumbnail );
+		if ( $creation !== null ) {
+			BoundFileHooks::markImage( $attribs, $creation );
+			return true;
+		}
 		// Handle case where $linkAttribs is false (no link) in older MW versions
 		$linkAttribsIsArray = is_array( $linkAttribs );
 
@@ -1337,7 +1356,7 @@ class WikitextHooks {
 	/**
 	 * Hook: ParserBeforeInternalParse
 	 *
-	 * Fires before template expansion. Only `<gallery>` handling belongs here:
+	 * Fires before template expansion. Mark verified direct creation occurrences and handle galleries:
 	 * gallery is an extension tag, so by the time templates have been expanded its
 	 * body has been replaced by a strip marker and is no longer reachable.
 	 *
@@ -1351,6 +1370,9 @@ class WikitextHooks {
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
 		if ( $parser instanceof Parser ) {
+			if ( is_string( $text ) ) {
+				CreationOverlayControls::seed( $parser, $text );
+			}
 			self::wrapGalleryHook( $parser );
 		}
 		return true;
@@ -1390,6 +1412,22 @@ class WikitextHooks {
 			$textLen = strlen( $text );
 			$preview = substr( $text, 0, 200 );
 			self::logDebug( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
+			$expanded = [];
+			$defaults = [];
+			$affectedFiles = [];
+			$completeFileOptions = [];
+			if ( $parser instanceof Parser && MigrationState::forParser( $parser ) ) {
+				$expanded = ExpandedFileOptions::collect( $parser, $text );
+				foreach ( $expanded as $occurrence ) {
+					foreach ( $occurrence['options'] as $option ) {
+						if ( preg_match( '/\A\s*(?:layerset|layers)\s*=\s*on\s*\z/i', $option ) ) {
+							$defaults[$occurrence['start']] = $occurrence;
+							$affectedFiles[substr( $occurrence['target'], 5 )] = true;
+							break;
+						}
+					}
+				}
+			}
 
 			// First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layerset=)
@@ -1408,6 +1446,28 @@ class WikitextHooks {
 					// This ensures consistent offset comparison with layersMap
 					$offset = $match[0][1];
 					$allFileMatches[] = [ 'filename' => $filename, 'offset' => $offset ];
+				}
+			}
+
+			$allFileMatches = array_values( array_filter( $allFileMatches,
+				static function ( array $match ) use ( $affectedFiles, $defaults ): bool {
+					if ( isset( $affectedFiles[$match['filename']] ) ) {
+						return false;
+					}
+					foreach ( $defaults as $occurrence ) {
+						if ( $match['offset'] >= $occurrence['start'] &&
+							$match['offset'] < $occurrence['start'] + $occurrence['length']
+						) {
+							return false;
+						}
+					}
+					return true;
+				} ) );
+			foreach ( $expanded as $occurrence ) {
+				$filename = substr( $occurrence['target'], 5 );
+				if ( isset( $affectedFiles[$filename] ) ) {
+					$allFileMatches[] = [ 'filename' => $filename, 'offset' => $occurrence['start'] ];
+					$completeFileOptions[$occurrence['start']] = $occurrence;
 				}
 			}
 
@@ -1452,6 +1512,20 @@ class WikitextHooks {
 				}
 			}
 
+			foreach ( $expanded as $occurrence ) {
+				$filename = substr( $occurrence['target'], 5 );
+				if ( !isset( $affectedFiles[$filename] ) ) {
+					continue;
+				}
+				unset( $layersMap[$filename][$occurrence['start']] );
+				foreach ( $occurrence['options'] as $option ) {
+					if ( preg_match( '/\A\s*(?:layerset|layers?)\s*=\s*(.+)\z/is', $option, $selector ) ) {
+						$layersMap[$filename][$occurrence['start']] = trim( $selector[1] );
+						break;
+					}
+				}
+			}
+			$refused = [];
 			// Build queues with correct positions (null for files without layerset/layers= at that position)
 			$namedMap = [];
 			foreach ( $allFileMatches as $fileMatch ) {
@@ -1475,7 +1549,30 @@ class WikitextHooks {
 					}
 				}
 
-				if ( $layersValue !== null && preg_match( '/\A\s*[0-9]+:/', $layersValue ) ) {
+				if ( isset( $defaults[$offset] ) ) {
+					$revision = $parser->getRevisionRecordObject();
+					$owner = $revision ? $revision->getPageId() : null;
+					try {
+						$options = $defaults[$offset]['options'];
+						PageOwnedBindingOptions::extract( $options );
+						$selection = PageOwnedBindingOptions::named( $options, 'file',
+							$defaults[$offset]['target'], $owner );
+						if ( $selection === null || $selection['pageId'] !== $owner ||
+							$selection['name'] !== 'Default'
+						) {
+							$refused[$filename][$offset] = true;
+						} else {
+							$own = self::ownDrawingReference( $parser, $filename, 'on' );
+							if ( $own !== null ) {
+								$namedMap[$filename][$offset] = $own;
+							}
+						}
+					} catch ( \InvalidArgumentException $e ) {
+						$refused[$filename][$offset] = true;
+					}
+					$layersValue = null;
+					self::$pageHasLayers = true;
+				} elseif ( $layersValue !== null && preg_match( '/\A\s*[0-9]+:/', $layersValue ) ) {
 					// `<pageId>:<name>` names one of this page's drawings, never a shared set.
 					$namedMap[$filename][$offset] = $layersValue;
 					$layersValue = null;
@@ -1549,6 +1646,19 @@ class WikitextHooks {
 				}
 			}
 
+			foreach ( $completeFileOptions as $offset => $occurrence ) {
+				$filename = substr( $occurrence['target'], 5 );
+				unset( $layerslinkMap[$filename][$offset] );
+				foreach ( $occurrence['options'] as $option ) {
+					if ( preg_match( '/\A\s*layerslink\s*=\s*(.+)\z/is', $option, $link ) &&
+						in_array( strtolower( trim( $link[1] ) ), [ 'editor', 'editor-newtab', 'editor-return',
+							'editor-modal', 'viewer', 'lightbox' ], true )
+					) {
+						$layerslinkMap[$filename][$offset] = strtolower( trim( $link[1] ) );
+						break;
+					}
+				}
+			}
 			// Build fileLinkTypes queues matching file render order
 			foreach ( $allFileMatches as $fileMatch ) {
 				$filename = $fileMatch['filename'];
@@ -1582,10 +1692,22 @@ class WikitextHooks {
 					$bindingMap[self::normalizeFileKey( $match[1][0] )][$match[0][1]] = $match[2][0];
 				}
 			}
+			foreach ( $completeFileOptions as $offset => $occurrence ) {
+				$filename = substr( $occurrence['target'], 5 );
+				unset( $bindingMap[$filename][$offset] );
+				foreach ( $occurrence['options'] as $option ) {
+					if ( preg_match( '/\A\s*layersbinding\s*=\s*(.*)\z/is', $option, $binding ) ) {
+						$bindingMap[$filename][$offset] = $binding[1];
+						break;
+					}
+				}
+			}
 			foreach ( $allFileMatches as $fileMatch ) {
 				$raw = $bindingMap[$fileMatch['filename']][$fileMatch['offset']] ?? null;
 				$named = $namedMap[$fileMatch['filename']][$fileMatch['offset']] ?? null;
-				if ( $raw === null && $named === null ) {
+				if ( isset( $refused[$fileMatch['filename']][$fileMatch['offset']] ) ) {
+					$bound = false;
+				} elseif ( $raw === null && $named === null ) {
 					$bound = null;
 				} elseif ( !$parser instanceof Parser || ( $raw !== null && $named !== null ) ) {
 					$bound = false;
@@ -1599,17 +1721,28 @@ class WikitextHooks {
 			// Strip our parameters ONLY from within file links, so that they do not
 			// leak into captions. Scoping to the link is what keeps {{#slide:...}}
 			// parser functions and <nowiki>-quoted documentation intact.
-			$text = preg_replace_callback(
-				'/\[\[' . $ns . ':([^\]]+)\]\]/i',
-				static function ( $match ) {
-					return preg_replace(
-						'/\|(?:(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+|layersbinding\s*=\s*[^|\]]*)/i',
-						'',
-						$match[0]
-					);
-				},
-				$text
-			);
+			$stripLegacy = static function ( string $segment ) use ( $ns ): string {
+				return preg_replace_callback( '/\[\[' . $ns . ':([^\]]+)\]\]/i',
+					static function ( $match ) {
+						return preg_replace(
+							'/\|(?:(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+|layersbinding\s*=\s*[^|\]]*)/i',
+							'', $match[0] );
+					}, $segment );
+			};
+			$remaining = $text;
+			$suffix = '';
+			foreach ( array_reverse( $completeFileOptions, true ) as $occurrence ) {
+				$end = $occurrence['start'] + $occurrence['length'];
+				$stripPattern = isset( $defaults[$occurrence['start']] ) ?
+					'/\A\s*(?:layerset|layers?|layersetid|layerslink|layersbinding)\s*=/i' :
+					'/\A\s*(?:(?:layerset|layers?|layerslink)\s*=\s*.+|layersbinding\s*=.*)\z/is';
+				$options = array_values( array_filter( $occurrence['options'], static fn ( string $option ): bool =>
+					!preg_match( $stripPattern, $option ) ) );
+				$suffix = '[[' . $occurrence['head'] . ( $options ? '|' . implode( '|', $options ) : '' ) . ']]' .
+					$stripLegacy( substr( $remaining, $end ) ) . $suffix;
+				$remaining = substr( $remaining, 0, $occurrence['start'] );
+			}
+			$text = $stripLegacy( $remaining ) . $suffix;
 			self::log( 'Stripped layers parameters from file links' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'InternalParseBeforeLinks error: ' . $e->getMessage() );

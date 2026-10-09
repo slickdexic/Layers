@@ -7,10 +7,13 @@ namespace MediaWiki\Extension\Layers\Hooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
+use MediaWiki\Extension\Layers\Revision\CreationOverlayControls;
+use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
+use MediaWiki\Html\Html;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\PPFrame;
@@ -166,7 +169,37 @@ class SlideHooks {
 					( $revision ? $revision->getPageId() : 0 ) . ':' . trim( (string)( $params['name'] ?? '' ) ) );
 			}
 			if ( $named !== null ) {
-				$binding = BoundSlideHooks::named( $parser, $named, 'slide', null );
+				try {
+					$binding = BoundSlideHooks::named( $parser, $named, 'slide', null );
+				} catch ( \DomainException $error ) {
+					$token = isset( $params['layerscreation'] ) ? (string)$params['layerscreation'] : null;
+					$missing = CreationOverlayControls::missing( $parser, $named, 'slide', null, $token );
+					if ( $missing === false ) {
+						throw $error;
+					}
+					$width = max( 1, min( DocumentSchema::MAX_DIMENSION,
+						(int)$config->get( 'LayersSlideDefaultWidth' ) ) );
+					$height = max( 1, min( DocumentSchema::MAX_DIMENSION,
+						(int)$config->get( 'LayersSlideDefaultHeight' ) ) );
+					if ( !empty( $params['size'] ) ) {
+						$size = self::parseCanvasDimensions( $params['size'], $config );
+						if ( $size ) {
+							$display = self::calculateScaledDimensions(
+								$width, $height, $size['width'], $size['height'] );
+							$width = $display['width'];
+							$height = $display['height'];
+						}
+					}
+					$background = (string)$config->get( 'LayersSlideDefaultBackground' );
+					$background = ColorValidator::isValidColor( $background ) ? $background : '#ffffff';
+					$html = Html::element( 'div', [ 'class' => 'layers-creation-slide',
+						'data-layers-creation' => $missing['creation'],
+						'data-layers-noedit' => $missing['noEdit'] ? '1' : null,
+						'role' => 'img', 'aria-label' => $named['name'],
+						'style' => "width:{$width}px;max-width:100%;aspect-ratio:{$width}/{$height};" .
+							"background:$background" ] );
+					return [ $html, 'noparse' => true, 'isHTML' => true ];
+				}
 			}
 		}
 		if ( $binding !== null ) {

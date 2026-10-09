@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Revision\CreationOverlayControls;
 use MediaWiki\Extension\Layers\Revision\DrawingName;
 use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
@@ -212,6 +213,7 @@ class BoundSlideHooks {
 	 * @param PageOwnedPilot $pilot Scoped native read composition
 	 */
 	public static function output( OutputPage $out, ParserOutput $parsed, PageOwnedPilot $pilot ): void {
+		CreationOverlayControls::output( $out, $parsed, $pilot );
 		$data = $parsed->getExtensionData( self::DATA_KEY );
 		$displayed = false;
 		foreach ( is_array( $data ) ? $data : [] as $context ) {

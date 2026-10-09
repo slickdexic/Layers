@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
+use MediaWiki\Extension\Layers\Revision\CreationOverlayControls;
 use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Parser\Parser;
 
@@ -35,10 +36,11 @@ class BoundFileHooks {
 	 * @param string $value Raw layerset= value
 	 * @param string $fileKey DB key of the embedded file
 	 * @param int|null $sourcePage Effective rendered page
+	 * @param string|null $creationToken Private direct-occurrence marker
 	 * @return array|false As resolve()
 	 */
 	public static function resolveNamed( Parser $parser, string $value, string $fileKey,
-		?int $sourcePage = null
+		?int $sourcePage = null, ?string $creationToken = null
 	) {
 		try {
 			$named = PageOwnedBinding::parseNamed( $value );
@@ -48,6 +50,10 @@ class BoundFileHooks {
 			[ $binding, $revisionId ] = BoundSlideHooks::register( $parser,
 				BoundSlideHooks::named( $parser, $named, 'file', 'File:' . $fileKey, $sourcePage ) );
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			if ( isset( $named ) && $creationToken !== null ) {
+				return CreationOverlayControls::missing( $parser, $named, 'image', 'File:' . $fileKey,
+					$creationToken );
+			}
 			return false;
 		}
 		$parser->getOutput()->addModules( [ 'ext.layers.history' ] );
@@ -59,6 +65,14 @@ class BoundFileHooks {
 	 * @param array $bound Result of resolve()
 	 */
 	public static function markImage( array &$attribs, array $bound ): void {
+		if ( isset( $bound['creation'] ) ) {
+			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-creation-image' );
+			$attribs['data-layers-creation'] = $bound['creation'];
+			if ( $bound['noEdit'] ) {
+				$attribs['data-layers-noedit'] = '1';
+			}
+			return;
+		}
 		$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-bound-file' );
 		$attribs['data-layers-binding'] = $bound['binding'];
 		$attribs['data-layers-revision'] = (string)$bound['revisionId'];

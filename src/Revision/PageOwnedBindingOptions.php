@@ -119,12 +119,18 @@ final class PageOwnedBindingOptions {
 		}
 		$found = null;
 		$bare = null;
+		$selectorCount = 0;
+		$defaultIntent = false;
 		foreach ( $options as $option ) {
 			$equalsPos = strpos( (string)$option, '=' );
-			$name = $equalsPos === false ? '' : strtolower( trim( substr( $option, 0, $equalsPos ), " \t\r\n\f" ) );
-			if ( $name !== 'layerset' && $name !== 'layers' ) {
+			$name = strtolower( trim( $equalsPos === false ? (string)$option :
+				substr( $option, 0, $equalsPos ), " \t\r\n\f" ) );
+			$selectorCount += isset( self::LEGACY_SELECTORS[$name] ) ? 1 : 0;
+			if ( $equalsPos === false || ( $name !== 'layerset' && $name !== 'layers' ) ) {
 				continue;
 			}
+			$defaultIntent = $defaultIntent ||
+				strtolower( trim( substr( $option, $equalsPos + 1 ), " \t\r\n\f" ) ) === 'on';
 			$named = PageOwnedBinding::parseNamed( substr( $option, $equalsPos + 1 ) );
 			if ( $named !== null ) {
 				if ( $found !== null ) {
@@ -134,6 +140,14 @@ final class PageOwnedBindingOptions {
 			} else {
 				$bare ??= trim( substr( $option, $equalsPos + 1 ), " \t\r\n\f" );
 			}
+		}
+		if ( $kind === 'file' && $bareOwner !== null && $bareOwner > 0 && $bareOwner <= 2147483647 &&
+			$defaultIntent
+		) {
+			if ( $selectorCount !== 1 || self::extract( $options ) !== null ) {
+				throw new \InvalidArgumentException( 'layers-invalid-page-binding' );
+			}
+			return [ 'pageId' => $bareOwner, 'name' => 'Default' ];
 		}
 		if ( $found === null && $bareOwner !== null && $bare !== null &&
 			!SetNameResolver::isGenericIntent( $bare ) && !str_starts_with( $bare, 'id:' )

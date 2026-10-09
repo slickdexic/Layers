@@ -88,6 +88,80 @@
 			}
 		};
 	}
+	function mountCreation( root, revisionId ) {
+		const config = typeof mw !== 'undefined' && mw.config;
+		const entries = config && config.get( 'wgLayersCreationOverlays' );
+		const Overlay = window.Layers.Viewer.Overlay;
+		const lightbox = window.Layers.lightbox;
+		const disposers = [];
+		if ( !entries || typeof entries !== 'object' || typeof Overlay !== 'function' || !lightbox ||
+			config.get( 'wgAction' ) !== 'view' || config.get( 'wgRevisionId' ) !== revisionId ||
+			config.get( 'wgCurRevisionId' ) !== revisionId || config.get( 'wgDiffOldId' ) ||
+			config.get( 'wgDiffNewId' ) || new URL( window.location.href ).searchParams.has( 'oldid' ) ||
+			new URL( window.location.href ).searchParams.has( 'diff' ) ) {
+			return () => {};
+		}
+		root.querySelectorAll( 'img.layers-creation-image, .layers-creation-slide' ).forEach( ( container ) => {
+			if ( mounted.has( container ) ) {
+				return;
+			}
+			const identity = container.getAttribute( 'data-layers-creation' );
+			const entry = Object.prototype.hasOwnProperty.call( entries, identity ) && entries[ identity ];
+			let parts;
+			try {
+				parts = JSON.parse( identity );
+			} catch ( error ) {
+				return;
+			}
+			const isImage = container.tagName === 'IMG';
+			if ( !Array.isArray( parts ) || parts.length !== 5 || parts[ 0 ] !== config.get( 'wgArticleId' ) ||
+				parts[ 1 ] !== revisionId || parts[ 2 ] !== ( isImage ? 'image' : 'slide' ) ||
+				!entry || entry.identity !== identity || entry.kind !== parts[ 2 ] || !entry.preview ||
+				entry.preview.kind !== entry.kind || !Array.isArray( entry.preview.layers ) || entry.preview.layers.length ) {
+				return;
+			}
+			const host = isImage ? document.createElement( 'span' ) : container;
+			if ( isImage ) {
+				host.style.display = 'inline-block';
+				host.style.maxWidth = '100%';
+				container.before( host );
+				host.appendChild( container );
+			}
+			host.classList.add( 'layers-bound-controls' );
+			let disposed = false;
+			let session;
+			const overlay = new Overlay( { container: host,
+				canEdit: typeof entry.editUrl === 'string' && entry.editUrl.length > 0 &&
+					!container.hasAttribute( 'data-layers-noedit' ),
+				onEdit: () => { window.location.href = entry.editUrl; },
+				onView: ( opener ) => {
+					if ( !disposed ) {
+						lightbox.open( Object.assign( {}, entry.preview, { filename: entry.label,
+							explicitEmpty: true, opener } ) );
+						session = lightbox._sessionToken;
+					}
+				} } );
+			overlay.init();
+			const dispose = () => {
+				if ( mounted.get( container ) !== dispose ) {
+					return;
+				}
+				disposed = true;
+				if ( session !== undefined && lightbox.explicitEmpty && lightbox._sessionToken === session ) {
+					lightbox.close( true );
+				}
+				overlay.destroy();
+				mounted.delete( container );
+				host.classList.remove( 'layers-bound-controls' );
+				if ( isImage && host.contains( container ) ) {
+					host.replaceWith( container );
+				}
+			};
+			mounted.set( container, dispose );
+			disposers.push( dispose );
+		} );
+		return () => disposers.forEach( ( dispose ) => dispose() );
+	}
 	function mountInline( root, bundles, fields, api ) {
 		const disposers = [];
 		root.querySelectorAll( HOSTS ).forEach( ( container ) => {
@@ -170,6 +244,7 @@
 	 * @return {Promise<Function>} Disposer
 	 */
 	function loadInline( root, api, owner, revisionId, fields ) {
+		const creationDispose = mountCreation( root, revisionId );
 		const bindings = [];
 		root.querySelectorAll( HOSTS ).forEach( ( host ) => {
 			const binding = host.getAttribute( 'data-layers-binding' );
@@ -179,7 +254,7 @@
 			}
 		} );
 		if ( !bindings.length || typeof owner !== 'string' || !owner || !Number.isInteger( revisionId ) ) {
-			return Promise.resolve( () => {} );
+			return Promise.resolve( creationDispose );
 		}
 		const requests = [];
 		for ( let i = 0; i < bindings.length; i += 50 ) {
@@ -188,7 +263,10 @@
 				.then( ( response ) => ( response && response.layersread && response.layersread.bindings ) || {} )
 				.catch( () => ( {} ) ) );
 		}
-		return Promise.all( requests ).then( ( parts ) => mountInline( root, Object.assign( {}, ...parts ), fields, api ) );
+		return Promise.all( requests ).then( ( parts ) => {
+			const inlineDispose = mountInline( root, Object.assign( {}, ...parts ), fields, api );
+			return () => { creationDispose(); inlineDispose(); };
+		} );
 	}
 	/**
 	 * Fetch and mount each comparison host's drawing at its own revision.
@@ -252,7 +330,8 @@
 	if ( typeof $ === 'function' && typeof mw !== 'undefined' ) {
 		$( () => {
 			const container = document.getElementById( 'layers-history-container' );
-			if ( !container && !document.querySelector( HOSTS ) && !document.querySelector( COMPARISON_HOSTS ) ) {
+			if ( !container && !document.querySelector( HOSTS ) && !document.querySelector( COMPARISON_HOSTS ) &&
+				!document.querySelector( 'img.layers-creation-image, .layers-creation-slide' ) ) {
 				return;
 			}
 			let dispose = () => {};

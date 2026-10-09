@@ -153,6 +153,7 @@
 			// the correct page image + that page's layer set.
 			this.filename = config.filename;
 			this.pageOwned = config.pageOwned || null;
+			this.explicitEmpty = config.explicitEmpty === true;
 			this.opener = config.opener || document.activeElement;
 			this._sessionToken = ( this._sessionToken || 0 ) + 1;
 			this._pageOwnedViewerData = null;
@@ -199,6 +200,28 @@
 			this.isOpen = true;
 			if ( this.pageOwned ) {
 				this._loadPromise = this.loadPageOwned( null );
+				this.overlay.querySelector( '.layers-lightbox-close' ).focus();
+			} else if ( this.explicitEmpty ) {
+				this.isPdf = false;
+				this.isSlide = config.kind === 'slide';
+				this.presetImageUrl = config.kind === 'image' ? config.imageUrl : null;
+				this.presetLayerData = { layers: [], baseWidth: config.baseWidth, baseHeight: config.baseHeight,
+					backgroundVisible: true, backgroundOpacity: 1 };
+				if ( this.isSlide && Number.isInteger( config.baseWidth ) && Number.isInteger( config.baseHeight ) &&
+					config.baseWidth > 0 && config.baseHeight > 0 ) {
+					const canvas = document.createElement( 'canvas' );
+					canvas.width = config.baseWidth;
+					canvas.height = config.baseHeight;
+					const context = canvas.getContext( '2d' );
+					context.fillStyle = config.backgroundColor || '#ffffff';
+					context.fillRect( 0, 0, canvas.width, canvas.height );
+					this.presetImageUrl = canvas.toDataURL( 'image/png' );
+				}
+				if ( this.presetImageUrl ) {
+					this.renderViewer( this.presetImageUrl, this.presetLayerData );
+				} else {
+					this.showError( this.getMessage( 'layers-page-history-render-failed', 'Failed to load layer data' ) );
+				}
 				this.overlay.querySelector( '.layers-lightbox-close' ).focus();
 			} else if ( config.layerData && config.imageUrl ) {
 				this.renderViewer( config.imageUrl, config.layerData );
@@ -908,6 +931,9 @@
 			if ( this.pageOwned ) {
 				return this.exportPageOwned( 'print' );
 			}
+			if ( this.explicitEmpty ) {
+				return this.exportEmpty( 'print' );
+			}
 			if ( !this.filename ) {
 				return;
 			}
@@ -945,6 +971,55 @@
 			} );
 		}
 
+		exportEmpty( mode ) {
+			if ( this._exporting ) {
+				return this._exporting;
+			}
+			const session = this._sessionToken;
+			const imageUrl = this.presetImageUrl;
+			const layerData = this.presetLayerData;
+			const current = () => this.isOpen && this.explicitEmpty && this._sessionToken === session;
+			const button = mode === 'print' ? this.printBtn : this.downloadBtn;
+			const original = button && button.textContent;
+			if ( button ) {
+				button.disabled = true;
+				button.textContent = this.getMessage( 'layers-lightbox-print-preparing', 'Preparing pages...' );
+			}
+			const failure = () => {
+				if ( current() ) {
+					this.showError( this.getMessage( 'layers-page-history-render-failed', 'Failed to load layer data' ) );
+				}
+			};
+			const operation = Promise.resolve().then( () => current() && imageUrl && layerData ?
+				this.flattenPage( imageUrl, layerData, 'image/jpeg', 0.92 ) : null ).then( ( image ) => {
+				if ( !current() ) {
+					return;
+				}
+				if ( !image ) {
+					failure();
+				} else if ( mode === 'print' ) {
+					this.printImages( [ image.src ] );
+				} else {
+					const blob = this.buildPdfBlob( [ image ] );
+					if ( blob ) {
+						this.saveBlob( blob, this.exportFileName() );
+					} else {
+						failure();
+					}
+				}
+			} ).catch( failure ).finally( () => {
+				if ( this._exporting === operation ) {
+					this._exporting = null;
+				}
+				if ( button ) {
+					button.disabled = false;
+					button.textContent = original;
+				}
+			} );
+			this._exporting = operation;
+			return operation;
+		}
+
 		/**
 		 * Download the full marked-up document as a PDF.
 		 *
@@ -962,6 +1037,9 @@
 		downloadPdf() {
 			if ( this.pageOwned ) {
 				return this.exportPageOwned( 'download' );
+			}
+			if ( this.explicitEmpty ) {
+				return this.exportEmpty( 'download' );
 			}
 			if ( !this.filename ) {
 				return;
@@ -1171,6 +1249,10 @@
 		 * @private
 		 */
 		downloadViaServer() {
+			if ( this.explicitEmpty ) {
+				this.showError( this.getMessage( 'layers-page-history-render-failed', 'Failed to load layer data' ) );
+				return Promise.resolve();
+			}
 			return this.requestServerPdf( this.downloadBtn, ( url ) => {
 				this.triggerDownload( url );
 			} );
@@ -1202,6 +1284,9 @@
 		 * @private
 		 */
 		composePage( page, type, quality ) {
+			if ( this.explicitEmpty && ( page > 1 || !this.presetImageUrl || !this.presetLayerData ) ) {
+				return Promise.resolve( null );
+			}
 			// Single-page sources opened with their layer data already in hand —
 			// slides above all — are composited straight from it. A slide is
 			// identified by name, not by a File: title, so asking layersinfo for
@@ -1639,6 +1724,10 @@
 		 * @private
 		 */
 		printViaServer() {
+			if ( this.explicitEmpty ) {
+				this.showError( this.getMessage( 'layers-page-history-render-failed', 'Failed to load layer data' ) );
+				return Promise.resolve();
+			}
 			return this.requestServerPdf( this.printBtn, ( url ) => {
 				window.open( url, '_blank', 'noopener' );
 			} );
@@ -1820,7 +1909,7 @@
 		 * @private
 		 */
 		handleKeyDown( e ) {
-			if ( this.pageOwned && e.key === 'Tab' ) {
+			if ( ( this.pageOwned || this.explicitEmpty ) && e.key === 'Tab' ) {
 				const buttons = Array.from( this.overlay.querySelectorAll( 'button:not([disabled])' ) )
 					.filter( ( button ) => button.style.display !== 'none' );
 				const first = buttons[ 0 ];
@@ -1896,7 +1985,7 @@
 			}
 
 			this.debugLog( 'Closing lightbox' );
-			const opener = this.pageOwned && this.opener;
+			const opener = ( this.pageOwned || this.explicitEmpty ) && this.opener;
 			this._sessionToken = ( this._sessionToken || 0 ) + 1;
 			if ( this.pageOwned ) {
 				this.pageOwned.dispose();
