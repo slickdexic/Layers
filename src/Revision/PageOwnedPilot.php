@@ -933,6 +933,52 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * List exact admitted missing direct routes without exposing editor initialization.
+	 * @param int $pageId Native owner identity
+	 * @param int $revisionId Explicit current base
+	 * @param Authority $authority Original request actor
+	 * @return array[] Internal creation descriptors; each editor route revalidates on use
+	 */
+	public function listCreationOverlaySelections( int $pageId, int $revisionId, Authority $authority ): array {
+		try {
+			$selections = [];
+			foreach ( $this->listBoundEditorSelections( $pageId, $revisionId, $authority ) as $candidate ) {
+				if ( ( $candidate['create'] ?? false ) !== true ) {
+					continue;
+				}
+				$params = $candidate['params'];
+				try {
+					$init = $this->prepareBoundEditor( $params['pageid'], $params['revid'],
+						$params['start'], $params['expected'], $authority );
+					$admitted = $init['pageOwned'];
+					$surface = $admitted['newSurface'] ?? null;
+					if ( $admitted['pageId'] !== $pageId || $admitted['revisionId'] !== $revisionId ||
+						!is_array( $surface ) || !in_array( $surface['kind'], [ 'image', 'pdf', 'slide' ], true )
+					) {
+						continue;
+					}
+					$selection = [ 'label' => $surface['label'], 'kind' => $surface['kind'],
+						'fileTitle' => $surface['kind'] === 'slide' ? null : $surface['source']['fileTitle'],
+						'page' => $surface['kind'] === 'slide' ? null : $surface['source']['page'],
+						'params' => $params ];
+					$key = json_encode( [ $selection['kind'], $selection['fileTitle'],
+						DrawingName::key( $selection['label'] ), $selection['page'] ] );
+					$selections[$key] = $selection;
+				} catch ( \DomainException | \InvalidArgumentException $e ) {
+					continue;
+				}
+			}
+			$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $revisionId, $authority );
+			if ( !$this->scope->includes( $owner ) ) {
+				return [];
+			}
+			return array_values( $selections );
+		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			return [];
+		}
+	}
+
+	/**
 	 * Internal ordinary-entry admission from an exact saved direct embedding.
 	 * Source bytes are checked against native main content; caller IDs are not binding proof.
 	 * No public route is installed here. Slide embeds open slides, file embeds image/PDF surfaces.

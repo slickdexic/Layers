@@ -19,6 +19,7 @@ use OldRevisionImporter;
 use WikiRevision;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * @covers \MediaWiki\Extension\Layers\Revision\PageOwnedPilot
@@ -26,6 +27,13 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group API
  */
 class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
+	use IsolatedLocalRepoFixture;
+
+	protected function setUp(): void {
+		parent::setUp();
+		$this->setUpIsolatedLocalRepoFixture();
+	}
+
 	/**
 	 * @dataProvider provideBoundaryCases
 	 * @param string $mode
@@ -507,7 +515,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$newCanonical = ( new LayersDocumentContent( json_encode( $updated ) ) )->getCanonicalText();
 		$this->assertSame( json_decode( $oldCanonical, true )['surfaces'][0], $old['surface'] );
 		$this->assertSame( json_decode( $newCanonical, true )['surfaces'][0], $new['surface'] );
-		$this->assertSame( [ 'owner', 'revisionId', 'surface' ], array_keys( $old ) );
+		$this->assertSame( [ 'owner', 'pageId', 'revisionId', 'surface' ], array_keys( $old ) );
+		$this->assertSame( $title->getArticleID(), $old['pageId'] );
+		$this->assertSame( $old['pageId'], $new['pageId'] );
 		$entry = $this->getServiceContainer()->getSpecialPageFactory()->getPage( 'ViewLayersPage' );
 		$this->assertInstanceOf( \MediaWiki\Extension\Layers\SpecialPages\SpecialViewLayersPage::class, $entry );
 		$context = new \RequestContext();
@@ -1746,8 +1756,9 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		// Request Rev 1 after Rev 2 exists
 		$old = $pilot->prepareViewer( $title->getPrefixedText(), $rev1Id, 'presentation', $reader );
 
-		// Verify exact return shape: strictly only owner, revisionId, surface
-		$this->assertSame( [ 'owner', 'revisionId', 'surface' ], array_keys( $old ) );
+		// Exact owner identity allows read-only full-size controls for this revision.
+		$this->assertSame( [ 'owner', 'pageId', 'revisionId', 'surface' ], array_keys( $old ) );
+		$this->assertSame( $title->getArticleID(), $old['pageId'] );
 		$this->assertSame( $title->getPrefixedDBkey(), $old['owner'] );
 		$this->assertSame( $rev1Id, $old['revisionId'] );
 
@@ -1774,7 +1785,8 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 		// Request Rev 2 independently
 		$new = $pilot->prepareViewer( $title->getPrefixedText(), $rev2Id, 'presentation', $reader );
-		$this->assertSame( [ 'owner', 'revisionId', 'surface' ], array_keys( $new ) );
+		$this->assertSame( [ 'owner', 'pageId', 'revisionId', 'surface' ], array_keys( $new ) );
+		$this->assertSame( $old['pageId'], $new['pageId'] );
 		$this->assertSame( $title->getPrefixedDBkey(), $new['owner'] );
 		$this->assertSame( $rev2Id, $new['revisionId'] );
 

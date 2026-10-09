@@ -12,6 +12,7 @@ use MediaWiki\Parser\ParserOutputFlags;
 use Wikimedia\Rdbms\IDBAccessObject;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * `[[File:X|layersbinding=…]]` marks core's image with the binding; drawings arrive per reader.
@@ -21,6 +22,13 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class BoundFileHooksTest extends \MediaWikiIntegrationTestCase {
+	use IsolatedLocalRepoFixture;
+
+	protected function setUp(): void {
+		parent::setUp();
+		$this->setUpIsolatedLocalRepoFixture();
+	}
+
 	/** @var string Per-test upload; the file backend outlives the database rollback */
 	private $file;
 

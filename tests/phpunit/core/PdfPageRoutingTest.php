@@ -9,12 +9,18 @@ use MediaWiki\Extension\Layers\Cargo\CargoLayersGalleryFormat;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
+use MediaWiki\FileRepo\LocalRepo;
+use MediaWiki\FileRepo\RepoGroup;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOptions;
 use MediaWiki\Revision\RevisionRecord;
+use MediaWiki\WikiMap\WikiMap;
+use Wikimedia\FileBackend\FSFileBackend;
 use Wikimedia\Rdbms\IDBAccessObject;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/../../../maintenance/migrateLayersToPageHistory.php';
 
 /**
  * @covers \MediaWiki\Extension\Layers\Hooks\WikitextHooks
@@ -45,7 +51,86 @@ class PdfPageRoutingTest extends \MediaWikiIntegrationTestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$this->overrideConfigValues( [ 'LayersPageDrawingNamespaces' => null, 'PdfHandlerDpi' => 150 ] );
-		$this->publisher = TestingAdmissionRegistration::install( $this )['publisher'];
+		$database = $this->getDb();
+		$this->assertStringContainsString( 'unittest', $database->getDomainID() );
+		$this->assertSame( 0, (int)$database->newSelectQueryBuilder()->select( 'COUNT(*)' )
+			->from( 'layer_sets' )->caller( __METHOD__ )->fetchField() );
+		$witness = static function () use ( $database ): string {
+			$tables = [];
+			foreach ( [ 'page', 'revision', 'slots', 'content', 'text', 'image', 'oldimage' ] as $table ) {
+				$rows = [];
+				foreach ( $database->newSelectQueryBuilder()->select( '*' )->from( $table )
+					->caller( self::class . '::setUp' )->fetchResultSet() as $row ) {
+					$values = (array)$row;
+					ksort( $values );
+					$rows[] = serialize( $values );
+				}
+				sort( $rows, SORT_STRING );
+				$tables[$table] = $rows;
+			}
+			return serialize( $tables );
+		};
+		$before = $witness();
+		foreach ( [ false, true ] as $commit ) {
+			$maintenance = new \MigrateLayersToPageHistory();
+			$maintenance->setDB( $database );
+			$maintenance->setOption( 'user', $this->getTestSysop()->getUser()->getName() );
+			if ( $commit ) {
+				$maintenance->setOption( 'commit', true );
+			}
+			ob_start();
+			try {
+				$this->assertTrue( $maintenance->execute() );
+			} finally {
+				$output = ob_get_clean();
+			}
+			$this->assertStringContainsString( $commit ? 'Migration recorded as complete:' :
+				'Dry run: nothing is written.', $output );
+			$this->assertSame( $before, $witness() );
+		}
+		$directory = $this->getNewTempDirectory();
+		$temporaryRoot = realpath( getenv( 'TMPDIR' ) ?: $this->getServiceContainer()->getMainConfig()
+			->get( 'TmpDirectory' ) );
+		$this->assertSame( $directory, realpath( $directory ) );
+		$this->assertNotFalse( $temporaryRoot );
+		$this->assertStringStartsWith( $temporaryRoot . '/', $directory );
+		$paths = [];
+		foreach ( [ 'public', 'thumb', 'transcoded', 'temp', 'deleted', 'public/archive' ] as $zone ) {
+			$zoneDirectory = $directory . '/' . $zone;
+			if ( !is_dir( $zoneDirectory ) ) {
+				mkdir( $zoneDirectory, 0777, true );
+			}
+			for ( $ancestor = $zoneDirectory; dirname( $ancestor ) !== $ancestor; $ancestor = dirname( $ancestor ) ) {
+				$this->assertFalse( is_link( $ancestor ) );
+			}
+			$this->assertSame( $zoneDirectory, realpath( $zoneDirectory ) );
+			$this->assertDirectoryIsWritable( $zoneDirectory );
+			if ( function_exists( 'posix_geteuid' ) ) {
+				$this->assertSame( posix_geteuid(), fileowner( $zoneDirectory ) );
+			}
+			if ( $zone !== 'public/archive' ) {
+				$paths['layers-routing-' . $zone] = $zoneDirectory;
+			}
+		}
+		$backend = new FSFileBackend( [ 'name' => 'layers-routing-backend-' . wfRandomString( 8 ),
+			'wikiId' => WikiMap::getCurrentWikiId(), 'containerPaths' => $paths ] );
+		$repo = new LocalRepo( [ 'name' => 'layers-routing', 'backend' => $backend, 'url' => '/test-files' ] );
+		$repos = $this->createMock( RepoGroup::class );
+		$repos->method( 'getLocalRepo' )->willReturn( $repo );
+		$repos->method( 'findFile' )->willReturnCallback( static fn ( $title, $options = [] ) =>
+			$repo->findFile( $title, $options ) );
+		$this->setService( 'RepoGroup', $repos );
+		$services = $this->getServiceContainer();
+		$this->publisher = TestingAdmissionRegistration::install( $this, null,
+			new SourceVersionResolver( $repo, $services->getTitleFactory() ) )['publisher'];
+		$output = getenv( 'LAYERS_ROUTING_BACKEND_WITNESS' );
+		if ( $output ) {
+			file_put_contents( $output, json_encode( [ 'test' => $this->getName(), 'directory' => $directory,
+				'temporaryRoot' => $temporaryRoot, 'paths' => $paths, 'archive' => $directory . '/public/archive',
+				'uid' => function_exists( 'posix_geteuid' ) ? posix_geteuid() : null,
+				'repository' => $repo->getName(), 'nativeBackend' => get_class( $backend ),
+				'loadedSourceSha256' => hash_file( 'sha256', __FILE__ ) ] ) . "\n", FILE_APPEND | LOCK_EX );
+		}
 		$this->actor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $this->actor, [ 'read', 'edit', 'editlayers', 'createpage' ] );
 		$services = $this->getServiceContainer();
@@ -71,7 +156,6 @@ class PdfPageRoutingTest extends \MediaWikiIntegrationTestCase {
 		$this->revisionId = $this->publisher->publish( $this->title, $this->actor, $page->getLatest(),
 			json_encode( $this->document ), 'PDF routing fixture', new WikitextContent( 'Fixture' ), $this->pageId );
 		$this->pilot = new PageOwnedPilot( $services, [ $this->title->getPrefixedDBkey() ] );
-		MigrationState::markComplete( $this->getDb() );
 	}
 
 	protected function tearDown(): void {

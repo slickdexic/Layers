@@ -12,6 +12,7 @@ use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Title\Title;
 
 require_once __DIR__ . '/LegacyMigrationFixtures.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * Once the migration has finished, bare set and slide names mean the page's own drawings.
@@ -24,9 +25,11 @@ require_once __DIR__ . '/LegacyMigrationFixtures.php';
  */
 class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	use LegacyMigrationFixtures;
+	use IsolatedLocalRepoFixture;
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->setUpIsolatedLocalRepoFixture();
 		$this->setUpMigration();
 		MigrationState::clear( $this->getDb() );
 	}
@@ -126,16 +129,21 @@ class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		] )->caller( __METHOD__ )->execute();
 		$copies = $this->pilot->newPageCopyMigration();
 		$plan = $copies->plan( $page->getArticleID(), $this->actor );
-		$this->assertSame( [ [ 'default', true ], [ 'default 2', true ] ],
+		$this->assertSame( [ [ 'default', true ], [ 'default', true ] ],
 			array_map( static fn ( $c ) => [ $c['name'], $c['template'] ], $plan['copies'] ) );
 		$this->assertSame( [], $plan['notMoved'] );
 		$copies->commit( $plan, $this->actor );
 
 		MigrationState::markComplete( $this->getDb() );
 		$surfaces = $this->surfaces( $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle( $page ) );
-		$ids = array_column( $surfaces, 'id', 'label' );
-		$this->assertEqualsCanonicalizing( [ 'v1:' . $page->getArticleID() . ':' . $ids['default'],
-			'v1:' . $page->getArticleID() . ':' . $ids['default 2'] ],
+		$ids = [];
+		foreach ( $surfaces as $surface ) {
+			$this->assertSame( 'default', $surface['label'] );
+			$ids[$surface['source']['fileTitle']] = $surface['id'];
+		}
+		$this->assertCount( 2, $ids, 'Equal layer-set names retain both independent file identities' );
+		$this->assertEqualsCanonicalizing( [ 'v1:' . $page->getArticleID() . ':' . $ids['File:Row_one.png'],
+			'v1:' . $page->getArticleID() . ':' . $ids['File:Row_two.png'] ],
 			array_keys( $this->parse( $page )->getExtensionData( BoundSlideHooks::DATA_KEY ) ?? [] ) );
 	}
 
