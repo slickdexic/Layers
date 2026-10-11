@@ -224,3 +224,23 @@ This policy is qualified through native CLI tests. Final HTTP/session response
 headers, browser behavior and MediaWiki 1.44/mobile acceptance are not claimed.
 The Import picker/dialog, canonical source listing, empty-base admission,
 drafts/first-Save provenance and whole-PDF integration remain separate work.
+
+## Working-copy Import source listing
+
+Use `action=layersdrawings&purpose=import&exclude=<target page ID>` with the
+existing `search` and `limit` parameters to obtain current readable source
+choices. This read-only mode returns `owner` (canonical native prefixed DB key)
+beside each display `title`, native `pageid` and exact `revid`. Each image/slide
+member has `id`, `label`, `kind`, `canvas` (`width`, `height`) and `fileTitle`
+(`null` for slides). It returns no layer payload or application permission.
+
+The default `purpose=copy` retains the existing response shape. Both modes
+retain native editor access checks, source visibility, rate limiting and private
+zero-age CLI cache policy. Final HTTP/session headers require separate testing.
+
+The Import client matches the same image file and normalized layer-set name, or
+the same slide name, and keeps choices from different owner IDs distinct. Native
+IDs select internal data and are never author syntax. A selected choice must
+still pass the exact `layersworkingcopyimportread` admission and guarded editor
+application, with fresh visibility and target-base checks. Listing does not
+authorize Save. Whole-PDF Import and editor UI activation remain separate work.

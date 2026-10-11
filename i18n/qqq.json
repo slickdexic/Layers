@@ -1082,6 +1082,7 @@
 	"apihelp-layersread-param-controls": "{{doc-apihelp-param|layersread|controls}}",
 	"apihelp-layersdrawings-summary": "{{doc-apihelp-summary|layersdrawings}}",
 	"apihelp-layersdrawings-param-search": "{{doc-apihelp-param|layersdrawings|search}}",
+	"apihelp-layersdrawings-param-purpose": "{{doc-apihelp-param|layersdrawings|purpose}}",
 	"apihelp-layersdrawings-param-exclude": "{{doc-apihelp-param|layersdrawings|exclude}}",
 	"apihelp-layersdrawings-param-limit": "{{doc-apihelp-param|layersdrawings|limit}}",
 	"apihelp-layersdrawings-example": "{{doc-apihelp-example|layersdrawings}}",

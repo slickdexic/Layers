@@ -41,17 +41,27 @@ class ApiLayersDrawings extends ApiBase {
 			$this->dieWithError( 'layers-rate-limited', 'layers-rate-limited' );
 		}
 		$params = $this->extractRequestParams();
+		$forImport = $params['purpose'] === 'import';
 		$pages = [];
 		foreach ( $this->pilot->searchDrawings( $params['search'], $params['exclude'], $params['limit'],
-			$this->getAuthority() ) as $page ) {
+			$this->getAuthority(), $forImport ) as $page ) {
 			$drawings = [];
 			foreach ( $page['drawings'] as $drawing ) {
-				$drawings[] = [ 'id' => (string)$drawing['id'], 'label' => (string)$drawing['label'],
+				$entry = [ 'id' => (string)$drawing['id'], 'label' => (string)$drawing['label'],
 					'kind' => (string)$drawing['kind'] ];
+				if ( $forImport ) {
+					$entry['canvas'] = $drawing['canvas'];
+					$entry['fileTitle'] = $drawing['fileTitle'];
+				}
+				$drawings[] = $entry;
 			}
 			ApiResult::setIndexedTagName( $drawings, 'drawing' );
-			$pages[] = [ 'title' => $page['title']->getPrefixedText(), 'pageid' => $page['pageId'],
+			$entry = [ 'title' => $page['title']->getPrefixedText(), 'pageid' => $page['pageId'],
 				'revid' => $page['revisionId'], 'drawings' => $drawings ];
+			if ( $forImport ) {
+				$entry['owner'] = $page['title']->getPrefixedDBkey();
+			}
+			$pages[] = $entry;
 		}
 		ApiResult::setIndexedTagName( $pages, 'page' );
 		$this->getResult()->addValue( null, $this->getModuleName(), [ 'pages' => $pages ] );
@@ -60,6 +70,7 @@ class ApiLayersDrawings extends ApiBase {
 	/** @inheritDoc */
 	public function getAllowedParams() {
 		return [
+			'purpose' => [ self::PARAM_TYPE => [ 'copy', 'import' ], self::PARAM_DFLT => 'copy' ],
 			'search' => [ self::PARAM_TYPE => 'string', self::PARAM_DFLT => '', self::PARAM_MAX_BYTES => 255 ],
 			'exclude' => [ self::PARAM_TYPE => 'integer', self::PARAM_DFLT => 0, self::PARAM_MIN => 0,
 				self::PARAM_MAX => 2147483647 ],

@@ -742,17 +742,67 @@ class PageOwnedPilot {
 	 * @param int $pageId The page being edited
 	 * @param int $limit
 	 * @param Authority $authority
+	 * @param bool $forImport Include image/slide matching metadata for working-copy Import only
 	 * @return array[] title, pageId, revisionId and drawings of each page
 	 */
-	public function searchDrawings( string $search, int $pageId, int $limit, Authority $authority ): array {
+	public function searchDrawings( string $search, int $pageId, int $limit, Authority $authority,
+		bool $forImport = false
+	): array {
 		try {
 			$this->assertCopyScope( $pageId, $authority );
 		} catch ( PublicationException $e ) {
 			return [];
 		}
 		return ( new DrawingCatalog( $this->services->getConnectionProvider(), $this->services->getSlotRoleStore(),
-			$this->services->getTitleFactory(), [ $this, 'getHistorySurfaces' ] ) )
+			$this->services->getTitleFactory(), [ $this,
+				$forImport ? 'getImportSourceSelections' : 'getHistorySurfaces' ] ) )
 			->search( $search, $pageId, $limit, $authority );
+	}
+
+	/**
+	 * Matching metadata after an exact authorized read; never permission to apply or publish.
+	 * File availability and target admission are rechecked by the selected Import read path.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return array[] Image/slide identity and canvas metadata; no layer payload
+	 */
+	public function getImportSourceSelections( \MediaWiki\Title\Title $owner, int $revisionId,
+		Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) || $owner->hasFragment() ||
+			$revisionId < 1 || $revisionId > 2147483647 ) {
+			return [];
+		}
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, null, [] );
+		$members = $bundle['snapshot']['surfaces'];
+		$counts = array_count_values( array_filter( array_column( $members, 'id' ), 'is_string' ) );
+		$result = [];
+		foreach ( $members as $surface ) {
+			$id = $surface['id'] ?? null;
+			$kind = $surface['kind'] ?? null;
+			$label = $surface['label'] ?? null;
+			$canvas = $surface['canvas'] ?? [];
+			if ( !is_string( $id ) || $id === '' || strlen( $id ) > 128 || ( $counts[$id] ?? 0 ) !== 1 ||
+				!in_array( $kind, [ 'image', 'slide' ], true ) || !is_string( $label ) ) {
+				continue;
+			}
+			foreach ( [ 'width', 'height' ] as $dimension ) {
+				$value = $canvas[$dimension] ?? null;
+				if ( !( is_int( $value ) || is_float( $value ) ) || !is_finite( $value ) || $value <= 0 ) {
+					continue 2;
+				}
+			}
+			$fileTitle = $kind === 'image' ? ( $surface['source']['fileTitle'] ?? null ) : null;
+			if ( $kind === 'image' && ( !is_string( $fileTitle ) ||
+				!str_starts_with( $fileTitle, 'File:' ) || strlen( $fileTitle ) <= 5 ) ) {
+				continue;
+			}
+			$result[] = [ 'id' => $id, 'label' => $label, 'kind' => $kind,
+				'canvas' => [ 'width' => $canvas['width'], 'height' => $canvas['height'] ],
+				'fileTitle' => $fileTitle ];
+		}
+		return $result;
 	}
 
 	/**

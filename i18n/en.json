@@ -1088,6 +1088,7 @@
 	"apihelp-layersread-param-controls": "Include this reader's admitted edit link with binding results. This response is private and is never publicly cached.",
 	"apihelp-layersdrawings-summary": "List other pages' current layer sets that you may copy into the page you are editing. Only layer sets you can read are listed.",
 	"apihelp-layersdrawings-param-search": "Start of a page title, optionally with a namespace. Empty lists the pages edited last.",
+	"apihelp-layersdrawings-param-purpose": "Use import to list canonical source identities and matching image/slide metadata for working-copy Import. The default copy response remains unchanged. Listings do not authorize application or publication.",
 	"apihelp-layersdrawings-param-exclude": "ID of the page being edited, whose own layer sets are not listed.",
 	"apihelp-layersdrawings-param-limit": "Maximum number of pages to list.",
 	"apihelp-layersdrawings-example": "List layer sets of pages whose title starts with \"Layers\", leaving out page 228",
