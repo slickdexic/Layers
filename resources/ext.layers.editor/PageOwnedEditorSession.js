@@ -475,6 +475,23 @@
 	}
 
 	class PageOwnedEditorSession {
+		getWorkingCopyImportIdentity() {
+			try {
+				const guard = importCaptureWork( this );
+				const value = key => guard.descriptors[ key ].value;
+				if ( !Number.isInteger( value( '_pageId' ) ) || value( '_pageId' ) < 1 ||
+					value( '_pageId' ) > 2147483647 || value( '_newSurface' ) !== null ) {
+					throw importUnavailable();
+				}
+				const identity = { owner: value( '_owner' ), pageId: value( '_pageId' ),
+					revisionId: value( '_revisionId' ), surfaceId: value( '_surfaceId' ) };
+				importCheckWork( this, guard );
+				return identity;
+			} catch ( error ) {
+				throw importUnavailable();
+			}
+		}
+
 		async revalidateWorkingCopyImportApplication( handle, afterAwait ) {
 			return arguments.length > 1 ? this.revalidateWorkingCopyImport( handle, afterAwait ) : this.revalidateWorkingCopyImport( handle );
 		}
