@@ -18,7 +18,320 @@
 	 *
 	 * @class
 	 */
+	const workingCopyHistoryModes = new WeakMap();
+	const workingCopyTimelineCopies = new WeakMap();
+
+	function workingHistoryError() {
+		const error = new Error( 'Working-copy history unavailable' );
+		error.code = 'layers-working-copy-history-unavailable';
+		return error;
+	}
+
+	function workingHistoryEqual( left, right ) {
+		if ( Object.is( left, right ) ) { return true; }
+		if ( !left || !right || typeof left !== 'object' || typeof right !== 'object' || Array.isArray( left ) !== Array.isArray( right ) ) { return false; }
+		const keys = Object.keys( left );
+		return keys.length === Object.keys( right ).length && keys.every( key => Object.hasOwn( right, key ) && workingHistoryEqual( left[ key ], right[ key ] ) );
+	}
+
+	function workingHistoryAdmission( history, mode, batch = false ) {
+		const { bridge, editor, session, store } = mode;
+		if ( history.isDestroyed || history.editor !== editor || editor.historyManager !== history || editor.stateManager !== store ||
+			bridge.editor !== editor || bridge.session !== session || !bridge.loaded || bridge.disposed || bridge.saving || bridge.reconciling || bridge.pdfCoordinator ||
+			session._phase !== 'ready' || session._readOnly || session._reconciling || session._baseHasDrawings !== true ||
+			session._pdf || session._pdfContext || session._pdfRecovery || store.isLocked || store._isProcessingPending ||
+			!store.isWorkingCopyAlive() || store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ||
+			( !batch && history.batchMode ) ) {
+			throw workingHistoryError();
+		}
+	}
+
+	function workingHistoryGuard( history, mode, batch = false ) {
+		workingHistoryAdmission( history, mode, batch );
+		const { Store, editor, session, bridge, store } = mode, observe = Store.observeWorkingCopyObject;
+		const observations = [ observe( history, false ), observe( history.history ), observe( history.batchChanges ),
+			observe( editor, false ), observe( editor.config || {} ), observe( bridge, false ), observe( session, false ),
+			observe( session._snapshot ), observe( store, false ), observe( store.state ), observe( store.pendingOperations ), observe( store.lockingQueue ) ];
+		if ( session._newSurface ) { observations.push( observe( session._newSurface ) ); }
+		if ( editor.canvasManager ) {
+			observations.push( observe( editor.canvasManager, false ) );
+			if ( editor.canvasManager.selectionManager ) { observations.push( observe( editor.canvasManager.selectionManager, false ) ); }
+			for ( const owner of [ editor.canvasManager, editor.canvasManager.selectionManager ].filter( Boolean ) ) {
+				for ( const descriptor of Object.values( Object.getOwnPropertyDescriptors( owner ) ) ) {
+					if ( Array.isArray( descriptor.value ) ) { observations.push( observe( descriptor.value ) ); }
+				}
+			}
+		}
+		const entries = [ ...[ 'getWorkingCopyLiveState', 'prepareWorkingCopyDisplay', 'preflightWorkingCopyDisplay', 'commitWorkingCopyDisplay', 'refreshWorkingCopyDisplay', 'prepareWorkingCopyDisplayCommit' ].map( key => [ bridge, key ] ),
+			...[ 'captureWorkingCopyCheckpoint', 'inspectWorkingCopyCheckpoint', 'prepareWorkingCopyState', 'inspectPreparedWorkingCopyState', 'commitPreparedWorkingCopyState',
+				'prepareWorkingCopyRestore', 'inspectPreparedWorkingCopyRestore', 'commitWorkingCopyRestore' ].map( key => [ session, key ] ),
+			...[ 'prepareWorkingCopyPatch', 'preflightWorkingCopyPatch', 'commitWorkingCopyPatch', 'notifyWorkingCopyPatch', 'isWorkingCopyAlive', 'prepareWorkingCopyPatchCommit' ].map( key => [ store, key ] ),
+			...[ 'saveState', 'undo', 'redo', 'restoreState', 'captureTimeline', 'preflightTimeline', 'restoreTimeline', 'updateUndoRedoButtons' ].map( key => [ history, key ] ) ];
+		const methods = entries.map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+		return { observations, methods, mode, history, batch };
+	}
+
+	function workingHistoryCheck( guard ) {
+		workingHistoryAdmission( guard.history, guard.mode, guard.batch );
+		guard.observations.forEach( guard.mode.Store.checkWorkingCopyObservation );
+		guard.mode.Store.checkWorkingCopyMethods( guard.methods );
+	}
+
+	function workingHistoryCall( guard, object, key, ...args ) {
+		const method = guard.methods.find( item => item.object === object && item.key === key );
+		if ( !method ) { throw workingHistoryError(); }
+		const result = method.method.call( object, ...args );
+		workingHistoryCheck( guard );
+		return result;
+	}
+
+	function workingHistoryData( history ) {
+		return { history: history.history, historyIndex: history.historyIndex,
+			maxHistorySteps: history.maxHistorySteps, lastSaveHistoryIndex: history.lastSaveHistoryIndex };
+	}
+
+	function workingHistoryAssignments( history, values ) {
+		for ( const key of Object.keys( values ) ) {
+			const descriptor = Object.getOwnPropertyDescriptor( history, key );
+			if ( descriptor ? !Object.hasOwn( descriptor, 'value' ) || !descriptor.writable : !Object.isExtensible( history ) || key in history ) {
+				throw workingHistoryError();
+			}
+		}
+	}
+
+	function workingHistoryAssign( history, values ) {
+		for ( const [ key, value ] of Object.entries( values ) ) {
+			Object.defineProperty( history, key, { value, ...( Object.hasOwn( history, key ) ? {} : { writable: true, configurable: true, enumerable: true } ) } );
+		}
+	}
+
+	function workingHistoryTrim( timeline, capacity ) {
+		const remove = Math.max( 0, timeline.history.length - capacity );
+		return { ...timeline, history: timeline.history.slice( remove ), historyIndex: Math.max( timeline.history.length ? 0 : -1, timeline.historyIndex - remove ),
+			lastSaveHistoryIndex: timeline.lastSaveHistoryIndex < remove ? -1 : timeline.lastSaveHistoryIndex - remove };
+	}
+
+	function workingHistoryRefresh( history, mode, display ) {
+		try { mode.refreshDiagnostic = mode.bridge.refreshWorkingCopyDisplay( display ); }
+		catch ( error ) { mode.refreshDiagnostic = [ 'working-copy-refresh-failed' ]; }
+	}
+
+	function workingHistoryTimeline( history, input ) {
+		const mode = workingCopyHistoryModes.get( history ), association = workingCopyTimelineCopies.get( input );
+		if ( !association || association.mode !== mode || !workingHistoryEqual( mode.Store.copyWorkingCopyValue( input ), association.data ) ) { throw workingHistoryError(); }
+		return association;
+	}
+
+	const applicationHistoryCertificates = new WeakSet();
+
 	class HistoryManager {
+		static isWorkingCopyImportHistory( value ) {
+			return applicationHistoryCertificates.has( value );
+		}
+
+		captureWorkingCopyImportHistory( bridge ) {
+			const mode = workingCopyHistoryModes.get( this );
+			if ( !mode || mode.bridge !== bridge ) { throw workingHistoryError(); }
+			const guard = workingHistoryGuard( this, mode ), history = this;
+			const association = mode.entries.get( this.history[ this.historyIndex ] );
+			if ( !association ) { throw workingHistoryError(); }
+			const live = workingHistoryCall( guard, bridge, 'getWorkingCopyLiveState' );
+			const state = workingHistoryCall( guard, mode.session, 'inspectWorkingCopyCheckpoint', association.checkpoint );
+			const current = mode.Store.copyWorkingCopyValue( mode.session._snapshot.surfaces.find( surface => surface.id === state.surfaceId ) );
+			if ( !workingHistoryEqual( live, { canvas: state.canvas, layers: state.layers } ) || !workingHistoryEqual( current.canvas, state.canvas ) || !workingHistoryEqual( current.layers, state.layers ) ||
+				Object.hasOwn( current, 'readingOrder' ) !== Object.hasOwn( state, 'readingOrder' ) || !workingHistoryEqual( current.readingOrder, state.readingOrder ) ) { throw workingHistoryError(); }
+			const witness = Object.freeze( { preflight: () => { mode.Store.checkWorkingCopyMethods( guard.methods ); workingHistoryCheck( guard );
+				if ( workingCopyHistoryModes.get( history ) !== mode || mode.entries.get( history.history[ history.historyIndex ] ) !== association ) { throw workingHistoryError(); } } } );
+			witness.preflight(); applicationHistoryCertificates.add( witness ); return witness;
+		}
+
+		prepareWorkingCopyImportHistory( bridge, preview ) {
+			const witness = this.captureWorkingCopyImportHistory( bridge ), mode = workingCopyHistoryModes.get( this ), history = this;
+			const data = mode.Store.copyWorkingCopyValue( preview );
+			const entry = { layers: data.editorState.layers, workingState: data.workingState, importedLayerIds: data.importedLayerIds,
+				source: data.source, differentFileVersion: data.differentFileVersion, description: 'Import', timestamp: Date.now() };
+			const kept = this.history.slice( 0, this.historyIndex + 1 );
+			const values = workingHistoryTrim( { history: kept.concat( entry ), historyIndex: kept.length, maxHistorySteps: this.maxHistorySteps,
+				lastSaveHistoryIndex: this.lastSaveHistoryIndex > this.historyIndex ? -1 : this.lastSaveHistoryIndex }, this.maxHistorySteps );
+			workingHistoryAssignments( this, values );
+			const association = { checkpoint: null, workingState: data.workingState }; let committed = false;
+			const transaction = Object.freeze( {
+				preflight: () => { if ( committed ) { throw workingHistoryError(); } witness.preflight(); },
+				commit: checkpoint => { association.checkpoint = checkpoint; mode.entries.set( entry, association ); workingHistoryAssign( history, values ); committed = true; },
+				refresh: diagnostics => { mode.refreshDiagnostic = diagnostics.slice(); }
+			} );
+			witness.preflight(); applicationHistoryCertificates.add( transaction ); return transaction;
+		}
+
+		enableWorkingCopyHistory( bridge ) {
+			try {
+				if ( workingCopyHistoryModes.has( this ) || !bridge || bridge.editor !== this.editor || !this.editor || !this.editor.stateManager ) { throw workingHistoryError(); }
+				const store = this.editor.stateManager, descriptor = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( store ), 'constructor' );
+				if ( !descriptor || typeof descriptor.value !== 'function' ) { throw workingHistoryError(); }
+				const mode = { bridge, editor: this.editor, session: bridge.session, store, Store: descriptor.value, entries: new WeakMap(), batch: null, refreshDiagnostic: [] };
+				const guard = workingHistoryGuard( this, mode );
+				if ( this.history.length !== 1 || this.historyIndex !== 0 || this.lastSaveHistoryIndex !== 0 ||
+					this.history[ 0 ].description !== 'Initial state' || !Number.isFinite( this.history[ 0 ].timestamp ) ) { throw workingHistoryError(); }
+				const checkpoint = workingHistoryCall( guard, mode.session, 'captureWorkingCopyCheckpoint' );
+				const state = workingHistoryCall( guard, mode.session, 'inspectWorkingCopyCheckpoint', checkpoint );
+				const live = workingHistoryCall( guard, bridge, 'getWorkingCopyLiveState' ), snapshot = mode.Store.copyWorkingCopyValue( mode.session._snapshot );
+				if ( !workingHistoryEqual( snapshot, JSON.parse( mode.session._savedJson ) ) ||
+					!workingHistoryEqual( live, { canvas: state.canvas, layers: state.layers } ) || !workingHistoryEqual( this.history[ 0 ].layers, state.layers ) ) {
+					mode.session.releaseWorkingCopyCheckpoint( checkpoint ); throw workingHistoryError();
+				}
+				workingHistoryCheck( guard );
+				mode.entries.set( this.history[ 0 ], { checkpoint, workingState: state } ); mode.identityCheckpoint = checkpoint;
+				workingCopyHistoryModes.set( this, mode );
+			} catch ( error ) { throw workingHistoryError(); }
+		}
+
+		_workingCopyRecord( description, action = 'save' ) {
+			const mode = workingCopyHistoryModes.get( this );
+			let prepared, display;
+			try {
+				const guard = workingHistoryGuard( this, mode, action === 'batchEnd' || this.batchMode );
+				workingHistoryCall( guard, mode.session, 'inspectWorkingCopyCheckpoint', mode.identityCheckpoint );
+				const live = workingHistoryCall( guard, mode.bridge, 'getWorkingCopyLiveState' );
+				prepared = workingHistoryCall( guard, mode.session, 'prepareWorkingCopyState', live );
+				const preview = workingHistoryCall( guard, mode.session, 'inspectPreparedWorkingCopyState', prepared );
+				const entry = { layers: mode.Store.copyWorkingCopyValue( preview.editorState.layers ), description: description || 'Edit', timestamp: Date.now(),
+					workingState: mode.Store.copyWorkingCopyValue( preview.workingState ) };
+				let values = {}, entries;
+				if ( this.batchMode && action === 'save' ) {
+					values = { batchChanges: this.batchChanges.concat( entry ) }; values.batchOperations = values.batchChanges;
+				} else if ( action === 'batchStart' ) {
+					values = { batchMode: true, batchDescription: description || 'Batch operation', batchChanges: [], batchStartSnapshot: preview.editorState.layers };
+					values.batchOperations = values.batchChanges;
+				} else {
+					const kept = action === 'initial' ? [] : this.history.slice( 0, this.historyIndex + 1 );
+					const marker = action === 'initial' ? 0 : this.lastSaveHistoryIndex > this.historyIndex ? -1 : this.lastSaveHistoryIndex;
+					values = workingHistoryTrim( { history: kept.concat( entry ), historyIndex: kept.length, maxHistorySteps: this.maxHistorySteps, lastSaveHistoryIndex: marker }, this.maxHistorySteps );
+					entries = values.history;
+					if ( action === 'batchEnd' ) { values = { ...values, batchMode: false, batchChanges: [], batchStartSnapshot: null }; values.batchOperations = values.batchChanges; }
+				}
+				workingHistoryAssignments( this, values );
+				display = workingHistoryCall( guard, mode.bridge, 'prepareWorkingCopyDisplay', preview.editorState, preview.dirty, false );
+				const displayCommit = workingHistoryCall( guard, mode.bridge, 'prepareWorkingCopyDisplayCommit', display );
+				const Bridge = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( mode.bridge ), 'constructor' ).value;
+				if ( !Bridge.isWorkingCopyDisplayCommit( displayCommit ) ) { throw workingHistoryError(); }
+				workingHistoryCheck( guard );
+				const result = mode.session.commitPreparedWorkingCopyState( prepared, () => {
+					workingHistoryCheck( guard ); displayCommit.preflight(); workingHistoryCheck( guard );
+				} );
+				prepared = null;
+				displayCommit.commit();
+				if ( entries ) { mode.entries.set( entry, { checkpoint: result.checkpoint, workingState: result.workingState } ); }
+				if ( action === 'batchStart' ) { mode.batch = { checkpoint: result.checkpoint, timeline: workingHistoryData( this ) }; }
+				workingHistoryAssign( this, values );
+				if ( action === 'batchEnd' ) { mode.batch = null; }
+				workingHistoryRefresh( this, mode, display );
+				return true;
+			} catch ( error ) { throw workingHistoryError(); } finally {
+				if ( prepared ) { try { mode.session.releasePreparedWorkingCopyState( prepared ); } catch ( error ) {} }
+			}
+		}
+
+		_workingCopyRestore( targetIndex, batchCancel = false ) {
+			const mode = workingCopyHistoryModes.get( this );
+			let prepared;
+			try {
+				const guard = workingHistoryGuard( this, mode, batchCancel );
+				if ( !batchCancel && ( !Number.isInteger( targetIndex ) || targetIndex < 0 || targetIndex >= this.history.length ) ) { return false; }
+				const association = batchCancel ? mode.batch : mode.entries.get( this.history[ targetIndex ] );
+				if ( !association ) { throw workingHistoryError(); }
+				prepared = workingHistoryCall( guard, mode.session, 'prepareWorkingCopyRestore', association.checkpoint );
+				const preview = workingHistoryCall( guard, mode.session, 'inspectPreparedWorkingCopyRestore', prepared );
+				const current = mode.Store.copyWorkingCopyValue( mode.session._snapshot ), selected = current.surfaces.find( member => member.id === preview.workingState.surfaceId );
+				selected.canvas = preview.workingState.canvas; selected.layers = preview.workingState.layers;
+				if ( Object.hasOwn( preview.workingState, 'readingOrder' ) ) { selected.readingOrder = preview.workingState.readingOrder; } else { delete selected.readingOrder; }
+				const dirty = !workingHistoryEqual( current, JSON.parse( mode.session._savedJson ) );
+				const display = workingHistoryCall( guard, mode.bridge, 'prepareWorkingCopyDisplay', preview.editorState, dirty );
+				const displayCommit = workingHistoryCall( guard, mode.bridge, 'prepareWorkingCopyDisplayCommit', display );
+				const Bridge = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( mode.bridge ), 'constructor' ).value;
+				if ( !Bridge.isWorkingCopyDisplayCommit( displayCommit ) ) { throw workingHistoryError(); }
+				const values = batchCancel ? { ...association.timeline, batchMode: false, batchChanges: [], batchStartSnapshot: null } : { historyIndex: targetIndex };
+				if ( batchCancel ) { values.batchOperations = values.batchChanges; }
+				workingHistoryAssignments( this, values );
+				mode.session.commitWorkingCopyRestore( prepared, () => {
+					workingHistoryCheck( guard ); displayCommit.preflight(); workingHistoryCheck( guard );
+				} );
+				prepared = null;
+				displayCommit.commit(); workingHistoryAssign( this, values );
+				if ( batchCancel ) { mode.batch = null; }
+				workingHistoryRefresh( this, mode, display );
+				return true;
+			} catch ( error ) { return false; } finally {
+				if ( prepared ) { try { mode.session.releasePreparedWorkingCopyRestore( prepared ); } catch ( error ) {} }
+			}
+		}
+
+		_workingCopyTimeline( input ) {
+			const mode = workingCopyHistoryModes.get( this );
+			try {
+				const source = input === undefined ? workingHistoryData( this ) : workingHistoryTimeline( this, input ).data;
+				const data = mode.Store.copyWorkingCopyValue( source ), result = mode.Store.copyWorkingCopyValue( data );
+				const associations = input === undefined ? this.history.map( entry => mode.entries.get( entry ) ) : workingHistoryTimeline( this, input ).associations;
+				if ( associations.some( association => !association ) || this.isDestroyed || this.batchMode ) { throw workingHistoryError(); }
+				workingCopyTimelineCopies.set( result, { mode, data, associations } );
+				return result;
+			} catch ( error ) { throw workingHistoryError(); }
+		}
+
+		_workingCopyTimelineRestore( input ) {
+			const mode = workingCopyHistoryModes.get( this ), guard = workingHistoryGuard( this, mode ), association = workingHistoryTimeline( this, input );
+			const values = mode.Store.copyWorkingCopyValue( association.data );
+			workingHistoryAssignments( this, values ); workingHistoryCheck( guard );
+			values.history.forEach( ( entry, index ) => mode.entries.set( entry, association.associations[ index ] ) );
+			workingHistoryAssign( this, values );
+			try { this.updateUndoRedoButtons(); } catch ( error ) { mode.refreshDiagnostic = [ 'working-copy-refresh-failed' ]; }
+		}
+
+		_workingCopyDirty() {
+			const mode = workingCopyHistoryModes.get( this );
+			let prepared;
+			try {
+				const guard = workingHistoryGuard( this, mode, true );
+				const live = workingHistoryCall( guard, mode.bridge, 'getWorkingCopyLiveState' );
+				prepared = workingHistoryCall( guard, mode.session, 'prepareWorkingCopyState', live );
+				return workingHistoryCall( guard, mode.session, 'inspectPreparedWorkingCopyState', prepared ).dirty;
+			} catch ( error ) { return true; } finally {
+				if ( prepared ) { try { mode.session.releasePreparedWorkingCopyState( prepared ); } catch ( error ) {} }
+			}
+		}
+
+		_workingCopyMaintenance( operation, value ) {
+			const mode = workingCopyHistoryModes.get( this );
+			try {
+				if ( operation === 'destroy' ) {
+					workingHistoryAssign( this, { isDestroyed: true, history: [], historyIndex: -1, lastSaveHistoryIndex: -1, batchChanges: [], batchOperations: [],
+						batchStartSnapshot: null, canvasManager: null, config: null, editor: null } );
+					mode.entries = new WeakMap(); mode.batch = null; return;
+				}
+				const guard = workingHistoryGuard( this, mode, operation === 'batchEnd' || operation === 'clear' );
+				let values;
+				if ( operation === 'markSaved' ) { values = { lastSaveHistoryIndex: this.historyIndex }; }
+				if ( operation === 'clear' ) { values = { history: [], historyIndex: -1, lastSaveHistoryIndex: -1 }; }
+				if ( operation === 'batchEnd' ) { values = { batchMode: false, batchChanges: [], batchStartSnapshot: null }; values.batchOperations = values.batchChanges; }
+				if ( operation === 'capacity' ) {
+					if ( !Number.isInteger( value ) || value < 1 ) { throw workingHistoryError(); }
+					values = workingHistoryTrim( { ...workingHistoryData( this ), maxHistorySteps: value }, value );
+				}
+				if ( operation === 'compress' ) {
+					if ( this.history.length <= this.maxHistorySteps / 2 ) { return; }
+					values = workingHistoryTrim( workingHistoryData( this ), Math.max( 1, Math.floor( this.maxHistorySteps / 2 ) ) );
+				}
+				workingHistoryAssignments( this, values ); workingHistoryCheck( guard ); workingHistoryAssign( this, values );
+				if ( operation === 'clear' ) { mode.entries = new WeakMap(); }
+				if ( operation === 'batchEnd' ) { mode.batch = null; }
+				try { this.updateUndoRedoButtons(); } catch ( error ) { mode.refreshDiagnostic = [ 'working-copy-refresh-failed' ]; }
+			} catch ( error ) { throw workingHistoryError(); }
+		}
+
+		getWorkingCopyHistoryDiagnostic() {
+			const mode = workingCopyHistoryModes.get( this );
+			return mode ? mode.refreshDiagnostic.slice() : [];
+		}
+
 		/**
 		 * @param {Object} [options={}] Configuration options
 		 * @param {Object} [options.editor] Editor reference
@@ -90,6 +403,7 @@
 		}
 
 		copyTimeline( value ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyTimeline( value ); }
 			// Classic ResourceLoader scripts also have module.exports; their require cannot load files.
 			const Adapter = ( typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
 				window.Layers.Editor.PageOwnedSnapshotAdapter ) ||
@@ -115,6 +429,7 @@
 		}
 
 		captureTimeline() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyTimeline(); }
 			if ( this.isDestroyed || this.batchMode ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
@@ -123,6 +438,7 @@
 		}
 
 		preflightTimeline( input ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyTimeline( input ); }
 			if ( this.isDestroyed || this.batchMode ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
@@ -130,6 +446,7 @@
 		}
 
 		restoreTimeline( input ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyTimelineRestore( input ); }
 			const timeline = this.preflightTimeline( input );
 			this.history = timeline.history;
 			this.historyIndex = timeline.historyIndex;
@@ -144,6 +461,7 @@
 		 * @param {string} description Optional description of the change
 		 */
 		saveState( description ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRecord( description ); }
 			if ( this.isDestroyed ) {
 				return;
 			}
@@ -260,6 +578,7 @@
 		 * @return {boolean} True if undo was performed
 		 */
 		undo() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this.historyIndex > 0 && this._workingCopyRestore( this.historyIndex - 1 ); }
 			if ( this.isDestroyed || !this.canUndo() ) {
 				return false;
 			}
@@ -288,6 +607,7 @@
 		 * @return {boolean} True if redo was performed
 		 */
 		redo() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this.historyIndex < this.history.length - 1 && this._workingCopyRestore( this.historyIndex + 1 ); }
 			if ( this.isDestroyed || !this.canRedo() ) {
 				return false;
 			}
@@ -334,6 +654,7 @@
 		 * @param {Object} state State object to restore
 		 */
 		restoreState( state ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRestore( this.history.indexOf( state ) ); }
 			// Restore layers using efficient cloning if available
 			const cloneLayersEfficient = this._getCloneLayersEfficient();
 			const restored = cloneLayersEfficient ?
@@ -443,6 +764,7 @@
 		 * @param {string} description Description for the batch operation
 		 */
 		startBatch( description ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRecord( description, 'batchStart' ); }
 			this.batchMode = true;
 			this.batchDescription = description || 'Batch operation';
 			this.batchChanges = [];
@@ -455,6 +777,7 @@
 		 * End batch mode and save as single history entry
 		 */
 		endBatch() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this.batchMode && this.batchChanges.length ? this._workingCopyRecord( this.batchDescription, 'batchEnd' ) : this._workingCopyMaintenance( 'batchEnd' ); }
 			if ( !this.batchMode || this.batchChanges.length === 0 ) {
 				this.batchMode = false;
 				this.batchChanges = [];
@@ -474,6 +797,7 @@
 		 * Cancel batch mode without saving
 		 */
 		cancelBatch() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRestore( -1, true ); }
 			// Revert to snapshot from start of batch if available
 			if ( this.batchStartSnapshot ) {
 				const snapshot = JSON.parse( JSON.stringify( this.batchStartSnapshot ) );
@@ -503,6 +827,7 @@
 		 * Clear all history
 		 */
 		clearHistory() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyMaintenance( 'clear' ); }
 			this.history = [];
 			this.historyIndex = -1;
 			this.updateUndoRedoButtons();
@@ -567,6 +892,7 @@
 		 * @return {boolean} True if revert was successful
 		 */
 		revertTo( targetIndex ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return targetIndex <= this.historyIndex && this._workingCopyRestore( targetIndex ); }
 			if (
 				targetIndex < 0 ||
 				targetIndex >= this.history.length ||
@@ -586,6 +912,7 @@
 		 * Compress history to save memory
 		 */
 		compressHistory() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyMaintenance( 'compress' ); }
 			if ( this.history.length <= this.maxHistorySteps / 2 ) {
 				return;
 			}
@@ -606,6 +933,7 @@
 		 * @param {number} maxSteps Maximum number of history steps
 		 */
 		setMaxHistorySteps( maxSteps ) {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyMaintenance( 'capacity', maxSteps ); }
 			this.maxHistorySteps = Math.max( 1, maxSteps );
 
 			// Trim current history if needed
@@ -627,6 +955,7 @@
 		 * @return {boolean} True if state has changed
 		 */
 		hasUnsavedChanges() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyDirty(); }
 			const editor = this.getEditor();
 
 			if ( this.history.length === 0 ) {
@@ -740,6 +1069,7 @@
 		 * Called after layers are loaded from API to establish undo baseline.
 		 */
 		saveInitialState() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRecord( 'Initial state', 'initial' ); }
 			this.clearHistory();
 			this.saveState( 'Initial state' );
 			// Mark initial state as saved (CORE-2 fix)
@@ -752,6 +1082,7 @@
 		 * CORE-2 FIX: Enables efficient hasUnsavedChanges() check.
 		 */
 		markAsSaved() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyMaintenance( 'markSaved' ); }
 			this.lastSaveHistoryIndex = this.historyIndex;
 		}
 
@@ -796,6 +1127,7 @@
 		 * Clean up resources and clear state
 		 */
 		destroy() {
+			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyMaintenance( 'destroy' ); }
 			// Mark as destroyed to prevent further operations
 			this.isDestroyed = true;
 

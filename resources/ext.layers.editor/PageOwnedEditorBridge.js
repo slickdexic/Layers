@@ -18,7 +18,315 @@
 		return Object.fromEntries( Object.entries( layer ).filter( ( [ , value ] ) => value !== null && value !== undefined ) );
 	}
 
+	const workingCopyDisplays = new WeakMap();
+	const workingCopyDisplayCommits = new WeakSet();
+
+	function workingCopyDisplayError() {
+		const error = new Error( 'Working-copy display unavailable' );
+		error.code = 'layers-working-copy-display-unavailable';
+		return error;
+	}
+
+	function workingCopyStoreClass( bridge ) {
+		const prototype = Object.getPrototypeOf( bridge.editor.stateManager );
+		const descriptor = prototype && Object.getOwnPropertyDescriptor( prototype, 'constructor' );
+		if ( !descriptor || typeof descriptor.value !== 'function' || typeof descriptor.value.copyWorkingCopyValue !== 'function' ) {
+			throw workingCopyDisplayError();
+		}
+		return descriptor.value;
+	}
+
+	function workingCopyDisplayRecord( bridge, handle, committed = false ) {
+		const record = workingCopyDisplays.get( handle );
+		if ( !record || record.bridge !== bridge || record.committed !== committed ) {
+			throw workingCopyDisplayError();
+		}
+		if ( !committed ) {
+			if ( !record.store.isWorkingCopyAlive() ) { throw workingCopyDisplayError(); }
+			record.Store.checkWorkingCopyObservation( record.owner );
+			record.Store.checkWorkingCopyObservation( record.editor );
+			record.Store.checkWorkingCopyMethods( record.methods );
+			record.store.preflightWorkingCopyPatch( record.patch );
+		}
+		return record;
+	}
+
+	const importApplications = new WeakMap();
+	const importApplicationActive = new WeakSet();
+	const importDisplayCertificates = new WeakSet();
+
+	function importApplicationError() {
+		const error = new Error( 'Working-copy Import unavailable' );
+		error.code = 'layers-working-copy-import-application-unavailable'; return error;
+	}
+
+	function importApplicationMethods( Store, entries ) {
+		return entries.map( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) ).flat();
+	}
+
+	function importApplicationCapture( bridge, source ) {
+		const Store = workingCopyStoreClass( bridge ), editor = bridge.editor, session = bridge.session, store = editor.stateManager, canvas = editor.canvasManager;
+		if ( !canvas || !canvas.selectionManager || !editor.historyManager ) { throw importApplicationError(); }
+		const selection = canvas.selectionManager, history = editor.historyManager;
+		const observations = [ Store.observeWorkingCopyObject( bridge, false ), Store.observeWorkingCopyObject( editor, false ), Store.observeWorkingCopyObject( editor.config || {} ),
+			Store.observeWorkingCopyObject( session, false ), Store.observeWorkingCopyObject( session._snapshot ), Store.observeWorkingCopyObject( store, false ),
+			Store.observeWorkingCopyObject( store.state ), Store.observeWorkingCopyObject( store.pendingOperations ), Store.observeWorkingCopyObject( store.lockingQueue ),
+			Store.observeWorkingCopyObject( history, false ), Store.observeWorkingCopyObject( history.history ), Store.observeWorkingCopyObject( history.batchChanges ),
+			Store.observeWorkingCopyObject( canvas, false ), Store.observeWorkingCopyObject( selection, false ) ];
+		if ( session._newSurface ) { observations.push( Store.observeWorkingCopyObject( session._newSurface ) ); }
+		const methods = importApplicationMethods( Store, [ [ bridge, [ 'getWorkingCopyLiveState', 'prepareWorkingCopyImportDisplay', 'inspectWorkingCopyImport', 'applyWorkingCopyImport' ] ],
+			[ history, [ 'captureWorkingCopyImportHistory', 'prepareWorkingCopyImportHistory' ] ], [ selection, [ 'captureWorkingCopyImportSelection', 'prepareWorkingCopyImportSelection' ] ],
+			[ session, [ 'prepareWorkingCopyImport', 'inspectWorkingCopyImport', 'revalidateWorkingCopyImport', 'prepareWorkingCopyImportCommit',
+				'inspectPreparedWorkingCopyImportCommit', 'commitPreparedWorkingCopyImport', 'releaseWorkingCopyImport', 'cleanupAppliedWorkingCopyImport' ] ],
+			[ source, [ 'prepare', 'inspect', 'revalidate', 'release' ] ], [ store, [ 'isWorkingCopyAlive', 'prepareWorkingCopyPatch', 'prepareWorkingCopyPatchCommit', 'notifyWorkingCopyPatch' ] ],
+			[ session._adapter, [ 'toEditorState', 'withWorkingCopyImport', 'withWorkingCopyRestore', 'withEditorState' ] ], [ session._reader, [ 'read' ] ], [ session._publisher, [ 'publish' ] ] ] );
+		let historyWitness, selectionWitness;
+		const check = () => {
+			Store.checkWorkingCopyMethods( methods ); observations.forEach( Store.checkWorkingCopyObservation );
+			if ( bridge.disposed || !bridge.loaded || bridge.saving || bridge.reconciling || bridge.pdfCoordinator || !store.isWorkingCopyAlive() ||
+				session._phase !== 'ready' || session._readOnly || session._reconciling || !session._baseHasDrawings || session._pdf || session._pdfContext || session._pdfRecovery ||
+				store.isLocked || store._isProcessingPending || store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null || history.batchMode ) { throw importApplicationError(); }
+			if ( historyWitness ) { historyWitness.preflight(); } if ( selectionWitness ) { selectionWitness.preflight(); }
+		};
+		check(); selectionWitness = selection.captureWorkingCopyImportSelection();
+		const Selection = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( selection ), 'constructor' ).value;
+		if ( !Selection.isWorkingCopyImportSelection( selectionWitness ) ) { throw importApplicationError(); } check();
+		historyWitness = history.captureWorkingCopyImportHistory( bridge );
+		const History = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( history ), 'constructor' ).value;
+		if ( !History.isWorkingCopyImportHistory( historyWitness ) ) { throw importApplicationError(); } check();
+		return { Store, editor, session, store, canvas, selection, history, Selection, History, check };
+	}
+
+	function importApplicationRecord( bridge, handle ) {
+		const record = importApplications.get( handle );
+		if ( !record || record.bridge !== bridge || record.consumed || record.released ) { throw importApplicationError(); }
+		record.guard.check(); return record;
+	}
+
 	class PageOwnedEditorBridge {
+		async prepareWorkingCopyImport( source, request ) {
+			let sessionHandle, guard;
+			try {
+				const mode = request && Object.getOwnPropertyDescriptor( request, 'mode' );
+				if ( !mode || !Object.hasOwn( mode, 'value' ) ) { throw importApplicationError(); }
+				if ( mode.value === 'cancel' ) { return null; }
+				if ( importApplicationActive.has( this ) ) { throw importApplicationError(); }
+				guard = importApplicationCapture( this, source ); importApplicationActive.add( this );
+				sessionHandle = await guard.session.prepareWorkingCopyImport( source, request ); guard.check();
+				const preview = guard.session.inspectWorkingCopyImport( sessionHandle ); guard.check();
+				const handle = Object.freeze( Object.create( null ) );
+				importApplications.set( handle, { bridge: this, guard, sessionHandle, preview: guard.Store.copyWorkingCopyValue( preview ), consumed: false, released: false, applying: false } );
+				return handle;
+			} catch ( error ) {
+				if ( sessionHandle ) { try { guard.session.releaseWorkingCopyImport( sessionHandle ); } catch ( cleanupError ) {} }
+				throw importApplicationError();
+			} finally { if ( guard ) { importApplicationActive.delete( this ); } }
+		}
+
+		inspectWorkingCopyImport( handle ) {
+			try { const record = importApplicationRecord( this, handle ); const result = record.guard.session.inspectWorkingCopyImport( record.sessionHandle );
+				record.guard.check(); return record.guard.Store.copyWorkingCopyValue( result ); }
+			catch ( error ) { throw importApplicationError(); }
+		}
+
+		prepareWorkingCopyImportDisplay( state, dirty, selectedIds ) {
+			const Store = workingCopyStoreClass( this ), store = this.editor.stateManager, copied = Store.copyWorkingCopyValue( state );
+			const values = { layers: copied.layers, selectedLayerIds: Store.copyWorkingCopyValue( selectedIds ), isDirty: dirty, isSlide: this.isSlide,
+				baseWidth: copied.canvas.width, baseHeight: copied.canvas.height }, clear = [];
+			for ( const [ field, key ] of Object.entries( this.isSlide ? slideFields : sourceFields ) ) {
+				if ( Object.hasOwn( copied.canvas, field ) ) { values[ key ] = copied.canvas[ field ]; } else { clear.push( key ); }
+			}
+			const patch = store.prepareWorkingCopyPatch( { values, clear } ), commit = store.prepareWorkingCopyPatchCommit( patch );
+			if ( !Store.isWorkingCopyPatchCommit( commit ) ) { throw importApplicationError(); }
+			const display = Object.freeze( { preflight: commit.preflight, commit: commit.commit,
+				notify: () => store.notifyWorkingCopyPatch( patch ), release: () => store.releaseWorkingCopyPatch( patch ) } );
+			importDisplayCertificates.add( display ); return display;
+		}
+
+		async applyWorkingCopyImport( handle ) {
+			if ( handle === null ) { return null; }
+			let record, prepared, display, result, committed = false, ownsActive = false;
+			try {
+				record = importApplicationRecord( this, handle );
+				if ( record.applying || importApplicationActive.has( this ) ) { throw importApplicationError(); }
+				record.applying = true; importApplicationActive.add( this ); ownsActive = true;
+				const guard = record.guard;
+				await guard.session.revalidateWorkingCopyImport( record.sessionHandle, guard.check ); guard.check();
+				prepared = guard.session.prepareWorkingCopyImportCommit( record.sessionHandle ); guard.check();
+				const preview = guard.session.inspectPreparedWorkingCopyImportCommit( prepared ); guard.check();
+				const selection = guard.selection.prepareWorkingCopyImportSelection( preview.editorState.layers, preview.importedLayerIds ); guard.check();
+				if ( !guard.Selection.isWorkingCopyImportSelection( selection ) ) { throw importApplicationError(); }
+				display = this.prepareWorkingCopyImportDisplay( preview.editorState, preview.dirty, selection.selectedIds ); guard.check();
+				if ( !importDisplayCertificates.has( display ) ) { throw importApplicationError(); }
+				const history = guard.history.prepareWorkingCopyImportHistory( this, preview ); guard.check();
+				if ( !guard.History.isWorkingCopyImportHistory( history ) ) { throw importApplicationError(); }
+				result = guard.session.commitPreparedWorkingCopyImport( prepared, () => {
+					guard.check(); display.preflight(); selection.preflight(); history.preflight(); guard.check();
+				} );
+				prepared = null;
+				display.commit(); selection.commit(); history.commit( result.checkpoint );
+				committed = true; record.consumed = true;
+				const diagnostics = [], attempt = callback => { try { const notes = callback(); if ( Array.isArray( notes ) ) { diagnostics.push( ...notes ); } } catch ( error ) { diagnostics.push( 'working-copy-import-refresh-failed' ); } };
+				attempt( display.notify ); attempt( selection.refresh );
+				if ( guard.store.isWorkingCopyAlive() ) {
+					attempt( () => guard.canvas.setBaseDimensions( this.isSlide ? guard.store.state.slideCanvasWidth : guard.store.state.baseWidth, this.isSlide ? guard.store.state.slideCanvasHeight : guard.store.state.baseHeight ) );
+					attempt( () => guard.canvas.renderLayers( guard.store.state.layers ) ); attempt( selection.refresh );
+					attempt( () => guard.editor.layerPanel.updateLayers( guard.store.state.layers ) ); attempt( selection.refresh );
+					attempt( () => guard.history.updateUndoRedoButtons() );
+				}
+				attempt( () => guard.session.cleanupAppliedWorkingCopyImport( record.sessionHandle ) ); attempt( selection.refresh );
+				history.refresh( diagnostics ); result.diagnostics = diagnostics;
+				return result;
+			} catch ( error ) {
+				if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; }
+				throw importApplicationError();
+			} finally {
+				if ( ownsActive ) { record.applying = false; importApplicationActive.delete( this ); }
+				if ( prepared ) { try { record.guard.session.releasePreparedWorkingCopyImportCommit( prepared ); } catch ( error ) {} }
+				if ( display ) { try { display.release(); } catch ( error ) {} }
+			}
+		}
+
+		releaseWorkingCopyImport( handle ) {
+			const record = importApplications.get( handle );
+			if ( !record || record.bridge !== this || record.released || record.applying ) { throw importApplicationError(); }
+			record.released = true; importApplications.delete( handle );
+			if ( !record.consumed ) { try { record.guard.session.releaseWorkingCopyImport( record.sessionHandle ); } catch ( error ) {} }
+		}
+
+		static isWorkingCopyDisplayCommit( value ) {
+			return workingCopyDisplayCommits.has( value );
+		}
+
+		prepareWorkingCopyDisplayCommit( handle ) {
+			const record = workingCopyDisplayRecord( this, handle ), bridge = this;
+			const stateCommit = record.store.prepareWorkingCopyPatchCommit( record.patch );
+			if ( !record.Store.isWorkingCopyPatchCommit( stateCommit ) ) { throw workingCopyDisplayError(); }
+			workingCopyDisplayRecord( this, handle );
+			const commit = Object.freeze( {
+				preflight: () => { workingCopyDisplayRecord( bridge, handle ); stateCommit.preflight(); },
+				commit: () => { stateCommit.commit(); record.committed = true; }
+			} );
+			workingCopyDisplayCommits.add( commit );
+			return commit;
+		}
+
+		getWorkingCopyLiveState() {
+			try {
+				if ( this.disposed || !this.loaded || this.saving || this.reconciling || this.pdfCoordinator || !this.editor.stateManager.isWorkingCopyAlive() ) {
+					throw workingCopyDisplayError();
+				}
+				const Store = workingCopyStoreClass( this ), owner = Store.observeWorkingCopyObject( this, false );
+				const editor = Store.observeWorkingCopyObject( this.editor, false ), bag = Store.observeWorkingCopyObject( this.editor.stateManager.state );
+				const method = Store.captureWorkingCopyMethod( this.session, 'getEditorState' );
+				const state = Store.copyWorkingCopyValue( method.method.call( this.session ) );
+				const fields = this.isSlide ? slideFields : sourceFields;
+				for ( const [ field, key ] of Object.entries( fields ) ) {
+					const descriptor = Object.getOwnPropertyDescriptor( this.editor.stateManager.state, key );
+					if ( descriptor && descriptor.value !== undefined ) {
+						state.canvas[ field ] = Store.copyWorkingCopyValue( descriptor.value );
+					} else {
+						delete state.canvas[ field ];
+					}
+				}
+				state.layers = Store.copyWorkingCopyValue( this.editor.stateManager.state.layers );
+				Store.checkWorkingCopyObservation( owner ); Store.checkWorkingCopyObservation( editor ); Store.checkWorkingCopyObservation( bag );
+				Store.checkWorkingCopyMethods( [ method ] );
+				return state;
+			} catch ( error ) {
+				throw workingCopyDisplayError();
+			}
+		}
+
+		prepareWorkingCopyDisplay( state, dirty, clearSelection = true ) {
+			try {
+				if ( this.disposed || !this.loaded || this.saving || this.reconciling || this.pdfCoordinator || typeof dirty !== 'boolean' || !this.editor.stateManager.isWorkingCopyAlive() ) {
+					throw workingCopyDisplayError();
+				}
+				const Store = workingCopyStoreClass( this ), copied = Store.copyWorkingCopyValue( state );
+				if ( !copied || !copied.canvas || !Array.isArray( copied.layers ) || Object.keys( copied ).some( key => ![ 'canvas', 'layers' ].includes( key ) ) ) {
+					throw workingCopyDisplayError();
+				}
+				const owner = Store.observeWorkingCopyObject( this, false ), editor = Store.observeWorkingCopyObject( this.editor, false ), store = this.editor.stateManager;
+				const methods = [ 'prepareWorkingCopyPatch', 'preflightWorkingCopyPatch', 'commitWorkingCopyPatch', 'notifyWorkingCopyPatch', 'isWorkingCopyAlive', 'prepareWorkingCopyPatchCommit' ]
+					.map( key => Store.captureWorkingCopyMethod( store, key ) );
+				const values = { layers: copied.layers, isDirty: dirty, isSlide: this.isSlide,
+					baseWidth: copied.canvas.width, baseHeight: copied.canvas.height }, clear = [];
+				if ( clearSelection ) { values.selectedLayerIds = []; }
+				for ( const [ field, key ] of Object.entries( this.isSlide ? slideFields : sourceFields ) ) {
+					if ( Object.hasOwn( copied.canvas, field ) ) {
+						values[ key ] = copied.canvas[ field ];
+					} else {
+						clear.push( key );
+					}
+				}
+				const patch = store.prepareWorkingCopyPatch( { values, clear } ), handle = Object.freeze( Object.create( null ) );
+				workingCopyDisplays.set( handle, { bridge: this, Store, owner, editor, store, methods, patch, clearSelection, committed: false, refreshed: false } );
+				workingCopyDisplayRecord( this, handle );
+				return handle;
+			} catch ( error ) {
+				throw workingCopyDisplayError();
+			}
+		}
+
+		preflightWorkingCopyDisplay( handle ) {
+			workingCopyDisplayRecord( this, handle );
+		}
+
+		commitWorkingCopyDisplay( handle ) {
+			const record = workingCopyDisplayRecord( this, handle );
+			record.store.commitWorkingCopyPatch( record.patch );
+			record.committed = true;
+		}
+
+		refreshWorkingCopyDisplay( handle ) {
+			const record = workingCopyDisplayRecord( this, handle, true );
+			if ( record.refreshed ) {
+				throw workingCopyDisplayError();
+			}
+			record.refreshed = true;
+			const diagnostics = [], attempt = callback => {
+				try { callback(); } catch ( error ) { diagnostics.push( 'working-copy-refresh-failed' ); }
+			};
+			const selection = record.store.state.selectedLayerIds;
+			if ( !record.store.isWorkingCopyAlive() ) { return [ 'working-copy-refresh-destroyed' ]; }
+			attempt( () => diagnostics.push( ...record.store.notifyWorkingCopyPatch( record.patch ) ) );
+			if ( !record.store.isWorkingCopyAlive() ) { return diagnostics.concat( 'working-copy-refresh-destroyed' ); }
+			const editor = this.editor, store = record.store;
+			if ( editor && editor.canvasManager ) {
+				attempt( () => {
+					const width = this.isSlide ? store.state.slideCanvasWidth : store.state.baseWidth;
+					const height = this.isSlide ? store.state.slideCanvasHeight : store.state.baseHeight;
+					editor.canvasManager.setBaseDimensions( width, height );
+				} );
+				attempt( () => {
+					if ( !record.clearSelection || store.state.selectedLayerIds !== selection ) { return; }
+					if ( editor.canvasManager.selectionManager ) {
+						editor.canvasManager.selectionManager.clearSelection();
+					} else {
+						editor.canvasManager.selectedLayerId = null; editor.canvasManager.selectedLayerIds = [];
+					}
+				} );
+				attempt( () => editor.canvasManager.renderLayers( store.state.layers ) );
+			}
+			if ( editor && editor.layerPanel ) {
+				attempt( () => editor.layerPanel.updateLayers( store.state.layers ) );
+			}
+			if ( editor && editor.historyManager ) {
+				attempt( () => editor.historyManager.updateUndoRedoButtons() );
+			}
+			return diagnostics;
+		}
+
+		releaseWorkingCopyDisplay( handle ) {
+			const record = workingCopyDisplays.get( handle );
+			if ( !record || record.bridge !== this ) {
+				throw workingCopyDisplayError();
+			}
+			record.store.releaseWorkingCopyPatch( record.patch );
+			workingCopyDisplays.delete( handle );
+		}
+
 		/**
 		 * @param {Object} editor Existing editor with StateManager and optional rendering components
 		 * @param {Object} session PageOwnedEditorSession

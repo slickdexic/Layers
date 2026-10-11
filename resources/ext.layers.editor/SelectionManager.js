@@ -26,7 +26,93 @@
 	 * SelectionManager class
 	 * Manages layer selection, manipulation, and transformation operations
 	 */
+	const importSelectionCertificates = new WeakSet();
+
+	function importSelectionError() {
+		return new Error( 'Working-copy selection unavailable' );
+	}
+
+	function importSelectionAssignments( object, values ) {
+		return Object.entries( values ).map( ( [ key, value ] ) => {
+			const descriptor = Object.getOwnPropertyDescriptor( object, key );
+			if ( descriptor ? !Object.hasOwn( descriptor, 'value' ) || !descriptor.writable : !Object.isExtensible( object ) || key in object ) { throw importSelectionError(); }
+			return { object, key, descriptor: { value, ...( descriptor ? {} : { writable: true, enumerable: true, configurable: true } ) } };
+		} );
+	}
+
 	class SelectionManager {
+		static isWorkingCopyImportSelection( value ) {
+			return importSelectionCertificates.has( value );
+		}
+
+		captureWorkingCopyImportSelection() {
+			const selection = this, canvas = this.canvasManager, editor = canvas && canvas.editor, store = editor && editor.stateManager;
+			if ( !store || !this._selectionState || !( this._selectionState instanceof SelectionState ) || canvas.selectionManager !== this ) { throw importSelectionError(); }
+			const Store = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( store ), 'constructor' ).value;
+			const observations = [ Store.observeWorkingCopyObject( this, false ), Store.observeWorkingCopyObject( this._selectionState ), Store.observeWorkingCopyObject( canvas, false ) ];
+			for ( const owner of [ this, canvas, canvas.transformController, this._marqueeSelection ].filter( Boolean ) ) {
+				observations.push( Store.observeWorkingCopyObject( owner, false ) );
+				for ( const descriptor of Object.values( Object.getOwnPropertyDescriptors( owner ) ) ) {
+					if ( Array.isArray( descriptor.value ) ) { observations.push( Store.observeWorkingCopyObject( descriptor.value ) ); }
+				}
+			}
+			const methods = [ ...[ 'selectLayer', 'clearSelection', 'notifySelectionChange', 'updateSelectionHandles', 'destroy', 'prepareWorkingCopyImportSelection' ].map( key => [ this, key ] ),
+				...[ 'setSelectedIds', 'getSelectedIds', 'notifySelectionChange', 'destroy' ].map( key => [ this._selectionState, key ] ), [ store, 'isWorkingCopyAlive' ] ]
+				.map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+			const preflight = () => {
+				Store.checkWorkingCopyMethods( methods ); observations.forEach( Store.checkWorkingCopyObservation );
+				if ( !store.isWorkingCopyAlive() || selection.canvasManager !== canvas || canvas.editor !== editor || editor.stateManager !== store || !selection._selectionState ) { throw importSelectionError(); }
+				for ( const owner of [ selection, canvas, canvas.transformController, selection._marqueeSelection ].filter( Boolean ) ) {
+					for ( const key of [ 'isDragging', 'isResizing', 'isRotating', 'isMarqueeSelecting', 'isDrawing', 'isPanning', 'isSelecting' ] ) {
+						const descriptor = Object.getOwnPropertyDescriptor( owner, key );
+						if ( descriptor && ( !Object.hasOwn( descriptor, 'value' ) || descriptor.value ) ) { throw importSelectionError(); }
+					}
+				}
+			};
+			preflight(); const witness = Object.freeze( { preflight } ); importSelectionCertificates.add( witness ); return witness;
+		}
+
+		prepareWorkingCopyImportSelection( layers, importedIds ) {
+			const witness = this.captureWorkingCopyImportSelection(), canvas = this.canvasManager, store = canvas.editor.stateManager, core = this._selectionState;
+			const Store = Object.getOwnPropertyDescriptor( Object.getPrototypeOf( store ), 'constructor' ).value;
+			const copied = Store.copyWorkingCopyValue( layers ), ids = Store.copyWorkingCopyValue( importedIds );
+			if ( !Array.isArray( copied ) || !Array.isArray( ids ) || new Set( ids ).size !== ids.length || ids.some( id => typeof id !== 'string' || copied.filter( layer => layer.id === id ).length !== 1 ) ) { throw importSelectionError(); }
+			const selected = ids.filter( id => {
+				const layer = copied.find( member => member.id === id );
+				return layer.locked !== true && layer.locked !== 1 && layer.visible !== false && layer.visible !== 0;
+			} );
+			const last = selected.length ? selected[ selected.length - 1 ] : null;
+			const initialIds = selected.slice();
+			const assignments = [ ...importSelectionAssignments( this, { selectedLayerIds: selected, lastSelectedId: last, selectionHandles: [] } ),
+				...importSelectionAssignments( core, { selectedLayerIds: selected, lastSelectedId: last } ),
+				...importSelectionAssignments( canvas, { selectedLayerIds: selected, selectedLayerId: last } ) ];
+			const selection = this; let committed = false;
+			const transaction = Object.freeze( {
+				selectedIds: Object.freeze( selected.slice() ),
+				preflight: () => { if ( committed ) { throw importSelectionError(); } witness.preflight(); },
+				commit: () => { for ( const assignment of assignments ) { Object.defineProperty( assignment.object, assignment.key, assignment.descriptor ); } committed = true; },
+				refresh: () => {
+					if ( !committed ) { throw importSelectionError(); }
+					const diagnostics = [];
+					if ( !store.isWorkingCopyAlive() || selection._selectionState !== core || selection.canvasManager !== canvas ) { return [ 'working-copy-selection-refresh-unavailable' ]; }
+					const current = [ core.selectedLayerIds, selection.selectedLayerIds, store.state.selectedLayerIds, canvas.selectedLayerIds ]
+						.find( value => Array.isArray( value ) && ( value.length !== initialIds.length || value.some( ( id, index ) => id !== initialIds[ index ] ) ) );
+					const latest = current || selected, latestLast = latest.length ? latest[ latest.length - 1 ] : null;
+					try {
+						for ( const assignment of [ ...importSelectionAssignments( selection, { selectedLayerIds: latest, lastSelectedId: latestLast } ),
+							...importSelectionAssignments( core, { selectedLayerIds: latest, lastSelectedId: latestLast } ),
+							...importSelectionAssignments( canvas, { selectedLayerIds: latest, selectedLayerId: latestLast } ), ...importSelectionAssignments( store.state, { selectedLayerIds: latest } ) ] ) {
+							Object.defineProperty( assignment.object, assignment.key, assignment.descriptor );
+						}
+						selection.updateSelectionHandles();
+						if ( canvas.editor.layerPanel && canvas.editor.layerPanel.updateSelection ) { canvas.editor.layerPanel.updateSelection( selection.selectedLayerIds ); }
+					} catch ( error ) { diagnostics.push( 'working-copy-selection-refresh-failed' ); }
+					return diagnostics;
+				}
+			} );
+			witness.preflight(); importSelectionCertificates.add( transaction ); return transaction;
+		}
+
 		/**
 		 * Create a SelectionManager instance
 		 *

@@ -21,7 +21,268 @@ const getDefaults = () => {
 	return DEFAULT_VALUES;
 };
 
+const workingCopyPatches = new WeakMap();
+const workingCopyDestroyedStores = new WeakSet();
+const workingCopyPatchCommits = new WeakSet();
+
+function workingCopyPatchError() {
+	const error = new Error( 'Working-copy state unavailable' );
+	error.code = 'layers-working-copy-state-unavailable';
+	return error;
+}
+
+function workingCopyFinite( value, ancestors = new Set() ) {
+	if ( value === null || typeof value === 'boolean' || typeof value === 'string' ||
+		( typeof value === 'number' && Number.isFinite( value ) ) ) {
+		return value;
+	}
+	if ( !value || typeof value !== 'object' || ancestors.has( value ) ) {
+		throw workingCopyPatchError();
+	}
+	const array = Array.isArray( value ), prototype = Object.getPrototypeOf( value ), keys = Reflect.ownKeys( value );
+	if ( ( array ? prototype !== Array.prototype : ![ Object.prototype, null ].includes( prototype ) ) || keys.some( key => typeof key !== 'string' ) ||
+		( array && ( keys.length !== value.length + 1 || keys.some( key => key !== 'length' &&
+			( !/^(0|[1-9][0-9]*)$/.test( key ) || Number( key ) >= value.length ) ) ) ) ) {
+		throw workingCopyPatchError();
+	}
+	const result = array ? [] : Object.create( prototype );
+	ancestors.add( value );
+	try {
+		for ( const key of keys.filter( name => !array || name !== 'length' ) ) {
+			const descriptor = Object.getOwnPropertyDescriptor( value, key );
+			if ( !Object.hasOwn( descriptor, 'value' ) || !descriptor.enumerable ) {
+				throw workingCopyPatchError();
+			}
+			Object.defineProperty( result, key, { value: workingCopyFinite( descriptor.value, ancestors ), enumerable: true, writable: true, configurable: true } );
+		}
+	} finally {
+		ancestors.delete( value );
+	}
+	return result;
+}
+
+function workingCopyObserve( object, deep = true, ancestors = new Set() ) {
+	if ( !object || typeof object !== 'object' || ancestors.has( object ) ) {
+		throw workingCopyPatchError();
+	}
+	const observation = { object, prototype: Object.getPrototypeOf( object ), extensible: Object.isExtensible( object ),
+		descriptors: Object.getOwnPropertyDescriptors( object ), children: [] };
+	ancestors.add( object );
+	try {
+		if ( deep ) {
+			for ( const key of Reflect.ownKeys( observation.descriptors ) ) {
+				const descriptor = observation.descriptors[ key ];
+				if ( !Object.hasOwn( descriptor, 'value' ) ) {
+					throw workingCopyPatchError();
+				}
+				const value = descriptor.value;
+				if ( value && typeof value === 'object' ) {
+					observation.children.push( workingCopyObserve( value, true, ancestors ) );
+				}
+			}
+		}
+	} finally {
+		ancestors.delete( object );
+	}
+	return observation;
+}
+
+function workingCopyCheck( observation ) {
+	const { object, descriptors } = observation, current = Object.getOwnPropertyDescriptors( object );
+	if ( Object.getPrototypeOf( object ) !== observation.prototype || Object.isExtensible( object ) !== observation.extensible ||
+		Reflect.ownKeys( current ).length !== Reflect.ownKeys( descriptors ).length ) {
+		throw workingCopyPatchError();
+	}
+	for ( const key of Reflect.ownKeys( descriptors ) ) {
+		const expected = descriptors[ key ], actual = current[ key ];
+		if ( !actual || Reflect.ownKeys( expected ).some( field => !Object.is( actual[ field ], expected[ field ] ) ) ) {
+			throw workingCopyPatchError();
+		}
+	}
+	observation.children.forEach( workingCopyCheck );
+}
+
+function workingCopyMethod( object, key ) {
+	let owner = object;
+	while ( owner ) {
+		const descriptor = Object.getOwnPropertyDescriptor( owner, key );
+		if ( descriptor ) {
+			if ( !Object.hasOwn( descriptor, 'value' ) || typeof descriptor.value !== 'function' ) {
+				throw workingCopyPatchError();
+			}
+			return { object, owner, key, descriptor, method: descriptor.value };
+		}
+		owner = Object.getPrototypeOf( owner );
+	}
+	throw workingCopyPatchError();
+}
+
+function workingCopyMethodsCheck( methods ) {
+	for ( const method of methods ) {
+		const current = workingCopyMethod( method.object, method.key );
+		if ( current.owner !== method.owner || Reflect.ownKeys( method.descriptor ).some( key => !Object.is( current.descriptor[ key ], method.descriptor[ key ] ) ) ) {
+			throw workingCopyPatchError();
+		}
+	}
+}
+
+function workingCopyPatchRecord( store, handle, committed = false ) {
+	const record = workingCopyPatches.get( handle );
+	if ( !record || record.store !== store || record.committed !== committed ) {
+		throw workingCopyPatchError();
+	}
+	if ( !committed ) {
+		if ( workingCopyDestroyedStores.has( store ) ) {
+			throw workingCopyPatchError();
+		}
+		workingCopyCheck( record.owner );
+		workingCopyCheck( record.state );
+		workingCopyCheck( record.pending );
+		workingCopyCheck( record.queue );
+		workingCopyMethodsCheck( record.methods );
+	}
+	return record;
+}
+
 class StateManager {
+		static isWorkingCopyPatchCommit( value ) {
+			return workingCopyPatchCommits.has( value );
+		}
+
+		prepareWorkingCopyPatchCommit( handle ) {
+			const record = workingCopyPatchRecord( this, handle );
+			const store = this, version = this._layersVersion + ( record.changes.some( change => change.key === 'layers' ) ? 1 : 0 );
+			const assignments = record.changes.map( change => ( { key: change.key, descriptor: { value: change.value,
+				...( Object.hasOwn( store.state, change.key ) ? {} : { enumerable: true, configurable: true, writable: true } ) } } ) );
+			const commit = Object.freeze( {
+				preflight: () => { workingCopyPatchRecord( store, handle ); },
+				commit: () => {
+					workingCopyPatchRecord( store, handle );
+					for ( const assignment of assignments ) { Object.defineProperty( record.state.object, assignment.key, assignment.descriptor ); }
+					store._layersVersion = version;
+					record.committed = true;
+				}
+			} );
+			workingCopyPatchCommits.add( commit );
+			return commit;
+		}
+
+	isWorkingCopyAlive() {
+		return !workingCopyDestroyedStores.has( this );
+	}
+
+	static copyWorkingCopyValue( value ) {
+		return workingCopyFinite( value );
+	}
+
+	static observeWorkingCopyObject( value, deep = true ) {
+		return workingCopyObserve( value, deep );
+	}
+
+	static checkWorkingCopyObservation( observation ) {
+		workingCopyCheck( observation );
+	}
+
+	static captureWorkingCopyMethod( object, key ) {
+		return workingCopyMethod( object, key );
+	}
+
+	static checkWorkingCopyMethods( methods ) {
+		workingCopyMethodsCheck( methods );
+	}
+
+	prepareWorkingCopyPatch( patch ) {
+		try {
+			const owner = workingCopyObserve( this, false ), state = workingCopyObserve( this.state );
+			if ( workingCopyDestroyedStores.has( this ) || this.isLocked || this._isProcessingPending || this.pendingOperations.length || this.lockingQueue.length ||
+				this.lockTimeout !== null || this.lockAutoRecoveryTimeout !== null || !Object.hasOwn( this.state, 'layers' ) ) {
+				throw workingCopyPatchError();
+			}
+			const copied = workingCopyFinite( patch ), allowed = [ 'layers', 'selectedLayerIds', 'isDirty', 'isSlide', 'baseWidth', 'baseHeight',
+				'slideCanvasWidth', 'slideCanvasHeight', 'slideBackgroundColor', 'backgroundVisible', 'backgroundOpacity' ];
+			if ( !copied || Array.isArray( copied ) || Object.keys( copied ).length !== 2 || !copied.values || Array.isArray( copied.values ) ||
+				!Object.hasOwn( copied, 'clear' ) || !Object.hasOwn( copied, 'values' ) || !Array.isArray( copied.clear ) || new Set( copied.clear ).size !== copied.clear.length ) {
+				throw workingCopyPatchError();
+			}
+			const keys = [ ...Object.keys( copied.values ), ...copied.clear ];
+			if ( keys.some( key => !allowed.includes( key ) ) || copied.clear.some( key => Object.hasOwn( copied.values, key ) ) ) {
+				throw workingCopyPatchError();
+			}
+			for ( const [ key, value ] of Object.entries( copied.values ) ) {
+				if ( ( key === 'layers' && !Array.isArray( value ) ) ||
+					( key === 'selectedLayerIds' && ( !Array.isArray( value ) || value.some( id => typeof id !== 'string' ) || new Set( value ).size !== value.length ) ) ||
+					( [ 'isDirty', 'isSlide', 'backgroundVisible' ].includes( key ) && typeof value !== 'boolean' ) ||
+					( [ 'baseWidth', 'baseHeight', 'slideCanvasWidth', 'slideCanvasHeight' ].includes( key ) && ( typeof value !== 'number' || value < 0 ) ) ||
+					( key === 'backgroundOpacity' && ( typeof value !== 'number' || value < 0 || value > 1 ) ) ||
+					( key === 'slideBackgroundColor' && typeof value !== 'string' ) ) {
+					throw workingCopyPatchError();
+				}
+			}
+			const changes = keys.map( key => {
+				const descriptor = Object.getOwnPropertyDescriptor( this.state, key );
+				if ( descriptor ? !Object.hasOwn( descriptor, 'value' ) || !descriptor.writable : !Object.isExtensible( this.state ) ) {
+					throw workingCopyPatchError();
+				}
+				if ( !descriptor && key in this.state ) {
+					throw workingCopyPatchError();
+				}
+				return { key, oldValue: descriptor && descriptor.value, value: Object.hasOwn( copied.values, key ) ? copied.values[ key ] : undefined };
+			} ).filter( change => !Object.is( change.oldValue, change.value ) );
+			if ( changes.some( change => change.key === 'layers' ) && !Object.getOwnPropertyDescriptor( this, '_layersVersion' ).writable ) {
+				throw workingCopyPatchError();
+			}
+			const handle = Object.freeze( Object.create( null ) );
+			workingCopyPatches.set( handle, { store: this, owner, state, pending: workingCopyObserve( this.pendingOperations ), queue: workingCopyObserve( this.lockingQueue ),
+				methods: [ workingCopyMethod( this, 'notifyListeners' ), workingCopyMethod( this, 'commitWorkingCopyPatch' ), workingCopyMethod( this, 'preflightWorkingCopyPatch' ), workingCopyMethod( this, 'isWorkingCopyAlive' ) ],
+				changes, committed: false, notified: false } );
+			workingCopyPatchRecord( this, handle );
+			return handle;
+		} catch ( error ) {
+			throw workingCopyPatchError();
+		}
+	}
+
+	preflightWorkingCopyPatch( handle ) {
+		workingCopyPatchRecord( this, handle );
+	}
+
+	commitWorkingCopyPatch( handle ) {
+		const record = workingCopyPatchRecord( this, handle );
+		for ( const change of record.changes ) {
+			Object.defineProperty( this.state, change.key, { value: change.value,
+				...( Object.hasOwn( this.state, change.key ) ? {} : { enumerable: true, configurable: true, writable: true } ) } );
+		}
+		if ( record.changes.some( change => change.key === 'layers' ) ) {
+			this._layersVersion++;
+		}
+		record.committed = true;
+	}
+
+	notifyWorkingCopyPatch( handle ) {
+		const record = workingCopyPatchRecord( this, handle, true );
+		if ( record.notified ) {
+			throw workingCopyPatchError();
+		}
+		record.notified = true;
+		const diagnostics = [];
+		for ( const change of record.changes ) {
+			try {
+				this.notifyListeners( change.key, this.state[ change.key ], change.oldValue );
+			} catch ( error ) {
+				diagnostics.push( 'working-copy-notification-failed' );
+			}
+		}
+		return diagnostics;
+	}
+
+	releaseWorkingCopyPatch( handle ) {
+		const record = workingCopyPatches.get( handle );
+		if ( !record || record.store !== this ) {
+			throw workingCopyPatchError();
+		}
+		workingCopyPatches.delete( handle );
+	}
+
 	constructor( editor ) {
 		this.editor = editor;
 		this._layersVersion = 0;
@@ -931,6 +1192,7 @@ class StateManager {
 	 * Destroy state manager and clean up resources
 	 */
 	destroy() {
+		workingCopyDestroyedStores.add( this );
 		// Cancel any pending lock timeouts
 		if ( this.lockTimeout ) {
 			clearTimeout( this.lockTimeout );

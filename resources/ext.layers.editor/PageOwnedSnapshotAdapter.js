@@ -235,7 +235,207 @@
 		}
 	}
 
+	const importHasOwn = ( value, key ) => Object.prototype.hasOwnProperty.call( value, key );
+	const importIsObject = value => value !== null && typeof value === 'object' && !Array.isArray( value );
+	const importIsId = value => typeof value === 'string' && value.length > 0;
+
+	function importDataEqual( left, right ) {
+		if ( left === right ) {
+			return true;
+		}
+		if ( left === null || right === null || typeof left !== 'object' || typeof right !== 'object' ||
+			Array.isArray( left ) !== Array.isArray( right ) ) {
+			return false;
+		}
+		const keys = Object.keys( left );
+		return keys.length === Object.keys( right ).length && keys.every( key =>
+			importHasOwn( right, key ) && importDataEqual( left[ key ], right[ key ] ) );
+	}
+
+	function validateImportSurface( surface ) {
+		if ( !importIsObject( surface ) || !importIsId( surface.id ) || typeof surface.label !== 'string' ||
+			![ 'image', 'slide' ].includes( surface.kind ) || !importIsObject( surface.canvas ) ||
+			!Number.isFinite( surface.canvas.width ) || surface.canvas.width <= 0 ||
+			!Number.isFinite( surface.canvas.height ) || surface.canvas.height <= 0 || !Array.isArray( surface.layers ) ) {
+			throw createInvalidSnapshotError();
+		}
+		const layers = new Map(), parents = new Map();
+		for ( const layer of surface.layers ) {
+			if ( !importIsObject( layer ) || !importIsId( layer.id ) || !importIsId( layer.type ) || layers.has( layer.id ) ) {
+				throw createInvalidSnapshotError();
+			}
+			layers.set( layer.id, layer );
+		}
+		for ( const layer of surface.layers ) {
+			if ( layer.type !== 'group' ) {
+				continue;
+			}
+			if ( !Array.isArray( layer.children ) ) {
+				throw createInvalidSnapshotError();
+			}
+			for ( const child of layer.children ) {
+				if ( !importIsId( child ) || !layers.has( child ) || parents.has( child ) ||
+					layers.get( child ).parentGroup !== layer.id ) {
+					throw createInvalidSnapshotError();
+				}
+				parents.set( child, layer.id );
+			}
+		}
+		for ( const layer of surface.layers ) {
+			if ( importHasOwn( layer, 'parentGroup' ) && layer.parentGroup !== null &&
+				( !importIsId( layer.parentGroup ) || parents.get( layer.id ) !== layer.parentGroup ) ) {
+				throw createInvalidSnapshotError();
+			}
+			const seen = new Set( [ layer.id ] );
+			let parent = parents.get( layer.id );
+			while ( parent !== undefined ) {
+				if ( seen.has( parent ) ) {
+					throw createInvalidSnapshotError();
+				}
+				seen.add( parent );
+				parent = parents.get( parent );
+			}
+		}
+		if ( importHasOwn( surface, 'readingOrder' ) ) {
+			if ( !Array.isArray( surface.readingOrder ) ) {
+				throw createInvalidSnapshotError();
+			}
+			const seen = new Set();
+			for ( const id of surface.readingOrder ) {
+				if ( !importIsId( id ) || !layers.has( id ) || seen.has( id ) ) {
+					throw createInvalidSnapshotError();
+				}
+				seen.add( id );
+			}
+		}
+		return layers;
+	}
+
+	function validateImportCandidate( target, plan, mode ) {
+		if ( !importIsObject( plan ) || Object.keys( plan ).length !== 2 ||
+			!importHasOwn( plan, 'surface' ) || !importHasOwn( plan, 'importedLayerIds' ) ||
+			!Array.isArray( plan.importedLayerIds ) ) {
+			throw createInvalidSnapshotError();
+		}
+		const candidate = plan.surface, oldLayers = validateImportSurface( target );
+		validateImportSurface( candidate );
+		if ( mode === 'empty' ? target.layers.length !== 0 : target.layers.length === 0 ) {
+			throw createInvalidSnapshotError();
+		}
+		const mutable = new Set( [ 'layers', 'readingOrder' ] );
+		if ( mode === 'empty' && target.kind === 'slide' ) {
+			mutable.add( 'canvas' );
+		}
+		const targetKeys = Object.keys( target ).filter( key => !mutable.has( key ) );
+		const candidateKeys = Object.keys( candidate ).filter( key => !mutable.has( key ) );
+		if ( targetKeys.length !== candidateKeys.length || targetKeys.some( key =>
+			!importHasOwn( candidate, key ) || !importDataEqual( target[ key ], candidate[ key ] ) ) ) {
+			throw createInvalidSnapshotError();
+		}
+		const imported = new Set();
+		for ( const [ index, id ] of plan.importedLayerIds.entries() ) {
+			if ( !importIsId( id ) || imported.has( id ) || oldLayers.has( id ) ||
+				!candidate.layers[ index ] || candidate.layers[ index ].id !== id ) {
+				throw createInvalidSnapshotError();
+			}
+			imported.add( id );
+		}
+		const suffix = candidate.layers.slice( plan.importedLayerIds.length );
+		if ( mode === 'append' ? !importDataEqual( suffix, target.layers ) : suffix.length !== 0 ) {
+			throw createInvalidSnapshotError();
+		}
+		if ( importHasOwn( target, 'readingOrder' ) && !importHasOwn( candidate, 'readingOrder' ) ) {
+			throw createInvalidSnapshotError();
+		}
+		if ( importHasOwn( candidate, 'readingOrder' ) ) {
+			const prefix = mode === 'append' ? ( target.readingOrder || target.layers.map( layer => layer.id ) ) : [];
+			if ( !importDataEqual( candidate.readingOrder.slice( 0, prefix.length ), prefix ) ||
+				candidate.readingOrder.slice( prefix.length ).some( id => !imported.has( id ) ) ) {
+				throw createInvalidSnapshotError();
+			}
+		}
+		return candidate;
+	}
+
 	class PageOwnedSnapshotAdapter {
+		/**
+		 * @param {Object} snapshot Current complete document
+		 * @param {string} surfaceId Exact existing image/slide ID
+		 * @param {Object} state Canvas, layers and optional own readingOrder
+		 * @return {Object} Detached document with only the selected working fields restored
+		 */
+		withWorkingCopyRestore( snapshot, surfaceId, state ) {
+			try {
+				if ( !importIsId( surfaceId ) ) {
+					throw createInvalidSnapshotError();
+				}
+				const copied = cloneJson( state );
+				if ( !importIsObject( copied ) || !importHasOwn( copied, 'canvas' ) || !importHasOwn( copied, 'layers' ) ||
+					Object.keys( copied ).some( key => ![ 'canvas', 'layers', 'readingOrder' ].includes( key ) ) ) {
+					throw createInvalidSnapshotError();
+				}
+				const result = validateAndCloneSnapshot( snapshot ), target = result.surfaces.find( surface => surface.id === surfaceId );
+				if ( !target || ![ 'image', 'slide' ].includes( target.kind ) ||
+					( target.kind === 'image' && ( !importIsObject( copied.canvas ) ||
+						copied.canvas.width !== target.canvas.width || copied.canvas.height !== target.canvas.height ) ) ) {
+					throw createInvalidSnapshotError();
+				}
+				target.canvas = copied.canvas;
+				target.layers = copied.layers;
+				if ( importHasOwn( copied, 'readingOrder' ) ) {
+					target.readingOrder = copied.readingOrder;
+				} else {
+					delete target.readingOrder;
+				}
+				const validated = validateAndCloneSnapshot( result );
+				if ( importHasOwn( copied, 'readingOrder' ) ) {
+					const counts = new Map();
+					for ( const layer of copied.layers ) {
+						if ( importIsObject( layer ) && typeof layer.id === 'string' ) {
+							counts.set( layer.id, ( counts.get( layer.id ) || 0 ) + 1 );
+						}
+					}
+					if ( copied.readingOrder.some( id => counts.get( id ) !== 1 ) ) {
+						throw createInvalidSnapshotError();
+					}
+				}
+				return validated;
+			} catch ( error ) {
+				throw createInvalidSnapshotError();
+			}
+		}
+
+		/**
+		 * Apply a validated detached Import plan without publication or editor mutation.
+		 *
+		 * @param {Object} snapshot Complete version-1 snapshot
+		 * @param {string} surfaceId Exact target surface ID
+		 * @param {Object} plan Detached surface and ordered importedLayerIds
+		 * @param {string} mode Empty, append or replace
+		 * @return {Object} Complete isolated snapshot
+		 */
+		withWorkingCopyImport( snapshot, surfaceId, plan, mode ) {
+			try {
+				if ( !importIsId( surfaceId ) || ![ 'empty', 'append', 'replace' ].includes( mode ) ) {
+					throw createInvalidSnapshotError();
+				}
+				const result = validateAndCloneSnapshot( snapshot ), clonedPlan = cloneJson( plan );
+				const target = result.surfaces.find( surface => surface.id === surfaceId );
+				if ( !target ) {
+					throw createInvalidSnapshotError();
+				}
+				const candidate = validateImportCandidate( target, clonedPlan, mode );
+				target.canvas = candidate.canvas;
+				target.layers = candidate.layers;
+				if ( importHasOwn( candidate, 'readingOrder' ) ) {
+					target.readingOrder = candidate.readingOrder;
+				}
+				return validateAndCloneSnapshot( result );
+			} catch ( error ) {
+				throw createInvalidSnapshotError();
+			}
+		}
+
 		/**
 		 * Extract the editor state { canvas, layers } from the exact selected surface.
 		 *

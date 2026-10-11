@@ -74,7 +74,804 @@
 			Array.isArray( surface.layers ) && surface.layers.length === 0;
 	}
 
+	const workingCopyImports = new WeakMap();
+	const importHasOwn = ( value, key ) => Object.prototype.hasOwnProperty.call( value, key );
+	const importFields = [ '_owner', '_pageId', '_surfaceId', '_revisionId', '_readOnly', '_newSurface',
+		'_baseHasDrawings', '_reader', '_publisher', '_adapter', '_pdfContext', '_pdf', '_pdfRecovery',
+		'_phase', '_snapshot', '_savedJson', '_reconciling' ];
+
+	function importUnavailable() {
+		const error = new Error( 'Working-copy Import unavailable' );
+		error.code = 'layers-working-copy-import-unavailable';
+		return error;
+	}
+
+	function importDescriptor( value, key ) {
+		const descriptor = Object.getOwnPropertyDescriptor( value, key );
+		if ( !descriptor || !descriptor.enumerable || !importHasOwn( descriptor, 'value' ) ) {
+			throw importUnavailable();
+		}
+		return descriptor;
+	}
+
+	function importObjectFields( value, keys ) {
+		if ( !value || typeof value !== 'object' || Array.isArray( value ) ||
+			![ Object.prototype, null ].includes( Object.getPrototypeOf( value ) ) ||
+			Reflect.ownKeys( value ).length !== keys.length ) {
+			throw importUnavailable();
+		}
+		const descriptors = keys.map( key => importDescriptor( value, key ) );
+		return Object.fromEntries( keys.map( ( key, index ) => [ key, descriptors[ index ].value ] ) );
+	}
+
+	function importMethod( object, key ) {
+		if ( !object || typeof object !== 'object' || Array.isArray( object ) ) {
+			throw importUnavailable();
+		}
+		let owner = object;
+		while ( owner !== null ) {
+			const descriptor = Object.getOwnPropertyDescriptor( owner, key );
+			if ( descriptor ) {
+				if ( !importHasOwn( descriptor, 'value' ) || typeof descriptor.value !== 'function' ) {
+					throw importUnavailable();
+				}
+				return { object, owner, key, method: descriptor.value, call: descriptor.value.bind( object ) };
+			}
+			owner = Object.getPrototypeOf( owner );
+		}
+		throw importUnavailable();
+	}
+
+	function importMethodsExact( methods ) {
+		for ( const captured of methods ) {
+			const current = importMethod( captured.object, captured.key );
+			if ( current.method !== captured.method || current.owner !== captured.owner ) {
+				throw importUnavailable();
+			}
+		}
+	}
+
+	function importCall( guard, method, ...args ) {
+		const result = method.call( ...args );
+		if ( guard.session ) {
+			importCheckWork( guard.session, guard );
+		}
+		return result;
+	}
+
+	function importCopy( guard, value ) {
+		return importCall( guard, guard.copy, { schemaVersion: 1, surfaces: [ {
+			id: 'session-import-data', kind: 'slide', layers: [], canvas: { value }
+		} ] }, 'session-import-data' ).canvas.value;
+	}
+
+	function importDataEqual( left, right, ancestors = new Set() ) {
+		if ( left === null || typeof left !== 'object' ) {
+			return left === right && ( typeof left !== 'number' || Number.isFinite( left ) );
+		}
+		if ( !right || typeof right !== 'object' || Array.isArray( left ) !== Array.isArray( right ) || ancestors.has( left ) ) {
+			return false;
+		}
+		const array = Array.isArray( left ), prototype = Object.getPrototypeOf( left );
+		if ( array ? prototype !== Array.prototype : ![ Object.prototype, null ].includes( prototype ) ) {
+			return false;
+		}
+		const keys = Reflect.ownKeys( left ), otherKeys = Reflect.ownKeys( right );
+		if ( keys.length !== otherKeys.length || keys.some( key => typeof key !== 'string' || !otherKeys.includes( key ) ) ) {
+			return false;
+		}
+		ancestors.add( left );
+		try {
+			return keys.every( key => {
+				const descriptor = Object.getOwnPropertyDescriptor( left, key );
+				return descriptor && importHasOwn( descriptor, 'value' ) &&
+					( descriptor.enumerable || ( array && key === 'length' ) ) &&
+					importDataEqual( descriptor.value, Object.getOwnPropertyDescriptor( right, key ).value, ancestors );
+			} );
+		} finally {
+			ancestors.delete( left );
+		}
+	}
+
+	function importCheckWork( session, guard ) {
+		for ( const key of importFields ) {
+			const current = importDescriptor( session, key ), captured = guard.descriptors[ key ];
+			if ( current.value !== captured.value || current.writable !== captured.writable ||
+				current.configurable !== captured.configurable ) {
+				throw importUnavailable();
+			}
+		}
+		importMethodsExact( guard.methods );
+		if ( !importDataEqual( guard.descriptors._snapshot.value, guard.snapshot ) ||
+			!importDataEqual( guard.descriptors._newSurface.value, guard.newSurface ) ) {
+			throw importUnavailable();
+		}
+	}
+
+	function importCaptureWork( session ) {
+		const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( session, key ) ] ) );
+		const value = key => descriptors[ key ].value;
+		if ( value( '_phase' ) !== 'ready' || value( '_readOnly' ) !== false || value( '_reconciling' ) !== false ||
+			value( '_baseHasDrawings' ) !== true || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
+			value( '_pdfRecovery' ) !== null || !value( '_snapshot' ) || typeof value( '_savedJson' ) !== 'string' ||
+			typeof value( '_owner' ) !== 'string' || !value( '_owner' ).trim() || typeof value( '_surfaceId' ) !== 'string' ||
+			!value( '_surfaceId' ) || !Number.isInteger( value( '_revisionId' ) ) || value( '_revisionId' ) < 1 ||
+			value( '_revisionId' ) > 2147483647 || ( value( '_pageId' ) !== undefined &&
+				( !Number.isInteger( value( '_pageId' ) ) || value( '_pageId' ) < 1 || value( '_pageId' ) > 2147483647 ) ) ) {
+			throw importUnavailable();
+		}
+		const copy = importMethod( value( '_adapter' ), 'toEditorState' ), apply = importMethod( value( '_adapter' ), 'withWorkingCopyImport' );
+		const read = importMethod( value( '_reader' ), 'read' );
+		const guard = { descriptors, copy, apply, read, methods: [ copy, apply, read,
+			importMethod( value( '_adapter' ), 'withEditorState' ), importMethod( value( '_publisher' ), 'publish' ) ] };
+		guard.snapshot = importCopy( guard, value( '_snapshot' ) );
+		guard.newSurface = importCopy( guard, value( '_newSurface' ) );
+		guard.session = session;
+		guard.saved = importCopy( guard, JSON.parse( value( '_savedJson' ) ) );
+		importCall( guard, copy, guard.snapshot, value( '_surfaceId' ) );
+		const selected = guard.snapshot.surfaces.find( surface => surface.id === value( '_surfaceId' ) );
+		if ( !selected || ![ 'image', 'slide' ].includes( selected.kind ) ) {
+			throw importUnavailable();
+		}
+		if ( guard.newSurface !== null ) {
+			if ( !isNewSurface( guard.newSurface, selected.id ) || guard.saved.surfaces.some( surface => surface.id === selected.id ) ) {
+				throw importUnavailable();
+			}
+		}
+		const savedValidation = { ...guard.saved, surfaces: guard.saved.surfaces.concat( [ {
+			id: 'session-import-saved-check', kind: 'slide', canvas: {}, layers: []
+		} ] ) };
+		importCall( guard, copy, savedValidation, 'session-import-saved-check' );
+		importCheckWork( session, guard );
+		return guard;
+	}
+
+	function importHandles( session ) {
+		let handles = workingCopyImports.get( session );
+		if ( !handles ) {
+			handles = new WeakMap();
+			workingCopyImports.set( session, handles );
+		}
+		return handles;
+	}
+
+	function importRecord( session, handle ) {
+		const record = importHandles( session ).get( handle );
+		if ( !record ) {
+			throw importUnavailable();
+		}
+		importCheckWork( session, record.guard );
+		importMethodsExact( record.sourceMethods );
+		return record;
+	}
+
+	function importCleanup( record ) {
+		try {
+			record.source.release.call( record.sourceHandle );
+		} catch ( error ) {
+			return;
+		}
+	}
+
+	function importPreview( guard, input, request ) {
+		const preview = importCopy( guard, input );
+		importObjectFields( preview, [ 'source', 'targetSurfaceId', 'mode', 'importedLayerIds', 'candidateSnapshot', 'differentFileVersion' ] );
+		const source = importObjectFields( preview.source, [ 'owner', 'revisionId', 'surfaceId', 'label' ] );
+		if ( source.owner !== request.source.owner || source.revisionId !== request.source.revisionId ||
+			source.surfaceId !== request.source.surfaceId || typeof source.label !== 'string' ||
+			preview.mode !== request.mode || preview.targetSurfaceId !== guard.descriptors._surfaceId.value ||
+			typeof preview.differentFileVersion !== 'boolean' ) {
+			throw importUnavailable();
+		}
+		importCall( guard, guard.copy, preview.candidateSnapshot, preview.targetSurfaceId );
+		const surface = preview.candidateSnapshot.surfaces.find( member => member.id === preview.targetSurfaceId );
+		const original = guard.snapshot.surfaces.find( member => member.id === preview.targetSurfaceId );
+		if ( nameKey( source.label ) !== nameKey( original.label ) ||
+			( original.kind === 'slide' && preview.differentFileVersion ) ||
+			!Array.isArray( preview.importedLayerIds ) || surface.layers.length > request.maxLayers ) {
+			throw importUnavailable();
+		}
+		const rebuilt = importCall( guard, guard.apply, guard.snapshot, preview.targetSurfaceId,
+			{ surface, importedLayerIds: preview.importedLayerIds }, preview.mode );
+		if ( !importDataEqual( rebuilt, preview.candidateSnapshot ) ) {
+			throw importUnavailable();
+		}
+		return preview;
+	}
+
+	const workingCopyCheckpoints = new WeakMap();
+	const preparedWorkingCopyRestores = new WeakMap();
+
+	function restoreUnavailable() {
+		const error = new Error( 'Working-copy restore unavailable' );
+		error.code = 'layers-working-copy-restore-unavailable';
+		return error;
+	}
+
+	function restoreClone( value, ancestors = new Set() ) {
+		if ( value === null || typeof value === 'boolean' || typeof value === 'string' ||
+			( typeof value === 'number' && Number.isFinite( value ) ) ) {
+			return value;
+		}
+		if ( !value || typeof value !== 'object' || ancestors.has( value ) ) {
+			throw restoreUnavailable();
+		}
+		const array = Array.isArray( value ), prototype = Object.getPrototypeOf( value );
+		if ( array ? prototype !== Array.prototype : ![ Object.prototype, null ].includes( prototype ) ) {
+			throw restoreUnavailable();
+		}
+		const keys = Reflect.ownKeys( value );
+		if ( keys.some( key => typeof key !== 'string' ) ) {
+			throw restoreUnavailable();
+		}
+		const length = array ? Object.getOwnPropertyDescriptor( value, 'length' ) : null;
+		if ( array && ( !length || !importHasOwn( length, 'value' ) || length.enumerable ||
+			!Number.isInteger( length.value ) || length.value < 0 || keys.length !== length.value + 1 ||
+			keys.some( key => key !== 'length' && ( !/^(0|[1-9][0-9]*)$/.test( key ) || Number( key ) >= length.value ) ) ) ) {
+			throw restoreUnavailable();
+		}
+		const result = array ? new Array( length.value ) : Object.create( prototype );
+		ancestors.add( value );
+		try {
+			for ( const key of keys.filter( name => !array || name !== 'length' ) ) {
+				const descriptor = importDescriptor( value, key );
+				Object.defineProperty( result, key, { value: restoreClone( descriptor.value, ancestors ),
+					enumerable: true, configurable: true, writable: true } );
+			}
+		} finally {
+			ancestors.delete( value );
+		}
+		return result;
+	}
+
+	function restoreMaps( map, session ) {
+		let records = map.get( session );
+		if ( !records ) {
+			records = new WeakMap();
+			map.set( session, records );
+		}
+		return records;
+	}
+
+	function restoreCheckWork( session, guard ) {
+		for ( const key of importFields ) {
+			const current = importDescriptor( session, key ), original = guard.descriptors[ key ];
+			if ( current.value !== original.value || current.writable !== original.writable || current.configurable !== original.configurable ) {
+				throw restoreUnavailable();
+			}
+		}
+		for ( const method of guard.methods ) {
+			const current = importMethod( method.object, method.key ), descriptor = Object.getOwnPropertyDescriptor( current.owner, current.key );
+			if ( current.owner !== method.owner || current.method !== method.method ||
+				descriptor.writable !== method.descriptor.writable || descriptor.enumerable !== method.descriptor.enumerable ||
+				descriptor.configurable !== method.descriptor.configurable ) {
+				throw restoreUnavailable();
+			}
+		}
+		if ( !importDataEqual( restoreClone( guard.descriptors._snapshot.value ), guard.snapshot ) ||
+			!importDataEqual( restoreClone( guard.descriptors._newSurface.value ), guard.newSurface ) ) {
+			throw restoreUnavailable();
+		}
+	}
+
+	function restoreCall( session, guard, method, ...args ) {
+		const result = method.call( ...args );
+		restoreCheckWork( session, guard );
+		return result;
+	}
+
+	function restoreCaptureWork( session ) {
+		const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( session, key ) ] ) ), value = key => descriptors[ key ].value;
+		if ( value( '_phase' ) !== 'ready' || value( '_readOnly' ) !== false || value( '_reconciling' ) !== false ||
+			value( '_baseHasDrawings' ) !== true || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
+			value( '_pdfRecovery' ) !== null || !value( '_snapshot' ) || typeof value( '_savedJson' ) !== 'string' ||
+			typeof value( '_owner' ) !== 'string' || !value( '_owner' ).trim() || typeof value( '_surfaceId' ) !== 'string' || !value( '_surfaceId' ) ||
+			!Number.isInteger( value( '_revisionId' ) ) || value( '_revisionId' ) < 1 || value( '_revisionId' ) > 2147483647 ||
+			( value( '_pageId' ) !== undefined && ( !Number.isInteger( value( '_pageId' ) ) || value( '_pageId' ) < 1 || value( '_pageId' ) > 2147483647 ) ) ) {
+			throw restoreUnavailable();
+		}
+		const guard = { descriptors, snapshot: restoreClone( value( '_snapshot' ) ), newSurface: restoreClone( value( '_newSurface' ) ) };
+		const selected = guard.snapshot.surfaces && guard.snapshot.surfaces.find( surface => surface.id === value( '_surfaceId' ) );
+		if ( !selected || ![ 'image', 'slide' ].includes( selected.kind ) ) {
+			throw restoreUnavailable();
+		}
+		const entries = [ [ value( '_adapter' ), 'toEditorState' ], [ value( '_adapter' ), 'withWorkingCopyRestore' ],
+			[ value( '_adapter' ), 'withEditorState' ], [ value( '_reader' ), 'read' ], [ value( '_publisher' ), 'publish' ] ];
+		guard.methods = entries.map( ( [ object, key ] ) => {
+			const method = importMethod( object, key );
+			return { ...method, descriptor: Object.getOwnPropertyDescriptor( method.owner, key ) };
+		} );
+		guard.copy = guard.methods[ 0 ]; guard.apply = guard.methods[ 1 ];
+		restoreCall( session, guard, guard.copy, restoreClone( guard.snapshot ), value( '_surfaceId' ) );
+		restoreCheckWork( session, guard );
+		return guard;
+	}
+
+	function restoreWorkingState( surface ) {
+		return restoreClone( { surfaceId: surface.id, canvas: surface.canvas, layers: surface.layers,
+			...( importHasOwn( surface, 'readingOrder' ) ? { readingOrder: surface.readingOrder } : {} ) } );
+	}
+
+	function restoreIdentity( guard ) {
+		const surface = guard.snapshot.surfaces.find( member => member.id === guard.descriptors._surfaceId.value );
+		return restoreClone( { owner: guard.descriptors._owner.value,
+			...( guard.descriptors._pageId.value === undefined ? {} : { pageId: guard.descriptors._pageId.value } ),
+			surfaceId: surface.id, kind: surface.kind,
+			...( importHasOwn( surface, 'source' ) ? { source: surface.source } : {} ) } );
+	}
+
+	function restoreCheckpoint( session, checkpoint, guard ) {
+		const record = restoreMaps( workingCopyCheckpoints, session ).get( checkpoint );
+		if ( !record || !importDataEqual( restoreIdentity( guard ), record.identity ) ) {
+			throw restoreUnavailable();
+		}
+		return record;
+	}
+
+	function restoreExpected( snapshot, state ) {
+		const result = restoreClone( snapshot ), target = result.surfaces.find( member => member.id === state.surfaceId );
+		target.canvas = restoreClone( state.canvas ); target.layers = restoreClone( state.layers );
+		if ( importHasOwn( state, 'readingOrder' ) ) {
+			target.readingOrder = restoreClone( state.readingOrder );
+		} else {
+			delete target.readingOrder;
+		}
+		return result;
+	}
+
+	function restorePrepared( session, handle ) {
+		const record = restoreMaps( preparedWorkingCopyRestores, session ).get( handle );
+		if ( !record ) {
+			throw restoreUnavailable();
+		}
+		restoreCheckWork( session, record.guard );
+		restoreCheckpoint( session, record.checkpoint, record.guard );
+		return record;
+	}
+
+	function restoreResult( session, record ) {
+		const candidate = restoreClone( record.candidate ), workingState = restoreWorkingState(
+			candidate.surfaces.find( member => member.id === record.guard.descriptors._surfaceId.value ) );
+		const editorState = restoreCall( session, record.guard, record.guard.copy, candidate, workingState.surfaceId );
+		const result = restoreClone( { editorState, workingState } );
+		if ( !importDataEqual( result.editorState, { canvas: workingState.canvas, layers: workingState.layers } ) ) {
+			throw restoreUnavailable();
+		}
+		return result;
+	}
+
+	const preparedWorkingCopyStates = new WeakMap();
+
+	function workingStateBeforeCommit( callback ) {
+		if ( callback !== undefined && typeof callback !== 'function' ) {
+			throw restoreUnavailable();
+		}
+	}
+
+	function workingStateCallback( callback ) {
+		if ( callback !== undefined && callback() !== undefined ) {
+			throw restoreUnavailable();
+		}
+	}
+
+	function workingStateRecord( session, handle ) {
+		const record = restoreMaps( preparedWorkingCopyStates, session ).get( handle );
+		if ( !record ) {
+			throw restoreUnavailable();
+		}
+		restoreCheckWork( session, record.guard );
+		return record;
+	}
+
+	const applicationImportCommits = new WeakMap();
+	const applicationImportCleanup = new WeakMap();
+
+	function applicationImportRecord( session, handle ) {
+		const record = restoreMaps( applicationImportCommits, session ).get( handle );
+		if ( !record || importRecord( session, record.handle ) !== record.importRecord || !record.importRecord.ready || record.importRecord.checking ) {
+			throw importUnavailable();
+		}
+		return record;
+	}
+
 	class PageOwnedEditorSession {
+		async revalidateWorkingCopyImportApplication( handle, afterAwait ) {
+			return arguments.length > 1 ? this.revalidateWorkingCopyImport( handle, afterAwait ) : this.revalidateWorkingCopyImport( handle );
+		}
+
+		prepareWorkingCopyImportCommit( handle ) {
+			try {
+				const record = importRecord( this, handle );
+				if ( !record.ready || record.checking ) { throw importUnavailable(); }
+				const preview = importPreview( record.guard, record.preview, record.request );
+				const candidate = restoreClone( preview.candidateSnapshot );
+				const state = restoreWorkingState( candidate.surfaces.find( member => member.id === preview.targetSurfaceId ) );
+				if ( !importDataEqual( candidate, restoreExpected( record.guard.snapshot, state ) ) || !importDescriptor( this, '_snapshot' ).writable ) { throw importUnavailable(); }
+				const result = { editorState: importCall( record.guard, record.guard.copy, restoreClone( candidate ), preview.targetSurfaceId ),
+					workingState: restoreClone( state ), source: restoreClone( preview.source ), mode: preview.mode,
+					importedLayerIds: restoreClone( preview.importedLayerIds ), differentFileVersion: preview.differentFileVersion,
+					dirty: comparable( candidate ) !== comparable( JSON.parse( this._savedJson ) ) };
+				const prepared = Object.freeze( Object.create( null ) ), checkpoint = Object.freeze( Object.create( null ) );
+				importRecord( this, handle );
+				restoreMaps( workingCopyCheckpoints, this );
+				restoreMaps( applicationImportCleanup, this );
+				restoreMaps( applicationImportCommits, this ).set( prepared, { handle, importRecord: record, candidate, state,
+					identity: restoreIdentity( record.guard ), checkpoint, result: restoreClone( result ) } );
+				return prepared;
+			} catch ( error ) { throw importUnavailable(); }
+		}
+
+		inspectPreparedWorkingCopyImportCommit( handle ) {
+			try { const record = applicationImportRecord( this, handle ); return restoreClone( record.result ); }
+			catch ( error ) { throw importUnavailable(); }
+		}
+
+		commitPreparedWorkingCopyImport( handle, beforeCommit ) {
+			try {
+				workingStateBeforeCommit( beforeCommit );
+				const record = applicationImportRecord( this, handle ), original = record.importRecord;
+				const preview = importPreview( original.guard, original.preview, original.request );
+				const candidate = restoreClone( record.candidate );
+				if ( !importDataEqual( candidate, preview.candidateSnapshot ) || !importDataEqual( candidate, restoreExpected( original.guard.snapshot, record.state ) ) ||
+					!importDescriptor( this, '_snapshot' ).writable ) { throw importUnavailable(); }
+				const result = { ...restoreClone( record.result ), editorState: restoreClone( importCall( original.guard, original.guard.copy, restoreClone( candidate ), preview.targetSurfaceId ) ), checkpoint: record.checkpoint };
+				const liveSource = original.source.inspect.call( original.sourceHandle );
+				if ( !importDataEqual( liveSource, original.preview ) ) { throw importUnavailable(); }
+				applicationImportRecord( this, handle );
+				workingStateCallback( beforeCommit );
+				applicationImportRecord( this, handle );
+				this._snapshot = candidate;
+				workingCopyCheckpoints.get( this ).set( record.checkpoint, { identity: record.identity, state: record.state } );
+				workingCopyImports.get( this ).delete( record.handle );
+				applicationImportCleanup.get( this ).set( record.handle, original );
+				applicationImportCommits.get( this ).delete( handle );
+				return result;
+			} catch ( error ) { throw importUnavailable(); }
+		}
+
+		releasePreparedWorkingCopyImportCommit( handle ) {
+			if ( !restoreMaps( applicationImportCommits, this ).delete( handle ) ) { throw importUnavailable(); }
+		}
+
+		prepareWorkingCopyImportCleanup() {
+			restoreMaps( applicationImportCleanup, this );
+		}
+
+		cleanupAppliedWorkingCopyImport( handle ) {
+			const handles = applicationImportCleanup.get( this ), record = handles && handles.get( handle );
+			if ( !record ) { throw importUnavailable(); }
+			handles.delete( handle );
+			try { record.source.release.call( record.sourceHandle ); return []; }
+			catch ( error ) { return [ 'working-copy-import-cleanup-failed' ]; }
+		}
+
+		prepareWorkingCopyState( state ) {
+			try {
+				const guard = restoreCaptureWork( this ), copied = restoreClone( state );
+				if ( !copied || Array.isArray( copied ) || Object.keys( copied ).length !== 2 ||
+					!importHasOwn( copied, 'canvas' ) || !importHasOwn( copied, 'layers' ) || !Array.isArray( copied.layers ) ) {
+					throw restoreUnavailable();
+				}
+				const selected = guard.snapshot.surfaces.find( member => member.id === guard.descriptors._surfaceId.value );
+				const stateWithOrder = { ...copied, surfaceId: selected.id };
+				if ( importHasOwn( selected, 'readingOrder' ) ) {
+					const oldIds = new Set( selected.layers.filter( layer => layer && typeof layer === 'object' ).map( layer => layer.id ) );
+					const counts = new Map();
+					copied.layers.forEach( layer => {
+						if ( layer && typeof layer === 'object' ) {
+							counts.set( layer.id, ( counts.get( layer.id ) || 0 ) + 1 );
+						}
+					} );
+					stateWithOrder.readingOrder = selected.readingOrder.filter( id => !oldIds.has( id ) || counts.has( id ) );
+					if ( stateWithOrder.readingOrder.some( id => counts.get( id ) !== 1 ) ) {
+						throw restoreUnavailable();
+					}
+				}
+				const expected = restoreExpected( guard.snapshot, stateWithOrder ), adapterState = restoreClone( stateWithOrder );
+				delete adapterState.surfaceId;
+				const candidate = restoreClone( restoreCall( this, guard, guard.apply,
+					restoreClone( guard.snapshot ), selected.id, adapterState ) );
+				if ( !importDataEqual( candidate, expected ) ) {
+					throw restoreUnavailable();
+				}
+				const checkpoint = Object.freeze( Object.create( null ) ), handle = Object.freeze( Object.create( null ) );
+				const record = { guard, candidate, checkpoint, state: restoreWorkingState( candidate.surfaces.find( member => member.id === selected.id ) ),
+					identity: restoreIdentity( guard ), dirty: comparable( candidate ) !== comparable( JSON.parse( guard.descriptors._savedJson.value ) ) };
+				restoreCheckWork( this, guard );
+				restoreMaps( workingCopyCheckpoints, this );
+				restoreMaps( preparedWorkingCopyStates, this ).set( handle, record );
+				return handle;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		inspectPreparedWorkingCopyState( handle ) {
+			try {
+				const record = workingStateRecord( this, handle ), result = { ...restoreResult( this, record ), dirty: record.dirty };
+				workingStateRecord( this, handle );
+				return result;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		commitPreparedWorkingCopyState( handle, beforeCommit ) {
+			try {
+				workingStateBeforeCommit( beforeCommit );
+				const record = workingStateRecord( this, handle ), candidate = restoreClone( record.candidate );
+				if ( !importDataEqual( candidate, restoreExpected( record.guard.snapshot, record.state ) ) || !importDescriptor( this, '_snapshot' ).writable ) {
+					throw restoreUnavailable();
+				}
+				const result = { ...restoreResult( this, record ), dirty: record.dirty, checkpoint: record.checkpoint };
+				workingStateCallback( beforeCommit );
+				workingStateRecord( this, handle );
+				this._snapshot = candidate;
+				workingCopyCheckpoints.get( this ).set( record.checkpoint, { identity: record.identity, state: record.state } );
+				preparedWorkingCopyStates.get( this ).delete( handle );
+				return result;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		releasePreparedWorkingCopyState( handle ) {
+			try {
+				if ( !restoreMaps( preparedWorkingCopyStates, this ).delete( handle ) ) {
+					throw restoreUnavailable();
+				}
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @return {Object} Owned reusable opaque full working-state checkpoint */
+		captureWorkingCopyCheckpoint() {
+			try {
+				const guard = restoreCaptureWork( this ), surface = guard.snapshot.surfaces.find( member => member.id === guard.descriptors._surfaceId.value );
+				const state = restoreWorkingState( surface ), identity = restoreIdentity( guard );
+				const checkpoint = Object.freeze( Object.create( null ) );
+				restoreCheckWork( this, guard );
+				restoreMaps( workingCopyCheckpoints, this ).set( checkpoint, { identity, state } );
+				return checkpoint;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} checkpoint Owned checkpoint @return {Object} Detached working state */
+		inspectWorkingCopyCheckpoint( checkpoint ) {
+			try {
+				const guard = restoreCaptureWork( this ), record = restoreCheckpoint( this, checkpoint, guard ), result = restoreClone( record.state );
+				restoreCheckWork( this, guard );
+				return result;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} checkpoint Owned checkpoint @return {Object} Guarded opaque restore handle */
+		prepareWorkingCopyRestore( checkpoint ) {
+			try {
+				const guard = restoreCaptureWork( this ), captured = restoreCheckpoint( this, checkpoint, guard );
+				const expected = restoreExpected( guard.snapshot, captured.state ), state = restoreClone( captured.state );
+				delete state.surfaceId;
+				const candidate = restoreClone( restoreCall( this, guard, guard.apply,
+					restoreClone( guard.snapshot ), guard.descriptors._surfaceId.value, state ) );
+				if ( !importDataEqual( candidate, expected ) ) {
+					throw restoreUnavailable();
+				}
+				const handle = Object.freeze( Object.create( null ) );
+				restoreCheckpoint( this, checkpoint, guard );
+				restoreCheckWork( this, guard );
+				restoreMaps( preparedWorkingCopyRestores, this ).set( handle, { guard, checkpoint, candidate } );
+				return handle;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Prepared restore @return {Object} Detached editor and working state */
+		inspectPreparedWorkingCopyRestore( handle ) {
+			try {
+				const record = restorePrepared( this, handle ), result = restoreResult( this, record );
+				restorePrepared( this, handle );
+				return result;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Prepared restore @return {Object} Detached synchronous result */
+		commitWorkingCopyRestore( handle, beforeCommit ) {
+			try {
+				workingStateBeforeCommit( beforeCommit );
+				const record = restorePrepared( this, handle ), candidate = restoreClone( record.candidate );
+				if ( !importDataEqual( candidate, restoreExpected( record.guard.snapshot,
+					restoreCheckpoint( this, record.checkpoint, record.guard ).state ) ) || !importDescriptor( this, '_snapshot' ).writable ) {
+					throw restoreUnavailable();
+				}
+				const result = restoreResult( this, record );
+				workingStateCallback( beforeCommit );
+				restorePrepared( this, handle );
+				this._snapshot = candidate;
+				preparedWorkingCopyRestores.get( this ).delete( handle );
+				return result;
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} checkpoint Owned reusable checkpoint; private cleanup only */
+		releaseWorkingCopyCheckpoint( checkpoint ) {
+			try {
+				if ( !restoreMaps( workingCopyCheckpoints, this ).delete( checkpoint ) ) {
+					throw restoreUnavailable();
+				}
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Owned prepared restore; private cleanup only */
+		releasePreparedWorkingCopyRestore( handle ) {
+			try {
+				if ( !restoreMaps( preparedWorkingCopyRestores, this ).delete( handle ) ) {
+					throw restoreUnavailable();
+				}
+			} catch ( error ) {
+				throw restoreUnavailable();
+			}
+		}
+
+		/**
+		 * @param {Object} sourceComponent Accepted injected exact-source component
+		 * @param {Object} request Source descriptor and Import options only
+		 * @return {Promise<Object|null>} Private frozen session handle, or null for Cancel
+		 */
+		async prepareWorkingCopyImport( sourceComponent, request ) {
+			let cleanup = null;
+			try {
+				const modeDescriptor = importDescriptor( request, 'mode' );
+				if ( modeDescriptor.value === 'cancel' ) {
+					return null;
+				}
+				const captured = importObjectFields( request, [ 'source', 'mode', 'maxLayers', 'allocateId' ] );
+				const guard = importCaptureWork( this );
+				captured.source = importCopy( guard, importObjectFields( captured.source, [ 'owner', 'revisionId', 'surfaceId' ] ) );
+				if ( ![ 'empty', 'append', 'replace' ].includes( captured.mode ) ||
+					!Number.isInteger( captured.maxLayers ) || captured.maxLayers <= 0 || typeof captured.allocateId !== 'function' ||
+					typeof captured.source.owner !== 'string' || !captured.source.owner.trim() ||
+					!Number.isInteger( captured.source.revisionId ) || captured.source.revisionId < 1 || captured.source.revisionId > 2147483647 ||
+					typeof captured.source.surfaceId !== 'string' || !captured.source.surfaceId ) {
+					throw importUnavailable();
+				}
+				const source = Object.fromEntries( [ 'prepare', 'inspect', 'revalidate', 'release' ].map( key => [ key, importMethod( sourceComponent, key ) ] ) );
+				const sourceMethods = Object.values( source );
+				const targetSnapshot = importCopy( guard, guard.snapshot );
+				importMethodsExact( sourceMethods );
+				importCheckWork( this, guard );
+				const sourceHandle = await source.prepare.call( { ...captured, targetSnapshot, targetSurfaceId: guard.descriptors._surfaceId.value } );
+				cleanup = { source, sourceHandle };
+				importCheckWork( this, guard );
+				importMethodsExact( sourceMethods );
+				const preview = importPreview( guard, importCall( guard, source.inspect, sourceHandle ), captured );
+				importMethodsExact( sourceMethods );
+				importCheckWork( this, guard );
+				const handle = Object.freeze( Object.create( null ) );
+				importHandles( this ).set( handle, { guard, source, sourceMethods, sourceHandle, preview, request: captured,
+					ready: false, checking: false } );
+				cleanup = null;
+				return handle;
+			} catch ( error ) {
+				if ( cleanup ) {
+					importCleanup( cleanup );
+				}
+				throw importUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Live session handle @return {Object} Detached preview */
+		inspectWorkingCopyImport( handle ) {
+			try {
+				const record = importRecord( this, handle );
+				const fresh = importCopy( record.guard, record.source.inspect.call( record.sourceHandle ) );
+				const result = importCopy( record.guard, record.preview );
+				if ( !importDataEqual( fresh, record.preview ) ) {
+					throw importUnavailable();
+				}
+				importRecord( this, handle );
+				return result;
+			} catch ( error ) {
+				throw importUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Live session handle @return {Promise<void>} Fresh checks only */
+		async revalidateWorkingCopyImport( handle, participantGuard ) {
+			let record;
+			let ownsCheck = false;
+			try {
+				const callback = participantGuard;
+				if ( arguments.length > 1 && typeof callback !== 'function' ) { throw importUnavailable(); }
+				workingStateBeforeCommit( callback );
+				record = importRecord( this, handle );
+				if ( record.checking ) {
+					throw importUnavailable();
+				}
+				record.ready = false;
+				record.checking = true;
+				ownsCheck = true;
+				const guard = record.guard;
+				const response = await guard.read.call( { owner: guard.descriptors._owner.value, revisionId: guard.descriptors._revisionId.value } );
+				workingStateCallback( callback );
+				importRecord( this, handle );
+				const bundle = importCopy( guard, response );
+				if ( callback !== undefined ) { workingStateCallback( callback ); importRecord( this, handle ); }
+				if ( bundle.revisionId !== guard.descriptors._revisionId.value || !importDataEqual( bundle.snapshot, guard.saved ) ) {
+					throw importUnavailable();
+				}
+				importRecord( this, handle );
+				await record.source.revalidate.call( record.sourceHandle );
+				workingStateCallback( callback );
+				importRecord( this, handle );
+				record.ready = true;
+			} catch ( error ) {
+				if ( ownsCheck ) {
+					record.ready = false;
+				}
+				throw importUnavailable();
+			} finally {
+				if ( ownsCheck ) {
+					record.checking = false;
+				}
+			}
+		}
+
+		/** @param {Object} handle Revalidated live handle @return {Object} Detached bridge data */
+		commitWorkingCopyImport( handle ) {
+			try {
+				const record = importRecord( this, handle );
+				if ( !record.ready || record.checking ) {
+					throw importUnavailable();
+				}
+				const preview = importPreview( record.guard, record.preview, record.request );
+				const candidate = importCopy( record.guard, preview.candidateSnapshot );
+				const result = importCopy( record.guard, {
+					editorState: importCall( record.guard, record.guard.copy, candidate, preview.targetSurfaceId ), source: preview.source,
+					mode: preview.mode, importedLayerIds: preview.importedLayerIds, differentFileVersion: preview.differentFileVersion
+				} );
+				const assignment = importDescriptor( this, '_snapshot' );
+				if ( !assignment.writable ) {
+					throw importUnavailable();
+				}
+				const liveSource = record.source.inspect.call( record.sourceHandle );
+				if ( !importDataEqual( liveSource, record.preview ) ) {
+					throw importUnavailable();
+				}
+				importRecord( this, handle );
+				this._snapshot = candidate;
+				workingCopyImports.get( this ).delete( handle );
+				return result;
+			} catch ( error ) {
+				throw importUnavailable();
+			}
+		}
+
+		/** @param {Object} handle Owned handle; cleanup is allowed after session disposal */
+		releaseWorkingCopyImport( handle ) {
+			try {
+				const handles = workingCopyImports.get( this ), record = handles && handles.get( handle );
+				if ( !record ) {
+					throw importUnavailable();
+				}
+				handles.delete( handle );
+				importCleanup( record );
+			} catch ( error ) {
+				throw importUnavailable();
+			}
+		}
+
 		/**
 		 * @param {Object} options Immutable owner, revisionId, surfaceId and optional pageId/readOnly; newSurface
 		 *  starts a drawing the page does not have yet, and emptyBase says the base revision has no drawings
