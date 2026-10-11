@@ -176,3 +176,51 @@ No current parameter binds a set to a MediaWiki article revision, writes searcha
 ## Explicit save-name validation
 
 On the local J01–J05 review branch (not yet merged to main), `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. J17 extends the same canonical validation to info, rename (old and new names) and delete. Required mutation identifiers cannot be omitted. This is review-branch behavior, not a tagged release.
+
+## Native working-copy Import read API
+
+Added October 11, 2026 (J116K). This section describes the newly registered
+native read endpoint, not activation of Import UI or editor callers. Earlier
+dated sections above retain their historical scope and deployment statements.
+
+### layersworkingcopyimportread - GET
+
+Reads existing image/slide members through MediaWiki's native API module manager
+and the `LayersPageOwnedPilot` service factory. This is a read preflight, not
+application or publication authority. It creates no page revision and grants no
+permission that survives the request. Whole-PDF Import is not supported here.
+
+All six parameters are required. Page/revision IDs are integers from 1 through
+2147483647; member IDs are strings of at most 128 UTF-8 bytes. Native page IDs
+are internal transport identity, never author-facing wikitext or owner labels.
+
+- `targetpageid`: native ID of the page owning the target layer set.
+- `baserevid`: exact current target page revision; stale bases are refused.
+- `targetsurface`: internal ID of the existing target image/slide member.
+- `sourcepageid`: native ID of a different page owning the source layer set.
+- `sourcerevid`: exact readable source revision, including readable history.
+- `sourcesurface`: internal ID of the existing source image/slide member.
+
+Each invocation freshly rechecks target ownership, current revision, scope,
+ordinary page edit permission and `editlayers`, plus source read visibility and
+exact revision/member identity. Equal owner IDs, wrong-owner revisions, missing
+members, unavailable sources and out-of-scope targets are refused. No latest
+revision or shared-set fallback is used.
+
+With `formatversion=2`, success is keyed by `layersworkingcopyimportread`, holding
+`target`, `source`, `targetBundle` and `sourceBundle`. Each canonical descriptor
+has `pageId`, `owner` (current prefixed DB key), `revisionId` and `surfaceId`.
+Bundles retain the complete exact snapshots, pinned sources, native geometry and
+renditions; unrelated members and readable historical data are not discarded.
+Do not treat these detached values as approval to apply or save an Import.
+
+Admission/read failures use the fixed `layers-working-copy-import-unavailable`
+error code with the generic unavailable-revision message; parameter validation
+uses native API errors. No partially admitted Import bundle is returned.
+
+The endpoint sets ApiMain's policy to private with zero `max-age` and `s-maxage`,
+including refusals after module construction, regardless of requested cache ages.
+This policy is qualified through native CLI tests. Final HTTP/session response
+headers, browser behavior and MediaWiki 1.44/mobile acceptance are not claimed.
+The Import picker/dialog, canonical source listing, empty-base admission,
+drafts/first-Save provenance and whole-PDF integration remain separate work.

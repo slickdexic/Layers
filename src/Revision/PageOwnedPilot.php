@@ -9,6 +9,7 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
@@ -85,6 +86,17 @@ class PageOwnedPilot {
 			$this->scope, [ $this, 'prepareBoundViewers' ],
 			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0,
 			[ $this, 'prepareFullSizeViewer' ], [ $this, 'preparePdfEditorPage' ] );
+	}
+
+	/**
+	 * @param ApiMain $main
+	 * @param string $name
+	 * @return ApiLayersWorkingCopyImportRead
+	 */
+	public function newWorkingCopyImportReadApi( ApiMain $main, string $name ): ApiLayersWorkingCopyImportRead {
+		return new ApiLayersWorkingCopyImportRead( $main, $name,
+			new PageWorkingCopyImportReadService( $this->newIdentityResolver(),
+				$this->services->getTitleFactory(), $this->reader, $this->scope ) );
 	}
 
 	/**

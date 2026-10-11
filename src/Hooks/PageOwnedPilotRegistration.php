@@ -8,6 +8,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersMergeHistory;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Hook\MediaWikiServicesHook;
@@ -90,6 +91,11 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 				return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
 					->newReadApi( $main, $name );
 			} ],
+			'layersworkingcopyimportread' => [ 'class' => ApiLayersWorkingCopyImportRead::class,
+				'factory' => static function ( $main, $name ) {
+					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
+						->newWorkingCopyImportReadApi( $main, $name );
+				} ],
 			'layersdrawings' => [ 'class' => ApiLayersDrawings::class, 'factory' => static function ( $main, $name ) {
 				return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
 					->newDrawingsApi( $main, $name );

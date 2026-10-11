@@ -8,7 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\PageWorkingCopyImportReadService;
 
-/** Unregistered native working-copy Import read candidate. */
+/** Registered native working-copy Import read endpoint. */
 class ApiLayersWorkingCopyImportRead extends ApiBase {
 	private PageWorkingCopyImportReadService $reader;
 
