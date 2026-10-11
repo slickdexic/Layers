@@ -16,6 +16,16 @@
 		return JSON.stringify( value );
 	}
 
+	// Independent sessions have different timestamps; compare recoverable history content.
+	function workingCopyDraftChanged( bridge, candidate ) {
+		if ( !candidate.workingCopyDraft ) { return false; }
+		const current = bridge.captureWorkingCopyDraft().workingCopyDraft;
+		const comparable = data => ( { ...data.timeline, history: data.timeline.history.map( entry => {
+			const copy = { ...entry }; delete copy.timestamp; return copy;
+		} ), workingState: data.workingState } );
+		return canonical( comparable( candidate.workingCopyDraft ) ) !== canonical( comparable( current ) );
+	}
+
 	class PageOwnedDraftLifecycle {
 		/**
 		 * @param {Object} bridge Loaded editor bridge
@@ -53,6 +63,7 @@
 			}
 			const candidate = this.controller.inspectRecovery();
 			if ( candidate && ( candidate.publicationBlocked ||
+				workingCopyDraftChanged( this.bridge, candidate ) ||
 				( typeof candidate.label === 'string' && candidate.label !== this.bridge.getName() ) ||
 				( candidate.pdfDraft && canonical( candidate.pdfDraft.snapshot ) !==
 					canonical( this.bridge.session.getDraft().snapshot ) ) ||
@@ -60,21 +71,31 @@
 				const coordinator = this.bridge.pdfCoordinator;
 				const witness = coordinator ? coordinator.witness() : null;
 				const version = coordinator ? coordinator.version : null;
-				const recover = await this.ui.confirmRecovery( candidate );
-				if ( this.disposed ) {
+				const workingHandle = candidate.workingCopyDraft ? this.bridge.prepareWorkingCopyDraftRecovery( candidate ) : null;
+				let recover;
+				try {
+					recover = await this.ui.confirmRecovery( candidate );
+					if ( workingHandle && recover ) { this.bridge.preflightWorkingCopyDraftRecovery( workingHandle ); }
+				} catch ( error ) {
+					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
+					throw error;
+				}
+				if ( this.disposed || ( workingHandle && this.finalized ) ) {
+					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
 					return;
 				}
 				if ( recover ) {
 					if ( coordinator && ( coordinator.version !== version || coordinator.witness() !== witness ) ) {
 						throw new Error( 'layers-editor-session-unavailable' );
 					}
-					if ( !candidate.pdfDraft ) {
+					if ( !candidate.pdfDraft && !workingHandle ) {
 						await this.bridge.session.revalidate();
 					}
 					if ( this.disposed ) {
 						return;
 					}
-					await this.bridge.restoreDraft( candidate );
+					if ( workingHandle ) { await this.bridge.commitWorkingCopyDraftRecovery( workingHandle ); }
+					else { await this.bridge.restoreDraft( candidate ); }
 					if ( this.disposed || this.finalized ) {
 						return;
 					}
@@ -82,6 +103,7 @@
 						this.ui.notifyBlocked();
 					}
 				} else {
+					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
 					// Cancel is not permission to overwrite the stored draft with server content.
 					this.bridge.session.blockPublication();
 					this.ui.notifyBlocked();

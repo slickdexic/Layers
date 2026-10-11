@@ -441,6 +441,7 @@
 	}
 
 	const preparedWorkingCopyStates = new WeakMap();
+	const preparedWorkingCopyDraftRestores = new WeakMap();
 
 	function workingStateBeforeCommit( callback ) {
 		if ( callback !== undefined && typeof callback !== 'function' ) {
@@ -475,6 +476,104 @@
 	}
 
 	class PageOwnedEditorSession {
+		/** Capture complete live backup work, including during a publication hold. */
+		updateWorkingCopyDraftState( input ) {
+			try {
+				this._requireLoaded();
+				if ( this._readOnly || this._newSurface || this._pdf || this._pdfContext || this._pdfRecovery ||
+					!this._baseHasDrawings || ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( this._phase ) ) { throw restoreUnavailable(); }
+				const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( this, key ) ] ) );
+				const method = importMethod( this._adapter, 'withWorkingCopyRestore' );
+				const guard = { descriptors, snapshot: restoreClone( this._snapshot ), newSurface: null,
+					methods: [ { ...method, descriptor: Object.getOwnPropertyDescriptor( method.owner, method.key ) } ] };
+				const state = restoreClone( input ), surface = guard.snapshot.surfaces.find( s => s.id === this._surfaceId );
+				if ( !surface || ![ 'image', 'slide' ].includes( surface.kind ) || state.surfaceId !== surface.id ||
+					Object.keys( state ).some( key => ![ 'surfaceId', 'canvas', 'layers', 'readingOrder' ].includes( key ) ) ) { throw restoreUnavailable(); }
+				const expected = restoreExpected( guard.snapshot, state ), values = restoreClone( state ); delete values.surfaceId;
+				const candidate = restoreClone( restoreCall( this, guard, method, restoreClone( guard.snapshot ), surface.id, values ) );
+				if ( !importDataEqual( candidate, expected ) || !descriptors._snapshot.writable ) { throw restoreUnavailable(); }
+				restoreCheckWork( this, guard ); this._snapshot = candidate;
+			} catch ( error ) { throw restoreUnavailable(); }
+		}
+
+		/** Rebuild a private checkpoint from draft data within the current native surface identity. */
+		prepareWorkingCopyDraftCheckpoint( input ) {
+			try {
+				const guard = restoreCaptureWork( this ), state = restoreClone( input );
+				if ( !state || Array.isArray( state ) || state.surfaceId !== guard.descriptors._surfaceId.value ||
+					!importHasOwn( state, 'canvas' ) || !Array.isArray( state.layers ) ||
+					Object.keys( state ).some( key => ![ 'surfaceId', 'canvas', 'layers', 'readingOrder' ].includes( key ) ) ) {
+					throw restoreUnavailable();
+				}
+				const candidate = restoreExpected( guard.snapshot, state ), adapterState = restoreClone( state );
+				delete adapterState.surfaceId;
+				const actual = restoreClone( restoreCall( this, guard, guard.apply,
+					restoreClone( guard.snapshot ), state.surfaceId, adapterState ) );
+				if ( !importDataEqual( actual, candidate ) ) { throw restoreUnavailable(); }
+				const handle = Object.freeze( Object.create( null ) );
+				restoreCheckWork( this, guard );
+				restoreMaps( workingCopyCheckpoints, this ).set( handle, {
+					identity: restoreIdentity( guard ), state: restoreWorkingState( actual.surfaces.find( s => s.id === state.surfaceId ) )
+				} );
+				return handle;
+			} catch ( error ) { throw restoreUnavailable(); }
+		}
+
+		/** Privately prepare complete draft state and an optional validated unsaved rename. */
+		prepareWorkingCopyDraftRestore( checkpoint, label, publicationBlocked = false ) {
+			try {
+				const guard = restoreCaptureWork( this ), captured = restoreCheckpoint( this, checkpoint, guard );
+				if ( typeof publicationBlocked !== 'boolean' || !importDescriptor( this, '_phase' ).writable ) { throw restoreUnavailable(); }
+				const state = restoreClone( captured.state ), candidate = restoreExpected( guard.snapshot, state );
+				const selected = candidate.surfaces.find( s => s.id === state.surfaceId );
+				if ( typeof label !== 'string' || ( label !== selected.label && ( normalizeName( label ) !== label ||
+					candidate.surfaces.some( s => s.id !== selected.id && sameScope( s, selected ) &&
+						nameKey( labelOf( s ) ) === nameKey( label ) ) ) ) ) { throw restoreUnavailable(); }
+				selected.label = label;
+				const adapterState = restoreClone( state ); delete adapterState.surfaceId;
+				const actual = restoreClone( restoreCall( this, guard, guard.apply,
+					restoreClone( candidate ), state.surfaceId, adapterState ) );
+				if ( !importDataEqual( actual, candidate ) || !importDescriptor( this, '_snapshot' ).writable ) { throw restoreUnavailable(); }
+				const handle = Object.freeze( Object.create( null ) );
+				restoreCheckWork( this, guard );
+				restoreMaps( preparedWorkingCopyDraftRestores, this ).set( handle, { guard, checkpoint, candidate, state, label, publicationBlocked } );
+				return handle;
+			} catch ( error ) { throw restoreUnavailable(); }
+		}
+
+		inspectWorkingCopyDraftRestore( handle ) {
+			try {
+				const record = restoreMaps( preparedWorkingCopyDraftRestores, this ).get( handle );
+				if ( !record ) { throw restoreUnavailable(); }
+				restoreCheckWork( this, record.guard ); restoreCheckpoint( this, record.checkpoint, record.guard );
+				const result = { ...restoreResult( this, record ), label: record.label,
+					dirty: comparable( record.candidate ) !== comparable( JSON.parse( record.guard.descriptors._savedJson.value ) ) };
+				restoreCheckWork( this, record.guard ); return result;
+			} catch ( error ) { throw restoreUnavailable(); }
+		}
+
+		commitWorkingCopyDraftRestore( handle, beforeCommit ) {
+			try {
+				workingStateBeforeCommit( beforeCommit );
+				const record = restoreMaps( preparedWorkingCopyDraftRestores, this ).get( handle );
+				if ( !record ) { throw restoreUnavailable(); }
+				const result = this.inspectWorkingCopyDraftRestore( handle ), candidate = restoreClone( record.candidate );
+				const expected = restoreExpected( record.guard.snapshot, restoreCheckpoint( this, record.checkpoint, record.guard ).state );
+				expected.surfaces.find( s => s.id === record.state.surfaceId ).label = record.label;
+				if ( !importDataEqual( expected, record.candidate ) || !importDescriptor( this, '_snapshot' ).writable ) { throw restoreUnavailable(); }
+				workingStateCallback( beforeCommit ); restoreCheckWork( this, record.guard );
+				restoreCheckpoint( this, record.checkpoint, record.guard );
+				this._snapshot = candidate;
+				if ( record.publicationBlocked ) { this._phase = 'conflict'; }
+				preparedWorkingCopyDraftRestores.get( this ).delete( handle );
+				return result;
+			} catch ( error ) { throw restoreUnavailable(); }
+		}
+
+		releaseWorkingCopyDraftRestore( handle ) {
+			if ( !restoreMaps( preparedWorkingCopyDraftRestores, this ).delete( handle ) ) { throw restoreUnavailable(); }
+		}
+
 		getWorkingCopyImportIdentity() {
 			try {
 				const guard = importCaptureWork( this );

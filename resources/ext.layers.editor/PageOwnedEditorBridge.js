@@ -20,6 +20,16 @@
 
 	const workingCopyDisplays = new WeakMap();
 	const workingCopyDisplayCommits = new WeakSet();
+	const workingCopyDraftRecoveries = new WeakMap();
+
+	function workingCopyDraftEqual( left, right ) {
+		if ( Object.is( left, right ) ) { return true; }
+		if ( !left || !right || typeof left !== 'object' || typeof right !== 'object' ||
+			Array.isArray( left ) !== Array.isArray( right ) ) { return false; }
+		const keys = Object.keys( left );
+		return keys.length === Object.keys( right ).length && keys.every( key =>
+			Object.hasOwn( right, key ) && workingCopyDraftEqual( left[ key ], right[ key ] ) );
+	}
 
 	function workingCopyDisplayError() {
 		const error = new Error( 'Working-copy display unavailable' );
@@ -104,6 +114,111 @@
 	}
 
 	class PageOwnedEditorBridge {
+		/** Capture complete draft data in the already opted-in working-copy history mode. */
+		captureWorkingCopyDraft() {
+			const timeline = this.editor.historyManager.captureWorkingCopyDraftTimeline();
+			return { workingCopyDraft: timeline,
+				editorState: { canvas: timeline.workingState.canvas, layers: timeline.workingState.layers } };
+		}
+
+		/** Read-only backup remains available during saving/conflict/uncertain publication holds. */
+		getWorkingCopyDraftLiveState() {
+			if ( this.disposed || !this.loaded || this.pdfCoordinator || this.session.getStatus().readOnly ) { throw workingCopyDisplayError(); }
+			const Store = workingCopyStoreClass( this ), observations = [ Store.observeWorkingCopyObject( this, false ),
+				Store.observeWorkingCopyObject( this.editor, false ), Store.observeWorkingCopyObject( this.editor.stateManager.state ) ];
+			const methods = [ Store.captureWorkingCopyMethod( this.session, 'getEditorState' ) ];
+			const state = Store.copyWorkingCopyValue( this.session.getEditorState() );
+			for ( const [ field, key ] of Object.entries( this.isSlide ? slideFields : sourceFields ) ) {
+				const descriptor = Object.getOwnPropertyDescriptor( this.editor.stateManager.state, key );
+				if ( descriptor && descriptor.value !== undefined ) { state.canvas[ field ] = Store.copyWorkingCopyValue( descriptor.value ); }
+				else { delete state.canvas[ field ]; }
+			}
+			state.layers = Store.copyWorkingCopyValue( this.editor.stateManager.state.layers );
+			observations.forEach( Store.checkWorkingCopyObservation ); Store.checkWorkingCopyMethods( methods ); return state;
+		}
+
+		/** Prepare recovery before confirmation/read awaits; no live participant is changed. */
+		prepareWorkingCopyDraftRecovery( candidate ) {
+			let history, prepared, display, selection;
+			try {
+				const Store = workingCopyStoreClass( this ), copied = Store.copyWorkingCopyValue( candidate );
+				const editor = this.editor, session = this.session, manager = editor.historyManager;
+				const selectionManager = editor.canvasManager && editor.canvasManager.selectionManager;
+				if ( !selectionManager || copied.pdfDraft || typeof copied.publicationBlocked !== 'boolean' || typeof copied.label !== 'string' ) {
+					throw workingCopyDisplayError();
+				}
+				history = manager.prepareWorkingCopyDraftTimeline( copied.workingCopyDraft );
+				if ( !manager.constructor.isWorkingCopyDraftTimeline( history ) ) { throw workingCopyDisplayError(); }
+				prepared = session.prepareWorkingCopyDraftRestore( history.checkpoint, copied.label, copied.publicationBlocked );
+				const preview = session.inspectWorkingCopyDraftRestore( prepared );
+				if ( !workingCopyDraftEqual( preview.editorState, copied.editorState ) ) {
+					throw workingCopyDisplayError();
+				}
+				display = this.prepareWorkingCopyImportDisplay( preview.editorState, preview.dirty, [] );
+				if ( !importDisplayCertificates.has( display ) ) { throw workingCopyDisplayError(); }
+				selection = selectionManager.prepareWorkingCopyImportSelection( preview.editorState.layers, [] );
+				if ( !selectionManager.constructor.isWorkingCopyImportSelection( selection ) ) { throw workingCopyDisplayError(); }
+				const methods = [ [ session, 'revalidate' ], [ session, 'inspectWorkingCopyDraftRestore' ],
+					[ session, 'commitWorkingCopyDraftRestore' ], [ manager, 'prepareWorkingCopyDraftTimeline' ],
+					[ this, 'commitWorkingCopyDraftRecovery' ], [ this, 'prepareWorkingCopyImportDisplay' ],
+					[ selectionManager, 'prepareWorkingCopyImportSelection' ] ].map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+				const preflight = () => {
+					Store.checkWorkingCopyMethods( methods ); history.preflight();
+					session.inspectWorkingCopyDraftRestore( prepared ); display.preflight(); selection.preflight();
+				};
+				preflight(); const handle = Object.freeze( Object.create( null ) );
+				workingCopyDraftRecoveries.set( handle, { bridge: this, Store, session, editor, manager,
+					selectionManager, history, prepared, display, selection, preflight, committed: false, applying: false } );
+				return handle;
+			} catch ( error ) {
+				if ( prepared ) { try { this.session.releaseWorkingCopyDraftRestore( prepared ); } catch ( cleanupError ) {} }
+				if ( display ) { try { display.release(); } catch ( cleanupError ) {} }
+				if ( history ) { try { history.release(); } catch ( cleanupError ) {} }
+				throw workingCopyDisplayError();
+			}
+		}
+
+		preflightWorkingCopyDraftRecovery( handle ) {
+			const record = workingCopyDraftRecoveries.get( handle );
+			if ( !record || record.bridge !== this || record.committed ) { throw workingCopyDisplayError(); }
+			record.preflight();
+		}
+
+		async commitWorkingCopyDraftRecovery( handle ) {
+			const record = workingCopyDraftRecoveries.get( handle );
+			if ( !record || record.bridge !== this || record.committed || record.applying ) { throw workingCopyDisplayError(); }
+			record.applying = true;
+			try {
+				record.preflight(); await record.session.revalidate(); record.preflight();
+				const result = record.session.commitWorkingCopyDraftRestore( record.prepared, record.preflight );
+				record.prepared = null;
+				record.display.commit(); record.selection.commit(); record.history.commit(); record.committed = true;
+				const diagnostics = [], attempt = callback => {
+					try { const notes = callback(); if ( Array.isArray( notes ) ) { diagnostics.push( ...notes ); } }
+					catch ( error ) { diagnostics.push( 'working-copy-refresh-failed' ); }
+				};
+				attempt( record.display.notify ); attempt( record.selection.refresh );
+				attempt( () => {
+					if ( record.editor.stateManager.isWorkingCopyAlive() ) {
+						attempt( () => record.editor.canvasManager.setBaseDimensions( result.editorState.canvas.width, result.editorState.canvas.height ) );
+						attempt( () => record.editor.canvasManager.renderLayers( record.editor.stateManager.state.layers ) );
+						attempt( () => record.editor.layerPanel.updateLayers( record.editor.stateManager.state.layers ) );
+						attempt( record.selection.refresh ); attempt( () => record.manager.updateUndoRedoButtons() );
+					}
+				} );
+				result.diagnostics = diagnostics; return result;
+			} catch ( error ) { throw workingCopyDisplayError(); }
+			finally { record.applying = false; this.releaseWorkingCopyDraftRecovery( handle ); }
+		}
+
+		releaseWorkingCopyDraftRecovery( handle ) {
+			const record = workingCopyDraftRecoveries.get( handle );
+			if ( !record || record.bridge !== this || record.applying ) { throw workingCopyDisplayError(); }
+			workingCopyDraftRecoveries.delete( handle );
+			if ( record.prepared ) { record.session.releaseWorkingCopyDraftRestore( record.prepared ); }
+			record.display.release(); record.history.release();
+		}
+
 		async prepareWorkingCopyImport( source, request ) {
 			let sessionHandle, guard;
 			try {
@@ -373,6 +488,9 @@
 		 */
 		restoreDraft( candidate ) {
 			this._requireActive();
+			if ( candidate.workingCopyDraft ) {
+				return this.commitWorkingCopyDraftRecovery( this.prepareWorkingCopyDraftRecovery( candidate ) );
+			}
 			if ( !this.loaded || this.session.getStatus().readOnly || this.session.getStatus().phase !== 'ready' ) {
 				throw this._error( 'layers-editor-session-unavailable' );
 			}
@@ -439,6 +557,11 @@
 
 		/** Capture current editor values while retaining unexposed canvas fields. */
 		capture() {
+			if ( this.editor.historyManager && this.editor.historyManager.hasWorkingCopyHistory &&
+				this.editor.historyManager.hasWorkingCopyHistory( this ) ) {
+				this.session.updateWorkingCopyDraftState( this.captureWorkingCopyDraft().workingCopyDraft.workingState );
+				return;
+			}
 			this.session.update( this.getLiveState() );
 		}
 
@@ -447,6 +570,10 @@
 			this._requireActive();
 			if ( !this.loaded ) {
 				throw this._error( 'layers-editor-session-unavailable' );
+			}
+			if ( this.editor.historyManager && this.editor.historyManager.hasWorkingCopyHistory &&
+				this.editor.historyManager.hasWorkingCopyHistory( this ) ) {
+				return this.getWorkingCopyDraftLiveState();
 			}
 			const state = this.session.getEditorState();
 			for ( const [ field, key ] of Object.entries( this._fields() ) ) {

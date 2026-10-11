@@ -1100,5 +1100,6 @@
 	"layers-reading-disabled": "Error from the experimental page-owned read API when disabled.",
 	"layers-revision-unavailable": "Generic error for missing, denied, wrong-owner or unavailable historical Layers content. Does not distinguish permission from existence.",
 	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed.",
-	"layers-cargo-invalid-rows": "Error shown on a page when {{#layers_cargo_store:}} receives an unsupported _rows value. Do not reflect the raw value. The suggested _rows=layers mode stores one row per layer; omitting _rows keeps the existing layer-set table format, whose legacy rows are per stored surface. Keep the parameter spelling _rows unchanged."
+	"layers-cargo-invalid-rows": "Error shown on a page when {{#layers_cargo_store:}} receives an unsupported _rows value. Do not reflect the raw value. The suggested _rows=layers mode stores one row per layer; omitting _rows keeps the existing layer-set table format, whose legacy rows are per stored surface. Keep the parameter spelling _rows unchanged.",
+	"layers-page-working-copy-recovered-edits": "Undo history description for image/slide edits recovered from a local draft that had not yet been recorded as an Undo step. This route is explicitly opted in."
 }

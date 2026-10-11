@@ -1,8 +1,15 @@
 /** Draft capture and recovery inspection after an authorized exact-revision load. */
 ( function () {
 	'use strict';
+	const workingCopyDraftControllers = new WeakSet();
 
 	class PageOwnedDraftController {
+		/** Explicit opt-in after actual full working-copy history has been enabled. */
+		enableWorkingCopyDrafts() {
+			this.bridge.captureWorkingCopyDraft();
+			workingCopyDraftControllers.add( this );
+		}
+
 		/**
 		 * @param {Object} bridge Loaded PageOwnedEditorBridge
 		 * @param {Object} store PageOwnedDraftStore
@@ -94,13 +101,15 @@
 				if ( pdf ) {
 					this.bridge.capture();
 				}
+				const working = workingCopyDraftControllers.has( this ) ? this.bridge.captureWorkingCopyDraft() : null;
 				json = JSON.stringify( {
 					version: 1, scope,
 					phase: this.bridge.session.getStatus().phase,
 					label: this.bridge.session.getLabel(),
 					...( pdf ? { pdfDraft: this.bridge.session.getDraft(),
 						pdfHistory: this.bridge.pdfCoordinator.captureDraftHistory() } : {} ),
-					editorState: this._copyState( this.bridge.getLiveState() )
+					editorState: this._copyState( working ? working.editorState : this.bridge.getLiveState() ),
+					...( working ? { workingCopyDraft: working.workingCopyDraft } : {} )
 				} );
 			} catch ( error ) {
 				throw this._error();
@@ -142,6 +151,13 @@
 				// Drafts written before drawings could be renamed have no name.
 				if ( typeof envelope.label === 'string' ) {
 					candidate.label = envelope.label;
+				}
+				if ( Object.prototype.hasOwnProperty.call( envelope, 'workingCopyDraft' ) ) {
+					if ( !workingCopyDraftControllers.has( this ) || envelope.pdfDraft || envelope.pdfHistory ) { throw this._error(); }
+					const carrier = { id: 'working-copy-draft', kind: 'slide', canvas: {}, layers: [] };
+					candidate.workingCopyDraft = this.adapter.withEditorState( {
+						schemaVersion: 1, surfaces: [ carrier ], workingCopyDraft: envelope.workingCopyDraft
+					}, carrier.id, { canvas: {}, layers: [] } ).workingCopyDraft;
 				}
 				if ( envelope.pdfDraft !== undefined ) {
 					if ( typeof this.bridge.session.getPdfStatus !== 'function' || !this.bridge.session.getPdfStatus() ) {

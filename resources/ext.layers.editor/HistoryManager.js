@@ -20,6 +20,7 @@
 	 */
 	const workingCopyHistoryModes = new WeakMap();
 	const workingCopyTimelineCopies = new WeakMap();
+	const workingCopyDraftTimelineCertificates = new WeakSet();
 
 	function workingHistoryError() {
 		const error = new Error( 'Working-copy history unavailable' );
@@ -90,6 +91,17 @@
 			maxHistorySteps: history.maxHistorySteps, lastSaveHistoryIndex: history.lastSaveHistoryIndex };
 	}
 
+	function workingHistoryDraftGuard( history, mode ) {
+		const guard = workingHistoryGuard( history, mode );
+		for ( const [ owner, keys ] of [ [ mode.session, [ 'getWorkingCopyImportIdentity',
+			'prepareWorkingCopyDraftCheckpoint', 'prepareWorkingCopyDraftRestore',
+			'inspectWorkingCopyDraftRestore', 'commitWorkingCopyDraftRestore', 'revalidate' ] ],
+		[ history, [ 'captureWorkingCopyDraftTimeline', 'prepareWorkingCopyDraftTimeline' ] ] ] ) {
+			guard.methods.push( ...keys.map( key => mode.Store.captureWorkingCopyMethod( owner, key ) ) );
+		}
+		return guard;
+	}
+
 	function workingHistoryAssignments( history, values ) {
 		for ( const key of Object.keys( values ) ) {
 			const descriptor = Object.getOwnPropertyDescriptor( history, key );
@@ -125,6 +137,125 @@
 	const applicationHistoryCertificates = new WeakSet();
 
 	class HistoryManager {
+		/** Finite draft data only; checkpoint certificates stay private and are never serialized. */
+		captureWorkingCopyDraftTimeline() {
+			const mode = workingCopyHistoryModes.get( this );
+			try {
+				if ( !mode || this.isDestroyed || mode.bridge.disposed || !mode.bridge.loaded ||
+					mode.editor !== this.editor || mode.editor.historyManager !== this ||
+					mode.editor.stateManager !== mode.store || mode.bridge.editor !== mode.editor || mode.bridge.session !== mode.session || mode.bridge.pdfCoordinator ||
+					mode.session._readOnly || mode.session._pdf || mode.session._pdfContext || mode.session._newSurface ||
+					mode.session._baseHasDrawings !== true || !mode.store.isWorkingCopyAlive() ||
+					![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( mode.session._phase ) ) { throw workingHistoryError(); }
+				const copy = mode.Store.copyWorkingCopyValue, observations = [
+					mode.Store.observeWorkingCopyObject( this, false ), mode.Store.observeWorkingCopyObject( this.history ),
+					mode.Store.observeWorkingCopyObject( mode.session, false ), mode.Store.observeWorkingCopyObject( mode.session._snapshot ),
+					mode.Store.observeWorkingCopyObject( mode.editor, false ), mode.Store.observeWorkingCopyObject( mode.bridge, false ),
+					mode.Store.observeWorkingCopyObject( mode.store, false ), mode.Store.observeWorkingCopyObject( mode.store.state ) ];
+				const methods = [ mode.Store.captureWorkingCopyMethod( mode.bridge, 'getWorkingCopyDraftLiveState' ) ];
+				const identity = { owner: mode.session._owner, pageId: mode.session._pageId,
+					revisionId: mode.session._revisionId, surfaceId: mode.session._surfaceId };
+				const timeline = copy( workingHistoryData( this ) );
+				timeline.history.forEach( ( entry, index ) => {
+					const association = mode.entries.get( this.history[ index ] );
+					if ( !association ) { throw workingHistoryError(); }
+					entry.workingState = copy( association.workingState );
+					if ( !workingHistoryEqual( entry.layers, entry.workingState.layers ) ) { throw workingHistoryError(); }
+				} );
+				// A successful publication can establish a new base before the UI marks its entry saved.
+				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
+				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
+					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
+				if ( !workingHistoryEqual( timeline.history[ timeline.lastSaveHistoryIndex ] &&
+					timeline.history[ timeline.lastSaveHistoryIndex ].workingState, savedState ) ) {
+					timeline.lastSaveHistoryIndex = timeline.history.findIndex( entry => workingHistoryEqual( entry.workingState, savedState ) );
+				}
+				const live = mode.bridge.getWorkingCopyDraftLiveState(), selected = mode.session._snapshot.surfaces.find( s => s.id === identity.surfaceId );
+				const workingState = { surfaceId: selected.id, ...copy( live ) };
+				if ( Object.hasOwn( selected, 'readingOrder' ) ) {
+					const oldIds = new Set( selected.layers.map( layer => layer.id ) ), ids = new Set( live.layers.map( layer => layer.id ) );
+					workingState.readingOrder = selected.readingOrder.filter( id => !oldIds.has( id ) || ids.has( id ) );
+				}
+				observations.forEach( mode.Store.checkWorkingCopyObservation ); mode.Store.checkWorkingCopyMethods( methods );
+				return copy( { version: 1, identity, timeline, workingState } );
+			} catch ( error ) { throw workingHistoryError(); }
+		}
+
+		hasWorkingCopyHistory( bridge ) {
+			const mode = workingCopyHistoryModes.get( this );
+			return !!mode && mode.bridge === bridge;
+		}
+
+		static isWorkingCopyDraftTimeline( transaction ) {
+			return workingCopyDraftTimelineCertificates.has( transaction );
+		}
+
+		/** Rebuild associations using current native identity; untrusted data supplies no permissions. */
+		prepareWorkingCopyDraftTimeline( input ) {
+			const mode = workingCopyHistoryModes.get( this ), checkpoints = [];
+			let committed = false, released = false;
+			try {
+				const guard = workingHistoryDraftGuard( this, mode ), copy = mode.Store.copyWorkingCopyValue;
+				const data = copy( input ), identity = workingHistoryCall( guard, mode.session, 'getWorkingCopyImportIdentity' );
+				if ( !data || Object.keys( data ).length !== 4 || data.version !== 1 ||
+					!workingHistoryEqual( data.identity, identity ) ) { throw workingHistoryError(); }
+				const values = data.timeline;
+				if ( !values || Object.keys( values ).sort().join() !==
+					'history,historyIndex,lastSaveHistoryIndex,maxHistorySteps' || !Array.isArray( values.history ) ||
+					!values.history.length || values.history.length > this.maxHistorySteps ||
+					values.maxHistorySteps !== this.maxHistorySteps || !Number.isInteger( values.historyIndex ) ||
+					values.historyIndex < 0 || values.historyIndex >= values.history.length ||
+					!Number.isInteger( values.lastSaveHistoryIndex ) || values.lastSaveHistoryIndex < -1 ||
+					values.lastSaveHistoryIndex >= values.history.length ) { throw workingHistoryError(); }
+				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
+				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
+					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
+				if ( values.lastSaveHistoryIndex >= 0 && !workingHistoryEqual(
+					values.history[ values.lastSaveHistoryIndex ].workingState, savedState ) ) { throw workingHistoryError(); }
+				if ( !workingHistoryEqual( values.history[ values.historyIndex ].workingState, data.workingState ) ) {
+					values.history = values.history.slice( 0, values.historyIndex + 1 );
+					values.history.push( { layers: copy( data.workingState.layers ),
+						workingState: copy( data.workingState ), timestamp: Date.now(),
+						description: mw.msg( 'layers-page-working-copy-recovered-edits' ) } );
+					values.historyIndex++;
+					if ( values.lastSaveHistoryIndex >= values.historyIndex ) { values.lastSaveHistoryIndex = -1; }
+					Object.assign( values, workingHistoryTrim( values, values.maxHistorySteps ) );
+				}
+				const associations = values.history.map( entry => {
+					if ( !entry || !Array.isArray( entry.layers ) || typeof entry.description !== 'string' ||
+						!Number.isFinite( entry.timestamp ) || entry.timestamp < 0 ||
+						!workingHistoryEqual( entry.layers, entry.workingState && entry.workingState.layers ) ) { throw workingHistoryError(); }
+					const checkpoint = workingHistoryCall( guard, mode.session, 'prepareWorkingCopyDraftCheckpoint', entry.workingState );
+					checkpoints.push( checkpoint );
+					const state = workingHistoryCall( guard, mode.session, 'inspectWorkingCopyCheckpoint', checkpoint );
+					if ( !workingHistoryEqual( state, entry.workingState ) ) { throw workingHistoryError(); }
+					return { checkpoint, workingState: state };
+				} );
+				workingHistoryAssignments( this, values ); workingHistoryCheck( guard );
+				const preflight = () => {
+					if ( released || committed || workingCopyHistoryModes.get( this ) !== mode ) { throw workingHistoryError(); }
+					workingHistoryCheck( guard ); workingHistoryAssignments( this, values );
+				};
+				const transaction = Object.freeze( {
+					checkpoint: associations[ values.historyIndex ].checkpoint,
+					inspect: () => copy( data.workingState ), preflight,
+					commit: () => {
+						if ( released || committed ) { throw workingHistoryError(); }
+						values.history.forEach( ( entry, index ) => mode.entries.set( entry, associations[ index ] ) );
+						workingHistoryAssign( this, values ); committed = true;
+					},
+					release: () => {
+						if ( released ) { return; } released = true;
+						if ( !committed ) { checkpoints.forEach( checkpoint => mode.session.releaseWorkingCopyCheckpoint( checkpoint ) ); }
+					}
+				} );
+				preflight(); workingCopyDraftTimelineCertificates.add( transaction ); return transaction;
+			} catch ( error ) {
+				checkpoints.forEach( checkpoint => { try { mode.session.releaseWorkingCopyCheckpoint( checkpoint ); } catch ( cleanupError ) {} } );
+				throw workingHistoryError();
+			}
+		}
+
 		static isWorkingCopyImportHistory( value ) {
 			return applicationHistoryCertificates.has( value );
 		}

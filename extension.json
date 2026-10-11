@@ -670,6 +670,7 @@
 				"editor/HelpDialog.css"
 			],
 			"messages": [
+				"layers-page-working-copy-recovered-edits",
 				"layers-editor-title",
 				"layers-content-not-renderable",
 				"layers-toolbar-title",

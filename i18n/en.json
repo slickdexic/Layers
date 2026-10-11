@@ -1106,5 +1106,6 @@
 	"layers-reading-disabled": "Page-owned Layers reading is not enabled.",
 	"layers-revision-unavailable": "This Layers revision is unavailable.",
 	"layers-reading-failed": "The Layers revision could not be loaded.",
-	"layers-cargo-invalid-rows": "Unsupported Cargo row mode. Use _rows=layers for one row per layer, or omit _rows to use the existing layer-set table format."
+	"layers-cargo-invalid-rows": "Unsupported Cargo row mode. Use _rows=layers for one row per layer, or omit _rows to use the existing layer-set table format.",
+	"layers-page-working-copy-recovered-edits": "Recovered layer edits"
 }
