@@ -9,6 +9,8 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
@@ -101,6 +103,36 @@ class PageOwnedPilot {
 		return new ApiLayersWorkingCopyImportRead( $main, $name,
 			new PageWorkingCopyImportReadService( $this->newIdentityResolver(),
 				$this->services->getTitleFactory(), $this->reader, $this->scope ) );
+	}
+
+	/**
+	 * @param ApiMain $main
+	 * @param string $name
+	 * @return ApiLayersWorkingCopyImportCreationRead
+	 */
+	public function newWorkingCopyImportCreationReadApi( ApiMain $main, string $name
+	): ApiLayersWorkingCopyImportCreationRead {
+		return new ApiLayersWorkingCopyImportCreationRead( $main, $name, $this->newCreationImportService() );
+	}
+
+	/**
+	 * @param ApiMain $main
+	 * @param string $name
+	 * @return ApiLayersWorkingCopyImportCreationPublish
+	 */
+	public function newWorkingCopyImportCreationPublishApi( ApiMain $main, string $name
+	): ApiLayersWorkingCopyImportCreationPublish {
+		return new ApiLayersWorkingCopyImportCreationPublish( $main, $name, $this->newCreationImportService() );
+	}
+
+	private function newCreationImportService(): PageWorkingCopyImportCreationService {
+		$identities = $this->newIdentityResolver();
+		$titles = $this->services->getTitleFactory();
+		return new PageWorkingCopyImportCreationService(
+			new PageWorkingCopyImportCreationTarget( $this, $identities,
+				$this->services->getRevisionLookup(), $this->reader ), $this->reader,
+			new PageWorkingCopyImportReadService( $identities, $titles, $this->reader, $this->scope ),
+			$this->publisher, $titles, $this->scope, $this->services->getConnectionProvider() );
 	}
 
 	/**
