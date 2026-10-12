@@ -190,6 +190,7 @@
 			record.applying = true;
 			try {
 				record.preflight(); await record.session.revalidate(); record.preflight();
+				if ( record.history.revalidateProvenance ) { await record.history.revalidateProvenance( record.preflight ); record.preflight(); }
 				const result = record.session.commitWorkingCopyDraftRestore( record.prepared, record.preflight );
 				record.prepared = null;
 				record.display.commit(); record.selection.commit(); record.history.commit(); record.committed = true;

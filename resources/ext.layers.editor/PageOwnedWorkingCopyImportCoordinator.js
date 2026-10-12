@@ -117,6 +117,12 @@
 	}
 
 	class PageOwnedWorkingCopyImportCoordinator {
+		/** Explicit opt-in; no existing editor or UI caller invokes this method. */
+		enablePublicationProvenance() {
+			const state = stateFor( this );
+			state.session.enableWorkingCopyImportProvenance( state.readClient );
+			state.provenanceEnabled = true;
+		}
 		constructor( dependencies ) {
 			try {
 				const state = fields( dependencies, [ 'bridge', 'session', 'readClient', 'Source', 'planner', 'adapter' ] );
@@ -183,6 +189,9 @@
 					}
 					return result.sourceBundle;
 				} };
+				if ( state.provenanceEnabled ) {
+					reader.getNativeIdentity = () => { checkRecord( this, record ); return { target: { ...target }, source: { ...source } }; };
+				}
 				record.component = new state.Source( { reader, planner: state.planner, adapter: state.adapter } );
 				record.componentMethods = [ 'prepare', 'inspect', 'revalidate', 'release', 'dispose' ].map( key => method( record.component, key ) );
 				record.disposeComponent = method( record.component, 'dispose' );

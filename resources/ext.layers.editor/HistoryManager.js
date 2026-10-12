@@ -93,6 +93,10 @@
 
 	function workingHistoryDraftGuard( history, mode ) {
 		const guard = workingHistoryGuard( history, mode );
+		if ( mode.session.hasWorkingCopyImportProvenance() ) {
+			guard.methods.push( ...[ 'hasWorkingCopyImportProvenance', 'revalidateWorkingCopyDraftProvenance' ]
+				.map( key => mode.Store.captureWorkingCopyMethod( mode.session, key ) ) );
+		}
 		for ( const [ owner, keys ] of [ [ mode.session, [ 'getWorkingCopyImportIdentity',
 			'prepareWorkingCopyDraftCheckpoint', 'prepareWorkingCopyDraftRestore',
 			'inspectWorkingCopyDraftRestore', 'commitWorkingCopyDraftRestore', 'revalidate' ] ],
@@ -153,31 +157,38 @@
 					mode.Store.observeWorkingCopyObject( mode.editor, false ), mode.Store.observeWorkingCopyObject( mode.bridge, false ),
 					mode.Store.observeWorkingCopyObject( mode.store, false ), mode.Store.observeWorkingCopyObject( mode.store.state ) ];
 				const methods = [ mode.Store.captureWorkingCopyMethod( mode.bridge, 'getWorkingCopyDraftLiveState' ) ];
+				if ( mode.session.hasWorkingCopyImportProvenance() ) {
+					methods.push( ...[ 'captureWorkingCopyImportProvenance', 'inspectWorkingCopyDraftCheckpoint', 'hasWorkingCopyImportProvenance' ]
+						.map( key => mode.Store.captureWorkingCopyMethod( mode.session, key ) ) );
+				}
 				const identity = { owner: mode.session._owner, pageId: mode.session._pageId,
 					revisionId: mode.session._revisionId, surfaceId: mode.session._surfaceId };
 				const timeline = copy( workingHistoryData( this ) );
 				timeline.history.forEach( ( entry, index ) => {
 					const association = mode.entries.get( this.history[ index ] );
 					if ( !association ) { throw workingHistoryError(); }
-					entry.workingState = copy( association.workingState );
+					entry.workingState = mode.session.hasWorkingCopyImportProvenance() ?
+						mode.session.inspectWorkingCopyDraftCheckpoint( association.checkpoint ) : copy( association.workingState );
 					if ( !workingHistoryEqual( entry.layers, entry.workingState.layers ) ) { throw workingHistoryError(); }
 				} );
 				// A successful publication can establish a new base before the UI marks its entry saved.
 				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
 				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
 					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
+				if ( mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
 				if ( !workingHistoryEqual( timeline.history[ timeline.lastSaveHistoryIndex ] &&
 					timeline.history[ timeline.lastSaveHistoryIndex ].workingState, savedState ) ) {
 					timeline.lastSaveHistoryIndex = timeline.history.findIndex( entry => workingHistoryEqual( entry.workingState, savedState ) );
 				}
 				const live = mode.bridge.getWorkingCopyDraftLiveState(), selected = mode.session._snapshot.surfaces.find( s => s.id === identity.surfaceId );
 				const workingState = { surfaceId: selected.id, ...copy( live ) };
+				if ( mode.session.hasWorkingCopyImportProvenance() ) { workingState.importProvenance = mode.session.captureWorkingCopyImportProvenance(); }
 				if ( Object.hasOwn( selected, 'readingOrder' ) ) {
 					const oldIds = new Set( selected.layers.map( layer => layer.id ) ), ids = new Set( live.layers.map( layer => layer.id ) );
 					workingState.readingOrder = selected.readingOrder.filter( id => !oldIds.has( id ) || ids.has( id ) );
 				}
 				observations.forEach( mode.Store.checkWorkingCopyObservation ); mode.Store.checkWorkingCopyMethods( methods );
-				return copy( { version: 1, identity, timeline, workingState } );
+				return copy( { version: mode.session.hasWorkingCopyImportProvenance() ? 2 : 1, identity, timeline, workingState } );
 			} catch ( error ) { throw workingHistoryError(); }
 		}
 
@@ -197,7 +208,15 @@
 			try {
 				const guard = workingHistoryDraftGuard( this, mode ), copy = mode.Store.copyWorkingCopyValue;
 				const data = copy( input ), identity = workingHistoryCall( guard, mode.session, 'getWorkingCopyImportIdentity' );
-				if ( !data || Object.keys( data ).length !== 4 || data.version !== 1 ||
+				if ( mode.session.hasWorkingCopyImportProvenance() ) {
+					for ( const state of [ data.workingState, ...data.timeline.history.map( entry => entry.workingState ) ] ) {
+						if ( state && !Object.hasOwn( state, 'importProvenance' ) ) {
+							if ( data.version === 2 ) { throw workingHistoryError(); } state.importProvenance = [];
+						}
+					}
+					if ( data.version === 1 && data.timeline.history.some( entry => Object.hasOwn( entry, 'importedLayerIds' ) ) ) { throw workingHistoryError(); }
+				}
+				if ( !data || Object.keys( data ).length !== 4 || ( data.version !== 1 && !( data.version === 2 && mode.session.hasWorkingCopyImportProvenance() ) ) ||
 					!workingHistoryEqual( data.identity, identity ) ) { throw workingHistoryError(); }
 				const values = data.timeline;
 				if ( !values || Object.keys( values ).sort().join() !==
@@ -210,6 +229,7 @@
 				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
 				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
 					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
+				if ( mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
 				if ( values.lastSaveHistoryIndex >= 0 && !workingHistoryEqual(
 					values.history[ values.lastSaveHistoryIndex ].workingState, savedState ) ) { throw workingHistoryError(); }
 				if ( !workingHistoryEqual( values.history[ values.historyIndex ].workingState, data.workingState ) ) {
@@ -237,6 +257,9 @@
 					workingHistoryCheck( guard ); workingHistoryAssignments( this, values );
 				};
 				const transaction = Object.freeze( {
+					...( mode.session.hasWorkingCopyImportProvenance() ? {
+						revalidateProvenance: afterAwait => mode.session.revalidateWorkingCopyDraftProvenance( checkpoints, afterAwait )
+					} : {} ),
 					checkpoint: associations[ values.historyIndex ].checkpoint,
 					inspect: () => copy( data.workingState ), preflight,
 					commit: () => {

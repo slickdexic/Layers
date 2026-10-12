@@ -96,6 +96,8 @@
 		constructor( dependencies ) {
 			try {
 				const { reader, planner, adapter } = fields( dependencies, [ 'reader', 'planner', 'adapter' ] );
+				const native = reader && Object.getOwnPropertyDescriptor( reader, 'getNativeIdentity' );
+				if ( native && ( !hasOwn( native, 'value' ) || typeof native.value !== 'function' ) ) { throw unavailable(); }
 				if ( !reader || !planner || !adapter || typeof reader.read !== 'function' ||
 					typeof planner.prepare !== 'function' || typeof adapter.toEditorState !== 'function' ||
 					typeof adapter.withWorkingCopyImport !== 'function' ) {
@@ -103,6 +105,7 @@
 				}
 				instances.set( this, {
 					active: true, handles: new WeakMap(), read: reader.read.bind( reader ),
+					nativeIdentity: native ? native.value.bind( reader ) : null,
 					prepare: planner.prepare.bind( planner ), toEditorState: adapter.toEditorState.bind( adapter ),
 					apply: adapter.withWorkingCopyImport.bind( adapter )
 				} );
@@ -164,6 +167,7 @@
 				const handle = Object.freeze( Object.create( null ) );
 				state.handles.set( handle, {
 					source, sourceLabel: selected.label, authorizedSource: authorized.result,
+					nativeIdentity: state.nativeIdentity ? copyData( state, state.nativeIdentity() ) : null,
 					targetSnapshot, candidateSnapshot, targetSurfaceId, mode,
 					importedLayerIds: copyData( state, plan.importedLayerIds ), differentFileVersion
 				} );
@@ -188,6 +192,16 @@
 			} catch ( error ) {
 				throw unavailable();
 			}
+		}
+
+		/** Literal native IDs retained separately from the existing preview contract. */
+		getWorkingCopyImportProvenance( handle ) {
+			const { state, record } = recordFor( this, handle ), native = record.nativeIdentity;
+			if ( !native || !state.nativeIdentity || !dataEqual( native, state.nativeIdentity() ) ||
+				native.source.owner !== record.source.owner || native.source.revisionId !== record.source.revisionId ||
+				native.source.surfaceId !== record.source.surfaceId || native.target.surfaceId !== record.targetSurfaceId ) { throw unavailable(); }
+			return { sourcePageId: native.source.pageId, sourceRevisionId: native.source.revisionId,
+				sourceSurfaceId: native.source.surfaceId, targetSurfaceId: native.target.surfaceId };
 		}
 
 		/**

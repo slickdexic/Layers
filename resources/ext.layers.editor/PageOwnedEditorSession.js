@@ -75,6 +75,114 @@
 	}
 
 	const workingCopyImports = new WeakMap();
+	const workingCopyProvenance = new WeakMap();
+	const provenanceCheckpoints = new WeakMap();
+
+	function provenanceObserve( session, guard ) {
+		const mode = workingCopyProvenance.get( session );
+		guard.provenance = mode && { mode, current: mode.current, epoch: mode.epoch };
+	}
+
+	function provenanceCheck( session, guard ) {
+		const mode = workingCopyProvenance.get( session ), observed = guard.provenance;
+		if ( observed ? mode !== observed.mode || mode.current !== observed.current || mode.epoch !== observed.epoch : mode ) {
+			throw importUnavailable();
+		}
+		if ( mode ) { importMethodsExact( [ mode.read ] ); }
+	}
+
+	function provenanceClaims( session, input ) {
+		const claims = restoreClone( input );
+		if ( !Array.isArray( claims ) || claims.length > 32 ) { throw importUnavailable(); }
+		for ( const claim of claims ) {
+			importObjectFields( claim, [ 'sourcePageId', 'sourceRevisionId', 'sourceSurfaceId', 'targetSurfaceId', 'layerIds', 'canvas' ] );
+			if ( ![ claim.sourcePageId, claim.sourceRevisionId ].every( id => Number.isInteger( id ) && id > 0 && id <= 2147483647 ) ||
+				claim.sourcePageId === session._pageId || claim.targetSurfaceId !== session._surfaceId ||
+				![ claim.sourceSurfaceId, claim.targetSurfaceId ].every( id => typeof id === 'string' && id.length > 0 && id.length <= 80 && !/[^A-Za-z0-9_.:-]/.test( id ) ) ||
+				typeof claim.canvas !== 'boolean' || !Array.isArray( claim.layerIds ) || claim.layerIds.length > 2000 ||
+				claim.layerIds.some( id => typeof id !== 'string' || !id ) || new Set( claim.layerIds ).size !== claim.layerIds.length ) { throw importUnavailable(); }
+		}
+		return claims;
+	}
+
+	function provenanceSetCheckpoint( session, checkpoint, claims, validated = true ) {
+		const mode = workingCopyProvenance.get( session );
+		if ( mode ) { provenanceCheckpoints.set( checkpoint, { session, epoch: mode.epoch,
+			claims: provenanceClaims( session, claims === undefined ? mode.current : claims ), validated } ); }
+	}
+
+	function provenancePreparedCheckpoint( session, claims ) {
+		const mode = workingCopyProvenance.get( session );
+		return mode && { session, epoch: mode.epoch, claims: provenanceClaims( session, claims === undefined ? mode.current : claims ), validated: true };
+	}
+
+	function provenanceForCheckpoint( session, checkpoint ) {
+		const mode = workingCopyProvenance.get( session ), record = provenanceCheckpoints.get( checkpoint );
+		return mode && record && record.session === session && record.epoch === mode.epoch ? record : { claims: [], validated: true };
+	}
+
+	function provenanceState( session, state, checkpoint ) {
+		const issued = checkpoint && restoreMaps( workingCopyCheckpoints, session ).has( checkpoint );
+		return workingCopyProvenance.has( session ) ? { ...state,
+			importProvenance: restoreClone( issued ? provenanceForCheckpoint( session, checkpoint ).claims : workingCopyProvenance.get( session ).current ) } : state;
+	}
+
+	function provenanceImported( session, record, preview ) {
+		const mode = workingCopyProvenance.get( session );
+		if ( !mode ) { return undefined; }
+		const source = importMethod( record.source.inspect.object, 'getWorkingCopyImportProvenance' ).call( record.sourceHandle );
+		importObjectFields( source, [ 'sourcePageId', 'sourceRevisionId', 'sourceSurfaceId', 'targetSurfaceId' ] );
+		if ( source.sourceRevisionId !== preview.source.revisionId || source.sourceSurfaceId !== preview.source.surfaceId ) { throw importUnavailable(); }
+		const before = record.guard.snapshot.surfaces.find( s => s.id === preview.targetSurfaceId );
+		const after = preview.candidateSnapshot.surfaces.find( s => s.id === preview.targetSurfaceId );
+		const claim = { ...source, layerIds: restoreClone( preview.importedLayerIds ),
+			canvas: preview.mode === 'empty' && before.kind === 'slide' && !importDataEqual( before.canvas, after.canvas ) };
+		const retained = mode.current.filter( previous => previous.canvas || previous.layerIds.some( id => after.layers.some( layer => layer.id === id ) ) );
+		const existing = retained.find( previous => previous.sourcePageId === claim.sourcePageId &&
+			previous.sourceRevisionId === claim.sourceRevisionId && previous.sourceSurfaceId === claim.sourceSurfaceId );
+		const claims = restoreClone( retained );
+		if ( existing ) {
+			const merged = claims[ retained.indexOf( existing ) ];
+			merged.layerIds = Array.from( new Set( merged.layerIds.concat( claim.layerIds ) ) ); merged.canvas = merged.canvas || claim.canvas;
+		} else { claims.push( claim ); }
+		return provenanceClaims( session, claims );
+	}
+
+	function provenanceCommit( session, claims ) {
+		const mode = workingCopyProvenance.get( session );
+		if ( mode ) { mode.current = claims; }
+	}
+
+	async function provenanceRevalidate( session, claims, afterAwait ) {
+		const mode = workingCopyProvenance.get( session );
+		if ( !mode ) { throw importUnavailable(); }
+		const captured = { mode, epoch: mode.epoch, current: mode.current, owner: session._owner,
+			pageId: session._pageId, revisionId: session._revisionId, surfaceId: session._surfaceId, saved: session._savedJson };
+		const check = () => {
+			if ( workingCopyProvenance.get( session ) !== mode || mode.epoch !== captured.epoch || mode.current !== captured.current ||
+				session._phase === 'disposed' || session._owner !== captured.owner || session._pageId !== captured.pageId ||
+				session._revisionId !== captured.revisionId || session._surfaceId !== captured.surfaceId || session._savedJson !== captured.saved ) { throw importUnavailable(); }
+			importMethodsExact( [ mode.read ] ); workingStateCallback( afterAwait );
+		};
+		const saved = JSON.parse( captured.saved ), target = saved.surfaces.find( s => s.id === captured.surfaceId ), seen = new Set();
+		for ( const claim of claims.flatMap( entry => provenanceClaims( session, [ entry ] ) ) ) {
+			const key = JSON.stringify( [ claim.sourcePageId, claim.sourceRevisionId, claim.sourceSurfaceId ] );
+			if ( seen.has( key ) ) { continue; } seen.add( key ); check();
+			const response = restoreClone( await mode.read.call( { targetPageId: captured.pageId,
+				targetBaseRevisionId: captured.revisionId, targetSurfaceId: captured.surfaceId,
+				sourcePageId: claim.sourcePageId, sourceRevisionId: claim.sourceRevisionId, sourceSurfaceId: claim.sourceSurfaceId } ) );
+			check();
+			const selected = response.sourceBundle && response.sourceBundle.snapshot.surfaces.filter( s => s.id === claim.sourceSurfaceId );
+			if ( !response.target || response.target.pageId !== captured.pageId || response.target.revisionId !== captured.revisionId ||
+				response.target.surfaceId !== captured.surfaceId || response.target.owner !== captured.owner ||
+				!response.source || response.source.pageId !== claim.sourcePageId || response.source.revisionId !== claim.sourceRevisionId ||
+				response.source.surfaceId !== claim.sourceSurfaceId || !response.targetBundle ||
+				!importDataEqual( response.targetBundle.snapshot, saved ) || !selected || selected.length !== 1 ||
+				selected[ 0 ].kind !== target.kind || nameKey( selected[ 0 ].label ) !== nameKey( target.label ) ||
+				( target.kind === 'image' && selected[ 0 ].source.fileTitle !== target.source.fileTitle ) ) { throw importUnavailable(); }
+		}
+		check();
+	}
 	const importHasOwn = ( value, key ) => Object.prototype.hasOwnProperty.call( value, key );
 	const importFields = [ '_owner', '_pageId', '_surfaceId', '_revisionId', '_readOnly', '_newSurface',
 		'_baseHasDrawings', '_reader', '_publisher', '_adapter', '_pdfContext', '_pdf', '_pdfRecovery',
@@ -174,6 +282,7 @@
 	}
 
 	function importCheckWork( session, guard ) {
+		provenanceCheck( session, guard );
 		for ( const key of importFields ) {
 			const current = importDescriptor( session, key ), captured = guard.descriptors[ key ];
 			if ( current.value !== captured.value || current.writable !== captured.writable ||
@@ -206,6 +315,7 @@
 			importMethod( value( '_adapter' ), 'withEditorState' ), importMethod( value( '_publisher' ), 'publish' ) ] };
 		guard.snapshot = importCopy( guard, value( '_snapshot' ) );
 		guard.newSurface = importCopy( guard, value( '_newSurface' ) );
+		provenanceObserve( session, guard );
 		guard.session = session;
 		guard.saved = importCopy( guard, JSON.parse( value( '_savedJson' ) ) );
 		importCall( guard, copy, guard.snapshot, value( '_surfaceId' ) );
@@ -334,6 +444,7 @@
 	}
 
 	function restoreCheckWork( session, guard ) {
+		provenanceCheck( session, guard );
 		for ( const key of importFields ) {
 			const current = importDescriptor( session, key ), original = guard.descriptors[ key ];
 			if ( current.value !== original.value || current.writable !== original.writable || current.configurable !== original.configurable ) {
@@ -371,6 +482,7 @@
 			throw restoreUnavailable();
 		}
 		const guard = { descriptors, snapshot: restoreClone( value( '_snapshot' ) ), newSurface: restoreClone( value( '_newSurface' ) ) };
+		provenanceObserve( session, guard );
 		const selected = guard.snapshot.surfaces && guard.snapshot.surfaces.find( surface => surface.id === value( '_surfaceId' ) );
 		if ( !selected || ![ 'image', 'slide' ].includes( selected.kind ) ) {
 			throw restoreUnavailable();
@@ -433,7 +545,7 @@
 		const candidate = restoreClone( record.candidate ), workingState = restoreWorkingState(
 			candidate.surfaces.find( member => member.id === record.guard.descriptors._surfaceId.value ) );
 		const editorState = restoreCall( session, record.guard, record.guard.copy, candidate, workingState.surfaceId );
-		const result = restoreClone( { editorState, workingState } );
+		const result = restoreClone( { editorState, workingState: provenanceState( session, workingState, record.checkpoint ) } );
 		if ( !importDataEqual( result.editorState, { canvas: workingState.canvas, layers: workingState.layers } ) ) {
 			throw restoreUnavailable();
 		}
@@ -476,6 +588,38 @@
 	}
 
 	class PageOwnedEditorSession {
+		/** Explicitly enable pending native Import citations for a fresh existing image/slide base. */
+		enableWorkingCopyImportProvenance( readClient ) {
+			const identity = this.getWorkingCopyImportIdentity();
+			if ( workingCopyProvenance.has( this ) || this.getStatus().dirty || !identity.pageId ) { throw importUnavailable(); }
+			workingCopyProvenance.set( this, { read: importMethod( readClient, 'read' ), current: [], epoch: 0 } );
+		}
+
+		hasWorkingCopyImportProvenance() { return workingCopyProvenance.has( this ); }
+
+		captureWorkingCopyImportProvenance( checkpoint ) {
+			this._requireLoaded();
+			if ( !workingCopyProvenance.has( this ) ) { throw importUnavailable(); }
+			if ( checkpoint && !restoreMaps( workingCopyCheckpoints, this ).has( checkpoint ) ) { throw restoreUnavailable(); }
+			return restoreClone( checkpoint ? provenanceForCheckpoint( this, checkpoint ).claims : workingCopyProvenance.get( this ).current );
+		}
+
+		inspectWorkingCopyDraftCheckpoint( checkpoint ) {
+			this._requireLoaded();
+			const record = restoreMaps( workingCopyCheckpoints, this ).get( checkpoint );
+			const surface = this._snapshot.surfaces.find( s => s.id === this._surfaceId );
+			if ( !record || !importDataEqual( record.identity, { owner: this._owner,
+				...( this._pageId === undefined ? {} : { pageId: this._pageId } ), surfaceId: this._surfaceId,
+				kind: surface.kind, ...( importHasOwn( surface, 'source' ) ? { source: surface.source } : {} ) } ) ) { throw restoreUnavailable(); }
+			return provenanceState( this, restoreClone( record.state ), checkpoint );
+		}
+
+		async revalidateWorkingCopyDraftProvenance( checkpoints, afterAwait ) {
+			if ( checkpoints.some( checkpoint => !restoreMaps( workingCopyCheckpoints, this ).has( checkpoint ) ) ) { throw restoreUnavailable(); }
+			const records = checkpoints.map( checkpoint => provenanceForCheckpoint( this, checkpoint ) );
+			await provenanceRevalidate( this, records.flatMap( r => r.claims ), afterAwait );
+			records.forEach( record => { record.validated = true; } );
+		}
 		/** Capture complete live backup work, including during a publication hold. */
 		updateWorkingCopyDraftState( input ) {
 			try {
@@ -486,7 +630,9 @@
 				const method = importMethod( this._adapter, 'withWorkingCopyRestore' );
 				const guard = { descriptors, snapshot: restoreClone( this._snapshot ), newSurface: null,
 					methods: [ { ...method, descriptor: Object.getOwnPropertyDescriptor( method.owner, method.key ) } ] };
+				provenanceObserve( this, guard );
 				const state = restoreClone( input ), surface = guard.snapshot.surfaces.find( s => s.id === this._surfaceId );
+				if ( workingCopyProvenance.has( this ) ) { delete state.importProvenance; }
 				if ( !surface || ![ 'image', 'slide' ].includes( surface.kind ) || state.surfaceId !== surface.id ||
 					Object.keys( state ).some( key => ![ 'surfaceId', 'canvas', 'layers', 'readingOrder' ].includes( key ) ) ) { throw restoreUnavailable(); }
 				const expected = restoreExpected( guard.snapshot, state ), values = restoreClone( state ); delete values.surfaceId;
@@ -500,6 +646,9 @@
 		prepareWorkingCopyDraftCheckpoint( input ) {
 			try {
 				const guard = restoreCaptureWork( this ), state = restoreClone( input );
+				const claims = workingCopyProvenance.has( this ) ? provenanceClaims( this,
+					importHasOwn( state, 'importProvenance' ) ? state.importProvenance : [] ) : undefined;
+				if ( workingCopyProvenance.has( this ) ) { delete state.importProvenance; }
 				if ( !state || Array.isArray( state ) || state.surfaceId !== guard.descriptors._surfaceId.value ||
 					!importHasOwn( state, 'canvas' ) || !Array.isArray( state.layers ) ||
 					Object.keys( state ).some( key => ![ 'surfaceId', 'canvas', 'layers', 'readingOrder' ].includes( key ) ) ) {
@@ -515,6 +664,7 @@
 				restoreMaps( workingCopyCheckpoints, this ).set( handle, {
 					identity: restoreIdentity( guard ), state: restoreWorkingState( actual.surfaces.find( s => s.id === state.surfaceId ) )
 				} );
+				provenanceSetCheckpoint( this, handle, claims, !claims || claims.length === 0 );
 				return handle;
 			} catch ( error ) { throw restoreUnavailable(); }
 		}
@@ -561,9 +711,12 @@
 				const expected = restoreExpected( record.guard.snapshot, restoreCheckpoint( this, record.checkpoint, record.guard ).state );
 				expected.surfaces.find( s => s.id === record.state.surfaceId ).label = record.label;
 				if ( !importDataEqual( expected, record.candidate ) || !importDescriptor( this, '_snapshot' ).writable ) { throw restoreUnavailable(); }
+				const provenance = provenanceForCheckpoint( this, record.checkpoint ), claims = restoreClone( provenance.claims );
+				if ( !provenance.validated ) { throw restoreUnavailable(); }
 				workingStateCallback( beforeCommit ); restoreCheckWork( this, record.guard );
 				restoreCheckpoint( this, record.checkpoint, record.guard );
 				this._snapshot = candidate;
+				provenanceCommit( this, claims );
 				if ( record.publicationBlocked ) { this._phase = 'conflict'; }
 				preparedWorkingCopyDraftRestores.get( this ).delete( handle );
 				return result;
@@ -608,11 +761,12 @@
 					importedLayerIds: restoreClone( preview.importedLayerIds ), differentFileVersion: preview.differentFileVersion,
 					dirty: comparable( candidate ) !== comparable( JSON.parse( this._savedJson ) ) };
 				const prepared = Object.freeze( Object.create( null ) ), checkpoint = Object.freeze( Object.create( null ) );
+				const claims = provenanceImported( this, record, preview );
 				importRecord( this, handle );
 				restoreMaps( workingCopyCheckpoints, this );
 				restoreMaps( applicationImportCleanup, this );
 				restoreMaps( applicationImportCommits, this ).set( prepared, { handle, importRecord: record, candidate, state,
-					identity: restoreIdentity( record.guard ), checkpoint, result: restoreClone( result ) } );
+					identity: restoreIdentity( record.guard ), checkpoint, claims, result: restoreClone( result ) } );
 				return prepared;
 			} catch ( error ) { throw importUnavailable(); }
 		}
@@ -634,10 +788,13 @@
 				const liveSource = original.source.inspect.call( original.sourceHandle );
 				if ( !importDataEqual( liveSource, original.preview ) ) { throw importUnavailable(); }
 				applicationImportRecord( this, handle );
+				const provenance = provenancePreparedCheckpoint( this, record.claims );
 				workingStateCallback( beforeCommit );
 				applicationImportRecord( this, handle );
 				this._snapshot = candidate;
+				provenanceCommit( this, record.claims );
 				workingCopyCheckpoints.get( this ).set( record.checkpoint, { identity: record.identity, state: record.state } );
+				if ( provenance ) { provenanceCheckpoints.set( record.checkpoint, provenance ); }
 				workingCopyImports.get( this ).delete( record.handle );
 				applicationImportCleanup.get( this ).set( record.handle, original );
 				applicationImportCommits.get( this ).delete( handle );
@@ -720,10 +877,12 @@
 					throw restoreUnavailable();
 				}
 				const result = { ...restoreResult( this, record ), dirty: record.dirty, checkpoint: record.checkpoint };
+				const provenance = provenancePreparedCheckpoint( this );
 				workingStateCallback( beforeCommit );
 				workingStateRecord( this, handle );
 				this._snapshot = candidate;
 				workingCopyCheckpoints.get( this ).set( record.checkpoint, { identity: record.identity, state: record.state } );
+				if ( provenance ) { provenanceCheckpoints.set( record.checkpoint, provenance ); }
 				preparedWorkingCopyStates.get( this ).delete( handle );
 				return result;
 			} catch ( error ) {
@@ -749,6 +908,7 @@
 				const checkpoint = Object.freeze( Object.create( null ) );
 				restoreCheckWork( this, guard );
 				restoreMaps( workingCopyCheckpoints, this ).set( checkpoint, { identity, state } );
+				provenanceSetCheckpoint( this, checkpoint );
 				return checkpoint;
 			} catch ( error ) {
 				throw restoreUnavailable();
@@ -758,7 +918,7 @@
 		/** @param {Object} checkpoint Owned checkpoint @return {Object} Detached working state */
 		inspectWorkingCopyCheckpoint( checkpoint ) {
 			try {
-				const guard = restoreCaptureWork( this ), record = restoreCheckpoint( this, checkpoint, guard ), result = restoreClone( record.state );
+				const guard = restoreCaptureWork( this ), record = restoreCheckpoint( this, checkpoint, guard ), result = provenanceState( this, restoreClone( record.state ), checkpoint );
 				restoreCheckWork( this, guard );
 				return result;
 			} catch ( error ) {
@@ -808,9 +968,12 @@
 					throw restoreUnavailable();
 				}
 				const result = restoreResult( this, record );
+				const provenance = provenanceForCheckpoint( this, record.checkpoint ), claims = restoreClone( provenance.claims );
+				if ( !provenance.validated ) { throw restoreUnavailable(); }
 				workingStateCallback( beforeCommit );
 				restorePrepared( this, handle );
 				this._snapshot = candidate;
+				provenanceCommit( this, claims );
 				preparedWorkingCopyRestores.get( this ).delete( handle );
 				return result;
 			} catch ( error ) {
@@ -966,7 +1129,9 @@
 					throw importUnavailable();
 				}
 				importRecord( this, handle );
+				const claims = provenanceImported( this, record, preview );
 				this._snapshot = candidate;
+				provenanceCommit( this, claims );
 				workingCopyImports.get( this ).delete( handle );
 				return result;
 			} catch ( error ) {
@@ -1691,6 +1856,7 @@
 		 * @return {Promise<Object>} Confirmed revision and current dirty state
 		 */
 		async save( summary = '', beforePublish ) {
+			if ( workingCopyProvenance.has( this ) ) { return this.saveWorkingCopyImportProvenance( summary, beforePublish ); }
 			this._requireLoaded();
 			if ( this._readOnly ) {
 				throw failure( 'layers-editor-read-only' );
@@ -1741,6 +1907,48 @@
 						safeError.code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
 				}
 				throw safeError;
+			}
+		}
+
+		/** Opt-in publication; only a confirmed revision acknowledges pending source citations. */
+		async saveWorkingCopyImportProvenance( summary = '', beforePublish ) {
+			this._requireLoaded();
+			const mode = workingCopyProvenance.get( this );
+			if ( !mode || this._readOnly || this._phase !== 'ready' || this._reconciling || this._pdfRecovery ) { throw failure( 'layers-editor-session-unavailable' ); }
+			if ( typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) { throw failure( 'layers-invalid-publication-request' ); }
+			const snapshotJson = JSON.stringify( this._snapshot ), captured = JSON.parse( snapshotJson );
+			const selected = captured.surfaces.find( s => s.id === this._surfaceId ), saved = JSON.parse( this._savedJson ).surfaces.find( s => s.id === this._surfaceId );
+			const layerIds = new Set( selected.layers.map( layer => layer.id ) );
+			const active = mode.current.filter( claim => claim.layerIds.some( id => layerIds.has( id ) ) ||
+				( claim.canvas && !importDataEqual( selected.canvas, saved.canvas ) ) );
+			const sources = new Map();
+			if ( !importDataEqual( restoreWorkingState( selected ), restoreWorkingState( saved ) ) ) {
+				active.forEach( claim => { const descriptor = { sourcePageId: claim.sourcePageId, sourceRevisionId: claim.sourceRevisionId,
+					sourceSurfaceId: claim.sourceSurfaceId, targetSurfaceId: claim.targetSurfaceId }; sources.set( JSON.stringify( descriptor ), descriptor ); } );
+			}
+			const owner = this._owner, pageId = this._pageId, surfaceId = this._surfaceId, baseRevisionId = this._revisionId, baseJson = this._savedJson, current = mode.current;
+			const publisher = importMethod( this._publisher, 'publish' ), epoch = mode.epoch;
+			this._phase = 'saving';
+			try {
+				if ( beforePublish ) { try { await beforePublish(); } catch ( error ) { throw failure( 'layers-draft-storage-failed' ); } }
+				const check = () => {
+					if ( this._phase !== 'saving' || this._revisionId !== baseRevisionId || this._savedJson !== baseJson ||
+						this._owner !== owner || this._pageId !== pageId || this._surfaceId !== surfaceId || workingCopyProvenance.get( this ) !== mode || mode.current !== current || mode.epoch !== epoch ||
+						this._publisher !== publisher.object ) { throw failure( 'layers-editor-session-unavailable' ); }
+					importMethodsExact( [ publisher ] );
+				};
+				check(); if ( sources.size ) { await provenanceRevalidate( this, active, check ); } check();
+				const request = { owner, pageId, baseRevisionId, snapshotJson, summary,
+					...( sources.size ? { importSources: Array.from( sources.values() ) } : {} ) };
+				const result = await publisher.call( request ); check();
+				if ( !result || !Number.isInteger( result.revisionId ) || result.revisionId < baseRevisionId || result.revisionId > 2147483647 ||
+					( sources.size && result.revisionId === baseRevisionId ) ) { throw failure( 'layers-publication-outcome-unknown' ); }
+				this._revisionId = result.revisionId; this._savedJson = snapshotJson; this._baseHasDrawings = true;
+				mode.current = []; mode.epoch++; this._phase = 'ready'; return this.getStatus();
+			} catch ( error ) {
+				const safe = error && typeof error.code === 'string' ? error : failure( 'layers-publication-outcome-unknown' );
+				if ( this._phase !== 'disposed' ) { this._phase = safe.code === 'layers-edit-conflict' ? 'conflict' : safe.code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready'; }
+				throw safe;
 			}
 		}
 
