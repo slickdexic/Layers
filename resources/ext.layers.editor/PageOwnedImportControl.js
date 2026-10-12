@@ -99,17 +99,19 @@
 
 		_decision( choice, target, preview ) {
 			const dialog = this.dialog, message = this.options.message;
+			dialog.panel.classList.add( 'is-deciding' );
 			dialog.list.hidden = true; dialog.input.hidden = true; dialog.decision.hidden = false; dialog.decision.textContent = '';
 			const info = document.createElement( 'p' );
+			info.className = 'layers-page-import-summary';
 			info.textContent = message( 'layers-page-import-confirm', preview.source.label, choice.title, target.name, target.owner );
 			const warning = document.createElement( 'p' ); warning.className = 'layers-page-import-warning';
 			warning.textContent = message( 'layers-page-import-replace-warning', target.layerCount ); dialog.decision.append( info, warning );
 			if ( target.kind === 'slide' ) {
-				const sizes = document.createElement( 'p' ); sizes.textContent = message( 'layers-page-import-slide-sizes',
+				const sizes = document.createElement( 'p' ); sizes.className = 'layers-page-import-size-note'; sizes.textContent = message( 'layers-page-import-slide-sizes',
 					target.canvas.width, target.canvas.height, choice.canvas.width, choice.canvas.height ); dialog.decision.appendChild( sizes );
 			}
-			if ( preview.differentFileVersion ) { const notice = document.createElement( 'p' ); notice.textContent = message( 'layers-page-import-file-version' ); dialog.decision.appendChild( notice ); }
-			const note = document.createElement( 'p' ); note.textContent = message( 'layers-page-import-working-copy' ); dialog.decision.appendChild( note );
+			if ( preview.differentFileVersion ) { const notice = document.createElement( 'p' ); notice.className = 'layers-page-import-version-note'; notice.textContent = message( 'layers-page-import-file-version' ); dialog.decision.appendChild( notice ); }
+			const note = document.createElement( 'p' ); note.className = 'layers-page-import-working-note'; note.textContent = message( 'layers-page-import-working-copy' ); dialog.decision.appendChild( note );
 			const actions = document.createElement( 'div' ); actions.className = 'layers-page-import-actions';
 			const append = this._button( 'layers-page-import-append', () => this._apply( dialog, this.generation ) ); append.className = 'layers-page-import-append';
 			const replace = this._button( 'layers-page-import-replace', () => this._replace( choice ) ); replace.className = 'layers-page-import-replace';
