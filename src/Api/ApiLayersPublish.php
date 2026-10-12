@@ -8,24 +8,29 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
+use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PagePublicationService;
+use MediaWiki\Extension\Layers\Revision\PageWorkingCopyImportPublicationService;
 use MediaWiki\Extension\Layers\Revision\PublicationException;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
+use Wikimedia\Rdbms\IDBAccessObject;
 
 /** Experimental page revision publication API; disabled by default. */
 class ApiLayersPublish extends ApiBase {
 	private PagePublicationService $publisher;
 	private TitleFactory $titles;
 	private ?PageOwnedScope $scope;
+	/** @var callable|null Lazy factory; omitted by older publication compositions. */
+	private $importPublisherFactory;
 
 	private const PUBLIC_ERRORS = [
 		'layers-owner-edit-denied', 'layers-invalid-publication-request',
 		'layers-main-model-change-denied', 'layers-invalid-snapshot',
 		'layers-source-unavailable', 'layers-edit-conflict', 'layers-revision-save-failed',
 		'layers-admission-unauthorized', 'layers-slot-removal-denied', 'layers-content-not-renderable',
-		'layers-edit-filtered'
+		'layers-edit-filtered', 'layers-working-copy-import-unavailable'
 	];
 
 	/**
@@ -34,14 +39,16 @@ class ApiLayersPublish extends ApiBase {
 	 * @param PagePublicationService $publisher
 	 * @param TitleFactory $titles
 	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
+	 * @param callable|null $importPublisherFactory Returns the native Import publication service on demand
 	 */
 	public function __construct( ApiMain $main, string $name, PagePublicationService $publisher,
-		TitleFactory $titles, ?PageOwnedScope $scope = null
+		TitleFactory $titles, ?PageOwnedScope $scope = null, ?callable $importPublisherFactory = null
 	) {
 		parent::__construct( $main, $name );
 		$this->publisher = $publisher;
 		$this->titles = $titles;
 		$this->scope = $scope;
+		$this->importPublisherFactory = $importPublisherFactory;
 	}
 
 	public function execute() {
@@ -61,10 +68,40 @@ class ApiLayersPublish extends ApiBase {
 			$this->dieWithError( 'layers-publication-disabled', 'layers-publication-disabled' );
 		}
 		try {
-			$id = $this->publisher->publish( $owner, $this->getAuthority(), $params['baserevid'],
-				$params['data'], $params['summary'],
-				$params['maintext'] !== null ? new WikitextContent( $params['maintext'] ) : null,
-				$params['pageid'] );
+			if ( $params['importsources'] !== null ) {
+				if ( !$this->importPublisherFactory || $params['pageid'] === null || $params['baserevid'] < 1 ||
+					$params['maintext'] !== null ||
+					$owner->getArticleID( IDBAccessObject::READ_LATEST ) !== $params['pageid']
+				) {
+					throw new PublicationException( 'layers-working-copy-import-unavailable' );
+				}
+				try {
+					$decoded = json_decode( $params['importsources'], false, 16, JSON_THROW_ON_ERROR );
+					JsonSnapshotCodec::rejectDuplicateKeys( $params['importsources'] );
+					if ( !is_array( $decoded ) || !$decoded || count( $decoded ) > 32 ) {
+						throw new \InvalidArgumentException();
+					}
+					$sources = array_map( static function ( $descriptor ): array {
+						if ( !$descriptor instanceof \stdClass ) {
+							throw new \InvalidArgumentException();
+						}
+						return get_object_vars( $descriptor );
+					}, $decoded );
+				} catch ( \JsonException | \InvalidArgumentException $error ) {
+					throw new PublicationException( 'layers-working-copy-import-unavailable' );
+				}
+				$importPublisher = ( $this->importPublisherFactory )();
+				if ( !$importPublisher instanceof PageWorkingCopyImportPublicationService ) {
+					throw new \LogicException( 'Invalid native Import publication composition' );
+				}
+				$id = $importPublisher->publish( $params['pageid'], $params['baserevid'], $params['data'],
+					$sources, $this->getAuthority(), $params['summary'] );
+			} else {
+				$id = $this->publisher->publish( $owner, $this->getAuthority(), $params['baserevid'],
+					$params['data'], $params['summary'],
+					$params['maintext'] !== null ? new WikitextContent( $params['maintext'] ) : null,
+					$params['pageid'] );
+			}
 		} catch ( PublicationException $e ) {
 			$reason = in_array( $e->getMessage(),
 				[ 'layers-owner-unavailable', 'layers-embedding-source-unavailable' ], true ) ?
@@ -90,7 +127,8 @@ class ApiLayersPublish extends ApiBase {
 			'data' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
 			'maintext' => [ self::PARAM_TYPE => 'string', self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
-			'summary' => [ self::PARAM_TYPE => 'string', self::PARAM_DFLT => '', self::PARAM_MAX_CHARS => 500 ]
+			'summary' => [ self::PARAM_TYPE => 'string', self::PARAM_DFLT => '', self::PARAM_MAX_CHARS => 500 ],
+			'importsources' => [ self::PARAM_TYPE => 'string', self::PARAM_MAX_BYTES => 16384 ]
 		];
 	}
 

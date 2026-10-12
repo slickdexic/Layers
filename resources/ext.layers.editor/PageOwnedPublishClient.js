@@ -24,7 +24,8 @@
 		'layers-admission-unauthorized',
 		'layers-slot-removal-denied',
 		'layers-content-not-renderable',
-		'layers-edit-filtered'
+		'layers-edit-filtered',
+		'layers-working-copy-import-unavailable'
 	] );
 
 	// Codes whose reason is a Layers message naming the refused layer; no other payload text is shown.
@@ -42,6 +43,45 @@
 		const err = new Error( message || code );
 		err.code = code;
 		return err;
+	}
+
+	/** Capture a bounded list of literal native source identities, without invoking descriptor accessors.
+	 * @param {Object[]} sources
+	 * @return {string}
+	 */
+	function captureImportSources( sources ) {
+		if ( !Array.isArray( sources ) || sources.length < 1 || sources.length > 32 ) {
+			throw createError( 'layers-invalid-publication-request' );
+		}
+		const expected = [ 'sourcePageId', 'sourceRevisionId', 'sourceSurfaceId', 'targetSurfaceId' ];
+		const captured = [];
+		for ( let index = 0; index < sources.length; index++ ) {
+			const record = sources[ index ];
+			if ( !record || typeof record !== 'object' ||
+				( Object.getPrototypeOf( record ) !== Object.prototype && Object.getPrototypeOf( record ) !== null ) ||
+				Reflect.ownKeys( record ).length !== expected.length ) {
+				throw createError( 'layers-invalid-publication-request' );
+			}
+			const properties = Object.getOwnPropertyDescriptors( record ), copy = {};
+			for ( const name of expected ) {
+				const property = properties[ name ];
+				if ( !property || !Object.prototype.hasOwnProperty.call( property, 'value' ) ) {
+					throw createError( 'layers-invalid-publication-request' );
+				}
+				const value = property.value;
+				if ( name === 'sourcePageId' || name === 'sourceRevisionId' ) {
+					if ( !Number.isInteger( value ) || value < 1 || value > 2147483647 ) {
+						throw createError( 'layers-invalid-publication-request' );
+					}
+				} else if ( typeof value !== 'string' || value.length < 1 || value.length > 80 ||
+					/[^A-Za-z0-9_.:-]/.test( value ) ) {
+					throw createError( 'layers-invalid-publication-request' );
+				}
+				copy[ name ] = value;
+			}
+			captured.push( copy );
+		}
+		return JSON.stringify( captured );
 	}
 
 	class PageOwnedPublishClient {
@@ -65,6 +105,7 @@
 		 * @param {string} [options.summary] Optional edit summary (defaults to empty string)
 		 * @param {string} [options.mainText] Optional main wikitext content (omitted if undefined/null, preserved if empty string)
 		 * @param {number} [options.pageId] Optional expected owner PageID (integer 1..2147483647; requires baseRevisionId > 0)
+		 * @param {Object[]} [options.importSources] Explicit source identities for a first Save after Import
 		 * @return {Promise<{ revisionId: number }>}
 		 */
 		publish( options ) {
@@ -79,6 +120,7 @@
 			const summary = options.summary;
 			const mainText = options.mainText;
 			const pageId = options.pageId;
+			const importSources = options.importSources;
 
 			// Local validation
 			if ( typeof owner !== 'string' || owner.trim().length === 0 ) {
@@ -123,6 +165,17 @@
 
 			if ( typeof mainText === 'string' ) {
 				postParams.maintext = mainText;
+			}
+
+			if ( importSources !== undefined ) {
+				try {
+					if ( pageId === undefined || baseRevisionId < 1 || typeof mainText === 'string' ) {
+						throw createError( 'layers-invalid-publication-request' );
+					}
+					postParams.importsources = captureImportSources( importSources );
+				} catch ( error ) {
+					return Promise.reject( createError( 'layers-invalid-publication-request' ) );
+				}
 			}
 
 			// Invoke immediately, but route synchronous transport failures through safe error mapping too.

@@ -1072,6 +1072,7 @@
 	"apihelp-layerspublish-param-data": "Complete versioned Layers snapshot as JSON.",
 	"apihelp-layerspublish-param-maintext": "Optional simultaneous wikitext edit; required for a new owner page. Subject to the wiki's edit filters.",
 	"apihelp-layerspublish-param-summary": "Edit summary, at most 500 UTF-8 bytes.",
+	"apihelp-layerspublish-param-importsources": "Optional JSON list of native source page, revision and member IDs for the first Save after Import. Requires pageid and an existing base revision; maintext is refused. Source citations are generated and revalidated by the server.",
 	"apihelp-layersread-summary": "Read the layer sets saved in an exact revision of a page. The page must be in a supported namespace or already own layer sets.",
 	"apihelp-layersworkingcopyimportread-summary": "Read an existing image or slide layer set from another page for working-copy Import.",
 	"apihelp-layersworkingcopyimportread-description": "Read exact target and source layer-set members using native page and revision IDs. Each request rechecks permission to edit the current target and read the source. Returns complete private bundles without saving changes or granting permission to apply or publish them.",
@@ -1105,6 +1106,7 @@
 	"tag-layers-migration-description": "Edit by the Layers migration script, which moved shared layer sets and slides into page history.",
 	"layers-reading-disabled": "Page-owned Layers reading is not enabled.",
 	"layers-revision-unavailable": "This Layers revision is unavailable.",
+	"layers-working-copy-import-unavailable": "The layer set could not be saved using that Import source.",
 	"layers-reading-failed": "The Layers revision could not be loaded.",
 	"layers-cargo-invalid-rows": "Unsupported Cargo row mode. Use _rows=layers for one row per layer, or omit _rows to use the existing layer-set table format.",
 	"layers-page-working-copy-recovered-edits": "Recovered layer edits"

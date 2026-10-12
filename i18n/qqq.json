@@ -1066,6 +1066,7 @@
 	"apihelp-layerspublish-param-data": "{{doc-apihelp-param|layerspublish|data}}",
 	"apihelp-layerspublish-param-maintext": "{{doc-apihelp-param|layerspublish|maintext}}",
 	"apihelp-layerspublish-param-summary": "{{doc-apihelp-param|layerspublish|summary}}",
+	"apihelp-layerspublish-param-importsources": "{{doc-apihelp-param|layerspublish|importsources}}",
 	"apihelp-layersworkingcopyimportread-summary": "{{doc-apihelp-summary|layersworkingcopyimportread}}",
 	"apihelp-layersworkingcopyimportread-description": "{{doc-apihelp-description|layersworkingcopyimportread}}",
 	"apihelp-layersworkingcopyimportread-param-targetpageid": "{{doc-apihelp-param|layersworkingcopyimportread|targetpageid}}",
@@ -1099,6 +1100,7 @@
 	"tag-layers-migration-description": "Long description of the layers-migration change tag, shown on [[Special:Tags]]. The tag marks the bot edits of the migration script (maintenance/migrateLayersToPageHistory.php).",
 	"layers-reading-disabled": "Error from the experimental page-owned read API when disabled.",
 	"layers-revision-unavailable": "Generic error for missing, denied, wrong-owner or unavailable historical Layers content. Does not distinguish permission from existence.",
+	"layers-working-copy-import-unavailable": "Fixed error for refused first-Save Import publication. Covers malformed identities, unavailable source data and permission failures without distinguishing them or reflecting private source details.",
 	"layers-reading-failed": "Generic operational error from the experimental exact-revision Layers read API; internal diagnostics must not be exposed.",
 	"layers-cargo-invalid-rows": "Error shown on a page when {{#layers_cargo_store:}} receives an unsupported _rows value. Do not reflect the raw value. The suggested _rows=layers mode stores one row per layer; omitting _rows keeps the existing layer-set table format, whose legacy rows are per stored surface. Keep the parameter spelling _rows unchanged.",
 	"layers-page-working-copy-recovered-edits": "Undo history description for image/slide edits recovered from a local draft that had not yet been recorded as an Undo step. This route is explicitly opted in."

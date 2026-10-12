@@ -72,7 +72,11 @@ class PageOwnedPilot {
 	 */
 	public function newPublishApi( ApiMain $main, string $name ): ApiLayersPublish {
 		return new ApiLayersPublish( $main, $name, $this->publisher, $this->services->getTitleFactory(),
-			$this->scope );
+			$this->scope, fn (): PageWorkingCopyImportPublicationService =>
+				new PageWorkingCopyImportPublicationService(
+					new PageWorkingCopyImportReadService( $this->newIdentityResolver(),
+						$this->services->getTitleFactory(), $this->reader, $this->scope ),
+					$this->publisher, $this->services->getTitleFactory(), $this->services->getConnectionProvider() ) );
 	}
 
 	/**
