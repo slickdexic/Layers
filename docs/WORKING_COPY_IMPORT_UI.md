@@ -28,3 +28,24 @@ Destroy disposes in-flight source preparation/application before the editor.
 
 Browser/HTTP and owner acceptance, missing/new target members, whole-PDF Import,
 MediaWiki 1.44 and native mobile acceptance remain separate qualification work.
+
+## Native desktop checkpoint: October 12, 2026
+
+The revised Import preview's visual direction is approved. Native acceptance
+now covers MediaWiki 1.45.3 at a 1440-wide desktop viewport, using a separate
+test wiki with actual authorization, source reads and publication.
+
+Four normal browser Saves passed: image Append, populated-slide Replace, and
+direct Import into saved empty image and slide targets. Each operation passed
+Undo/Redo, created exactly one owning-page revision with the native source
+page/revision citation, returned to its owner on Close and reopened saved work.
+Source pages, main wikitext, image pins and offscreen surfaces stayed exact.
+Populated slides retained their canvas; the empty slide copied source geometry.
+The image working-copy checks confirmed no revision before Save.
+
+This checkpoint leaves native Import draft recovery and stale-save refusal,
+missing/new target members, whole-PDF Import, mobile, MediaWiki 1.44 and overall
+owner acceptance open. Save was outside the default 985-wide viewport; that
+editor layout gap remains recorded under UI-6/UI-10. The temporary page box
+still awaits qualified replacement closeout. No runtime change was required
+by these desktop journeys. Private test data and evidence remain local.
