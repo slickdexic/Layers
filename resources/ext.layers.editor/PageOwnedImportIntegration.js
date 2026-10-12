@@ -10,22 +10,37 @@
 				typeof editor.historyManager.enableWorkingCopyHistory === 'function' && editor.canvasManager && editor.canvasManager.selectionManager );
 		}
 
+		static supportsCreation( bridge ) {
+			const editor = bridge && bridge.editor, session = bridge && bridge.session;
+			const selection = editor && editor.config && editor.config.pageOwned && editor.config.pageOwned.creationSelection;
+			return !!( bridge && bridge.loaded && !bridge.disposed && !bridge.pdfCoordinator && session &&
+				!session._readOnly && session._newSurface && [ 'image', 'slide' ].includes( session._newSurface.kind ) &&
+				!session._pdf && !session._pdfContext && Number.isInteger( session._pageId ) && session._pageId > 0 &&
+				selection && Number.isInteger( selection.start ) && selection.start >= 0 && typeof selection.expected === 'string' && selection.expected &&
+				editor && !editor.isDestroyed && editor.historyManager && editor.canvasManager && editor.canvasManager.selectionManager );
+		}
+
 		constructor( bridge, api, classes ) {
-			if ( !PageOwnedImportIntegration.supports( bridge ) ) { throw new Error( 'layers-working-copy-import-unavailable' ); }
+			const creation = PageOwnedImportIntegration.supportsCreation( bridge );
+			if ( !PageOwnedImportIntegration.supports( bridge ) && !creation ) { throw new Error( 'layers-working-copy-import-unavailable' ); }
 			this.bridge = bridge; this.classes = classes; this.disposed = false; this.control = null;
 			this.catalog = new classes.PageOwnedWorkingCopyImportCatalogClient( api );
+			const readClient = creation ? new classes.PageOwnedCreationImportClient( api, bridge.editor.config.pageOwned.creationSelection ) :
+				new classes.PageOwnedWorkingCopyImportReadClient( api );
+			if ( creation ) { bridge.session.enableCreationImport( readClient, bridge.editor.config.pageOwned.creationSelection ); }
 			this.coordinator = new classes.PageOwnedWorkingCopyImportCoordinator( { bridge, session: bridge.session,
-				readClient: new classes.PageOwnedWorkingCopyImportReadClient( api ), Source: classes.PageOwnedWorkingCopyImportSource,
+				readClient, Source: classes.PageOwnedWorkingCopyImportSource,
 				planner: classes.PageOwnedWorkingCopyImportPlan, adapter: new classes.PageOwnedSnapshotAdapter() } );
 			if ( !bridge.editor.historyManager.hasWorkingCopyHistory( bridge ) ) { bridge.editor.historyManager.enableWorkingCopyHistory( bridge ); }
-			this.coordinator.enablePublicationProvenance();
+			if ( !creation ) { this.coordinator.enablePublicationProvenance(); } else { this.coordinator.enableCreationProvenance(); }
 		}
 
 		enableDrafts( controller ) { controller.enableWorkingCopyDrafts(); }
 
 		_target() {
 			const session = this.bridge.session, identity = session.getWorkingCopyImportIdentity();
-			const saved = JSON.parse( session._savedJson ).surfaces.find( surface => surface.id === identity.surfaceId );
+			const saved = JSON.parse( session._savedJson ).surfaces.find( surface => surface.id === identity.surfaceId ) ||
+				( session.hasCreationImport() ? session._newSurface : null );
 			const live = this.bridge.getWorkingCopyLiveState();
 			return { match: { pageId: identity.pageId, kind: saved.kind, label: saved.label,
 				fileTitle: saved.kind === 'image' ? saved.source.fileTitle : null },

@@ -334,6 +334,9 @@
 				const classes = window.Layers.Editor;
 				if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
 					this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
+				} else if ( classes.PageOwnedCreationImportClient && classes.PageOwnedImportIntegration &&
+					classes.PageOwnedImportIntegration.supportsCreation( this.pageOwnedBridge ) ) {
+					this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
 				}
 				// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
 				const random = new Uint8Array( 16 );

@@ -94,7 +94,7 @@
 		const check = () => {
 			Store.checkWorkingCopyMethods( methods ); observations.forEach( Store.checkWorkingCopyObservation );
 			if ( bridge.disposed || !bridge.loaded || bridge.saving || bridge.reconciling || bridge.pdfCoordinator || !store.isWorkingCopyAlive() ||
-				session._phase !== 'ready' || session._readOnly || session._reconciling || !session._baseHasDrawings || session._pdf || session._pdfContext || session._pdfRecovery ||
+				session._phase !== 'ready' || session._readOnly || session._reconciling || ( !session._baseHasDrawings && !session.hasCreationImport() ) || session._pdf || session._pdfContext || session._pdfRecovery ||
 				store.isLocked || store._isProcessingPending || store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null || history.batchMode ) { throw importApplicationError(); }
 			if ( historyWitness ) { historyWitness.preflight(); } if ( selectionWitness ) { selectionWitness.preflight(); }
 		};

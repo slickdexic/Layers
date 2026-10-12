@@ -1128,6 +1128,9 @@ class PageOwnedPilot {
 						$authority );
 					$init['pageOwned'] += [ 'newSurface' => $new['surface'],
 						'emptyBase' => !$revision->hasSlot( PageRevisionWriter::SLOT ) ];
+					if ( in_array( $new['surface']['kind'], [ 'image', 'slide' ], true ) ) {
+						$init['pageOwned']['creationSelection'] = [ 'start' => $start, 'expected' => $expected ];
+					}
 					$legacy = $this->legacyDraftSurface( $candidates, $surfaces, $new['surface'], $revision );
 					if ( $legacy !== null ) {
 						$init['pageOwned']['draftScope']['legacySurface'] = $legacy;

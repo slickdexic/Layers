@@ -347,6 +347,7 @@
 				"PageOwnedWorkingCopyImportCatalogClient.js",
 				"PageOwnedImportControl.js",
 				"PageOwnedImportIntegration.js",
+				"PageOwnedCreationImportClient.js",
 				"PageOwnedSummaryField.js"
 			],
 			"styles": [ "PageOwnedRecoveryDialog.css", "PageOwnedHeaderControls.css", "PageOwnedImportControl.css" ],

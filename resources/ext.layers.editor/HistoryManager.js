@@ -39,7 +39,7 @@
 		const { bridge, editor, session, store } = mode;
 		if ( history.isDestroyed || history.editor !== editor || editor.historyManager !== history || editor.stateManager !== store ||
 			bridge.editor !== editor || bridge.session !== session || !bridge.loaded || bridge.disposed || bridge.saving || bridge.reconciling || bridge.pdfCoordinator ||
-			session._phase !== 'ready' || session._readOnly || session._reconciling || session._baseHasDrawings !== true ||
+			session._phase !== 'ready' || session._readOnly || session._reconciling || ( session._baseHasDrawings !== true && !session.hasCreationImport() ) ||
 			session._pdf || session._pdfContext || session._pdfRecovery || store.isLocked || store._isProcessingPending ||
 			!store.isWorkingCopyAlive() || store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ||
 			( !batch && history.batchMode ) ) {
@@ -148,8 +148,8 @@
 				if ( !mode || this.isDestroyed || mode.bridge.disposed || !mode.bridge.loaded ||
 					mode.editor !== this.editor || mode.editor.historyManager !== this ||
 					mode.editor.stateManager !== mode.store || mode.bridge.editor !== mode.editor || mode.bridge.session !== mode.session || mode.bridge.pdfCoordinator ||
-					mode.session._readOnly || mode.session._pdf || mode.session._pdfContext || mode.session._newSurface ||
-					mode.session._baseHasDrawings !== true || !mode.store.isWorkingCopyAlive() ||
+					mode.session._readOnly || mode.session._pdf || mode.session._pdfContext || ( mode.session._newSurface && !mode.session.hasCreationImport() ) ||
+					( mode.session._baseHasDrawings !== true && !mode.session.hasCreationImport() ) || !mode.store.isWorkingCopyAlive() ||
 					![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( mode.session._phase ) ) { throw workingHistoryError(); }
 				const copy = mode.Store.copyWorkingCopyValue, observations = [
 					mode.Store.observeWorkingCopyObject( this, false ), mode.Store.observeWorkingCopyObject( this.history ),
@@ -173,9 +173,9 @@
 				} );
 				// A successful publication can establish a new base before the UI marks its entry saved.
 				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
-				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
+				const savedState = saved && { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
 					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
-				if ( mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
+				if ( savedState && mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
 				if ( !workingHistoryEqual( timeline.history[ timeline.lastSaveHistoryIndex ] &&
 					timeline.history[ timeline.lastSaveHistoryIndex ].workingState, savedState ) ) {
 					timeline.lastSaveHistoryIndex = timeline.history.findIndex( entry => workingHistoryEqual( entry.workingState, savedState ) );
@@ -227,9 +227,9 @@
 					!Number.isInteger( values.lastSaveHistoryIndex ) || values.lastSaveHistoryIndex < -1 ||
 					values.lastSaveHistoryIndex >= values.history.length ) { throw workingHistoryError(); }
 				const saved = JSON.parse( mode.session._savedJson ).surfaces.find( s => s.id === identity.surfaceId );
-				const savedState = { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
+				const savedState = saved && { surfaceId: saved.id, canvas: saved.canvas, layers: saved.layers,
 					...( Object.hasOwn( saved, 'readingOrder' ) ? { readingOrder: saved.readingOrder } : {} ) };
-				if ( mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
+				if ( savedState && mode.session.hasWorkingCopyImportProvenance() ) { savedState.importProvenance = []; }
 				if ( values.lastSaveHistoryIndex >= 0 && !workingHistoryEqual(
 					values.history[ values.lastSaveHistoryIndex ].workingState, savedState ) ) { throw workingHistoryError(); }
 				if ( !workingHistoryEqual( values.history[ values.historyIndex ].workingState, data.workingState ) ) {
@@ -329,13 +329,14 @@
 				const checkpoint = workingHistoryCall( guard, mode.session, 'captureWorkingCopyCheckpoint' );
 				const state = workingHistoryCall( guard, mode.session, 'inspectWorkingCopyCheckpoint', checkpoint );
 				const live = workingHistoryCall( guard, bridge, 'getWorkingCopyLiveState' ), snapshot = mode.Store.copyWorkingCopyValue( mode.session._snapshot );
-				if ( !workingHistoryEqual( snapshot, JSON.parse( mode.session._savedJson ) ) ||
+				if ( ( !mode.session.hasCreationImport() && !workingHistoryEqual( snapshot, JSON.parse( mode.session._savedJson ) ) ) ||
 					!workingHistoryEqual( live, { canvas: state.canvas, layers: state.layers } ) || !workingHistoryEqual( this.history[ 0 ].layers, state.layers ) ) {
 					mode.session.releaseWorkingCopyCheckpoint( checkpoint ); throw workingHistoryError();
 				}
 				workingHistoryCheck( guard );
 				mode.entries.set( this.history[ 0 ], { checkpoint, workingState: state } ); mode.identityCheckpoint = checkpoint;
 				workingCopyHistoryModes.set( this, mode );
+				if ( mode.session.hasCreationImport() ) { this.lastSaveHistoryIndex = -1; }
 			} catch ( error ) { throw workingHistoryError(); }
 		}
 

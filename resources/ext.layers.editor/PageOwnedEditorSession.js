@@ -74,6 +74,20 @@
 			Array.isArray( surface.layers ) && surface.layers.length === 0;
 	}
 
+	const creationImportModes = new WeakMap();
+	function creationImportActive( session ) {
+		const mode = creationImportModes.get( session );
+		return !!mode && session._newSurface !== null && importDataEqual( session._newSurface, mode.newSurface ) &&
+			!JSON.parse( session._savedJson ).surfaces.some( surface => surface.id === session._surfaceId );
+	}
+	function creationImportCheck( session, response ) {
+		const creation = response.creation, mode = creationImportModes.get( session );
+		if ( !mode || !creationImportActive( session ) || !creation ||
+			!importDataEqual( creation.target, { pageId: session._pageId, owner: session._owner, revisionId: session._revisionId, surfaceId: session._surfaceId } ) ||
+			!importDataEqual( creation.newSurface, mode.newSurface ) || creation.hasLayersSlot !== session._baseHasDrawings ||
+			!importDataEqual( creation.selection, mode.selection ) || ( creation.hasLayersSlot ?
+				!creation.baseBundle || !importDataEqual( creation.baseBundle.snapshot, JSON.parse( session._savedJson ) ) : creation.baseBundle !== null ) ) { throw importUnavailable(); }
+	}
 	const workingCopyImports = new WeakMap();
 	const workingCopyProvenance = new WeakMap();
 	const provenanceCheckpoints = new WeakMap();
@@ -164,7 +178,7 @@
 				session._revisionId !== captured.revisionId || session._surfaceId !== captured.surfaceId || session._savedJson !== captured.saved ) { throw importUnavailable(); }
 			importMethodsExact( [ mode.read ] ); workingStateCallback( afterAwait );
 		};
-		const saved = JSON.parse( captured.saved ), target = saved.surfaces.find( s => s.id === captured.surfaceId ), seen = new Set();
+		const saved = JSON.parse( captured.saved ), target = creationImportActive( session ) ? session._newSurface : saved.surfaces.find( s => s.id === captured.surfaceId ), seen = new Set();
 		for ( const claim of claims.flatMap( entry => provenanceClaims( session, [ entry ] ) ) ) {
 			const key = JSON.stringify( [ claim.sourcePageId, claim.sourceRevisionId, claim.sourceSurfaceId ] );
 			if ( seen.has( key ) ) { continue; } seen.add( key ); check();
@@ -172,6 +186,7 @@
 				targetBaseRevisionId: captured.revisionId, targetSurfaceId: captured.surfaceId,
 				sourcePageId: claim.sourcePageId, sourceRevisionId: claim.sourceRevisionId, sourceSurfaceId: claim.sourceSurfaceId } ) );
 			check();
+			if ( creationImportActive( session ) ) { creationImportCheck( session, response ); continue; }
 			const selected = response.sourceBundle && response.sourceBundle.snapshot.surfaces.filter( s => s.id === claim.sourceSurfaceId );
 			if ( !response.target || response.target.pageId !== captured.pageId || response.target.revisionId !== captured.revisionId ||
 				response.target.surfaceId !== captured.surfaceId || response.target.owner !== captured.owner ||
@@ -301,7 +316,7 @@
 		const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( session, key ) ] ) );
 		const value = key => descriptors[ key ].value;
 		if ( value( '_phase' ) !== 'ready' || value( '_readOnly' ) !== false || value( '_reconciling' ) !== false ||
-			value( '_baseHasDrawings' ) !== true || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
+			( value( '_baseHasDrawings' ) !== true && !creationImportActive( session ) ) || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
 			value( '_pdfRecovery' ) !== null || !value( '_snapshot' ) || typeof value( '_savedJson' ) !== 'string' ||
 			typeof value( '_owner' ) !== 'string' || !value( '_owner' ).trim() || typeof value( '_surfaceId' ) !== 'string' ||
 			!value( '_surfaceId' ) || !Number.isInteger( value( '_revisionId' ) ) || value( '_revisionId' ) < 1 ||
@@ -474,7 +489,7 @@
 	function restoreCaptureWork( session ) {
 		const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( session, key ) ] ) ), value = key => descriptors[ key ].value;
 		if ( value( '_phase' ) !== 'ready' || value( '_readOnly' ) !== false || value( '_reconciling' ) !== false ||
-			value( '_baseHasDrawings' ) !== true || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
+			( value( '_baseHasDrawings' ) !== true && !creationImportActive( session ) ) || value( '_pdfContext' ) !== null || value( '_pdf' ) !== null ||
 			value( '_pdfRecovery' ) !== null || !value( '_snapshot' ) || typeof value( '_savedJson' ) !== 'string' ||
 			typeof value( '_owner' ) !== 'string' || !value( '_owner' ).trim() || typeof value( '_surfaceId' ) !== 'string' || !value( '_surfaceId' ) ||
 			!Number.isInteger( value( '_revisionId' ) ) || value( '_revisionId' ) < 1 || value( '_revisionId' ) > 2147483647 ||
@@ -588,6 +603,30 @@
 	}
 
 	class PageOwnedEditorSession {
+		/** Explicit native creation mode; the admitted member is never inserted into saved history. */
+		enableCreationImport( client, selection ) {
+			this._requireLoaded();
+			if ( creationImportModes.has( this ) || workingCopyProvenance.has( this ) || this._readOnly || this._phase !== 'ready' ||
+				!isNewSurface( this._newSurface, this._surfaceId ) || ![ 'image', 'slide' ].includes( this._newSurface.kind ) ||
+				!Number.isInteger( this._pageId ) || this._pageId < 1 || JSON.parse( this._savedJson ).surfaces.some( s => s.id === this._surfaceId ) ||
+				!importDataEqual( this._snapshot.surfaces.find( s => s.id === this._surfaceId ), this._newSurface ) ) { throw importUnavailable(); }
+			const mode = { client, newSurface: restoreClone( this._newSurface ), selection: restoreClone( selection ),
+				read: importMethod( client, 'read' ), publish: importMethod( client, 'publish' ), confirm: importMethod( client, 'confirmStored' ) };
+			creationImportModes.set( this, mode );
+			workingCopyProvenance.set( this, { read: mode.read, current: [], epoch: 0 } );
+		}
+
+		hasCreationImport() { return creationImportActive( this ); }
+
+		validateCreationImportResponse( response ) { creationImportCheck( this, response ); }
+
+		completeCreationImport( revisionId ) {
+			const mode = creationImportModes.get( this );
+			if ( !mode ) { return; }
+			importMethodsExact( [ mode.confirm ] ); mode.confirm.call( revisionId );
+			this._newSurface = null; creationImportModes.delete( this );
+		}
+
 		/** Explicitly enable pending native Import citations for a fresh existing image/slide base. */
 		enableWorkingCopyImportProvenance( readClient ) {
 			const identity = this.getWorkingCopyImportIdentity();
@@ -624,11 +663,11 @@
 		updateWorkingCopyDraftState( input ) {
 			try {
 				this._requireLoaded();
-				if ( this._readOnly || this._newSurface || this._pdf || this._pdfContext || this._pdfRecovery ||
-					!this._baseHasDrawings || ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( this._phase ) ) { throw restoreUnavailable(); }
+				if ( this._readOnly || ( this._newSurface && !creationImportActive( this ) ) || this._pdf || this._pdfContext || this._pdfRecovery ||
+					( !this._baseHasDrawings && !creationImportActive( this ) ) || ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( this._phase ) ) { throw restoreUnavailable(); }
 				const descriptors = Object.fromEntries( importFields.map( key => [ key, importDescriptor( this, key ) ] ) );
 				const method = importMethod( this._adapter, 'withWorkingCopyRestore' );
-				const guard = { descriptors, snapshot: restoreClone( this._snapshot ), newSurface: null,
+				const guard = { descriptors, snapshot: restoreClone( this._snapshot ), newSurface: restoreClone( this._newSurface ),
 					methods: [ { ...method, descriptor: Object.getOwnPropertyDescriptor( method.owner, method.key ) } ] };
 				provenanceObserve( this, guard );
 				const state = restoreClone( input ), surface = guard.snapshot.surfaces.find( s => s.id === this._surfaceId );
@@ -732,7 +771,7 @@
 				const guard = importCaptureWork( this );
 				const value = key => guard.descriptors[ key ].value;
 				if ( !Number.isInteger( value( '_pageId' ) ) || value( '_pageId' ) < 1 ||
-					value( '_pageId' ) > 2147483647 || value( '_newSurface' ) !== null ) {
+					value( '_pageId' ) > 2147483647 || ( value( '_newSurface' ) !== null && !creationImportActive( this ) ) ) {
 					throw importUnavailable();
 				}
 				const identity = { owner: value( '_owner' ), pageId: value( '_pageId' ),
@@ -1082,7 +1121,9 @@
 				record.checking = true;
 				ownsCheck = true;
 				const guard = record.guard;
-				const response = await guard.read.call( { owner: guard.descriptors._owner.value, revisionId: guard.descriptors._revisionId.value } );
+				const response = creationImportActive( this ) && !this._baseHasDrawings ?
+					{ revisionId: this._revisionId, snapshot: JSON.parse( this._savedJson ) } :
+					await guard.read.call( { owner: guard.descriptors._owner.value, revisionId: guard.descriptors._revisionId.value } );
 				workingStateCallback( callback );
 				importRecord( this, handle );
 				const bundle = importCopy( guard, response );
@@ -1912,6 +1953,7 @@
 
 		/** Opt-in publication; only a confirmed revision acknowledges pending source citations. */
 		async saveWorkingCopyImportProvenance( summary = '', beforePublish ) {
+			if ( creationImportActive( this ) ) { return this.saveCreationImport( summary, beforePublish ); }
 			this._requireLoaded();
 			const mode = workingCopyProvenance.get( this );
 			if ( !mode || this._readOnly || this._phase !== 'ready' || this._reconciling || this._pdfRecovery ) { throw failure( 'layers-editor-session-unavailable' ); }
@@ -1945,6 +1987,43 @@
 					( sources.size && result.revisionId === baseRevisionId ) ) { throw failure( 'layers-publication-outcome-unknown' ); }
 				this._revisionId = result.revisionId; this._savedJson = snapshotJson; this._baseHasDrawings = true;
 				mode.current = []; mode.epoch++; this._phase = 'ready'; return this.getStatus();
+			} catch ( error ) {
+				const safe = error && typeof error.code === 'string' ? error : failure( 'layers-publication-outcome-unknown' );
+				if ( this._phase !== 'disposed' ) { this._phase = safe.code === 'layers-edit-conflict' ? 'conflict' : safe.code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready'; }
+				throw safe;
+			}
+		}
+
+		/** First Save preserves claims and newer edits until native publication is confirmed. */
+		async saveCreationImport( summary = '', beforePublish ) {
+			this._requireLoaded();
+			const mode = creationImportModes.get( this ), provenance = workingCopyProvenance.get( this );
+			if ( !creationImportActive( this ) || !provenance || this._readOnly || this._phase !== 'ready' || this._reconciling ||
+				typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) { throw failure( 'layers-editor-session-unavailable' ); }
+			const snapshotJson = JSON.stringify( this._snapshot ), selected = JSON.parse( snapshotJson ).surfaces.find( s => s.id === this._surfaceId );
+			const ids = new Set( selected.layers.map( layer => layer.id ) ), active = provenance.current.filter( claim =>
+				claim.layerIds.some( id => ids.has( id ) ) || ( claim.canvas && !importDataEqual( selected.canvas, mode.newSurface.canvas ) ) );
+			const sources = new Map(); active.forEach( claim => { const source = { sourcePageId: claim.sourcePageId, sourceRevisionId: claim.sourceRevisionId,
+				sourceSurfaceId: claim.sourceSurfaceId, targetSurfaceId: this._surfaceId }; sources.set( JSON.stringify( source ), source ); } );
+			const owner = this._owner, pageId = this._pageId, baseRevisionId = this._revisionId, surfaceId = this._surfaceId, baseJson = this._savedJson,
+				current = provenance.current, epoch = provenance.epoch, publisher = sources.size ? mode.publish : importMethod( this._publisher, 'publish' );
+			const check = () => {
+				if ( this._phase !== 'saving' || this._owner !== owner || this._pageId !== pageId || this._revisionId !== baseRevisionId || this._surfaceId !== surfaceId ||
+					this._savedJson !== baseJson || creationImportModes.get( this ) !== mode || !creationImportActive( this ) || workingCopyProvenance.get( this ) !== provenance ||
+					provenance.current !== current || provenance.epoch !== epoch ) { throw failure( 'layers-editor-session-unavailable' ); }
+				importMethodsExact( [ mode.read, mode.publish, mode.confirm, publisher ] );
+			};
+			this._phase = 'saving';
+			try {
+				if ( beforePublish ) { try { await beforePublish(); } catch ( error ) { throw failure( 'layers-draft-storage-failed' ); } }
+				check(); if ( sources.size ) { await provenanceRevalidate( this, active, check ); } check();
+				const request = { ...( sources.size ? { surfaceId } : { owner } ), pageId, baseRevisionId, snapshotJson, summary,
+					...( sources.size ? { importSources: Array.from( sources.values() ) } : {} ) };
+				const result = await publisher.call( request ); check();
+				if ( !result || !Number.isInteger( result.revisionId ) || result.revisionId <= baseRevisionId || result.revisionId > 2147483647 ) { throw failure( 'layers-publication-outcome-unknown' ); }
+				this.completeCreationImport( result.revisionId );
+				this._revisionId = result.revisionId; this._savedJson = snapshotJson; this._baseHasDrawings = true;
+				provenance.current = []; provenance.epoch++; this._phase = 'ready'; return this.getStatus();
 			} catch ( error ) {
 				const safe = error && typeof error.code === 'string' ? error : failure( 'layers-publication-outcome-unknown' );
 				if ( this._phase !== 'disposed' ) { this._phase = safe.code === 'layers-edit-conflict' ? 'conflict' : safe.code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready'; }

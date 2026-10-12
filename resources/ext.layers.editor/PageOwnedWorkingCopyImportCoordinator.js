@@ -117,6 +117,11 @@
 	}
 
 	class PageOwnedWorkingCopyImportCoordinator {
+		enableCreationProvenance() {
+			const state = stateFor( this );
+			if ( !state.session.hasCreationImport() || !state.session.hasWorkingCopyImportProvenance() ) { throw unavailable(); }
+			state.provenanceEnabled = true;
+		}
 		/** Explicit opt-in; no existing editor or UI caller invokes this method. */
 		enablePublicationProvenance() {
 			const state = stateFor( this );
@@ -130,6 +135,7 @@
 					throw unavailable();
 				}
 				state.getIdentity = method( state.session, 'getWorkingCopyImportIdentity' );
+				state.creation = typeof state.session.hasCreationImport === 'function' && state.session.hasCreationImport();
 				state.read = method( state.readClient, 'read' );
 				state.prepareBridge = method( state.bridge, 'prepareWorkingCopyImport' );
 				state.inspectBridge = method( state.bridge, 'inspectWorkingCopyImport' );
@@ -138,6 +144,7 @@
 				state.methods = [ state.getIdentity, state.read, state.prepareBridge, state.inspectBridge, state.applyBridge, state.releaseBridge,
 					method( state.planner, 'prepare' ), method( state.adapter, 'toEditorState' ), method( state.adapter, 'withWorkingCopyImport' ),
 					...[ 'prepare', 'inspect', 'apply', 'release', 'dispose' ].map( key => method( this, key ) ) ];
+				if ( state.creation ) { state.methods.push( method( state.session, 'validateCreationImportResponse' ) ); }
 				state.active = true;
 				state.records = new Map();
 				state.pending = new Set();
@@ -183,7 +190,13 @@
 						sourcePageId: source.pageId, sourceRevisionId: source.revisionId, sourceSurfaceId: source.surfaceId
 					} );
 					checkRecord( this, record );
-					const result = fields( response, [ 'target', 'source', 'targetBundle', 'sourceBundle' ] );
+					let result;
+					if ( Object.hasOwn( response, 'creation' ) ) {
+						if ( !state.creation ) { throw unavailable(); }
+						method( state.session, 'validateCreationImportResponse' ).call( response ); checkRecord( this, record );
+						const creationResult = fields( response, [ 'creation', 'source', 'sourceBundle' ] );
+						result = { target: creationResult.creation.target, source: creationResult.source, sourceBundle: creationResult.sourceBundle };
+					} else { result = fields( response, [ 'target', 'source', 'targetBundle', 'sourceBundle' ] ); }
 					if ( !equalIdentity( identity( result.target ), target ) || !equalIdentity( identity( result.source ), source ) ) {
 						throw unavailable();
 					}
