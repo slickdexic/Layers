@@ -49,3 +49,26 @@ owner acceptance open. Save was outside the default 985-wide viewport; that
 editor layout gap remains recorded under UI-6/UI-10. The temporary page box
 still awaits qualified replacement closeout. No runtime change was required
 by these desktop journeys. Private test data and evidence remain local.
+
+## Native recovery and refusal checkpoint: October 12, 2026
+
+Two independent-editor recovery journeys now pass on MediaWiki 1.45.3:
+image Append into an existing populated target and direct Import into a saved
+empty slide. The second editor explicitly restores the first editor's local
+draft. Actual Undo/Redo restores the original and imported states, including
+the empty slide's original and source canvas dimensions. Each recovered Save
+creates one native owner revision with the exact source citation. Clean Close
+returns to the owner, and reopening shows the saved layers and slide geometry.
+
+The original editor then makes a late edit against its genuinely stale base.
+Both normal Save activations refuse during native source/base revalidation,
+before a publication request. The newer saved revisions stay exact; the late
+local edits and usable Undo/Redo remain. This proves the pre-publication refusal
+boundary, not the server's publication-conflict boundary or crash recovery.
+Source pages, main text, target image pins and offscreen members stay exact.
+
+The slide's stale Save used the normal button's keyboard action because its
+pointer target lay outside the observed viewport. Narrow/mobile Save visibility
+remains open. No runtime or maintained test change was required. Missing/new
+targets, whole-PDF Import, MediaWiki 1.44, final UI-10 closeout and overall owner
+acceptance remain open; milestone 1 is not complete. Private evidence stays local.
