@@ -1,0 +1,86 @@
+.layers-page-import-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000001;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba( 0, 0, 0, 0.5 );
+}
+
+.layers-page-import-dialog {
+	box-sizing: border-box;
+	width: min( 36rem, 94vw );
+	max-height: 90vh;
+	max-height: 90dvh;
+	overflow: auto;
+	padding: 1rem;
+	border-radius: 2px;
+	background: #fff;
+	color: #202122;
+}
+
+.layers-page-import-dialog h2 {
+	margin: 0 0 0.75rem;
+	font-size: 1.125em;
+}
+
+.layers-page-import-search {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0.5rem;
+	font: inherit;
+}
+
+.layers-page-import-status {
+	color: #54595d;
+}
+
+.layers-page-import-results {
+	padding: 0;
+	list-style: none;
+}
+
+.layers-page-import-results li {
+	margin-bottom: 0.5rem;
+}
+
+.layers-page-import-results span {
+	display: block;
+	padding: 0.25rem 0.5rem;
+}
+
+.layers-page-import-dialog button {
+	min-height: 44px;
+	padding: 0.5rem 0.75rem;
+	font: inherit;
+	cursor: pointer;
+}
+
+.layers-page-import-results button {
+	width: 100%;
+	text-align: start;
+}
+
+.layers-page-import-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0.75rem 0;
+}
+
+.layers-page-import-warning {
+	padding: 0.5rem;
+	border: 1px solid #edab00;
+	background: #fef6e7;
+}
+
+.layers-page-import-dialog :focus-visible {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+.layers-page-import-dialog button:disabled {
+	cursor: default;
+	opacity: 0.6;
+}

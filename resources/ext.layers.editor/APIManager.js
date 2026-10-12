@@ -332,6 +332,9 @@
 					return state;
 				}
 				const classes = window.Layers.Editor;
+				if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
+					this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
+				}
 				// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
 				const random = new Uint8Array( 16 );
 				window.crypto.getRandomValues( random );
@@ -339,6 +342,7 @@
 				const store = new classes.PageOwnedDraftStore( window.localStorage, writerId );
 				const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
 					new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
+				if ( this.pageOwnedImport ) { this.pageOwnedImport.enableDrafts( controller ); }
 				this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
 				this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
 					chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
@@ -353,6 +357,10 @@
 						} );
 						this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
 						const header = this.editor.uiManager.container.querySelector( '.layers-header' );
+						if ( header && this.pageOwnedImport ) {
+							this.pageOwnedImport.mount( header, header.querySelector( '.layers-header-right' ), this.pageOwnedDrafts,
+								() => this.generateLayerId(), mw.config.get( 'wgLayersMaxLayerCount' ) || 100, ( key, ...args ) => mw.msg( key, ...args ) );
+						}
 						if ( header && classes.PageOwnedNameControl ) {
 							this.pageOwnedNameControl = new classes.PageOwnedNameControl( {
 								getName: () => this.pageOwnedBridge.getName(),
@@ -1962,6 +1970,7 @@
 	 * Clean up resources and abort pending requests
 	 */
 	destroy() {
+		if ( this.pageOwnedImport ) { this.pageOwnedImport.dispose(); }
 		if ( this.pageOwnedRecoveryDialog ) {
 			this.pageOwnedRecoveryDialog.dispose();
 		}
