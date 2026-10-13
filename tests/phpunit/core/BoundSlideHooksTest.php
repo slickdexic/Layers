@@ -65,6 +65,30 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$this->assertTrue( $unsaved->getOutputFlag( ParserOutputFlags::VARY_REVISION ) );
 	}
 
+	public function testPageOwnedNoeditRemainsAnIdentityOnlyEmbedConstraint(): void {
+		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => null ] );
+		$registered = TestingAdmissionRegistration::install( $this );
+		$page = $this->getExistingTestPage( 'BoundSlideNoedit' );
+		$actor = $this->getTestUser()->getUser();
+		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers' ] );
+		$revision = $registered['publisher']->publish( $page->getTitle(), $actor, $page->getLatest(),
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Synthetic noedit',
+			null, $page->getId() );
+		$binding = 'v1:' . $page->getId() . ':presentation';
+		foreach ( [ $page->getId() . ':Welcome Slide', 'Demo|layersbinding=' . $binding ] as $options ) {
+			foreach ( [ '', '|noedit', '|NOEDIT' ] as $flag ) {
+				$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse(
+					'{{#Slide:' . $options . $flag . '}}', $page->getTitle(), ParserOptions::newFromAnon(),
+					true, true, $revision );
+				$this->assertSame( $flag !== '', str_contains( $parsed->getRawText(), 'data-layers-noedit="1"' ) );
+				$this->assertStringContainsString( 'data-layers-binding="' . $binding . '"', $parsed->getRawText() );
+				$this->assertSame( [ $binding => [ 'revisionId' => $revision, 'pageId' => $page->getId() ] ],
+					$parsed->getExtensionData( BoundSlideHooks::DATA_KEY ) );
+				$this->assertStringNotContainsString( 'Visual ideas', json_encode( $parsed->toJsonArray() ) );
+			}
+		}
+	}
+
 	public function testParserCachesOnlyIdentityAndOutputReadsExactAuthorizedRevision(): void {
 		$this->overrideConfigValues( [ 'LayersSlidesEnable' => true, 'LayersPageDrawingNamespaces' => null ] );
 		$registered = TestingAdmissionRegistration::install( $this );
@@ -117,11 +141,11 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$current = new OutputPage( $context );
 		$current->setRevisionId( $second );
 		BoundSlideHooks::output( $current, $currentParsed, $pilot );
-		$this->assertStringContainsString( 'layers-page-edit-link', $current->getHTML() );
-		$this->assertStringContainsString( 'pageid=' . $page->getId(), $current->getHTML() );
-		$this->assertStringContainsString( 'revid=' . $second, $current->getHTML() );
-		$this->assertStringContainsString( 'start=0', $current->getHTML() );
-		$this->assertStringContainsString( 'expected=', $current->getHTML() );
+		$this->assertStringNotContainsString( 'layers-page-edit-link', $current->getHTML() );
+		$this->assertStringNotContainsString( 'pageid=' . $page->getId(), $current->getHTML() );
+		$this->assertStringNotContainsString( 'revid=' . $second, $current->getHTML() );
+		$this->assertStringNotContainsString( 'start=0', $current->getHTML() );
+		$this->assertStringNotContainsString( 'expected=', $current->getHTML() );
 		$this->assertStringNotContainsString( 'layers-page-edit-link', json_encode( $currentParsed->toJsonArray() ) );
 		// Even an explicit oldid pointing at latest remains a view-only history entry.
 		$context->setRequest( new \MediaWiki\Request\FauxRequest( [ 'oldid' => (string)$second ] ) );

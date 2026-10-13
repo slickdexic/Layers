@@ -12,14 +12,12 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Html\Html;
-use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Parser\Parser;
 use MediaWiki\Parser\ParserOutput;
 use MediaWiki\Parser\ParserOutputFlags;
 use MediaWiki\Revision\RevisionRecord;
-use MediaWiki\SpecialPage\SpecialPage;
 
 /** Page output carries only binding identities; each reader's browser fetches authorized drawings. */
 class BoundSlideHooks {
@@ -205,9 +203,8 @@ class BoundSlideHooks {
 	}
 
 	/**
-	 * Load the viewer and, for editors of the current revision, per-request edit and adoption links.
-	 * Drawing data never enters this response: the viewer requests it through layersread with the
-	 * reader's own session, so the page HTML stays cacheable like any other page.
+	 * Prepare creation overlays and load the exact-revision viewer without a page links box.
+	 * Layer data stays in the authorized reader response, outside shared parser output.
 	 * @param OutputPage $out
 	 * @param ParserOutput $parsed Shared cache object: never add private data to it
 	 * @param PageOwnedPilot $pilot Scoped native read composition
@@ -220,89 +217,8 @@ class BoundSlideHooks {
 			$displayed = $displayed ||
 				( is_array( $context ) && ( $context['revisionId'] ?? null ) === $out->getRevisionId() );
 		}
-		$adoptable = $parsed->getExtensionData( self::ADOPTABLE_KEY ) === true;
-		$creatable = $parsed->getExtensionData( self::CREATABLE_KEY ) === true;
-		$copyable = $parsed->getExtensionData( self::COPYABLE_KEY ) === true;
 		if ( $displayed ) {
 			$out->addModules( 'ext.layers.history' );
 		}
-		$request = $out->getRequest();
-		if ( ( !$displayed && !$adoptable && !$creatable && !$copyable ) ||
-			$request->getVal( 'action', 'view' ) !== 'view' ||
-			$request->getCheck( 'oldid' ) || $request->getCheck( 'diff' ) || !$out->getUser()->isRegistered()
-		) {
-			return;
-		}
-		try {
-			$pageId = $out->getTitle()->getArticleID();
-			$items = '';
-			foreach ( $displayed || $creatable ? $pilot->listBoundEditorSelections( $pageId, $out->getRevisionId(),
-				$out->getAuthority() ) : [] as $entry
-			) {
-				$items .= self::controlItem( 'layers-page-edit-link', 'EditLayersPage', $entry['params'],
-					$out->msg( empty( $entry['create'] ) ? 'layers-page-edit-drawing' : 'layers-page-create-drawing',
-						$entry['label'] )->text() );
-			}
-			$adoptItems = '';
-			foreach ( $adoptable ? $pilot->listAdoptionCandidates( $pageId, $out->getRevisionId(),
-				$out->getAuthority() ) : [] as $entry
-			) {
-				$adoptItems .= self::controlItem( 'layers-page-adopt-link', 'AdoptLayersDrawing', $entry['params'],
-					$out->msg( 'layers-page-adopt-drawing', $entry['label'] )->text() );
-			}
-			$copyItems = '';
-			foreach ( $copyable ? $pilot->listCopyCandidates( $pageId, $out->getRevisionId(),
-				$out->getAuthority() ) : [] as $entry
-			) {
-				$copyItems .= self::controlItem( 'layers-page-copy-link', 'CopyLayersDrawing', $entry['params'],
-					$out->msg( 'layers-page-copy-drawing', $entry['label'], $entry['source']->getPrefixedText() )
-						->text() );
-			}
-			$html = '';
-			if ( $items !== '' ) {
-				$html .= self::controlGroup( $out, 'layers-page-edit-history-notice', $items );
-			}
-			if ( $adoptItems !== '' ) {
-				$html .= self::controlGroup( $out, 'layers-page-adopt-notice', $adoptItems );
-			}
-			if ( $copyItems !== '' ) {
-				$html .= self::controlGroup( $out, 'layers-page-copy-notice', $copyItems );
-			}
-			if ( $html !== '' ) {
-				$out->addModuleStyles( 'ext.layers.pageControls.styles' );
-				$out->addHTML( Html::rawElement( 'section', [ 'class' => 'layers-page-edit-controls',
-					'aria-labelledby' => 'layers-page-edit-controls-heading' ],
-					Html::element( 'p', [ 'id' => 'layers-page-edit-controls-heading',
-						'class' => 'layers-page-edit-controls__heading', 'role' => 'heading', 'aria-level' => '2' ],
-						$out->msg( 'layers-page-drawings-heading' )->text() ) . $html ) );
-			}
-		} catch ( \Throwable $e ) {
-			LoggerFactory::getInstance( 'Layers' )->error( 'Page-owned drawing controls failed.',
-				[ 'exception' => $e ] );
-		}
-	}
-
-	/**
-	 * @param OutputPage $out
-	 * @param string $notice Message key explaining what the links do
-	 * @param string $items Rendered list items
-	 * @return string
-	 */
-	private static function controlGroup( OutputPage $out, string $notice, string $items ): string {
-		return Html::rawElement( 'div', [ 'class' => 'layers-page-edit-controls__group' ],
-			Html::element( 'p', [ 'class' => 'layers-page-edit-controls__notice' ], $out->msg( $notice )->text() ) .
-			Html::rawElement( 'ul', [ 'class' => 'layers-page-edit-controls__list' ], $items ) );
-	}
-
-	/**
-	 * @param string $class
-	 * @param string $special
-	 * @param array $params
-	 * @param string $text
-	 * @return string
-	 */
-	private static function controlItem( string $class, string $special, array $params, string $text ): string {
-		return Html::rawElement( 'li', [], Html::element( 'a', [ 'class' => $class,
-			'href' => SpecialPage::getTitleFor( $special )->getLocalURL( $params ) ], $text ) );
 	}
 }

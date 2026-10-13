@@ -19,6 +19,7 @@ use MediaWiki\Request\FauxRequest;
 use MediaWiki\User\User;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * Explicit adoption of a shared slide through its confirmation page.
@@ -29,6 +30,8 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group API
  */
 class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
+	use IsolatedLocalRepoFixture;
+
 	private const PREFIX = "Intro<br>\n";
 	private const EMBED = '{{#Slide:WelcomePresentation|width=400}}';
 
@@ -154,7 +157,7 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( $before, $this->revisionCount( $page->getId() ) );
 	}
 
-	public function testPilotPageOffersAdoptionOnlyToEditorsOfTheCurrentRevision(): void {
+	public function testPilotPageNeverOffersTheRetiredAdoptionBox(): void {
 		$this->overrideConfigValue( 'LayersSlidesEnable', true );
 		[ $page, $actor, $base, $pilot ] = $this->sharedSlidePage();
 		$this->legacy();
@@ -179,15 +182,15 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$html[$case] = $out->getHTML();
 			$styles[$case] = $out->getModuleStyles();
 		}
-		$this->assertStringContainsString( 'layers-page-adopt-link', $html['editor'] );
-		$this->assertStringContainsString( 'aria-labelledby="layers-page-edit-controls-heading"', $html['editor'] );
-		$this->assertStringContainsString( 'id="layers-page-edit-controls-heading"', $html['editor'] );
-		$this->assertStringContainsString( 'role="heading" aria-level="2"', $html['editor'] );
-		$this->assertContains( 'ext.layers.pageControls.styles', $styles['editor'] );
+		$this->assertStringNotContainsString( 'layers-page-adopt-link', $html['editor'] );
+		$this->assertStringNotContainsString( 'aria-labelledby="layers-page-edit-controls-heading"', $html['editor'] );
+		$this->assertStringNotContainsString( 'id="layers-page-edit-controls-heading"', $html['editor'] );
+		$this->assertStringNotContainsString( 'role="heading" aria-level="2"', $html['editor'] );
+		$this->assertNotContains( 'ext.layers.pageControls.styles', $styles['editor'] );
 		$this->assertNotContains( 'ext.layers.pageControls.styles', $styles['reader'] );
-		$this->assertStringContainsString( 'Special:AdoptLayersDrawing', $html['editor'] );
-		$this->assertStringContainsString( 'legacyrev=202', $html['editor'] );
-		$this->assertStringContainsString( 'revid=' . $base, $html['editor'] );
+		$this->assertStringNotContainsString( 'Special:AdoptLayersDrawing', $html['editor'] );
+		$this->assertStringNotContainsString( 'legacyrev=202', $html['editor'] );
+		$this->assertStringNotContainsString( 'revid=' . $base, $html['editor'] );
 		$this->assertStringNotContainsString( 'layers-page-adopt-link', $html['reader'] . $html['history'] );
 		$this->assertStringNotContainsString( 'layers-page-adopt-link', json_encode( $parsed->toJsonArray() ) );
 	}
@@ -295,6 +298,7 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private function sharedFilePage( array $layers, string $name = 'Shared_adoption.png',
 		string $fixture = 'test-image.png', int $filePage = 1
 	): array {
+		$this->setUpIsolatedLocalRepoFixture();
 		$fileTitle = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $name );
 		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $fileTitle );
 		$this->assertStatusGood( $file->upload( __DIR__ . '/../../fixtures/assets/' . $fixture, 'Fixture', '',
@@ -340,8 +344,8 @@ class PageOwnedAdoptionFlowTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$out = new OutputPage( $context );
 		$out->setRevisionId( $base );
 		BoundSlideHooks::output( $out, $parsed, $this->pilot );
-		$this->assertStringContainsString( 'Make “Shared adoption.png” owned by this page', $out->getHTML() );
-		$this->assertStringContainsString( 'filets=' . $file->getTimestamp(), $out->getHTML() );
+		$this->assertStringNotContainsString( 'Make “Shared adoption.png” owned by this page', $out->getHTML() );
+		$this->assertStringNotContainsString( 'filets=' . $file->getTimestamp(), $out->getHTML() );
 		$params = array_map( 'strval', $candidates[0]['params'] );
 		$before = $this->revisionCount( $page->getId() );
 		$shown = $this->visit( $actor, $params, false, true, 'qqx' )->getOutput()->getHTML();
