@@ -14,3 +14,8 @@ The former **Layer sets on this page** links box is removed. Overlay labels,
 viewer controls, exact source versions, parser caching, authorization and editor
 routes are preserved. Legacy special pages and API definitions remain registered;
 removing this box does not authorize editing another page's layer set.
+
+After page-history migration, File pages have no **Edit layers** tab, including
+when the File page owns a layer set. Use the owning page's overlay to edit it.
+Existing direct compatibility URLs continue to route as before. Before migration,
+the legacy File-page tab remains available to preserve the upgrade path.

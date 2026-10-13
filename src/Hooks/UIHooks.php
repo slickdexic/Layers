@@ -16,13 +16,12 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Migration\FilePageDrawings;
 use MediaWiki\Extension\Layers\Migration\MigrationState;
-use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Html\Html;
 use MediaWiki\MediaWikiServices;
 
 class UIHooks {
 	/**
-	 * Add "Edit Layers" tab to file pages
+	 * Keep the legacy File-page tab until page-history migration is complete
 	 * @param mixed $sktemplate SkinTemplate or Skin
 	 * @param array &$links Navigation links bucket
 	 */
@@ -110,13 +109,10 @@ class UIHooks {
 			// ignore
 		}
 
-		// After the migration the tab opens the page's own drawings; without any there is nothing to open.
+		// Page-owned layer sets are edited through their owning-page overlays.
 		if ( MigrationState::isCompleteNow() ) {
-			$current = MediaWikiServices::getInstance()->getRevisionLookup()->getRevisionByTitle( $title );
-			if ( !$current || !$current->hasSlot( PageRevisionWriter::SLOT ) ) {
-				$log( 'Skip: migrated, and the file page has no drawings' );
-				return;
-			}
+			$log( 'Skip: migrated File-page tab retired' );
+			return;
 		}
 
 		// Optionally check file existence (relaxed: show tab even if lookup fails)

@@ -18,6 +18,7 @@ use MediaWiki\Title\Title;
 use MediaWiki\User\User;
 
 require_once __DIR__ . '/LegacyMigrationFixtures.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * After the migration the legacy entry points lead to page-owned drawings, never to a shared-set editor.
@@ -30,9 +31,11 @@ require_once __DIR__ . '/LegacyMigrationFixtures.php';
  */
 class LegacyEntryPointsAfterMigrationTest extends \MediaWikiIntegrationTestCase {
 	use LegacyMigrationFixtures;
+	use IsolatedLocalRepoFixture;
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->setUpIsolatedLocalRepoFixture();
 		$this->setUpMigration();
 		MigrationState::clear( $this->getDb() );
 	}
@@ -136,8 +139,8 @@ class LegacyEntryPointsAfterMigrationTest extends \MediaWikiIntegrationTestCase 
 			$this->section( $title, $this->getServiceContainer()->getUserFactory()->newAnonymous() ) );
 		$this->assertSame( '', $this->section( $plain->getTitle(), $this->actor ) );
 
-		// The tab stays where there are drawings to open.
-		$this->assertTrue( $this->hasTab( $title ) );
+		// Completed migration retires the File-page tab even when the page owns layer sets.
+		$this->assertFalse( $this->hasTab( $title ) );
 		$this->assertFalse( $this->hasTab( $plain->getTitle() ) );
 	}
 
