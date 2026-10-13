@@ -7,6 +7,7 @@
 	'use strict';
 
 	const STORAGE_KEY_PREFIX = 'layers-page-owned-draft-v1:';
+	const earlierCreationRecords = new WeakMap();
 
 	/**
 	 * Create a safe error with no diagnostic leakage.
@@ -21,6 +22,55 @@
 	}
 
 	class PageOwnedDraftStore {
+		/** Inactive discovery: same wiki/user/owner only; keys and payloads grant no native authority. */
+		listEarlierCreationCandidates( scope ) {
+			const permitted = JSON.parse( this._validateAndBuildKey( scope ).slice( STORAGE_KEY_PREFIX.length ) );
+			try {
+				const found = [], records = earlierCreationRecords.get( this ) || new WeakMap();
+				earlierCreationRecords.set( this, records );
+				const length = this._storage.length;
+				if ( !Number.isInteger( length ) || length < 0 || typeof this._storage.key !== 'function' ) { throw new Error(); }
+				for ( let i = 0; i < length; i++ ) {
+					const key = this._storage.key( i );
+					if ( typeof key !== 'string' || !key.startsWith( STORAGE_KEY_PREFIX ) ) { continue; }
+					let values, candidateScope, partition;
+					try {
+						const suffix = key.slice( STORAGE_KEY_PREFIX.length ), end = suffix.lastIndexOf( ']' );
+						const encoded = suffix.slice( 0, end + 1 ); partition = suffix.slice( end + 1 );
+						if ( partition && !/^#[a-f0-9]{32}$/.test( partition ) ) { continue; }
+						values = JSON.parse( encoded );
+						if ( !Array.isArray( values ) || values.length !== 5 || JSON.stringify( values ) !== encoded ||
+							values[ 0 ] !== permitted[ 0 ] || values[ 1 ] !== permitted[ 1 ] || values[ 2 ] !== permitted[ 2 ] || values[ 3 ] >= permitted[ 3 ] ) { continue; }
+						candidateScope = { wiki: values[ 0 ], user: values[ 1 ], owner: values[ 2 ], baseRevisionId: values[ 3 ], surfaceId: values[ 4 ] };
+						if ( this._validateAndBuildKey( candidateScope ) !== STORAGE_KEY_PREFIX + encoded ) { continue; }
+					} catch ( error ) { continue; }
+					const raw = this._read( key );
+					try {
+						const envelope = typeof raw === 'string' ? JSON.parse( raw ) : null;
+						if ( !envelope || envelope.version !== 1 || !envelope.scope || Object.keys( envelope.scope ).length !== 5 ||
+							Object.keys( candidateScope ).some( name => envelope.scope[ name ] !== candidateScope[ name ] ) ||
+							!envelope.creationOrigin || envelope.creationOrigin.version !== 1 || !envelope.creationOrigin.origin ||
+							envelope.creationOrigin.origin.owner !== permitted[ 2 ] || envelope.creationOrigin.origin.revisionId !== values[ 3 ] ||
+							envelope.creationOrigin.origin.surfaceId !== values[ 4 ] || !envelope.workingCopyDraft ) { continue; }
+						const handle = Object.freeze( Object.create( null ) );
+						records.set( handle, { key, raw, scope: candidateScope, writerId: partition ? partition.slice( 1 ) : null,
+							storage: this._storage, read: this._read, writer: this._writerId } ); found.push( handle );
+					} catch ( error ) { /* Unprovable or corrupt records stay intact. */ }
+				}
+				return found;
+			} catch ( error ) { throw failure( 'layers-draft-storage-failed' ); }
+		}
+
+		/** Read an owned discovery handle without selecting its writer or altering any destination. */
+		inspectEarlierCreationCandidate( handle ) {
+			try {
+				const record = earlierCreationRecords.get( this ) && earlierCreationRecords.get( this ).get( handle );
+				if ( !record || this._storage !== record.storage || this._read !== record.read || this._writerId !== record.writer ||
+					this._read( record.key ) !== record.raw ) { throw new Error(); }
+				return { scope: { ...record.scope }, writerId: record.writerId, raw: record.raw };
+			} catch ( error ) { throw failure( 'layers-draft-storage-failed' ); }
+		}
+
 		/**
 		 * @param {Object} storage Injected Storage-compatible object with getItem and setItem
 		 * @param {string} [writerId] Unique 32-hex editor instance ID; separate records prevent cross-tab overwrite

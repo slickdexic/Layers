@@ -2,8 +2,77 @@
 ( function () {
 	'use strict';
 	const workingCopyDraftControllers = new WeakSet();
+	const earlierCreationInspections = new WeakSet();
 
 	class PageOwnedDraftController {
+		static isEarlierCreationInspection( value ) { return earlierCreationInspections.has( value ); }
+
+		/** Inactive earlier-base discovery; existing exact-base recovery remains unchanged. */
+		listEarlierCreationCandidates() {
+			if ( !workingCopyDraftControllers.has( this ) || !this.bridge.session.hasCreationImport() ) { throw this._error(); }
+			return this.store.listEarlierCreationCandidates( this._scope() );
+		}
+
+		/** Native admission inspection only; no history reconstruction, application or backup writes. */
+		async prepareEarlierCreationInspection( handle, client ) {
+			let proof, returned = false;
+			try {
+				const Store = window.Layers.Core.StateManager, clone = Store.copyWorkingCopyValue;
+				const session = this.bridge.session, editor = this.bridge.editor, history = editor.historyManager;
+				if ( !workingCopyDraftControllers.has( this ) || !session.hasCreationImport() || session.getStatus().phase !== 'ready' ) { throw this._error(); }
+				const scope = clone( this._scope() ), current = clone( session.captureCreationImportOrigin() );
+				const draft = clone( session.getDraft() ), record = this.store.inspectEarlierCreationCandidate( handle );
+				const envelope = clone( JSON.parse( record.raw ) );
+				if ( ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) || envelope.pdfDraft || envelope.pdfHistory ||
+					!envelope.creationOrigin || !envelope.workingCopyDraft || envelope.creationOrigin.origin.pageId !== current.origin.pageId ) { throw this._error(); }
+				const observations = [ [ this, false ], [ this.bridge, false ], [ this.store, false ], [ session, false ],
+					[ editor, false ], [ editor.config, true ], [ editor.stateManager, false ], [ editor.stateManager.state, true ] ]
+					.map( ( [ object, deep ] ) => Store.observeWorkingCopyObject( object, deep ) );
+				const methods = [ [ this, '_scope' ], [ this.store, 'inspectEarlierCreationCandidate' ], [ session, 'captureCreationImportOrigin' ],
+					[ session, 'getDraft' ], [ history, 'captureWorkingCopyImportHistory' ], [ client, 'prepareDraftRebase' ] ]
+					.map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+				const historyWitness = history.captureWorkingCopyImportHistory( this.bridge );
+				if ( !history.constructor.isWorkingCopyImportHistory( historyWitness ) ) { throw this._error(); }
+				let released = false;
+				const check = () => {
+					if ( released || window.Layers.Core.StateManager !== Store ) { throw this._error(); }
+					observations.forEach( Store.checkWorkingCopyObservation ); Store.checkWorkingCopyMethods( methods ); historyWitness.preflight();
+					if ( JSON.stringify( this._scope() ) !== JSON.stringify( scope ) ||
+						JSON.stringify( session.captureCreationImportOrigin() ) !== JSON.stringify( current ) ||
+						JSON.stringify( session.getDraft() ) !== JSON.stringify( draft ) ||
+						this.store.inspectEarlierCreationCandidate( handle ).raw !== record.raw ) { throw this._error(); }
+					if ( proof ) { proof.preflight(); }
+				};
+				check(); proof = await client.prepareDraftRebase( { pageId: current.origin.pageId,
+					currentRevisionId: current.origin.revisionId, origin: envelope.creationOrigin } );
+				if ( !window.Layers.Editor.PageOwnedCreationImportClient.isPreparedDraftRebase( proof ) ) { throw this._error(); }
+				check(); const verified = proof.inspect(), native = verified.creation;
+				const base = clone( draft.snapshot ); base.surfaces = base.surfaces.filter( surface => surface.id !== scope.surfaceId );
+				const expectedBase = native.hasLayersSlot ? native.baseBundle.snapshot : { schemaVersion: 1, surfaces: [] };
+				// Compare complete finite data independently of object member ordering.
+				const same = ( left, right ) => {
+					if ( left === right ) { return true; }
+					if ( !left || !right || typeof left !== 'object' || typeof right !== 'object' || Array.isArray( left ) !== Array.isArray( right ) ) { return false; }
+					const keys = Object.keys( left ); return keys.length === Object.keys( right ).length && keys.every( key => Object.hasOwn( right, key ) && same( left[ key ], right[ key ] ) );
+				};
+				const retainedOrigin = envelope.creationOrigin.origin;
+				if ( !same( verified.origin, { pageId: retainedOrigin.pageId, revisionId: retainedOrigin.revisionId,
+					surfaceId: retainedOrigin.surfaceId, selection: retainedOrigin.selection } ) ||
+					native.target.owner !== scope.owner || native.target.surfaceId !== scope.surfaceId ||
+					!same( native.selection, current.origin.selection ) || !same( native.newSurface, current.newSurface ) ||
+					native.hasLayersSlot !== current.hasLayersSlot || !same( expectedBase, base ) ) { throw this._error(); }
+				const prepared = Object.freeze( {
+					inspect: () => { check(); return { scope: clone( record.scope ), writerId: record.writerId, envelope: clone( envelope ), native: proof.inspect() }; },
+					preflight: check,
+					revalidate: async () => { check(); await proof.revalidate(); check(); },
+					readSource: async options => { check(); const result = await proof.read( options ); check(); return result; },
+					release: () => { released = true; proof.release(); }
+				} );
+				check(); earlierCreationInspections.add( prepared ); returned = true; return prepared;
+			} catch ( error ) { throw this._error(); }
+			finally { if ( proof && !returned ) { try { proof.release(); } catch ( error ) {} } }
+		}
+
 		/** Explicit opt-in after actual full working-copy history has been enabled. */
 		enableWorkingCopyDrafts() {
 			this.bridge.captureWorkingCopyDraft();
