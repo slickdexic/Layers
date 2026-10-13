@@ -726,6 +726,18 @@
 
 		hasCreationImport() { return creationImportActive( this ); }
 
+		/** Retained admission hints for future authorized recovery; local data grants no authority. */
+		captureCreationImportOrigin() {
+			this._requireLoaded();
+			const mode = creationImportModes.get( this );
+			if ( !mode || !creationImportActive( this ) || this._readOnly ||
+				![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( this._phase ) ) { throw importUnavailable(); }
+			importMethodsExact( [ mode.read, mode.publish, mode.confirm ] );
+			return restoreClone( { version: 1, origin: { pageId: this._pageId, owner: this._owner,
+				revisionId: this._revisionId, surfaceId: this._surfaceId, selection: mode.selection },
+				newSurface: mode.newSurface, hasLayersSlot: this._baseHasDrawings } );
+		}
+
 		validateCreationImportResponse( response ) { creationImportCheck( this, response ); }
 
 		completeCreationImport( revisionId ) {

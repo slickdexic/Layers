@@ -102,6 +102,8 @@
 					this.bridge.capture();
 				}
 				const working = workingCopyDraftControllers.has( this ) ? this.bridge.captureWorkingCopyDraft() : null;
+				const creationOrigin = working && typeof this.bridge.session.hasCreationImport === 'function' &&
+					this.bridge.session.hasCreationImport() ? this.bridge.session.captureCreationImportOrigin() : null;
 				json = JSON.stringify( {
 					version: 1, scope,
 					phase: this.bridge.session.getStatus().phase,
@@ -109,6 +111,7 @@
 					...( pdf ? { pdfDraft: this.bridge.session.getDraft(),
 						pdfHistory: this.bridge.pdfCoordinator.captureDraftHistory() } : {} ),
 					editorState: this._copyState( working ? working.editorState : this.bridge.getLiveState() ),
+					...( creationOrigin ? { creationOrigin } : {} ),
 					...( working ? { workingCopyDraft: working.workingCopyDraft } : {} )
 				} );
 			} catch ( error ) {

@@ -143,6 +143,105 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * Derive historical embed context for an earlier creation draft without trusting its label or payload.
+	 * This inactive helper returns the existing re-admission contract, never application/write authority.
+	 * A caller must also retain and compare the original native empty member, source pin and local work.
+	 * Ambiguous historical occurrences refuse; the explicit-selection route remains unchanged.
+	 *
+	 * @param int $pageId Trusted current native owning page
+	 * @param int $currentRevisionId Exact current edit base
+	 * @param string $originSurfaceId Claimed historical canonical pending ID
+	 * @param int $originRevisionId Exact readable revision on the same page
+	 * @param Authority $authority Original request authority
+	 * @return array Historical origin and current creation admission
+	 */
+	public function prepareCreationDraftRebase( int $pageId, int $currentRevisionId,
+		string $originSurfaceId, int $originRevisionId, Authority $authority
+	): array {
+		try {
+			if ( $originRevisionId < 1 || $originRevisionId > $currentRevisionId ||
+				!preg_match( '/^[A-Za-z0-9_.:-]{1,80}$/D', $originSurfaceId ) ) {
+				throw new \DomainException();
+			}
+			$captured = $this->captureCreationDraftOrigin( $pageId, $currentRevisionId,
+				$originSurfaceId, $originRevisionId, $authority );
+			$origin = $captured['origin'];
+			$prepared = $this->prepareCreationRebase( $pageId, $currentRevisionId, $originSurfaceId,
+				$originRevisionId, $origin['selection']['start'], $origin['selection']['expected'], $authority );
+			$fresh = $this->captureCreationDraftOrigin( $pageId, $currentRevisionId,
+				$originSurfaceId, $originRevisionId, $authority );
+			if ( $captured !== $fresh ) {
+				throw new \DomainException();
+			}
+			$confirmed = $this->prepareCreationRebase( $pageId, $currentRevisionId, $originSurfaceId,
+				$originRevisionId, $origin['selection']['start'], $origin['selection']['expected'], $authority );
+			if ( $prepared !== $confirmed ) {
+				throw new \DomainException();
+			}
+			$last = $this->captureCreationDraftOrigin( $pageId, $currentRevisionId,
+				$originSurfaceId, $originRevisionId, $authority );
+			if ( $captured !== $last ) {
+				throw new \DomainException();
+			}
+			$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $currentRevisionId, $authority );
+			$historical = $this->services->getRevisionLookup()->getRevisionById(
+				$originRevisionId, IDBAccessObject::READ_LATEST );
+			if ( $owner->getPrefixedDBkey() !== $prepared['creation']['target']['owner'] ||
+				!$this->scope->includes( $owner, IDBAccessObject::READ_LATEST ) || !$historical ||
+				$historical->getPageId() !== $pageId ||
+				!RevisionRecord::userCanBitfield( $historical->getVisibility(), RevisionRecord::DELETED_TEXT,
+					$authority, $historical->getPage() ) ) {
+				throw new \DomainException();
+			}
+			return $prepared;
+		} catch ( \Throwable $error ) {
+			throw new \DomainException( 'layers-working-copy-import-unavailable' );
+		}
+	}
+
+	private function captureCreationDraftOrigin( int $pageId, int $currentRevisionId,
+		string $originSurfaceId, int $originRevisionId, Authority $authority
+	): array {
+		$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $currentRevisionId, $authority );
+		if ( $authority->getUser()->getId() <= 0 || !$this->scope->includes( $owner, IDBAccessObject::READ_LATEST ) ) {
+			throw new \DomainException();
+		}
+		$origin = $this->services->getRevisionLookup()->getRevisionById(
+			$originRevisionId, IDBAccessObject::READ_LATEST );
+		if ( !$origin || $origin->getPageId() !== $pageId ||
+			!RevisionRecord::userCanBitfield( $origin->getVisibility(), RevisionRecord::DELETED_TEXT,
+				$authority, $origin->getPage() ) ) {
+			throw new \DomainException();
+		}
+		$main = $origin->getContent( SlotRecord::MAIN, RevisionRecord::FOR_THIS_USER, $authority );
+		if ( !$main instanceof WikitextContent ) {
+			throw new \DomainException();
+		}
+		$bundle = $origin->hasSlot( PageRevisionWriter::SLOT ) ?
+			$this->reader->read( $owner, $originRevisionId, $authority, $pageId, [] ) : null;
+		$surfaces = $bundle['snapshot']['surfaces'] ?? [];
+		foreach ( $surfaces as $surface ) {
+			if ( $surface['id'] === $originSurfaceId ) {
+				throw new \DomainException();
+			}
+		}
+		$matches = [];
+		foreach ( $this->newRewriter()->scan( $main->getText(), $this->fileTargets() ) as $candidate ) {
+			$name = $this->missingName( $candidate, $pageId, $surfaces );
+			if ( $name !== null && NewPageDrawing::surfaceId( $pageId, $originRevisionId, $name,
+				$candidate['kind'] === 'file' ? $candidate['target'] : null ) === $originSurfaceId ) {
+				$matches[] = [ 'start' => $candidate['start'], 'expected' => $candidate['raw'] ];
+			}
+		}
+		if ( count( $matches ) !== 1 ) {
+			throw new \DomainException();
+		}
+		return [ 'origin' => [ 'pageId' => $pageId, 'revisionId' => $originRevisionId,
+			'surfaceId' => $originSurfaceId, 'selection' => $matches[0] ],
+			'main' => $main->getText(), 'bundle' => $bundle ];
+	}
+
+	/**
 	 * Prove a historical missing-member association and freshly admit the same saved direct embed.
 	 * The current canonical ID is returned separately; no old ID is accepted by publication.
 	 * Callers must preserve the original source pin and atomically rebind local work, history and drafts.
