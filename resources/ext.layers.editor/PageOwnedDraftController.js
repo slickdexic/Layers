@@ -5,6 +5,22 @@
 	const earlierCreationInspections = new WeakSet();
 
 	class PageOwnedDraftController {
+		/** Inactive preparation only; successful plans own the inspection until commit or release. */
+		async prepareEarlierCreationRecovery( handle, client ) {
+			let inspection;
+			try {
+				const Store = window.Layers.Core.StateManager;
+				const methods = [ [ this, 'prepareEarlierCreationInspection' ], [ this.bridge, 'prepareEarlierCreationDraftRecovery' ] ]
+					.map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+				inspection = await methods[ 0 ].method.call( this, handle, client );
+				Store.checkWorkingCopyMethods( methods ); inspection.preflight();
+				return methods[ 1 ].method.call( this.bridge, inspection );
+			} catch ( error ) {
+				if ( inspection ) { try { inspection.release(); } catch ( cleanupError ) {} }
+				throw this._error();
+			}
+		}
+
 		static isEarlierCreationInspection( value ) { return earlierCreationInspections.has( value ); }
 
 		/** Inactive earlier-base discovery; existing exact-base recovery remains unchanged. */

@@ -21,6 +21,7 @@
 	const workingCopyDisplays = new WeakMap();
 	const workingCopyDisplayCommits = new WeakSet();
 	const workingCopyDraftRecoveries = new WeakMap();
+	const earlierCreationDraftRecoveries = new WeakMap();
 
 	function workingCopyDraftEqual( left, right ) {
 		if ( Object.is( left, right ) ) { return true; }
@@ -114,6 +115,101 @@
 	}
 
 	class PageOwnedEditorBridge {
+		static isEarlierCreationDraftRecovery( handle ) { return earlierCreationDraftRecoveries.has( handle ); }
+
+		/** Inactive earlier-base recovery; remap only admitted surface IDs and explicit citations. */
+		prepareEarlierCreationDraftRecovery( inspection ) {
+			let inner;
+			try {
+				const Store = workingCopyStoreClass( this ), copy = Store.copyWorkingCopyValue;
+				if ( !window.Layers.Editor.PageOwnedDraftController.isEarlierCreationInspection( inspection ) ||
+					!this.session.hasCreationImport() ) { throw workingCopyDisplayError(); }
+				inspection.preflight(); const data = copy( inspection.inspect() ), envelope = data.envelope;
+				const origin = data.native.origin, target = data.native.creation.target, identity = this.session.getWorkingCopyImportIdentity();
+				const draft = envelope.workingCopyDraft;
+				if ( !workingCopyDraftEqual( target, identity ) || envelope.version !== 1 ||
+					Object.hasOwn( envelope, 'pdfDraft' ) || Object.hasOwn( envelope, 'pdfHistory' ) ||
+					![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) ||
+					envelope.label !== data.native.creation.newSurface.label || !draft || draft.version !== 2 ||
+					!workingCopyDraftEqual( draft.identity, { owner: target.owner, pageId: origin.pageId,
+						revisionId: origin.revisionId, surfaceId: origin.surfaceId } ) ||
+					!draft.timeline || !Array.isArray( draft.timeline.history ) || draft.timeline.lastSaveHistoryIndex !== -1 ) { throw workingCopyDisplayError(); }
+				const remapped = copy( draft ); remapped.identity = copy( target );
+				for ( const state of [ remapped.workingState, ...remapped.timeline.history.map( entry => entry.workingState ) ] ) {
+					if ( !state || state.surfaceId !== origin.surfaceId || !Array.isArray( state.importProvenance ) ) { throw workingCopyDisplayError(); }
+					state.surfaceId = target.surfaceId;
+					for ( const claim of state.importProvenance ) {
+						if ( !claim || claim.targetSurfaceId !== origin.surfaceId ) { throw workingCopyDisplayError(); }
+						claim.targetSurfaceId = target.surfaceId;
+					}
+				}
+				const candidate = { editorState: envelope.editorState, workingCopyDraft: remapped,
+					label: envelope.label, publicationBlocked: envelope.phase !== 'ready' };
+				const methods = [ [ this, 'prepareWorkingCopyDraftRecovery' ], [ this, 'preflightWorkingCopyDraftRecovery' ],
+					[ this, 'releaseWorkingCopyDraftRecovery' ], [ this, 'commitEarlierCreationDraftRecovery' ],
+					[ inspection, 'preflight' ], [ inspection, 'inspect' ], [ inspection, 'revalidate' ], [ inspection, 'release' ] ]
+					.map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+				inner = this.prepareWorkingCopyDraftRecovery( candidate );
+				const record = workingCopyDraftRecoveries.get( inner ), handle = Object.freeze( Object.create( null ) );
+				if ( !record || record.bridge !== this || !record.history.revalidateProvenance ) { throw workingCopyDisplayError(); }
+				const preflight = () => {
+					Store.checkWorkingCopyMethods( methods ); inspection.preflight();
+					if ( workingCopyDraftRecoveries.get( inner ) !== record ) { throw workingCopyDisplayError(); }
+					this.preflightWorkingCopyDraftRecovery( inner );
+				};
+				preflight(); earlierCreationDraftRecoveries.set( handle, { bridge: this, inspection, inner, record, preflight, applying: false, committed: false } );
+				return handle;
+			} catch ( error ) {
+				if ( inner ) { try { this.releaseWorkingCopyDraftRecovery( inner ); } catch ( cleanupError ) {} }
+				throw workingCopyDisplayError();
+			}
+		}
+
+		inspectEarlierCreationDraftRecovery( handle ) {
+			const plan = earlierCreationDraftRecoveries.get( handle );
+			if ( !plan || plan.bridge !== this || plan.committed ) { throw workingCopyDisplayError(); }
+			plan.preflight(); return plan.record.session.inspectWorkingCopyDraftRestore( plan.record.prepared );
+		}
+
+		/** All reads precede one synchronous model commit; no Save and no source-backup retirement. */
+		async commitEarlierCreationDraftRecovery( handle ) {
+			const plan = earlierCreationDraftRecoveries.get( handle );
+			if ( !plan || plan.bridge !== this || plan.applying || plan.committed || plan.record.applying ) { throw workingCopyDisplayError(); }
+			plan.applying = true; plan.record.applying = true;
+			const record = plan.record;
+			try {
+				plan.preflight(); await record.session.revalidate(); plan.preflight();
+				await record.history.revalidateProvenance( plan.preflight ); plan.preflight();
+				// The complete historical/current native proof is the final read before commit.
+				await plan.inspection.revalidate(); plan.preflight();
+				const result = record.session.commitWorkingCopyDraftRestore( record.prepared, plan.preflight );
+				record.prepared = null;
+				record.display.commit(); record.selection.commit(); record.history.commit(); record.committed = true; plan.committed = true;
+				const diagnostics = [], attempt = callback => {
+					try { const notes = callback(); if ( Array.isArray( notes ) ) { diagnostics.push( ...notes ); } }
+					catch ( error ) { diagnostics.push( 'working-copy-refresh-failed' ); }
+				};
+				attempt( record.display.notify ); attempt( record.selection.refresh );
+				attempt( () => {
+					if ( record.editor.stateManager.isWorkingCopyAlive() ) {
+						attempt( () => record.editor.canvasManager.setBaseDimensions( result.editorState.canvas.width, result.editorState.canvas.height ) );
+						attempt( () => record.editor.canvasManager.renderLayers( record.editor.stateManager.state.layers ) );
+						attempt( () => record.editor.layerPanel.updateLayers( record.editor.stateManager.state.layers ) );
+						attempt( record.selection.refresh ); attempt( () => record.manager.updateUndoRedoButtons() );
+					}
+				} );
+				result.diagnostics = diagnostics; return result;
+			} catch ( error ) { throw workingCopyDisplayError(); }
+			finally { plan.applying = false; plan.record.applying = false; this.releaseEarlierCreationDraftRecovery( handle ); }
+		}
+
+		releaseEarlierCreationDraftRecovery( handle ) {
+			const plan = earlierCreationDraftRecoveries.get( handle );
+			if ( !plan || plan.bridge !== this || plan.applying ) { throw workingCopyDisplayError(); }
+			earlierCreationDraftRecoveries.delete( handle );
+			try { this.releaseWorkingCopyDraftRecovery( plan.inner ); } finally { plan.inspection.release(); }
+		}
+
 		/** Capture complete draft data in the already opted-in working-copy history mode. */
 		captureWorkingCopyDraft() {
 			const timeline = this.editor.historyManager.captureWorkingCopyDraftTimeline();
