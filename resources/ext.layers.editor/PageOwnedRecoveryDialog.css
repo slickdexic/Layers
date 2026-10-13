@@ -1,30 +1,203 @@
 .layers-page-recovery {
-	max-width: min( 38rem, 90vw );
-	max-height: 85vh;
+	--recovery-surface: var( --background-color-base, #fff );
+	--recovery-subtle: var( --background-color-neutral-subtle, #f8f9fa );
+	--recovery-text: var( --color-base, #202122 );
+	--recovery-muted: var( --color-subtle, #54595d );
+	--recovery-border: var( --border-color-subtle, #dadde3 );
+	--recovery-accent: var( --color-progressive, #36c );
+	box-sizing: border-box;
+	width: min( 38rem, calc( 100vw - 32px ) );
+	max-width: calc( 100vw - 32px );
+	max-height: calc( 100vh - 32px );
+	max-height: calc( 100dvh - 32px );
+	overflow: hidden;
+	padding: 0;
+	border: 1px solid var( --recovery-border );
+	border-radius: 16px;
+	background: var( --recovery-surface );
+	color: var( --recovery-text );
+	box-shadow: 0 24px 80px rgba( 0, 0, 0, 0.24 ), 0 4px 16px rgba( 0, 0, 0, 0.1 );
+	font-family: var( --font-family-base, system-ui, sans-serif );
+	font-size: 0.875rem;
+	line-height: 1.55;
+}
+
+.layers-page-recovery[ open ] {
+	display: flex;
+	flex-direction: column;
+}
+
+.layers-page-recovery-header {
+	flex-shrink: 0;
+	padding: 28px 28px 20px;
+}
+
+.layers-page-recovery-content {
+	min-height: 0;
 	overflow: auto;
-	padding: 1.5rem;
-	border: 1px solid #72777d;
-	border-radius: 4px;
+	padding: 0 28px 24px;
 }
 
 .layers-page-recovery::backdrop {
-	background: rgba( 0, 0, 0, 0.5 );
+	background: rgba( 16, 24, 40, 0.48 );
+}
+
+.layers-page-recovery [ hidden ] {
+	display: none;
+}
+
+.layers-page-recovery h2 {
+	margin: 12px 0 8px;
+	font-size: 1.5rem;
+	font-weight: 650;
+	line-height: 1.25;
+	letter-spacing: -0.025em;
+}
+
+.layers-page-recovery h3 {
+	margin: 22px 0 4px;
+	font-size: 0.875rem;
+	font-weight: 650;
+}
+
+.layers-page-recovery p {
+	margin: 6px 0 0;
+}
+
+.layers-page-recovery label {
+	display: block;
+	margin-top: 0;
+	font-weight: 600;
+}
+
+.layers-page-recovery-intro,
+.layers-page-recovery-preview-note,
+.layers-page-recovery-cancellation {
+	color: var( --recovery-muted );
+}
+
+.layers-page-recovery-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 6px;
+	background: var( --recovery-subtle );
+	color: var( --recovery-muted );
+	font-size: 0.75rem;
 }
 
 .layers-page-recovery select {
 	display: block;
-	margin: 0.5rem 0;
-	max-width: 100%;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 44px;
+	margin-top: 8px;
+	padding: 10px 12px;
+	border: 1px solid var( --recovery-border );
+	border-radius: 8px;
+	background: var( --recovery-surface );
+	color: var( --recovery-text );
+	font: inherit;
+}
+
+.layers-page-recovery-context {
+	margin-top: 12px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.layers-page-recovery-information,
+.layers-page-recovery-warning {
+	margin-top: 16px;
+	padding: 16px;
+	border-radius: 10px;
+	background: var( --recovery-subtle );
+}
+
+.layers-page-recovery-warning {
+	border: 1px solid var( --border-color-warning, #d6b963 );
+	background: var( --background-color-warning-subtle, #fff8e6 );
+}
+
+.layers-page-recovery-warning div {
+	margin-top: 6px;
 }
 
 .layers-page-recovery pre {
+	max-height: 176px;
+	overflow: auto;
+	margin: 10px 0 0;
+	padding: 14px 16px;
+	border: 1px solid var( --recovery-border );
+	border-radius: 8px;
+	background: var( --recovery-surface );
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
-	max-height: 14rem;
-	overflow: auto;
+	font: inherit;
+}
+
+.layers-page-recovery-reminder {
+	margin-top: 20px;
+}
+
+.layers-page-recovery-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	flex-shrink: 0;
+	margin-top: 0;
+	padding: 20px 28px 28px;
+	border-top: 1px solid var( --recovery-border );
 }
 
 .layers-page-recovery button {
-	margin-inline-end: 0.75rem;
-	padding: 0.5rem 1rem;
+	min-height: 44px;
+	padding: 10px 16px;
+	border: 1px solid var( --recovery-border );
+	border-radius: 8px;
+	background: var( --recovery-surface );
+	color: var( --recovery-text );
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.layers-page-recovery button.layers-page-recovery-primary {
+	border-color: var( --recovery-accent );
+	background: var( --recovery-accent );
+	color: var( --color-inverted, #fff );
+}
+
+.layers-page-recovery button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.layers-page-recovery button:focus-visible,
+.layers-page-recovery select:focus-visible {
+	outline: 2px solid var( --recovery-accent );
+	outline-offset: 3px;
+}
+
+.layers-page-recovery-cancellation {
+	margin-top: 14px;
+	font-size: 0.75rem;
+}
+
+@media ( max-width: 520px ) {
+	.layers-page-recovery-header,
+	.layers-page-recovery-actions {
+		padding: 20px;
+	}
+
+	.layers-page-recovery-content {
+		padding: 0 20px 20px;
+	}
+
+	.layers-page-recovery-actions {
+		flex-direction: column;
+	}
+
+	.layers-page-recovery button {
+		width: 100%;
+	}
 }

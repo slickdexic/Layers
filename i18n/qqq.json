@@ -1158,5 +1158,18 @@
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|originsurface}}",
 	"layers-page-draft-dialog-earlier-number": "Label for an eligible local creation draft from an earlier owning-page revision. $1 is its number among earlier drafts.",
 	"layers-page-draft-dialog-earlier": "Recovery notice for an earlier-revision image or slide creation draft. Restore does not publish; the editor must explicitly Save.",
-	"layers-page-draft-earlier-failed": "Shown when earlier-revision recovery is refused. The current editor work and original local backup remain intact."
+	"layers-page-draft-earlier-failed": "Shown when earlier-revision recovery is refused. The current editor work and original local backup remain intact.",
+	"layers-page-draft-dialog-choose-intro": "Introduction when local drafts are available for explicit review. Drafts are private to the current browser.",
+	"layers-page-draft-dialog-confirm-intro": "Introduction before explicit Restore. It explains that recovery does not automatically Save the page.",
+	"layers-page-draft-dialog-browser-badge": "Storage-location label for a local draft stored in this browser.",
+	"layers-page-draft-dialog-context": "Layer-set context in the local recovery dialog. $1 is the layer-set name, inserted as plain text.",
+	"layers-page-draft-dialog-earlier-title": "Heading explaining that the selected verified local draft comes from an earlier page revision.",
+	"layers-page-draft-dialog-preview-title": "Heading for the bounded, plain-text preview of text from layers in a local draft.",
+	"layers-page-draft-dialog-preview-note": "Explains that shapes and other non-text layers are excluded from the text preview.",
+	"layers-page-draft-dialog-preview-empty": "Shown when a readable draft contains no layer text to preview. The draft may still contain other layers or Undo/Redo history.",
+	"layers-page-draft-dialog-check-title": "Warning heading for a draft whose publication hold must be resolved using Check saved page.",
+	"layers-page-draft-dialog-check-body": "Explains that Restore keeps the publication hold and directs the editor to Check saved page before another Save.",
+	"layers-page-draft-dialog-save-reminder": "Distinguishes local Restore from an explicit Save that creates an owning-page revision.",
+	"layers-page-draft-dialog-cancel-earlier": "Explains cancellation of an earlier-revision choice: no draft is applied/deleted and current work remains editable.",
+	"layers-page-draft-dialog-cancel-current": "Explains existing current-revision cancellation safeguards: the backup remains, and the editor must reopen to resolve it before saving."
 }

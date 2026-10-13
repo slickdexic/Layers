@@ -56,7 +56,7 @@ describe( 'approved visible earlier creation recovery', () => {
 			const c = await setup( kind, slot );
 			try {
 				const before = observed( c ), { pending } = await review( c );
-				expect( modal().querySelector( 'h2' ).textContent ).toBe( 'Recover local Layers edits' );
+				expect( modal().querySelector( 'h2' ).textContent ).toBe( 'Recover local layer edits' );
 				expect( modal().querySelector( 'p' ).textContent ).toBe( en[ 'layers-page-draft-dialog-earlier' ] );
 				expect( modal().querySelector( 'pre' ).textContent ).toContain( 'first' );
 				expect( observed( c ) ).toStrictEqual( before ); expect( c.events.proofs ).toBe( 2 );

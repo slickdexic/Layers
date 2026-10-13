@@ -29,3 +29,21 @@ This flow advances milestone 1 / HIST-4, HIST-1, DATA-1, SEC-2 and UI-10.
 Automated qualification and controlled screens do not establish native HTTP,
 browser, mobile, MediaWiki 1.44 or owner acceptance. Whole-PDF Import and the
 broader page-history milestone remain separate.
+
+## Recovery dialog presentation
+
+The dialog identifies the selected layer set when its name is available,
+explains local browser storage, and labels its bounded layer-text preview.
+Shapes and other non-text layers are not represented by that text preview.
+Earlier-revision recovery explains what Restore applies, what current page
+content it preserves, and why Save remains explicit. Publication holds retain
+their warning and the Check saved page action. Current and earlier cancellation
+explanations match their existing safeguards.
+
+The themed panel follows the Import dialog. Its heading and actions remain
+visible around independently scrollable draft content. Narrow layouts stack
+the existing buttons, with visible keyboard focus and touch-sized targets.
+The selection order, Review/Restore steps, initial focus, cancellation results,
+backup handling and publication behavior are unchanged. Names and preview text
+are inserted as plain text; private identifiers and guessed dates are omitted.
+Browser/mobile/owner acceptance remains separate from automated client checks.

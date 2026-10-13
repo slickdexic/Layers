@@ -48,10 +48,28 @@
 					select.appendChild( option );
 				} );
 				label.appendChild( select );
+				const intro = document.createElement( 'div' ); intro.className = 'layers-page-recovery-intro';
+				intro.textContent = this.message( confirm ? 'layers-page-draft-dialog-confirm-intro' : 'layers-page-draft-dialog-choose-intro' );
+				const badge = document.createElement( 'span' ); badge.className = 'layers-page-recovery-badge';
+				badge.textContent = this.message( 'layers-page-draft-dialog-browser-badge' );
+				const context = document.createElement( 'div' ); context.className = 'layers-page-recovery-context';
 				label.hidden = confirm;
 				const preview = document.createElement( 'pre' );
 				preview.setAttribute( 'aria-live', 'polite' );
-				const notice = document.createElement( 'p' );
+				const notice = document.createElement( 'p' ); notice.className = 'layers-page-recovery-notice';
+				const noticeTitle = document.createElement( 'strong' );
+				const noticeBox = document.createElement( 'div' ); noticeBox.className = 'layers-page-recovery-information';
+				noticeBox.append( noticeTitle, notice );
+				const warning = document.createElement( 'div' ); warning.className = 'layers-page-recovery-warning';
+				const warningTitle = document.createElement( 'strong' ); warningTitle.textContent = this.message( 'layers-page-draft-dialog-check-title' );
+				const warningText = document.createElement( 'div' ); warningText.textContent = this.message( 'layers-page-draft-dialog-check-body' );
+				warning.append( warningTitle, warningText );
+				const previewTitle = document.createElement( 'h3' ); previewTitle.textContent = this.message( 'layers-page-draft-dialog-preview-title' );
+				const previewNote = document.createElement( 'div' ); previewNote.className = 'layers-page-recovery-preview-note';
+				previewNote.textContent = this.message( 'layers-page-draft-dialog-preview-note' );
+				const reminder = document.createElement( 'div' ); reminder.className = 'layers-page-recovery-reminder';
+				reminder.textContent = this.message( 'layers-page-draft-dialog-save-reminder' );
+				const cancellation = document.createElement( 'div' ); cancellation.className = 'layers-page-recovery-cancellation';
 				const accept = document.createElement( 'button' );
 				accept.type = 'button';
 				accept.textContent = this.message( confirm ? 'layers-page-draft-dialog-restore' : 'layers-page-draft-dialog-review' );
@@ -61,10 +79,17 @@
 				const update = () => {
 					const candidate = candidates[ Number( select.value ) ];
 					const layers = candidate && candidate.editorState && candidate.editorState.layers;
+					context.hidden = !( candidate && typeof candidate.label === 'string' );
+					context.textContent = context.hidden ? '' : this.message( 'layers-page-draft-dialog-context', candidate.label );
+					noticeTitle.hidden = !( candidate && candidate.earlierCreation );
+					noticeTitle.textContent = this.message( 'layers-page-draft-dialog-earlier-title' );
+					warning.hidden = !( candidate && candidate.publicationBlocked );
+					cancellation.textContent = this.message( candidate && candidate.earlierCreation ? 'layers-page-draft-dialog-cancel-earlier' : 'layers-page-draft-dialog-cancel-current' );
 					accept.disabled = !Array.isArray( layers );
 					preview.textContent = Array.isArray( layers ) ? layers.slice( 0, 50 )
 						.map( ( layer ) => layer && typeof layer.text === 'string' ? layer.text.slice( 0, 200 ) : '' )
 						.filter( Boolean ).join( '\n' ).slice( 0, 2000 ) : '';
+					if ( !preview.textContent && Array.isArray( layers ) ) { preview.textContent = this.message( 'layers-page-draft-dialog-preview-empty' ); }
 					notice.textContent = this.message( accept.disabled ? 'layers-page-draft-dialog-unavailable' :
 						candidate.earlierCreation ? 'layers-page-draft-dialog-earlier' :
 							candidate.publicationBlocked ? 'layers-page-draft-blocked' : 'layers-page-draft-dialog-local' );
@@ -83,7 +108,12 @@
 				accept.addEventListener( 'click', () => { if ( !accept.disabled ) { finish( Number( select.value ) ); } } );
 				cancel.addEventListener( 'click', () => finish( null ) );
 				dialog.addEventListener( 'cancel', ( event ) => { event.preventDefault(); finish( null ); } );
-				dialog.append( title, label, preview, notice, accept, cancel );
+				const actions = document.createElement( 'div' ); actions.className = 'layers-page-recovery-actions'; actions.append( accept, cancel );
+				accept.className = 'layers-page-recovery-primary';
+				const header = document.createElement( 'div' ); header.className = 'layers-page-recovery-header'; header.append( badge, title, intro );
+				const content = document.createElement( 'div' ); content.className = 'layers-page-recovery-content';
+				content.append( label, context, noticeBox, warning, previewTitle, previewNote, preview, reminder, cancellation );
+				dialog.append( header, content, actions );
 				document.body.appendChild( dialog );
 				this.close = () => finish( null );
 				update();
