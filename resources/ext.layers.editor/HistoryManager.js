@@ -139,8 +139,72 @@
 	}
 
 	const applicationHistoryCertificates = new WeakSet();
+	const creationHistoryCertificates = new WeakSet();
 
 	class HistoryManager {
+		static isCreationRebaseHistory( value ) { return creationHistoryCertificates.has( value ); }
+
+		/** Capture all reachable private associations while creation conflict reconciliation is held. */
+		prepareCreationImportRebaseHistory( bridge ) {
+			const mode = workingCopyHistoryModes.get( this );
+			if ( !mode || mode.bridge !== bridge ) { throw workingHistoryError(); }
+			const { Store, editor, session, store } = mode, observe = Store.observeWorkingCopyObject;
+			const observations = [ observe( this, false ), observe( this.history ), observe( this.batchChanges ),
+				observe( bridge, false ), observe( session, false ), observe( session._snapshot ), observe( session._newSurface ),
+				observe( editor, false ), observe( editor.config ), observe( store, false ), observe( store.state ),
+				observe( store.pendingOperations ), observe( store.lockingQueue ) ];
+			for ( const owner of [ editor.canvasManager, editor.canvasManager && editor.canvasManager.selectionManager ].filter( Boolean ) ) {
+				observations.push( observe( owner, false ) );
+				for ( const descriptor of Object.values( Object.getOwnPropertyDescriptors( owner ) ) ) {
+					if ( Array.isArray( descriptor.value ) ) { observations.push( observe( descriptor.value ) ); }
+				}
+			}
+			const methods = [ [ session, [ 'prepareCreationImportRebase', 'inspectWorkingCopyDraftCheckpoint', 'hasCreationImport' ] ],
+				[ store, [ 'isWorkingCopyAlive', 'prepareWorkingCopyPatch', 'prepareWorkingCopyPatchCommit', 'notifyWorkingCopyPatch' ] ],
+				[ bridge, [ 'getLiveState', 'capture', 'prepareWorkingCopyDisplay', 'reconcile' ] ],
+				[ session._adapter, [ 'toEditorState', 'withEditorState', 'withWorkingCopyRestore' ] ],
+				[ this, [ 'prepareCreationImportRebaseHistory', 'undo', 'redo', 'saveState', 'updateUndoRedoButtons' ] ] ]
+				.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) );
+			const check = () => {
+				if ( workingCopyHistoryModes.get( this ) !== mode || this.isDestroyed || this.editor !== editor || editor.historyManager !== this || editor.stateManager !== store ||
+					bridge.editor !== editor || bridge.session !== session || bridge.disposed || !bridge.loaded || bridge.saving || !bridge.reconciling || bridge.pdfCoordinator ||
+					!session.hasCreationImport() || session._readOnly || session._reconciling || ![ 'ready', 'conflict', 'uncertain' ].includes( session._phase ) ||
+					!store.isWorkingCopyAlive() || store.isLocked || store._isProcessingPending || store.pendingOperations.length || store.lockingQueue.length ||
+					store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null || this.batchMode || mode.batch ) { throw workingHistoryError(); }
+				observations.forEach( Store.checkWorkingCopyObservation ); Store.checkWorkingCopyMethods( methods );
+			};
+			check();
+			const associations = this.history.map( entry => {
+				const record = mode.entries.get( entry );
+				if ( !record ) { throw workingHistoryError(); }
+				const state = session.inspectWorkingCopyDraftCheckpoint( record.checkpoint ); check();
+				if ( !workingHistoryEqual( state.layers, entry.layers ) ) { throw workingHistoryError(); }
+				return { entry, record, state };
+			} );
+			const checkpoints = associations.map( value => value.record.checkpoint ).concat( mode.identityCheckpoint );
+			let prepared = false;
+			const capture = Object.freeze( {
+				checkpoints, preflight: check,
+				prepare: rebase => {
+					check();
+					if ( prepared || !session.constructor.isCreationImportRebase( rebase ) ) { throw workingHistoryError(); }
+					const entries = associations.map( association => {
+						const entry = Store.copyWorkingCopyValue( association.entry ), state = rebase.inspectCheckpoint( association.record.checkpoint ); check();
+						entry.workingState = state;
+						return { entry, record: { checkpoint: association.record.checkpoint, workingState: state } };
+					} );
+					const values = { history: entries.map( value => value.entry ), lastSaveHistoryIndex: -1 };
+					workingHistoryAssignments( this, values ); check(); prepared = true;
+					let committed = false;
+					const transaction = Object.freeze( {
+						preflight: () => { if ( committed ) { throw workingHistoryError(); } check(); workingHistoryAssignments( this, values ); },
+						commit: () => { entries.forEach( value => mode.entries.set( value.entry, value.record ) ); workingHistoryAssign( this, values ); committed = true; }
+					} );
+					creationHistoryCertificates.add( transaction ); return transaction;
+				}
+			} );
+			check(); return capture;
+		}
 		/** Finite draft data only; checkpoint certificates stay private and are never serialized. */
 		captureWorkingCopyDraftTimeline() {
 			const mode = workingCopyHistoryModes.get( this );

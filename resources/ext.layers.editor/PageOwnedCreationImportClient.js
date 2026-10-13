@@ -4,6 +4,7 @@
 	const identities = [ 'targetPageId', 'targetBaseRevisionId', 'targetSurfaceId', 'sourcePageId', 'sourceRevisionId', 'sourceSurfaceId' ];
 	const descriptors = [ 'pageId', 'owner', 'revisionId', 'surfaceId' ];
 	const confirmedRevisions = new WeakMap();
+	const rebaseCertificates = new WeakSet();
 	const id = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
 	const bytes = value => new TextEncoder().encode( value ).length;
 	const member = value => typeof value === 'string' && value.length > 0 && bytes( value ) <= 128;
@@ -22,6 +23,58 @@
 		if ( !value || value.revisionId !== revisionId || !value.snapshot || value.snapshot.schemaVersion !== 1 || !Array.isArray( value.snapshot.surfaces ) ) { throw unavailable(); }
 	}
 	class PageOwnedCreationImportClient {
+		static isPreparedRebase( value ) { return rebaseCertificates.has( value ); }
+
+		/** Read-only native proof and detached transport; selection changes only at synchronous commit. */
+		async prepareRebase( options ) {
+			const Store = window.Layers.Core.StateManager, clone = Store.copyWorkingCopyValue;
+			const observe = Store.observeWorkingCopyObject, checkObservation = Store.checkWorkingCopyObservation;
+			const captureMethod = Store.captureWorkingCopyMethod, checkMethods = Store.checkWorkingCopyMethods;
+			const request = fields( options, [ 'pageId', 'originRevisionId', 'surfaceId', 'currentRevisionId' ] );
+			if ( ![ request.pageId, request.originRevisionId, request.currentRevisionId ].every( id ) ||
+				request.currentRevisionId < request.originRevisionId || !member( request.surfaceId ) || confirmedRevisions.get( this ) !== null ) { throw unavailable(); }
+			const selection = clone( this.selection ), observations = [ observe( this, false ), observe( this.selection ), observe( this.api, false ) ];
+			const methods = [ 'read', 'publish', 'confirmStored', 'prepareRebase' ].map( key => captureMethod( this, key ) )
+				.concat( [ 'post', 'postWithToken' ].map( key => captureMethod( this.api, key ) ) );
+			const descriptor = Object.getOwnPropertyDescriptor( this, 'selection' );
+			if ( !descriptor || !Object.hasOwn( descriptor, 'value' ) || !descriptor.writable ) { throw unavailable(); }
+			let committed = false;
+			const check = () => {
+				if ( committed || confirmedRevisions.get( this ) !== null || window.Layers.Core.StateManager !== Store ) { throw unavailable(); }
+				observations.forEach( checkObservation ); checkMethods( methods );
+			};
+			check();
+			const response = clone( await methods.find( method => method.key === 'post' ).method.call( this.api, {
+				action: 'layersworkingcopyimportcreationrebase', formatversion: 2, targetpageid: request.pageId,
+				baserevid: request.currentRevisionId, targetsurface: request.surfaceId, originrevid: request.originRevisionId,
+				originstart: selection.start, origintext: selection.expected
+			} ) );
+			check();
+			const result = fields( response.layersworkingcopyimportcreationrebase, [ 'origin', 'creation' ] );
+			const origin = fields( result.origin, [ 'pageId', 'revisionId', 'surfaceId', 'selection' ] );
+			const creation = fields( result.creation, [ 'target', 'selection', 'hasLayersSlot', 'baseBundle', 'newSurface' ] );
+			const next = fields( creation.selection, [ 'start', 'expected' ] ), target = fields( creation.target, descriptors );
+			if ( response.error || origin.pageId !== request.pageId || origin.revisionId !== request.originRevisionId ||
+				origin.surfaceId !== request.surfaceId || fields( origin.selection, [ 'start', 'expected' ] ).start !== selection.start || origin.selection.expected !== selection.expected ||
+				!matches( target, request.pageId, request.currentRevisionId, target.surfaceId ) || !member( target.surfaceId ) ||
+				( request.currentRevisionId === request.originRevisionId ? target.surfaceId !== request.surfaceId : target.surfaceId === request.surfaceId ) ||
+				!Number.isInteger( next.start ) || next.start < 0 || next.start > 2147483647 || next.expected !== selection.expected ||
+				typeof creation.hasLayersSlot !== 'boolean' || !creation.newSurface || creation.newSurface.id !== target.surfaceId ||
+				![ 'image', 'slide' ].includes( creation.newSurface.kind ) || typeof creation.newSurface.label !== 'string' ||
+				!creation.newSurface.canvas || !Array.isArray( creation.newSurface.layers ) || creation.newSurface.layers.length ) { throw unavailable(); }
+			if ( creation.hasLayersSlot ) {
+				bundle( creation.baseBundle, request.currentRevisionId );
+				if ( creation.baseBundle.snapshot.surfaces.some( surface => [ request.surfaceId, target.surfaceId ].includes( surface.id ) ) ) { throw unavailable(); }
+			} else if ( creation.baseBundle !== null ) { throw unavailable(); }
+			const detached = new PageOwnedCreationImportClient( this.api, next ), read = detached.read;
+			const preparedSelection = Object.freeze( clone( next ) );
+			const transaction = Object.freeze( {
+				inspect: () => { check(); return clone( creation ); },
+				read: options => { check(); return read.call( detached, options ); }, preflight: check,
+				commit: () => { check(); Object.defineProperty( this, 'selection', { value: preparedSelection } ); committed = true; }
+			} );
+			check(); rebaseCertificates.add( transaction ); return transaction;
+		}
 		constructor( api, selection ) {
 			if ( !api || typeof api.post !== 'function' || typeof api.postWithToken !== 'function' ) { throw unavailable(); }
 			this.api = api; this.selection = Object.freeze( fields( selection, [ 'start', 'expected' ] ) );

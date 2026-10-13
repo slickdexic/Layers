@@ -593,6 +593,31 @@
 
 	const applicationImportCommits = new WeakMap();
 	const applicationImportCleanup = new WeakMap();
+	const creationRebaseCertificates = new WeakSet();
+	const creationRebasePending = new WeakSet();
+
+	function creationRebaseMetadata( surface ) {
+		const data = restoreClone( surface );
+		for ( const key of [ 'id', 'canvas', 'layers', 'readingOrder' ] ) { delete data[ key ]; }
+		return data;
+	}
+
+	function creationRebaseCapture( session ) {
+		if ( !creationImportActive( session ) || session._readOnly || session._reconciling || session._pdf || session._pdfContext || session._pdfRecovery ||
+			![ 'ready', 'conflict', 'uncertain' ].includes( session._phase ) ) { throw importUnavailable(); }
+		const guard = { descriptors: Object.fromEntries( importFields.map( key => [ key, importDescriptor( session, key ) ] ) ),
+			snapshot: restoreClone( session._snapshot ), newSurface: restoreClone( session._newSurface ), methods: [] };
+		provenanceObserve( session, guard );
+		for ( const key of [ '_surfaceId', '_revisionId', '_snapshot', '_savedJson', '_newSurface', '_baseHasDrawings', '_phase' ] ) {
+			if ( !guard.descriptors[ key ].writable ) { throw importUnavailable(); }
+		}
+		const localBase = restoreClone( guard.snapshot );
+		const selected = localBase.surfaces.filter( surface => surface.id === session._surfaceId );
+		localBase.surfaces = localBase.surfaces.filter( surface => surface.id !== session._surfaceId );
+		if ( selected.length !== 1 || !importDataEqual( localBase, JSON.parse( session._savedJson ) ) ||
+			!importDataEqual( creationRebaseMetadata( selected[ 0 ] ), creationRebaseMetadata( guard.newSurface ) ) ) { throw importUnavailable(); }
+		return guard;
+	}
 
 	function applicationImportRecord( session, handle ) {
 		const record = restoreMaps( applicationImportCommits, session ).get( handle );
@@ -603,6 +628,89 @@
 	}
 
 	class PageOwnedEditorSession {
+		static isCreationImportRebase( value ) { return creationRebaseCertificates.has( value ); }
+
+		/** Prepare canonical identity and every retained checkpoint privately; never publishes. */
+		async prepareCreationImportRebase( revisionId, checkpoints, afterAwait ) {
+			if ( creationRebasePending.has( this ) ) { throw importUnavailable(); }
+			const guard = creationRebaseCapture( this ), mode = creationImportModes.get( this ), provenance = workingCopyProvenance.get( this );
+			if ( !Number.isInteger( revisionId ) || revisionId < this._revisionId || revisionId > 2147483647 ||
+				!Array.isArray( checkpoints ) || !checkpoints.length || typeof afterAwait !== 'function' ) { throw importUnavailable(); }
+			const methods = [ mode.read, mode.publish, mode.confirm, importMethod( mode.client, 'prepareRebase' ) ];
+			const map = restoreMaps( workingCopyCheckpoints, this ), identity = restoreIdentity( guard );
+			const records = Array.from( new Set( checkpoints ) ).map( handle => {
+				const record = map.get( handle );
+				if ( !record || !importDataEqual( record.identity, identity ) ) { throw importUnavailable(); }
+				return { handle, record, state: restoreClone( record.state ), claims: restoreClone( provenanceForCheckpoint( this, handle ).claims ) };
+			} );
+			const oldModeSurface = restoreClone( mode.newSurface ), oldSelection = restoreClone( mode.selection );
+			let committed = false, released = false, transport;
+			const check = () => {
+				if ( committed || released || creationImportModes.get( this ) !== mode || !creationImportActive( this ) ||
+					!importDataEqual( mode.newSurface, oldModeSurface ) || !importDataEqual( mode.selection, oldSelection ) ) { throw importUnavailable(); }
+				restoreCheckWork( this, guard ); importMethodsExact( methods );
+				for ( const record of records ) {
+					if ( map.get( record.handle ) !== record.record || !importDataEqual( record.record.state, record.state ) ||
+						!importDataEqual( provenanceForCheckpoint( this, record.handle ).claims, record.claims ) ) { throw importUnavailable(); }
+				}
+				if ( transport ) { transport.preflight(); }
+			};
+			const liveCheck = () => { check(); workingStateCallback( afterAwait ); check(); };
+			creationRebasePending.add( this );
+			try {
+				liveCheck();
+				transport = await methods[ 3 ].call( { pageId: this._pageId, originRevisionId: this._revisionId,
+					surfaceId: this._surfaceId, currentRevisionId: revisionId } );
+				if ( !window.Layers.Editor.PageOwnedCreationImportClient.isPreparedRebase( transport ) ) { throw importUnavailable(); }
+				liveCheck();
+				const creation = restoreClone( transport.inspect() ), native = creation.newSurface;
+				if ( creation.target.owner !== this._owner || creation.target.pageId !== this._pageId || creation.target.revisionId !== revisionId ||
+					!importDataEqual( creationRebaseMetadata( native ), creationRebaseMetadata( guard.newSurface ) ) ||
+					!importDataEqual( native.canvas, guard.newSurface.canvas ) ) { throw importUnavailable(); }
+				const base = creation.hasLayersSlot ? restoreClone( creation.baseBundle.snapshot ) : { schemaVersion: 1, surfaces: [] };
+				const selected = restoreClone( guard.snapshot.surfaces.find( surface => surface.id === this._surfaceId ) ); selected.id = native.id;
+				if ( base.surfaces.some( surface => newSurfaceCollides( surface, selected ) ) ) { throw importUnavailable(); }
+				const candidate = restoreClone( base ); candidate.surfaces.push( selected );
+				const savedJson = JSON.stringify( base ), nextSelection = restoreClone( creation.selection ), nextSurface = restoreClone( native );
+				const remap = claims => provenanceClaims( this, claims ).map( claim => ( { ...claim, targetSurfaceId: native.id } ) );
+				const currentClaims = remap( provenance.current ), nextMap = new WeakMap(), nextRecords = new Map();
+				for ( const record of records ) {
+					const state = restoreClone( record.state ); state.surfaceId = native.id;
+					const nextIdentity = restoreClone( identity ); nextIdentity.surfaceId = native.id;
+					const claims = remap( record.claims );
+					nextMap.set( record.handle, { identity: nextIdentity, state } ); nextRecords.set( record.handle, { state, claims } );
+				}
+				const sources = new Map();
+				for ( const claim of [ ...currentClaims, ...Array.from( nextRecords.values() ).flatMap( record => record.claims ) ] ) {
+					sources.set( JSON.stringify( [ claim.sourcePageId, claim.sourceRevisionId, claim.sourceSurfaceId ] ), claim );
+				}
+				if ( sources.size > 32 ) { throw importUnavailable(); }
+				for ( const claim of sources.values() ) {
+					liveCheck();
+					const response = restoreClone( await transport.read( { targetPageId: this._pageId, targetBaseRevisionId: revisionId,
+						targetSurfaceId: native.id, sourcePageId: claim.sourcePageId, sourceRevisionId: claim.sourceRevisionId, sourceSurfaceId: claim.sourceSurfaceId } ) );
+					liveCheck();
+					if ( !importDataEqual( response.creation, creation ) ) { throw importUnavailable(); }
+				}
+				const transaction = Object.freeze( {
+					inspect: () => { check(); return restoreClone( creation ); },
+					inspectCheckpoint: handle => { check(); const record = nextRecords.get( handle ); if ( !record ) { throw importUnavailable(); }
+						return restoreClone( { ...record.state, importProvenance: record.claims } ); },
+					preflight: liveCheck,
+					commit: () => {
+						check(); transport.commit();
+						this._snapshot = candidate; this._savedJson = savedJson; this._surfaceId = native.id; this._revisionId = revisionId;
+						this._newSurface = nextSurface; this._baseHasDrawings = creation.hasLayersSlot; this._phase = 'ready';
+						mode.newSurface = nextSurface; mode.selection = nextSelection; provenance.current = currentClaims; provenance.epoch++;
+						workingCopyCheckpoints.set( this, nextMap );
+						for ( const [ handle, record ] of nextRecords ) { provenanceCheckpoints.set( handle, { session: this, epoch: provenance.epoch, claims: record.claims, validated: true } ); }
+						committed = true;
+					},
+					release: () => { released = true; }
+				} );
+				liveCheck(); creationRebaseCertificates.add( transaction ); return transaction;
+			} catch ( error ) { throw importUnavailable(); } finally { creationRebasePending.delete( this ); }
+		}
 		/** Explicit native creation mode; the admitted member is never inserted into saved history. */
 		enableCreationImport( client, selection ) {
 			this._requireLoaded();
@@ -2037,6 +2145,7 @@
 		 * @return {Promise<Object>}
 		 */
 		async reconcile( revisionId ) {
+			if ( creationImportActive( this ) ) { throw failure( 'layers-editor-session-unavailable' ); }
 			this._requireLoaded();
 			if ( this._readOnly || this._reconciling || this._pdfRecovery ||
 				![ 'ready', 'conflict', 'uncertain' ].includes( this._phase ) ||

@@ -637,6 +637,7 @@
 		 * @return {Promise<Object>} Reconciled status; newer live edits remain dirty
 		 */
 		async reconcile( revisionId ) {
+			if ( this.session.hasCreationImport() ) { return this._reconcileCreationImport( revisionId ); }
 			if ( this.pdfCoordinator ) {
 				this.pdfCoordinator.invalidate();
 			}
@@ -663,6 +664,40 @@
 			}
 			this._requireActive();
 			return { ...this.session.getStatus(), dirty: this.editor.stateManager.get( 'isDirty' ), editorStateValid };
+		}
+
+		/** Prepared session/history/configuration commit; live editor geometry and selection stay intact. */
+		async _reconcileCreationImport( revisionId ) {
+			this._requireActive();
+			if ( this.saving || this.reconciling || !this.loaded || this.pdfCoordinator ) { throw importApplicationError(); }
+			this.capture();
+			const editor = this.editor, history = editor.historyManager, store = editor.stateManager, Store = workingCopyStoreClass( this );
+			this.reconciling = true;
+			let sessionTransaction;
+			try {
+				const captured = history.prepareCreationImportRebaseHistory( this );
+				const check = () => { captured.preflight(); };
+				sessionTransaction = await this.session.prepareCreationImportRebase( revisionId, captured.checkpoints, check );
+				check();
+				if ( !this.session.constructor.isCreationImportRebase( sessionTransaction ) ) { throw importApplicationError(); }
+				const creation = sessionTransaction.inspect(), historyTransaction = captured.prepare( sessionTransaction );
+				if ( !history.constructor.isCreationRebaseHistory( historyTransaction ) ) { throw importApplicationError(); }
+				const configured = Object.getOwnPropertyDescriptor( editor.config, 'pageOwned' );
+				if ( !configured || !Object.hasOwn( configured, 'value' ) || !configured.writable ) { throw importApplicationError(); }
+				const nextConfig = { ...Store.copyWorkingCopyValue( configured.value ), revisionId, surfaceId: creation.target.surfaceId,
+					newSurface: Store.copyWorkingCopyValue( creation.newSurface ), emptyBase: !creation.hasLayersSlot,
+					creationSelection: Store.copyWorkingCopyValue( creation.selection ) };
+				const patch = store.prepareWorkingCopyPatch( { values: { isDirty: true }, clear: [] } ), patchCommit = store.prepareWorkingCopyPatchCommit( patch );
+				if ( !Store.isWorkingCopyPatchCommit( patchCommit ) ) { throw importApplicationError(); }
+				sessionTransaction.preflight(); historyTransaction.preflight(); patchCommit.preflight(); check();
+				// No await or notification between these checked, synchronous participant commits.
+				sessionTransaction.commit(); historyTransaction.commit(); patchCommit.commit();
+				Object.defineProperty( editor.config, 'pageOwned', { value: nextConfig } );
+				this.reconciling = false;
+				try { store.notifyWorkingCopyPatch( patch ); history.updateUndoRedoButtons(); } catch ( error ) { /* Committed work remains intact. */ }
+				return { ...this.session.getStatus(), dirty: true, editorStateValid: true };
+			} catch ( error ) { throw importApplicationError(); }
+			finally { if ( sessionTransaction ) { sessionTransaction.release(); } this.reconciling = false; }
 		}
 
 		/** Call only after the owning UI has preserved any draft it needs. */
