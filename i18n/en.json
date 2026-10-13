@@ -1147,5 +1147,13 @@
 	"apihelp-layersworkingcopyimportcreationpublish-param-embedtext": "Complete saved literal embed text; supplied in the POST body.",
 	"apihelp-layersworkingcopyimportcreationpublish-param-data": "Complete proposed Layers snapshot as JSON, preserving every stored sibling.",
 	"apihelp-layersworkingcopyimportcreationpublish-param-importsources": "JSON list of 1–32 exact sourcePageId, sourceRevisionId and sourceSurfaceId records. Duplicate keys and a simultaneous maintext parameter are refused.",
-	"apihelp-layersworkingcopyimportcreationpublish-param-summary": "Optional editor note, up to 500 characters. Oversized complete source citations and note are refused rather than truncated."
+	"apihelp-layersworkingcopyimportcreationpublish-param-summary": "Optional editor note, up to 500 characters. Oversized complete source citations and note are refused rather than truncated.",
+	"apihelp-layersworkingcopyimportcreationrebase-summary": "Re-admit a still-missing image or slide layer set at an explicit newer owning-page revision.",
+	"apihelp-layersworkingcopyimportcreationrebase-description": "Read-only POST proves the exact historical embed association and freshly admits the unchanged saved embed. The genuine current stored base or absent-slot null stays separate from the empty member. This does not publish or grant write authority.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-targetpageid": "Native ID of the existing owning page, shared by the opening and current revisions.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-baserevid": "Exact current revision ID to check; stale revisions and zero are refused.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-targetsurface": "Internal unsaved member ID admitted at the opening revision.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-originrevid": "Exact readable opening revision ID on the same owning page.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-originstart": "UTF-8 byte offset of the original saved literal embed.",
+	"apihelp-layersworkingcopyimportcreationrebase-param-origintext": "Complete original saved literal embed text, which must still exist unchanged."
 }

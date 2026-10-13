@@ -1141,5 +1141,13 @@
 	"apihelp-layersworkingcopyimportcreationpublish-param-embedtext": "{{doc-apihelp-param|layersworkingcopyimportcreationpublish|embedtext}}",
 	"apihelp-layersworkingcopyimportcreationpublish-param-data": "{{doc-apihelp-param|layersworkingcopyimportcreationpublish|data}}",
 	"apihelp-layersworkingcopyimportcreationpublish-param-importsources": "{{doc-apihelp-param|layersworkingcopyimportcreationpublish|importsources}}",
-	"apihelp-layersworkingcopyimportcreationpublish-param-summary": "{{doc-apihelp-param|layersworkingcopyimportcreationpublish|summary}}"
+	"apihelp-layersworkingcopyimportcreationpublish-param-summary": "{{doc-apihelp-param|layersworkingcopyimportcreationpublish|summary}}",
+	"apihelp-layersworkingcopyimportcreationrebase-summary": "{{doc-apihelp-summary|layersworkingcopyimportcreationrebase}}",
+	"apihelp-layersworkingcopyimportcreationrebase-description": "{{doc-apihelp-description|layersworkingcopyimportcreationrebase}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-targetpageid": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|targetpageid}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-baserevid": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|baserevid}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-targetsurface": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|targetsurface}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-originrevid": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|originrevid}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-originstart": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|originstart}}",
+	"apihelp-layersworkingcopyimportcreationrebase-param-origintext": "{{doc-apihelp-param|layersworkingcopyimportcreationrebase|origintext}}"
 }

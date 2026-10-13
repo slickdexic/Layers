@@ -11,6 +11,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
@@ -133,6 +134,130 @@ class PageOwnedPilot {
 				$this->services->getRevisionLookup(), $this->reader ), $this->reader,
 			new PageWorkingCopyImportReadService( $identities, $titles, $this->reader, $this->scope ),
 			$this->publisher, $titles, $this->scope, $this->services->getConnectionProvider() );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersWorkingCopyImportCreationRebase */
+	public function newWorkingCopyImportCreationRebaseApi( ApiMain $main, string $name
+	): ApiLayersWorkingCopyImportCreationRebase {
+		return new ApiLayersWorkingCopyImportCreationRebase( $main, $name, $this );
+	}
+
+	/**
+	 * Prove a historical missing-member association and freshly admit the same saved direct embed.
+	 * The current canonical ID is returned separately; no old ID is accepted by publication.
+	 * Callers must preserve the original source pin and atomically rebind local work, history and drafts.
+	 * Neither this response nor a previous response grants application or write authority.
+	 *
+	 * @param int $pageId Existing native owning page
+	 * @param int $currentRevisionId Explicit current revision, never latest substitution
+	 * @param string $originSurfaceId Unsaved member ID admitted at the opening revision
+	 * @param int $originRevisionId Exact readable opening revision on the same page
+	 * @param int $originStart UTF-8 byte offset in that revision's saved main text
+	 * @param string $originText Complete literal embed, which must still exist unchanged
+	 * @param Authority $authority Original request authority
+	 * @return array Historical origin and current creation admission; genuine stored base stays separate
+	 */
+	public function prepareCreationRebase( int $pageId, int $currentRevisionId, string $originSurfaceId,
+		int $originRevisionId, int $originStart, string $originText, Authority $authority
+	): array {
+		try {
+			if ( $originRevisionId < 1 || $originRevisionId > $currentRevisionId || $originStart < 0 ||
+				$originStart > 2147483647 || $originText === '' || strlen( $originText ) > DocumentSchema::MAX_BYTES ||
+				!mb_check_encoding( $originText, 'UTF-8' ) ||
+				!preg_match( '/^[A-Za-z0-9_.:-]{1,80}$/D', $originSurfaceId ) ) {
+				throw new \DomainException();
+			}
+			$captured = $this->captureCreationRebase( $pageId, $currentRevisionId, $originSurfaceId,
+				$originRevisionId, $originStart, $originText, $authority );
+			$fresh = $this->captureCreationRebase( $pageId, $currentRevisionId, $originSurfaceId,
+				$originRevisionId, $originStart, $originText, $authority );
+			if ( $captured !== $fresh ) {
+				throw new \DomainException();
+			}
+			$owner = $this->newIdentityResolver()->resolveForEdit( $pageId, $currentRevisionId, $authority );
+			$origin = $this->services->getRevisionLookup()->getRevisionById(
+				$originRevisionId, IDBAccessObject::READ_LATEST );
+			if ( $owner->getPrefixedDBkey() !== $captured['creation']['target']['owner'] ||
+				!$this->scope->includes( $owner, IDBAccessObject::READ_LATEST ) || !$origin ||
+				$origin->getPageId() !== $pageId ||
+				!RevisionRecord::userCanBitfield( $origin->getVisibility(), RevisionRecord::DELETED_TEXT,
+					$authority, $origin->getPage() ) ) {
+				throw new \DomainException();
+			}
+			return $captured;
+		} catch ( \Throwable $error ) {
+			throw new \DomainException( 'layers-working-copy-import-unavailable' );
+		}
+	}
+
+	private function captureCreationRebase( int $pageId, int $currentRevisionId, string $originSurfaceId,
+		int $originRevisionId, int $originStart, string $originText, Authority $authority
+	): array {
+		$identities = $this->newIdentityResolver();
+		$owner = $identities->resolveForEdit( $pageId, $currentRevisionId, $authority );
+		if ( $authority->getUser()->getId() <= 0 || !$this->scope->includes( $owner, IDBAccessObject::READ_LATEST ) ) {
+			throw new \DomainException();
+		}
+		$lookup = $this->services->getRevisionLookup();
+		$origin = $lookup->getRevisionById( $originRevisionId, IDBAccessObject::READ_LATEST );
+		if ( !$origin || $origin->getPageId() !== $pageId ||
+			!RevisionRecord::userCanBitfield( $origin->getVisibility(), RevisionRecord::DELETED_TEXT,
+				$authority, $origin->getPage() ) ) {
+			throw new \DomainException();
+		}
+		$main = $origin->getContent( SlotRecord::MAIN, RevisionRecord::FOR_THIS_USER, $authority );
+		if ( !$main instanceof WikitextContent ) {
+			throw new \DomainException();
+		}
+		$originSurfaces = $origin->hasSlot( PageRevisionWriter::SLOT ) ?
+			$this->reader->read( $owner, $originRevisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
+		foreach ( $originSurfaces as $member ) {
+			if ( $member['id'] === $originSurfaceId ) {
+				throw new \DomainException();
+			}
+		}
+		$matched = false;
+		foreach ( $this->newRewriter()->scan( $main->getText(), $this->fileTargets() ) as $candidate ) {
+			if ( $candidate['start'] !== $originStart || $candidate['raw'] !== $originText ) {
+				continue;
+			}
+			$name = $this->missingName( $candidate, $pageId, $originSurfaces );
+			if ( $name === null || NewPageDrawing::surfaceId( $pageId, $originRevisionId, $name,
+				$candidate['kind'] === 'file' ? $candidate['target'] : null ) !== $originSurfaceId ) {
+				throw new \DomainException();
+			}
+			$matched = true;
+			break;
+		}
+		if ( !$matched ) {
+			throw new \DomainException();
+		}
+		$current = $lookup->getRevisionById( $currentRevisionId, IDBAccessObject::READ_LATEST );
+		$currentMain = $current ? $current->getContent( SlotRecord::MAIN,
+			RevisionRecord::FOR_THIS_USER, $authority ) : null;
+		if ( !$currentMain instanceof WikitextContent ) {
+			throw new \DomainException();
+		}
+		foreach ( $this->newRewriter()->scan( $currentMain->getText(), $this->fileTargets() ) as $candidate ) {
+			if ( $candidate['raw'] !== $originText ) {
+				continue;
+			}
+			$init = $this->prepareBoundEditor( $pageId, $currentRevisionId,
+				$candidate['start'], $originText, $authority );
+			$surfaceId = $init['pageOwned']['newSurface']['id'] ?? '';
+			$creation = ( new PageWorkingCopyImportCreationTarget( $this, $identities, $lookup, $this->reader ) )
+				->prepare( $pageId, $currentRevisionId, $surfaceId, $candidate['start'], $originText, $authority );
+			foreach ( $creation['baseBundle']['snapshot']['surfaces'] ?? [] as $member ) {
+				if ( $member['id'] === $originSurfaceId ) {
+					throw new \DomainException();
+				}
+			}
+			return [ 'origin' => [ 'pageId' => $pageId, 'revisionId' => $originRevisionId,
+				'surfaceId' => $originSurfaceId,
+				'selection' => [ 'start' => $originStart, 'expected' => $originText ] ],
+				'creation' => $creation ];
+		}
+		throw new \DomainException();
 	}
 
 	/**
