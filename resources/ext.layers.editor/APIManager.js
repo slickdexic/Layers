@@ -350,9 +350,12 @@
 				this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
 					chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
 					confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
+					chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
+					notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
 					notifyFailure: () => mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } ),
 					notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
 				} );
+				if ( this.pageOwnedImport ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
 				return this.pageOwnedDrafts.initialize().then( () => {
 					if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
 						this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {

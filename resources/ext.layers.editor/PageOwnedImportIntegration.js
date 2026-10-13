@@ -1,6 +1,7 @@
 /** Compose qualified Import, history and drafts in existing writable image/slide editors. */
 ( function () {
 	'use strict';
+	const creationRecoveryClients = new WeakMap();
 	class PageOwnedImportIntegration {
 		static supports( bridge ) {
 			const editor = bridge && bridge.editor, session = bridge && bridge.session;
@@ -28,6 +29,7 @@
 			const readClient = creation ? new classes.PageOwnedCreationImportClient( api, bridge.editor.config.pageOwned.creationSelection ) :
 				new classes.PageOwnedWorkingCopyImportReadClient( api );
 			if ( creation ) { bridge.session.enableCreationImport( readClient, bridge.editor.config.pageOwned.creationSelection ); }
+			if ( creation ) { creationRecoveryClients.set( this, readClient ); }
 			this.coordinator = new classes.PageOwnedWorkingCopyImportCoordinator( { bridge, session: bridge.session,
 				readClient, Source: classes.PageOwnedWorkingCopyImportSource,
 				planner: classes.PageOwnedWorkingCopyImportPlan, adapter: new classes.PageOwnedSnapshotAdapter() } );
@@ -36,6 +38,13 @@
 		}
 
 		enableDrafts( controller ) { controller.enableWorkingCopyDrafts(); }
+
+		/** Enable the approved earlier-revision flow only for admitted image/slide creation. */
+		enableEarlierCreationRecovery( drafts ) {
+			if ( !this.disposed && PageOwnedImportIntegration.supportsCreation( this.bridge ) ) {
+				drafts.enableEarlierCreationRecovery( creationRecoveryClients.get( this ) );
+			}
+		}
 
 		_target() {
 			const session = this.bridge.session, identity = session.getWorkingCopyImportIdentity();

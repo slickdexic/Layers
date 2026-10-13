@@ -1161,5 +1161,8 @@
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-targetpageid": "Native ID of the existing owning page, shared by the historical and current revisions.",
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-baserevid": "Exact current owning-page revision ID to check; stale revisions and zero are refused.",
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originrevid": "Exact readable historical revision ID on the same owning page.",
-	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "Canonical internal pending-member ID admitted at the historical revision."
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "Canonical internal pending-member ID admitted at the historical revision.",
+	"layers-page-draft-dialog-earlier-number": "Earlier draft $1",
+	"layers-page-draft-dialog-earlier": "This draft is from an earlier page revision. Restore its local layer edits into the version open now. Nothing is published until you Save.",
+	"layers-page-draft-earlier-failed": "These edits could not be restored safely. Your current work and the local draft have been left unchanged."
 }

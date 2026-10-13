@@ -171,18 +171,35 @@
 			plan.preflight(); return plan.record.session.inspectWorkingCopyDraftRestore( plan.record.prepared );
 		}
 
+		/** Verify every retained source before offering a text-only preview; never apply the plan. */
+		async reviewEarlierCreationDraftRecovery( handle, guard ) {
+			const plan = earlierCreationDraftRecoveries.get( handle );
+			if ( !plan || plan.bridge !== this || plan.applying || plan.committed || plan.record.applying ) { throw workingCopyDisplayError(); }
+			plan.applying = true; plan.record.applying = true;
+			const check = () => { guard(); plan.preflight(); };
+			try {
+				check(); await plan.record.session.revalidate(); check();
+				await plan.record.history.revalidateProvenance( check ); check();
+				await plan.inspection.revalidate(); check();
+				return { ...this.inspectEarlierCreationDraftRecovery( handle ),
+					publicationBlocked: plan.inspection.inspect().envelope.phase !== 'ready' };
+			} catch ( error ) { throw workingCopyDisplayError(); }
+			finally { plan.applying = false; plan.record.applying = false; }
+		}
+
 		/** All reads precede one synchronous model commit; no Save and no source-backup retirement. */
-		async commitEarlierCreationDraftRecovery( handle ) {
+		async commitEarlierCreationDraftRecovery( handle, guard = () => {} ) {
 			const plan = earlierCreationDraftRecoveries.get( handle );
 			if ( !plan || plan.bridge !== this || plan.applying || plan.committed || plan.record.applying ) { throw workingCopyDisplayError(); }
 			plan.applying = true; plan.record.applying = true;
 			const record = plan.record;
+			const check = () => { guard(); plan.preflight(); };
 			try {
-				plan.preflight(); await record.session.revalidate(); plan.preflight();
-				await record.history.revalidateProvenance( plan.preflight ); plan.preflight();
+				check(); await record.session.revalidate(); check();
+				await record.history.revalidateProvenance( check ); check();
 				// The complete historical/current native proof is the final read before commit.
-				await plan.inspection.revalidate(); plan.preflight();
-				const result = record.session.commitWorkingCopyDraftRestore( record.prepared, plan.preflight );
+				await plan.inspection.revalidate(); check();
+				const result = record.session.commitWorkingCopyDraftRestore( record.prepared, check );
 				record.prepared = null;
 				record.display.commit(); record.selection.commit(); record.history.commit(); record.committed = true; plan.committed = true;
 				const diagnostics = [], attempt = callback => {

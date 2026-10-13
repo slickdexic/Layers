@@ -1155,5 +1155,8 @@
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-targetpageid": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|targetpageid}}",
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-baserevid": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|baserevid}}",
 	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originrevid": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|originrevid}}",
-	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|originsurface}}"
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "{{doc-apihelp-param|layersworkingcopyimportcreationdraftrebase|originsurface}}",
+	"layers-page-draft-dialog-earlier-number": "Label for an eligible local creation draft from an earlier owning-page revision. $1 is its number among earlier drafts.",
+	"layers-page-draft-dialog-earlier": "Recovery notice for an earlier-revision image or slide creation draft. Restore does not publish; the editor must explicitly Save.",
+	"layers-page-draft-earlier-failed": "Shown when earlier-revision recovery is refused. The current editor work and original local backup remain intact."
 }

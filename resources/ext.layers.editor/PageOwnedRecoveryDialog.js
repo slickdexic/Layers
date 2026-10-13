@@ -14,13 +14,20 @@
 			return this._open( candidates, false );
 		}
 
+		/** Retain the cancelled choice so existing current-revision safeguards remain unchanged. */
+		chooseEarlierCreation( candidates ) {
+			let cancelled = null;
+			return this._open( candidates, false, index => { cancelled = index; } )
+				.then( selected => ( { selected, cancelled } ) );
+		}
+
 		/** @param {Object} candidate Inspected recovery state @return {Promise<boolean>} */
 		confirm( candidate ) {
 			return this._open( [ candidate ], true ).then( ( index ) => index === 0 );
 		}
 
 		/** @param {Array} candidates @param {boolean} confirm @return {Promise<?number>} @private */
-		_open( candidates, confirm ) {
+		_open( candidates, confirm, onCancel ) {
 			this.dispose();
 			return new Promise( ( resolve ) => {
 				const priorFocus = document.activeElement;
@@ -36,7 +43,8 @@
 				candidates.forEach( ( candidate, index ) => {
 					const option = document.createElement( 'option' );
 					option.value = String( index );
-					option.textContent = this.message( 'layers-page-draft-dialog-number', index + 1 );
+					option.textContent = this.message( candidate.earlierCreation ? 'layers-page-draft-dialog-earlier-number' :
+						'layers-page-draft-dialog-number', candidate.earlierCreation ? candidate.earlierNumber : index + 1 );
 					select.appendChild( option );
 				} );
 				label.appendChild( select );
@@ -58,9 +66,11 @@
 						.map( ( layer ) => layer && typeof layer.text === 'string' ? layer.text.slice( 0, 200 ) : '' )
 						.filter( Boolean ).join( '\n' ).slice( 0, 2000 ) : '';
 					notice.textContent = this.message( accept.disabled ? 'layers-page-draft-dialog-unavailable' :
-						candidate.publicationBlocked ? 'layers-page-draft-blocked' : 'layers-page-draft-dialog-local' );
+						candidate.earlierCreation ? 'layers-page-draft-dialog-earlier' :
+							candidate.publicationBlocked ? 'layers-page-draft-blocked' : 'layers-page-draft-dialog-local' );
 				};
 				const finish = ( result ) => {
+					if ( result === null && onCancel ) { onCancel( Number( select.value ) ); }
 					this.close = null;
 					dialog.close();
 					dialog.remove();
