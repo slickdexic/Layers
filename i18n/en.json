@@ -1155,5 +1155,11 @@
 	"apihelp-layersworkingcopyimportcreationrebase-param-targetsurface": "Internal unsaved member ID admitted at the opening revision.",
 	"apihelp-layersworkingcopyimportcreationrebase-param-originrevid": "Exact readable opening revision ID on the same owning page.",
 	"apihelp-layersworkingcopyimportcreationrebase-param-originstart": "UTF-8 byte offset of the original saved literal embed.",
-	"apihelp-layersworkingcopyimportcreationrebase-param-origintext": "Complete original saved literal embed text, which must still exist unchanged."
+	"apihelp-layersworkingcopyimportcreationrebase-param-origintext": "Complete original saved literal embed text, which must still exist unchanged.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-summary": "Prove a pending layer set's historical owning-page association and re-admit its unchanged embed.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-description": "Read-only POST derives a unique historical image or slide embed from its exact owner, revision and pending member ID, then repeats current native admission and visibility checks. It does not apply a backup, publish or grant write authority.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-targetpageid": "Native ID of the existing owning page, shared by the historical and current revisions.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-baserevid": "Exact current owning-page revision ID to check; stale revisions and zero are refused.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originrevid": "Exact readable historical revision ID on the same owning page.",
+	"apihelp-layersworkingcopyimportcreationdraftrebase-param-originsurface": "Canonical internal pending-member ID admitted at the historical revision."
 }

@@ -9,6 +9,7 @@ use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationDraftRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
@@ -140,6 +141,12 @@ class PageOwnedPilot {
 	public function newWorkingCopyImportCreationRebaseApi( ApiMain $main, string $name
 	): ApiLayersWorkingCopyImportCreationRebase {
 		return new ApiLayersWorkingCopyImportCreationRebase( $main, $name, $this );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersWorkingCopyImportCreationDraftRebase */
+	public function newWorkingCopyImportCreationDraftRebaseApi( ApiMain $main, string $name
+	): ApiLayersWorkingCopyImportCreationDraftRebase {
+		return new ApiLayersWorkingCopyImportCreationDraftRebase( $main, $name, $this );
 	}
 
 	/**
