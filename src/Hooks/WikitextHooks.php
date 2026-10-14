@@ -382,9 +382,10 @@ class WikitextHooks {
 	 * @param string|null $hint The image's layerset= value, if any
 	 * @param array &$attribs
 	 * @param int $sourcePage
+	 * @param int|null $requestedPage Native occurrence page before current-upload clamping
 	 */
 	private static function markGalleryDrawing( Parser $parser, string $filename, ?string $hint,
-		array &$attribs, int $sourcePage
+		array &$attribs, int $sourcePage, ?int $requestedPage = null
 	): void {
 		// Without a name a gallery image showed the file's latest set, except on the file's own page.
 		$value = $hint ?? ( self::isFilePageContext() ? null : 'on' );
@@ -400,7 +401,8 @@ class WikitextHooks {
 			$own = preg_match( '/\A\s*[0-9]+:/', $value ) ? trim( $value ) :
 				self::ownDrawingReference( $parser, $filename, $value );
 		}
-		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename, $sourcePage );
+		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename, $sourcePage,
+			null, $requestedPage );
 		if ( $bound !== false ) {
 			BoundFileHooks::markImage( $attribs, $bound );
 			self::$pageHasLayers = true;
@@ -673,6 +675,9 @@ class WikitextHooks {
 				'origFrag' => $nativeTitle->getFragment(),
 				'filename' => $nativeTitle->getDBkey(),
 				'invocation' => $invocation,
+				// Compatibility callbacks without native revision context cannot bind page-owned PDFs.
+				'requestedPage' => method_exists( $parser, 'getRevisionRecordObject' ) ?
+					ExpandedFileOptions::requestedPage( ExpandedFileOptions::options( $line ) ) : null,
 			];
 			$tokensCreated[] = $tok;
 			$taggedTitle = $nativeTitle->getPrefixedDBkey() . '#' . $tok;
@@ -850,7 +855,8 @@ class WikitextHooks {
 			$fileParams = $staged ?? self::getFileParamsForRender( $filename );
 			if ( is_array( $fileParams['binding'] ) && isset( $fileParams['binding']['named'] ) ) {
 				$fileParams['binding'] = BoundFileHooks::resolveNamed( $fileParams['binding']['parser'],
-					$fileParams['binding']['named'], $filename, self::sourcePage( $thumbnail ) );
+					$fileParams['binding']['named'], $filename, self::sourcePage( $thumbnail ), null,
+					$fileParams['binding']['requestedPage'] ?? null );
 			}
 			if ( $fileParams['binding'] !== null ) {
 				// A page-owned embed never shows a shared drawing, even when its binding was refused.
@@ -861,6 +867,7 @@ class WikitextHooks {
 			}
 		} else {
 			$hint = null;
+			$requestedPage = null;
 			$galleryState = $parser ? ( self::$galleryStates[$parser] ?? null ) : null;
 			$desc = $galleryState ? $galleryState->staged : null;
 			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
@@ -869,6 +876,7 @@ class WikitextHooks {
 				in_array( $desc['invocation'], $galleryState->invocations, true )
 			) {
 				$galleryState->staged = null;
+				$requestedPage = $desc['requestedPage'] ?? null;
 				if ( $desc['setName'] !== null ) {
 					$hint = $desc['setName'];
 				} elseif ( $filename !== null && isset( self::$galleryHints[$filename] ) ) {
@@ -881,7 +889,7 @@ class WikitextHooks {
 				( $hint !== null && preg_match( '/\A\s*[0-9]+:/', $hint ) ) )
 			) {
 				self::markGalleryDrawing( $parser, $filename, $hint, $attribs,
-					self::sourcePage( $thumbnail ) );
+					self::sourcePage( $thumbnail ), $requestedPage );
 				return true;
 			}
 			if ( !$parser && MigrationState::isCompleteNow() ) {
@@ -1412,12 +1420,26 @@ class WikitextHooks {
 			$textLen = strlen( $text );
 			$preview = substr( $text, 0, 200 );
 			self::logDebug( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
-			$expanded = [];
+			$expanded = $parser instanceof Parser ? ExpandedFileOptions::collect( $parser, $text ) : [];
+			$requestedPages = [];
+			foreach ( $expanded as $occurrence ) {
+				$requestedPages[$occurrence['start']] = ExpandedFileOptions::requestedPage( $occurrence['options'] );
+			}
 			$defaults = [];
 			$affectedFiles = [];
 			$completeFileOptions = [];
+			foreach ( $expanded as $occurrence ) {
+				foreach ( $occurrence['options'] as $option ) {
+					if ( preg_match( '/\A\s*(?:layerset|layers)\s*=\s*[0-9]+:/i', $option ) ||
+						( MigrationState::forParser( $parser ) &&
+							preg_match( '/\A\s*(?:layerset|layers)\s*=/i', $option ) )
+					) {
+						$affectedFiles[substr( $occurrence['target'], 5 )] = true;
+						break;
+					}
+				}
+			}
 			if ( $parser instanceof Parser && MigrationState::forParser( $parser ) ) {
-				$expanded = ExpandedFileOptions::collect( $parser, $text );
 				foreach ( $expanded as $occurrence ) {
 					foreach ( $occurrence['options'] as $option ) {
 						if ( preg_match( '/\A\s*(?:layerset|layers)\s*=\s*on\s*\z/i', $option ) ) {
@@ -1713,7 +1735,8 @@ class WikitextHooks {
 					$bound = false;
 				} else {
 					$bound = $raw !== null ? BoundFileHooks::resolve( $parser, $raw ) :
-						[ 'named' => $named, 'parser' => $parser ];
+						[ 'named' => $named, 'parser' => $parser,
+							'requestedPage' => $requestedPages[$fileMatch['offset']] ?? null ];
 				}
 				self::$fileBindings[$fileMatch['filename']][] = $bound;
 			}

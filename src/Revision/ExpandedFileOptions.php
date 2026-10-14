@@ -11,6 +11,27 @@ use Wikimedia\StringUtils\StringUtils;
 /** Expanded rendering occurrences only; never source-editor admission candidates. */
 final class ExpandedFileOptions {
 	/**
+	 * @param string $body Complete native gallery line or link body
+	 * @return string[] Ordered top-level parts; linked-caption pipes stay within their part
+	 */
+	public static function options( string $body ): array {
+		return self::parts( $body );
+	}
+
+	/**
+	 * @param string[] $options Complete ordered options from one rendering occurrence
+	 * @return int Native positive page option before file-specific upper bounds
+	 */
+	public static function requestedPage( array $options ): int {
+		$words = MediaWikiServices::getInstance()->getMagicWordFactory()->newArray( [ 'img_page' ] );
+		return PageOwnedBindingOptions::sourcePage( $options,
+			static function ( string $option ) use ( $words ): ?string {
+				[ $name, $value ] = $words->matchVariableStartToEnd( $option );
+				return $name === 'img_page' ? $value : null;
+			} );
+	}
+
+	/**
 	 * @param Parser $parser Actual parser receiving InternalParseBeforeLinks
 	 * @param string $text Expanded text, with native opaque strip markers intact
 	 * @return array Ordered complete file occurrences bound to this invocation

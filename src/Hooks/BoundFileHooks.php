@@ -37,10 +37,11 @@ class BoundFileHooks {
 	 * @param string $fileKey DB key of the embedded file
 	 * @param int|null $sourcePage Effective rendered page
 	 * @param string|null $creationToken Private direct-occurrence marker
+	 * @param int|null $requestedPage Native occurrence page before current-upload clamping
 	 * @return array|false As resolve()
 	 */
 	public static function resolveNamed( Parser $parser, string $value, string $fileKey,
-		?int $sourcePage = null, ?string $creationToken = null
+		?int $sourcePage = null, ?string $creationToken = null, ?int $requestedPage = null
 	) {
 		try {
 			$named = PageOwnedBinding::parseNamed( $value );
@@ -48,7 +49,7 @@ class BoundFileHooks {
 				return false;
 			}
 			[ $binding, $revisionId ] = BoundSlideHooks::register( $parser,
-				BoundSlideHooks::named( $parser, $named, 'file', 'File:' . $fileKey, $sourcePage ) );
+				BoundSlideHooks::named( $parser, $named, 'file', 'File:' . $fileKey, $sourcePage, $requestedPage ) );
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
 			if ( isset( $named ) && $creationToken !== null ) {
 				return CreationOverlayControls::missing( $parser, $named, 'image', 'File:' . $fileKey,

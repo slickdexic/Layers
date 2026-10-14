@@ -11,6 +11,7 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedBinding;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
+use MediaWiki\Extension\Layers\Revision\PinnedPdfRenderPage;
 use MediaWiki\Html\Html;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Output\OutputPage;
@@ -76,11 +77,12 @@ class BoundSlideHooks {
 	 * @param string|null $kind 'file' or 'slide'; null for any drawing
 	 * @param string|null $fileTitle For a file embed, 'File:<DB key>'
 	 * @param int|null $sourcePage Effective rendered page for files
+	 * @param int|null $requestedPage Native occurrence page before current-upload clamping
 	 * @return array Canonical identity for register()
 	 * @throws \DomainException layers-page-binding-unavailable
 	 */
 	public static function named( Parser $parser, array $named, ?string $kind, ?string $fileTitle,
-		?int $sourcePage = null
+		?int $sourcePage = null, ?int $requestedPage = null
 	): array {
 		// As in register(): renders without the revision must not be cached as the answer.
 		$parser->getOutput()->setOutputFlag( ParserOutputFlags::VARY_REVISION );
@@ -93,7 +95,13 @@ class BoundSlideHooks {
 			$parser->getOutput()->setExtensionData( self::COPYABLE_KEY, true );
 			throw new \DomainException( 'layers-page-binding-unavailable' );
 		}
-		$surfaceId = PageOwnedBinding::resolveNamed( $named, self::pageDrawings( $parser ), $kind, $fileTitle,
+		$surfaces = self::pageDrawings( $parser );
+		if ( $kind === 'file' && $fileTitle !== null && $requestedPage !== null ) {
+			$services = MediaWikiServices::getInstance();
+			$sourcePage = PinnedPdfRenderPage::effective( $surfaces, $fileTitle, $named['name'], $requestedPage,
+				$services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() ) ?? $sourcePage;
+		}
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, $surfaces, $kind, $fileTitle,
 			$sourcePage );
 		if ( $surfaceId === null ) {
 			// The page names a drawing it does not have yet; output() offers editors to create it.
