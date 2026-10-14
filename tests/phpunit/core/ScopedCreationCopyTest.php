@@ -8,6 +8,7 @@ use MediaWiki\Extension\Layers\Revision\NewPageDrawing;
 use MediaWiki\Title\Title;
 
 require_once __DIR__ . '/LegacyMigrationFixtures.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * Real uploads, editor preparation and guarded publication for file-scoped layer sets.
@@ -21,9 +22,11 @@ require_once __DIR__ . '/LegacyMigrationFixtures.php';
  */
 class ScopedCreationCopyTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	use LegacyMigrationFixtures;
+	use IsolatedLocalRepoFixture;
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->setUpIsolatedLocalRepoFixture();
 		$this->setUpMigration();
 	}
 
