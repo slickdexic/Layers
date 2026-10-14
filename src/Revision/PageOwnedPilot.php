@@ -14,6 +14,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
+use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedPilotLifecycleHooks;
@@ -778,25 +779,32 @@ class PageOwnedPilot {
 	 * @param array $candidate From DirectEmbeddingRewriter::scan()
 	 * @param array[]|callable $surfaces The page's drawings, or a function that reads them
 	 * @param int $pageId The page carrying the embed; its bare names are its own drawings after the migration
+	 * @param Authority $authority Current editor, after native owner admission
 	 * @return array|null Canonical identity
 	 * @throws \InvalidArgumentException For a malformed selector
 	 */
-	private function embedBinding( array $candidate, $surfaces, int $pageId ): ?array {
+	private function embedBinding( array $candidate, $surfaces, int $pageId, Authority $authority ): ?array {
 		$binding = PageOwnedBindingOptions::extract( $candidate['options'] );
 		$named = $binding === null ? PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
 			$candidate['target'], self::bareOwner( $pageId ) ) : null;
 		if ( $named === null ) {
 			return $binding;
 		}
-		$sourcePage = $candidate['kind'] === 'file' ? $this->effectiveSourcePage( $candidate ) : null;
-		$surfaceId = PageOwnedBinding::resolveNamed( $named, is_callable( $surfaces ) ? $surfaces() : $surfaces,
+		$surfaces = is_callable( $surfaces ) ? $surfaces() : $surfaces;
+		$sourcePage = $candidate['kind'] === 'file' ?
+			$this->effectiveEditorSourcePage( $candidate, $surfaces, $pageId, $authority ) : null;
+		$surfaceId = PageOwnedBinding::resolveNamed( $named, $surfaces,
 			$candidate['kind'], $candidate['kind'] === 'file' ? $candidate['target'] : null,
 			$sourcePage );
 		return $surfaceId === null ? null : [ 'pageId' => $named['pageId'], 'surfaceId' => $surfaceId ];
 	}
 
-	/** @param array $candidate Scanned embed @return int Native selected file page, or 1 */
-	private function effectiveSourcePage( array $candidate ): int {
+	/**
+	 * @param array $candidate Scanned embed
+	 * @param File|null $sourceFile Authorized pinned source, or null for the current native file
+	 * @return int Native selected file page, or 1
+	 */
+	private function effectiveSourcePage( array $candidate, ?File $sourceFile = null ): int {
 		if ( $candidate['kind'] !== 'file' ) {
 			return 1;
 		}
@@ -807,11 +815,43 @@ class PageOwnedPilot {
 				return $name === 'img_page' ? $value : null;
 			} );
 		$title = $this->services->getTitleFactory()->newFromText( $candidate['target'] );
-		$file = $title ? $this->services->getRepoGroup()->findFile( $title ) : false;
+		$file = $sourceFile ?? ( $title ? $this->services->getRepoGroup()->findFile( $title ) : false );
 		if ( $file && $file->getMimeType() !== 'application/pdf' ) {
 			return 1;
 		}
 		return $file && $file->isMultipage() && $file->pageCount() > 0 ? min( $page, $file->pageCount() ) : $page;
+	}
+
+	/**
+	 * Select within the saved PDF version, keeping current-file semantics for a still-missing set.
+	 * Only native editor admission calls this; migration and copy retain their existing interpretation.
+	 * @param array $candidate Exact saved occurrence
+	 * @param array[] $surfaces Authorized owning revision's complete snapshot
+	 * @param int $pageId Admitted owner
+	 * @param Authority $authority Original editor authority
+	 * @return int Native effective page within the exact source version
+	 */
+	private function effectiveEditorSourcePage( array $candidate, array $surfaces, int $pageId,
+		Authority $authority
+	): int {
+		$named = PageOwnedBindingOptions::named( $candidate['options'], $candidate['kind'],
+			$candidate['target'], self::bareOwner( $pageId ) );
+		if ( $candidate['kind'] !== 'file' || $named === null || $named['pageId'] !== $pageId ) {
+			return $this->effectiveSourcePage( $candidate );
+		}
+		$members = array_values( array_filter( $surfaces, static fn ( array $surface ): bool =>
+			$surface['kind'] === 'pdf' && $surface['source']['fileTitle'] === $candidate['target'] &&
+			DrawingName::key( (string)$surface['label'] ) === DrawingName::key( $named['name'] ) ) );
+		if ( !$members ) {
+			return $this->effectiveSourcePage( $candidate );
+		}
+		self::existingPdfSource( $candidate, (string)$members[0]['label'], $members );
+		$content = new LayersDocumentContent( JsonSnapshotCodec::encode(
+			[ 'schemaVersion' => 1, 'surfaces' => $members ] ) );
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		$files = $sources->resolve( $content, $authority );
+		return $this->effectiveSourcePage( $candidate, $files[$members[0]['id']] );
 	}
 
 	/**
@@ -827,10 +867,13 @@ class PageOwnedPilot {
 	 * @param array $candidate From DirectEmbeddingRewriter::scan()
 	 * @param int $pageId The page carrying the embed
 	 * @param array[] $surfaces The page's drawings
+	 * @param Authority|null $authority Current editor, or null for unchanged earlier-draft matching
 	 * @return string|null
 	 * @throws \InvalidArgumentException For a malformed selector
 	 */
-	private function missingName( array $candidate, int $pageId, array $surfaces ): ?string {
+	private function missingName( array $candidate, int $pageId, array $surfaces,
+		?Authority $authority = null
+	): ?string {
 		if ( PageOwnedBindingOptions::extract( $candidate['options'] ) !== null ) {
 			return null;
 		}
@@ -839,7 +882,8 @@ class PageOwnedPilot {
 		if ( $named === null || $named['pageId'] !== $pageId ) {
 			return null;
 		}
-		$page = $this->effectiveSourcePage( $candidate );
+		$page = $authority === null ? $this->effectiveSourcePage( $candidate ) :
+			$this->effectiveEditorSourcePage( $candidate, $surfaces, $pageId, $authority );
 		$label = $named['name'];
 		foreach ( $surfaces as $surface ) {
 			if ( DrawingName::key( (string)$surface['label'] ) !== DrawingName::key( $named['name'] ) ||
@@ -1225,11 +1269,12 @@ class PageOwnedPilot {
 			$selections = [];
 			foreach ( $candidates as $candidate ) {
 				try {
-					$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
-					$missing = $binding ? null : $this->missingName( $candidate, $pageId, $surfaces );
+					$binding = $this->embedBinding( $candidate, $surfaces, $pageId, $authority );
+					$missing = $binding ? null : $this->missingName( $candidate, $pageId, $surfaces, $authority );
 					$newKey = $missing === null ? '' : 'new:' . json_encode( [ $candidate['kind'],
 						$candidate['kind'] === 'file' ? $candidate['target'] : null,
-						DrawingName::key( $missing ), $this->effectiveSourcePage( $candidate ) ] );
+						DrawingName::key( $missing ),
+						$this->effectiveEditorSourcePage( $candidate, $surfaces, $pageId, $authority ) ] );
 					if ( $missing !== null && !isset( $selections[$newKey] ) ) {
 						$selections[$newKey] = [ 'label' => $missing, 'create' => true,
 							'params' => [ 'pageid' => $pageId, 'revid' => $revisionId, 'start' => $candidate['start'],
@@ -1345,15 +1390,15 @@ class PageOwnedPilot {
 				}
 				$surfaces = $revision->hasSlot( PageRevisionWriter::SLOT ) ?
 					$this->reader->read( $owner, $revisionId, $authority, $pageId, [] )['snapshot']['surfaces'] : [];
-				$binding = $this->embedBinding( $candidate, $surfaces, $pageId );
+				$binding = $this->embedBinding( $candidate, $surfaces, $pageId, $authority );
 				if ( !$binding ) {
-					$missing = $this->missingName( $candidate, $pageId, $surfaces );
+					$missing = $this->missingName( $candidate, $pageId, $surfaces, $authority );
 					if ( $missing === null ) {
 						throw new \DomainException();
 					}
 					// The drawing exists only in the editor until its first save adds it to the page.
 					$new = $this->newDrawings->prepare( $pageId, $revisionId, $candidate, $missing, $authority,
-						$this->effectiveSourcePage( $candidate ),
+						$this->effectiveEditorSourcePage( $candidate, $surfaces, $pageId, $authority ),
 						self::existingPdfSource( $candidate, $missing, $surfaces ) );
 					$init = $this->editorInit( $owner, $revisionId, $pageId, $new['surface'], $new['rendition'],
 						$authority );
