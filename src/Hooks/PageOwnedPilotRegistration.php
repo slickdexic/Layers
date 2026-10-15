@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersMergeHistory;
+use MediaWiki\Extension\Layers\Api\ApiLayersPdfCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationDraftRebase;
@@ -95,6 +96,11 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 				return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
 					->newReadApi( $main, $name );
 			} ],
+			'layerspdfcreationread' => [ 'class' => ApiLayersPdfCreationRead::class,
+				'factory' => static function ( $main, $name ) {
+					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
+						->newPdfCreationReadApi( $main, $name );
+				} ],
 			'layersworkingcopyimportread' => [ 'class' => ApiLayersWorkingCopyImportRead::class,
 				'factory' => static function ( $main, $name ) {
 					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )

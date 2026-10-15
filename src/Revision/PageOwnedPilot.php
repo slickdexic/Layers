@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Revision;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
+use MediaWiki\Extension\Layers\Api\ApiLayersPdfCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationDraftRebase;
@@ -95,6 +96,15 @@ class PageOwnedPilot {
 			$this->scope, [ $this, 'prepareBoundViewers' ],
 			$config->has( 'LayersBindingReadMaxAge' ) ? (int)$config->get( 'LayersBindingReadMaxAge' ) : 0,
 			[ $this, 'prepareFullSizeViewer' ], [ $this, 'preparePdfEditorPage' ] );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersPdfCreationRead */
+	public function newPdfCreationReadApi( ApiMain $main, string $name ): ApiLayersPdfCreationRead {
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		return new ApiLayersPdfCreationRead( $main, $name, new PageMissingPdfEditorReadService(
+			$this, $this->newIdentityResolver(), $this->services->getRevisionLookup(), $this->reader,
+			$sources, $this->newDrawings, new SourceRenditions( $this->services->getUrlUtils() ) ) );
 	}
 
 	/**

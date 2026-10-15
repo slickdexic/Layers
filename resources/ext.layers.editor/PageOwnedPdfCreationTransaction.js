@@ -19,7 +19,7 @@
 	}
 	const equal = ( left, right ) => canonical( left ) === canonical( right );
 	function classes() {
-		return typeof module !== 'undefined' && module.exports ? {
+		return typeof module !== 'undefined' && module && typeof module.require === 'function' ? {
 			Adapter: require( './PageOwnedSnapshotAdapter.js' ), Ids: require( './PageOwnedPdfWorkingSet.js' )
 		} : { Adapter: window.Layers.Editor.PageOwnedSnapshotAdapter, Ids: window.Layers.Editor.PageOwnedPdfWorkingSet };
 	}
