@@ -109,6 +109,12 @@
 	}
 	function recoveryCopy( record, input ) {
 		const envelope = record.Store.copyWorkingCopyValue( input ), current = record.transaction.getDraft();
+		let publicationAttempt, retainedAttempt = false;
+		if ( shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked', 'publicationAttempt' ] ) && envelope.version === 2 ) {
+			publicationAttempt = envelope.publicationAttempt;
+			if ( envelope.phase !== 'ready' && publicationAttempt === null ) throw unavailable();
+			retainedAttempt = true; delete envelope.publicationAttempt; envelope.version = 1;
+		}
 		if ( !shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked' ] ) || envelope.version !== 1 ||
 			typeof envelope.publicationBlocked !== 'boolean' ||
 			![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) || envelope.confirmation !== null ||
@@ -133,7 +139,14 @@
 		for ( const surface of draft.snapshot.surfaces.slice( draft.creation.baseBundle ? draft.creation.baseBundle.snapshot.surfaces.length : 0 ) ) {
 			if ( !surface.source || !pages.has( surface.source.page ) ) throw unavailable();
 		}
-		return envelope;
+		if ( retainedAttempt && publicationAttempt !== null ) {
+			const sent = publicationAttempt && publicationAttempt.snapshot;
+			if ( !sent || !Array.isArray( sent.surfaces ) ) throw unavailable();
+			for ( const member of sent.surfaces.slice( draft.creation.baseBundle ? draft.creation.baseBundle.snapshot.surfaces.length : 0 ) ) {
+				if ( !member || !member.source || !pages.has( member.source.page ) ) throw unavailable();
+			}
+		}
+		return retainedAttempt ? { ...envelope, publicationAttempt } : envelope;
 	}
 	function publicationGuard( record ) {
 		const { editor, canvas } = record, page = editor.page, count = editor.pageCount, url = window.location.href;
@@ -294,11 +307,16 @@
 				} ).sort( ( left, right ) => left.page - right.page ) } );
 		}
 
-		captureDraftEnvelope() {
+		captureDraftEnvelope( options ) {
 			const record = data( this ); capture( record );
+			const retained = options !== undefined;
+			if ( retained && ( record.blockedPhase || record.transaction.getStatus().phase ) !== 'ready' &&
+				record.transaction.getPublicationAttempt() === null ) throw unavailable();
+			if ( retained && ( !shape( options, [ 'publicationAttempt' ] ) ||
+				!Object.hasOwn( Object.getOwnPropertyDescriptor( options, 'publicationAttempt' ), 'value' ) || options.publicationAttempt !== true ) ) throw unavailable();
 			return record.Store.copyWorkingCopyValue( { version: 1, phase: record.blockedPhase || record.transaction.getStatus().phase,
 				draft: record.transaction.getDraft(), history: this.captureDraftHistory(), confirmation: record.confirmation,
-				publicationBlocked: record.publicationBlocked } );
+				publicationBlocked: record.publicationBlocked, ...( retained ? { version: 2, publicationAttempt: record.transaction.getPublicationAttempt() } : {} ) } );
 		}
 
 		/** Prepare only local review; the caller must obtain explicit Restore before committing this handle. */
@@ -328,7 +346,8 @@
 				if ( beforeCommit && beforeCommit() !== undefined ) throw unavailable(); plan.check(); };
 			try {
 				const prepared = await record.transaction.prepareDraft( envelope.draft, {
-					pages: envelope.history.members.map( member => member.page ), guard: check
+					pages: envelope.history.members.map( member => member.page ), guard: check,
+					...( Object.hasOwn( envelope, 'publicationAttempt' ) ? { publicationAttempt: envelope.publicationAttempt } : {} )
 				} ); operation.handle = prepared.handle; check();
 				const contexts = new Map( prepared.contexts.map( context => [ context.page, context ] ) ), timelines = new Map();
 				for ( const member of envelope.history.members ) {
@@ -368,6 +387,23 @@
 				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( operation.handle ) record.transaction.cancel( operation.handle );
 				if ( operation.stage ) operation.stage.dispose(); if ( record.operation === operation ) record.operation = null; record.recovering = false;
 			}
+		}
+
+		/** Explicit read-only outcome inspection; preserves current work and every publication/recovery hold. */
+		async inspectPublication( dependencies, ownerGuard ) {
+			const record = data( this );
+			const admit = value => { alive( value ); if ( value.needsRefresh || value.saving ||
+				![ 'ready', 'conflict', 'uncertain', 'confirmed' ].includes( value.transaction.getStatus().phase ) ) throw unavailable(); };
+			admit( record ); if ( record.recovering || ( ownerGuard !== undefined && typeof ownerGuard !== 'function' ) ) throw unavailable();
+			invalidate( record ); capture( record ); record.recovering = true;
+			try {
+				const participants = guard( record, record.generation, admit ), history = this.captureDraftHistory();
+				const check = () => { participants(); if ( ownerGuard ) {
+					const result = ownerGuard(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
+				} participants(); };
+				const outcome = await record.transaction.inspectPublication( dependencies, { guard: check, pages: history.members.map( member => member.page ) } );
+				check(); return outcome;
+			} finally { record.recovering = false; }
 		}
 
 		blockPublication() { const record = data( this ); record.publicationBlocked = true; record.blockedPhase = 'uncertain'; }

@@ -103,24 +103,50 @@
 	}
 	/** Optional synchronous host guard and history-only pages; default preparation remains unchanged. */
 	function operationOptions( record, input, allowPages = false ) {
-		let guard, pages = [];
+		let guard, pages = [], publicationAttempt;
 		if ( input !== undefined ) {
 			if ( !input || Object.getPrototypeOf( input ) !== Object.prototype || Reflect.ownKeys( input ).some( key =>
-				key !== 'guard' && ( !allowPages || key !== 'pages' ) ) ) throw unavailable();
+				key !== 'guard' && ( !allowPages || ( key !== 'pages' && key !== 'publicationAttempt' ) ) ) ) throw unavailable();
 			const properties = Object.getOwnPropertyDescriptors( input );
 			for ( const descriptor of Object.values( properties ) ) if ( !Object.hasOwn( descriptor, 'value' ) ) throw unavailable();
 			guard = properties.guard && properties.guard.value;
 			if ( guard !== undefined && typeof guard !== 'function' ) throw unavailable();
 			if ( properties.pages ) pages = clone( record.adapter, properties.pages.value );
+			if ( properties.publicationAttempt ) publicationAttempt = clone( record.adapter, properties.publicationAttempt.value );
 		}
 		if ( !Array.isArray( pages ) || pages.length > 100 || new Set( pages ).size !== pages.length ||
 			pages.some( page => !positive( page ) || page > record.fixed.context.pageCount ) ) throw unavailable();
-		return { pages, check: () => {
+		return { pages, publicationAttempt, check: () => {
 			if ( guard ) {
 				const result = guard();
 				if ( result !== undefined && result !== true ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
 			}
 		} };
+	}
+	function validateAttempt( record, input, pages ) {
+		if ( input === null ) return null;
+		const attempt = clone( record.adapter, input );
+		if ( !attempt || !equal( Object.keys( attempt ).sort(), [ 'baseRevisionId', 'code', 'dispatchState', 'revisionId', 'sequence', 'snapshot', 'version' ] ) ||
+			attempt.version !== 1 || !positive( attempt.sequence ) || attempt.baseRevisionId !== record.fixed.target.revisionId ||
+			![ 'prepared', 'dispatched', 'refused', 'unknown' ].includes( attempt.dispatchState ) ||
+			attempt.revisionId !== null ||
+			( attempt.code !== null && !publicationCodes.has( attempt.code ) &&
+				![ 'layers-publication-outcome-unknown', 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) ) ||
+			( [ 'prepared', 'dispatched', 'confirmed' ].includes( attempt.dispatchState ) && attempt.code !== null ) ) throw unavailable();
+		const next = attempt.snapshot, expected = snapshot( record, new Map() );
+		if ( !next || !Array.isArray( next.surfaces ) || !equal( { ...next, surfaces: [] }, { ...expected, surfaces: [] } ) ||
+			!equal( next.surfaces.slice( 0, record.base.surfaces.length ), record.base.surfaces ) ) throw unavailable();
+		let previous = 0; const members = next.surfaces.slice( record.base.surfaces.length );
+		if ( !members.length || members.length > record.fixed.context.pageCount ||
+			!members.some( member => member.source && member.source.page === record.fixed.context.initialPage ) ) throw unavailable();
+		for ( const member of members ) {
+			const page = member.source && member.source.page, blank = pages.get( page );
+			if ( !positive( page ) || page <= previous || !blank ) throw unavailable();
+			const surface = blank.surface, rebuilt = record.adapter.withEditorState( { schemaVersion: 1, surfaces: [ surface ] }, surface.id,
+				{ canvas: member.canvas, layers: member.layers } ).surfaces[ 0 ];
+			if ( !equal( member, rebuilt ) ) throw unavailable(); previous = page;
+		}
+		return attempt;
 	}
 	class PageOwnedPdfCreationTransaction {
 		/** Native preparation and injected native-read/publication transports; never a publication token. */
@@ -155,7 +181,7 @@
 			const record = { adapter, ids: Ids, fixed, base, reader: dependencies.reader, read: dependencies.reader.read,
 				publisher: dependencies.publisher, publish: dependencies.publisher.publish,
 				phase: 'ready', epoch: 0, pages: new Map(), members: new Map( [ [ anchor.source.page, anchor ] ] ),
-				page: fixed.context.page, confirmed: null };
+				page: fixed.context.page, confirmed: null, attempt: null, sequence: 0 };
 			const context = admit( record, fixed, fixed.context.page );
 			record.pages.set( context.page, context );
 			records.set( this, record );
@@ -163,6 +189,7 @@
 
 		getEditorState() { return state( data( this ) ); }
 		getDraft() { const record = data( this ); return clone( record.adapter, envelope( record ) ); }
+		getPublicationAttempt() { const record = data( this ); return clone( record.adapter, record.attempt ); }
 		getStatus() {
 			const record = data( this );
 			return { phase: record.phase, page: record.page, pageCount: record.fixed.context.pageCount,
@@ -200,7 +227,10 @@
 			current( this, plan.record, plan.epoch );
 			const record = plan.record;
 			if ( plan.kind === 'page' ) { record.pages.set( plan.context.page, plan.context ); record.page = plan.context.page; }
-			else { record.pages = plan.pages; record.members = plan.members; record.page = plan.page; }
+			else { record.pages = plan.pages; record.members = plan.members; record.page = plan.page;
+				if ( plan.publicationAttempt !== undefined ) { record.attempt = plan.publicationAttempt;
+					record.sequence = Math.max( record.sequence, record.attempt ? record.attempt.sequence : 0 ); }
+			}
 			record.epoch++;
 			return state( record );
 		}
@@ -225,6 +255,13 @@
 			}
 			if ( !members.has( record.fixed.context.initialPage ) || members.size > draft.pageCount ) throw unavailable();
 			host.pages.forEach( page => wanted.add( page ) );
+			if ( host.publicationAttempt !== undefined && host.publicationAttempt !== null ) {
+				const sent = host.publicationAttempt.snapshot;
+				if ( !sent || !Array.isArray( sent.surfaces ) ) throw unavailable();
+				for ( const member of sent.surfaces.slice( record.base.surfaces.length ) ) {
+					if ( !member || !member.source ) throw unavailable(); wanted.add( member.source.page );
+				}
+			}
 			for ( const page of wanted ) {
 				host.check(); current( this, record, epoch );
 				pages.set( page, await readPage( this, record, page, epoch ) );
@@ -237,7 +274,8 @@
 				if ( !equal( member, rebuilt ) ) throw unavailable();
 			}
 			const handle = Object.freeze( {} );
-			preparations.set( handle, { owner: this, record, epoch, kind: 'draft', pages, members, page: draft.activePage } );
+			const publicationAttempt = host.publicationAttempt === undefined ? undefined : validateAttempt( record, host.publicationAttempt, pages );
+			preparations.set( handle, { owner: this, record, epoch, kind: 'draft', pages, members, page: draft.activePage, publicationAttempt } );
 			return { handle, draft: clone( record.adapter, draft ), contexts: clone( record.adapter, Array.from( pages.values() ) ) };
 		}
 
@@ -246,6 +284,9 @@
 			const host = operationOptions( record, options ); host.check(); current( this, record, record.epoch );
 			if ( typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) throw unavailable();
 			const sent = clone( record.adapter, snapshot( record ) ), target = record.fixed.target;
+			if ( !positive( record.sequence + 1 ) ) throw unavailable();
+			record.attempt = { version: 1, sequence: ++record.sequence, baseRevisionId: target.revisionId, snapshot: sent,
+				dispatchState: 'prepared', revisionId: null, code: null };
 			let publishing = false;
 			record.epoch++;
 			record.phase = 'saving';
@@ -261,7 +302,7 @@
 					host.check(); current( this, record, null, 'saving' );
 				}
 				current( this, record, null, 'saving' );
-				publishing = true;
+				publishing = true; record.attempt.dispatchState = 'dispatched';
 				const result = clone( record.adapter, await record.publish.call( record.publisher, { owner: target.owner, pageId: target.pageId,
 					baseRevisionId: target.revisionId, snapshotJson: JSON.stringify( sent ), summary } ) );
 				current( this, record, null, 'saving' );
@@ -269,6 +310,7 @@
 					throw Object.assign( new Error( 'layers-publication-outcome-unknown' ), { code: 'layers-publication-outcome-unknown' } );
 				}
 				record.confirmed = { revisionId: result.revisionId, snapshot: sent };
+				record.attempt.dispatchState = 'confirmed'; record.attempt.revisionId = result.revisionId;
 				record.phase = 'confirmed'; record.epoch++;
 				return clone( record.adapter, { ...record.confirmed, currentSnapshot: snapshot( record ),
 					activePage: record.page, originalCreation: identity( record.fixed ) } );
@@ -277,11 +319,28 @@
 					error && error.code === 'layers-draft-storage-failed' ? error.code : 'layers-editor-session-unavailable';
 				if ( record.phase !== 'disposed' ) record.phase = code === 'layers-edit-conflict' ? 'conflict' :
 					code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
+				record.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused'; record.attempt.code = code;
 				const description = code === 'layers-invalid-snapshot' && error && Object.getOwnPropertyDescriptor( error, 'message' );
 				const message = description && Object.hasOwn( description, 'value' ) && typeof description.value === 'string' &&
 					description.value.length <= 300 ? description.value : code;
 				throw Object.assign( new Error( message ), { code } );
 			}
+		}
+
+		/** Explicit point-in-time inspection only: never publishes, changes phase or clears a hold. */
+		async inspectPublication( dependencies, options ) {
+			const record = data( this ), phase = record.phase, epoch = record.epoch;
+			if ( ![ 'ready', 'conflict', 'uncertain', 'confirmed' ].includes( phase ) || !record.attempt ) throw unavailable();
+			if ( !dependencies || !equal( Reflect.ownKeys( dependencies ).sort(), [ 'api', 'pdfReader', 'reader' ] ) ||
+				Object.values( Object.getOwnPropertyDescriptors( dependencies ) ).some( descriptor => !Object.hasOwn( descriptor, 'value' ) ) ) throw unavailable();
+			const host = operationOptions( record, options, true );
+			const check = () => { current( this, record, epoch, phase ); host.check(); current( this, record, epoch, phase ); };
+			check();
+			const Outcome = typeof module !== 'undefined' && module && typeof module.require === 'function' ?
+				require( './PageOwnedPdfCreationOutcomeReader.js' ) : window.Layers.Editor.PageOwnedPdfCreationOutcomeReader;
+			const outcome = await Outcome.inspect( { draft: envelope( record ), attempt: clone( record.adapter, record.attempt ) },
+				{ ...dependencies, creationReader: record.reader }, check, host.pages );
+			check(); return clone( record.adapter, outcome );
 		}
 
 		dispose() { const record = records.get( this ); if ( record ) { record.phase = 'disposed'; record.epoch++; } }

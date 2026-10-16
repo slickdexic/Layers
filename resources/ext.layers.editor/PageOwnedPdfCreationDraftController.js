@@ -31,10 +31,16 @@
 	}
 	class PageOwnedPdfCreationDraftController {
 		/** The supplied PageOwnedDraftStore must have its own independent writer ID. */
-		constructor( host, store, identity ) {
+		constructor( host, store, identity, options ) {
 			if ( !host || !store || !identity || typeof identity.wiki !== 'string' || !identity.wiki ||
 				typeof identity.user !== 'string' || !identity.user || !/^[a-f0-9]{32}$/.test( store._writerId ) ) throw failure();
 			const target = host.getDraft().creation.target;
+			let retainAttempt = false;
+			if ( options !== undefined ) {
+				const property = options && Object.getOwnPropertyDescriptor( options, 'retainPublicationAttempt' );
+				if ( !options || Reflect.ownKeys( options ).length !== 1 || !property || !Object.hasOwn( property, 'value' ) || property.value !== true ) throw failure();
+				retainAttempt = true;
+			}
 			const methods = [ [ host, [ 'getDraft', 'getStatus', 'captureDraftEnvelope', 'prepareDraftRecovery', 'commitDraftRecovery',
 				'releaseDraftRecovery', 'blockPublication', 'save' ] ], [ store, [ 'write', 'read', 'listCandidates', 'selectRecovery' ] ] ]
 				.flatMap( ( [ object, keys ] ) => keys.map( key => { if ( typeof object[ key ] !== 'function' ) throw failure();
@@ -42,12 +48,12 @@
 			records.set( this, { host, store, methods, writer: store._writerId, storage: store._storage, pageId: target.pageId,
 				read: store._read, write: store._write,
 				scope: { wiki: identity.wiki, user: identity.user, owner: target.owner, baseRevisionId: target.revisionId, surfaceId: target.surfaceId },
-				disposed: false, ready: false, reviewing: false, saving: false, cancelled: false, lastOwnedRaw: null } );
+				retainAttempt, disposed: false, ready: false, reviewing: false, saving: false, cancelled: false, lastOwnedRaw: null } );
 		}
 
 		persist() {
 			const record = data( this ); if ( !record.ready || record.reviewing || record.cancelled ) throw failure();
-			const json = JSON.stringify( { version: 1, scope: record.scope, pdfCreation: record.host.captureDraftEnvelope() } );
+			const json = JSON.stringify( { version: 1, scope: record.scope, pdfCreation: record.retainAttempt ? record.host.captureDraftEnvelope( { publicationAttempt: true } ) : record.host.captureDraftEnvelope() } );
 			const current = readCandidate( record, record.writer );
 			if ( current !== null && current !== record.lastOwnedRaw ) throw failure();
 			record.store.write( record.scope, json );
@@ -68,7 +74,8 @@
 			try {
 				const envelope = JSON.parse( candidate.raw );
 				if ( !envelope || Object.keys( envelope ).length !== 3 || envelope.version !== 1 ||
-					canonical( envelope.scope ) !== canonical( record.scope ) || !envelope.pdfCreation ) throw failure();
+					canonical( envelope.scope ) !== canonical( record.scope ) || !envelope.pdfCreation ||
+					( envelope.pdfCreation.version === 2 && !record.retainAttempt ) ) throw failure();
 				return envelope.pdfCreation;
 			} catch ( error ) { throw failure(); }
 		}
