@@ -1,7 +1,7 @@
 /** Inactive lifecycle for a missing PDF layer set. Existing editor/UI callers remain unchanged. */
 ( function () {
 	'use strict';
-	const records = new WeakMap(), closes = new WeakMap();
+	const records = new WeakMap(), closes = new WeakMap(), discards = new WeakMap();
 	const keys = [ 'layers', 'backgroundVisible', 'backgroundOpacity' ];
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ), { code: 'layers-editor-session-unavailable' } );
 	function classes() {
@@ -153,6 +153,44 @@
 		}
 
 		releaseCleanClose( handle ) { const plan = closes.get( handle ); if ( plan && plan.owner === this ) closes.delete( handle ); }
+
+		/** Caller obtains explicit Discard first. Unresolved sent evidence is never retirement authority. */
+		prepareDiscard() {
+			const record = data( this, true ); idle( record );
+			const status = record.host.getStatus(), envelope = record.host.captureExitEnvelope(), attempt = envelope.publicationAttempt;
+			if ( status.saving || status.recovering || status.needsRefresh || status.publicationBlocked ||
+				![ 'ready', 'conflict', 'confirmed' ].includes( status.phase ) ||
+				( attempt && ![ 'refused', 'confirmed' ].includes( attempt.dispatchState ) ) ) throw unavailable();
+			const bindings = [ 'prepareOwnedDiscard', 'commitOwnedDiscard', 'releaseOwnedDiscard' ].map( key => {
+				if ( typeof record.controller[ key ] !== 'function' ) throw unavailable(); return { key, value: record.controller[ key ] };
+			} );
+			const owned = record.controller.prepareOwnedDiscard( record.exitStore ), witness = record.host.witnessLifecycleExit();
+			const handle = Object.freeze( {} ), target = { owner: record.owner, revisionId: status.confirmedRevisionId || status.baseRevisionId };
+			discards.set( handle, { owner: this, record, epoch: record.epoch, owned, witness, bindings, target } );
+			return { handle, returnTarget: { ...target } };
+		}
+
+		/** Private single-use handle; a late edit or storage callback refuses Close and rolls retirement back. */
+		commitDiscard( handle ) {
+			const plan = discards.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable(); discards.delete( handle );
+			const check = () => {
+				const record = records.get( this );
+				if ( record !== plan.record || record.disposed || record.finalized || record.transferred || !record.ready ||
+					record.operation || record.epoch !== plan.epoch || record.editor.isDestroyed || record.editor.stateManager !== record.state ||
+					plan.bindings.some( binding => record.controller[ binding.key ] !== binding.value ) ) throw unavailable();
+				for ( const binding of record.methods ) if ( binding.object[ binding.key ] !== binding.value ) throw unavailable();
+				plan.witness();
+			};
+			try { check(); plan.record.controller.commitOwnedDiscard( plan.owned, check ); }
+			finally { plan.record.controller.releaseOwnedDiscard( plan.owned ); }
+			const record = plan.record; record.finalized = true; record.ready = false; record.epoch++; detach( record );
+			return { closed: true, discarded: true, returnTarget: { ...plan.target } };
+		}
+
+		releaseDiscard( handle ) {
+			const plan = discards.get( handle );
+			if ( plan && plan.owner === this ) { discards.delete( handle ); plan.record.controller.releaseOwnedDiscard( plan.owned ); }
+		}
 
 		/** Terminal cleanup preserves an independent copy before controller disposal; caller still owns editor destruction. */
 		dispose( terminal = false ) {

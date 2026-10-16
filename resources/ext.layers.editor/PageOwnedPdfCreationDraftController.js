@@ -1,7 +1,7 @@
 /** Explicit local drafts for the new-PDF host; existing lifecycle/UI callers remain unchanged. */
 ( function () {
 	'use strict';
-	const records = new WeakMap(), candidates = new WeakMap(), exitStores = new WeakMap();
+	const records = new WeakMap(), candidates = new WeakMap(), exitStores = new WeakMap(), discards = new WeakMap();
 	const failure = () => Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } );
 	function canonical( value ) {
 		if ( Array.isArray( value ) ) return '[' + value.map( canonical ).join( ',' ) + ']';
@@ -9,9 +9,9 @@
 			.map( key => JSON.stringify( key ) + ':' + canonical( value[ key ] ) ).join( ',' ) + '}';
 		return JSON.stringify( value );
 	}
-	function data( controller ) {
+	function data( controller, discarding = false ) {
 		const record = records.get( controller );
-		if ( !record || record.disposed || record.store._writerId !== record.writer || record.store._storage !== record.storage ||
+		if ( !record || record.disposed || ( record.discarding && !discarding ) || record.store._writerId !== record.writer || record.store._storage !== record.storage ||
 			record.store._read !== record.read || record.store._write !== record.write ) throw failure();
 		for ( const method of record.methods ) if ( method.object[ method.key ] !== method.value ) throw failure();
 		const current = record.host.getDraft().creation.target;
@@ -28,6 +28,13 @@
 		const candidate = candidates.get( handle );
 		if ( !candidate || candidate.record !== record || readCandidate( record, candidate.writer ) !== candidate.raw ) throw failure();
 		return candidate;
+	}
+	function discardable( record ) {
+		const status = record.host.getStatus(), attempt = record.host.captureExitEnvelope().publicationAttempt;
+		if ( !record.ready || record.reviewing || record.saving || record.checking || record.cancelled ||
+			status.saving || status.recovering || status.needsRefresh || status.publicationBlocked ||
+			![ 'ready', 'conflict', 'confirmed' ].includes( status.phase ) ||
+			( attempt && ![ 'refused', 'confirmed' ].includes( attempt.dispatchState ) ) ) throw failure();
 	}
 	class PageOwnedPdfCreationDraftController {
 		/** Lifecycle callers must use this actual controller with its original host and attempt retention. */
@@ -193,6 +200,58 @@
 			witness(); check(); if ( capture() !== raw ) throw failure();
 			return Object.freeze( { raw, preflight: () => { check(); if ( read() !== raw ) throw failure(); } } );
 		}
+
+		/** Prepare exact owned-record retirement only. Recovery/checkpoint writers never become owned here. */
+		prepareOwnedDiscard( exitStore ) {
+			const record = data( this );
+			discardable( record );
+			this.validateExitStore( exitStore );
+			const exit = exitStores.get( exitStore ), storage = record.storage;
+			const bindings = [ [ record.store, [ '_validateAndBuildKey', '_recordKey' ] ],
+				[ exitStore, [ 'read', 'selectRecovery', '_read', '_write', '_validateAndBuildKey', '_recordKey' ] ],
+				[ storage, [ 'getItem', 'setItem', 'removeItem' ] ] ].flatMap( ( [ object, names ] ) => names.map( key => {
+				if ( typeof object[ key ] !== 'function' ) throw failure(); return { object, key, value: object[ key ] };
+			} ) );
+			const entries = [ { key: record.store._recordKey( record.store._validateAndBuildKey( record.scope ), record.writer ), raw: record.lastOwnedRaw },
+				{ key: exitStore._recordKey( exitStore._validateAndBuildKey( record.scope ), exitStore._writerId ), raw: exit ? exit.raw : null } ];
+			const writer = exitStore._writerId, witness = record.host.witnessLifecycleExit();
+			const checkBindings = () => {
+				if ( data( this, true ) !== record || record.reviewing || record.saving || record.checking || record.cancelled || !record.ready ||
+					exitStore._storage !== storage || exitStore._writerId !== writer || exitStores.get( exitStore ) !== exit ||
+					bindings.some( binding => binding.object[ binding.key ] !== binding.value ) ) throw failure();
+			};
+			const check = removed => {
+				checkBindings();
+				witness();
+				for ( const entry of entries ) if ( record.read( entry.key ) !== ( removed.has( entry ) ? null : entry.raw ) ) throw failure();
+				checkBindings(); witness();
+			};
+			check( new Set() ); const handle = Object.freeze( {} );
+			discards.set( handle, { owner: this, record, entries, check, remove: storage.removeItem, storage } ); return handle;
+		}
+
+		/** Synchronous retirement with rollback on refusal. No work, histories or other writers are changed. */
+		commitOwnedDiscard( handle, ownerGuard ) {
+			const plan = discards.get( handle ); if ( !plan || plan.owner !== this || typeof ownerGuard !== 'function' ) throw failure();
+			discards.delete( handle ); const { record, entries, check, remove, storage } = plan, removed = new Set();
+			check( removed ); ownerGuard(); check( removed ); record.discarding = true;
+			try {
+				for ( const entry of entries ) {
+					check( removed ); ownerGuard(); check( removed );
+					if ( entry.raw !== null ) { removed.add( entry ); remove.call( storage, entry.key ); }
+					check( removed ); ownerGuard(); check( removed );
+				}
+				record.disposed = true; return true;
+			} catch ( error ) {
+				// A failed remove may already have removed its key. Restore exact bytes only into an absent destination.
+				for ( const entry of removed ) {
+					try { if ( record.read( entry.key ) === null ) record.write( entry.key, entry.raw ); } catch ( restoreError ) { /* Never overwrite foreign bytes. */ }
+				}
+				throw failure();
+			} finally { record.discarding = false; }
+		}
+
+		releaseOwnedDiscard( handle ) { const plan = discards.get( handle ); if ( plan && plan.owner === this ) discards.delete( handle ); }
 
 		/** Disposal never deletes backups or transfers the recovery source's writer ownership. */
 		dispose() { const record = records.get( this ); if ( record ) record.disposed = true; }
