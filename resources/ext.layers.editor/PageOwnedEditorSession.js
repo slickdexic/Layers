@@ -1668,7 +1668,7 @@
 		}
 
 		_pdfNativeId( record ) {
-			const helper = typeof module !== 'undefined' && module.exports ?
+			const helper = typeof module !== 'undefined' && module && typeof module.require === 'function' ?
 				require( './PageOwnedPdfWorkingSet.js' ) : window.Layers.Editor.PageOwnedPdfWorkingSet;
 			return helper.surfaceId( this._pageId, record.revisionId, record.surface.source.fileTitle,
 				record.surface.label, record.surface.source.page );

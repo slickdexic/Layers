@@ -71,8 +71,8 @@
 			return { object, key, descriptor: { value, ...( descriptor ? {} : { writable: true, enumerable: true, configurable: true } ) } };
 		} );
 	}
-	function guard( record, generation ) {
-		ready( record );
+	function guard( record, generation, admission = ready ) {
+		admission( record );
 		const { Store, editor, store, canvas, history } = record;
 		const observations = [ Store.observeWorkingCopyObject( editor, false ), Store.observeWorkingCopyObject( editor.config, false ),
 			Store.observeWorkingCopyObject( store, false ), Store.observeWorkingCopyObject( store.state ),
@@ -94,7 +94,7 @@
 		const draft = canonical( record.transaction.getDraft() ), timelines = canonical( Array.from( record.timelines ) );
 		const selected = canonical( [ canvas.selectedLayerIds || [], canvas.selectedLayerId || null ] );
 		return () => {
-			ready( record );
+			admission( record );
 			observations.forEach( Store.checkWorkingCopyObservation );
 			Store.checkWorkingCopyMethods( selectionMethods );
 			if ( generation !== record.generation || version !== record.version || url !== window.location.href ||
@@ -410,6 +410,67 @@
 					try { capture( record ); record.store.set( 'isDirty', record.transaction.getStatus().dirty ); } catch ( error ) { /* Retain newer invalid work. */ }
 				}
 			}
+		}
+
+		/** Inactive confirmed-first-Save handoff; callers must retain the returned bridge and backup. */
+		async handoffSavedSession( dependencies ) {
+			const record = data( this );
+			const admit = value => {
+				alive( value );
+				if ( value.needsRefresh || value.saving || value.publicationBlocked || !value.confirmation ||
+					value.transaction.getStatus().phase !== 'confirmed' ) throw unavailable();
+			};
+			admit( record ); if ( record.recovering ) throw unavailable();
+			invalidate( record ); capture( record ); record.recovering = true;
+			let check;
+			const common = typeof module !== 'undefined' && module && typeof module.require === 'function';
+			const Saved = common ? require( './PageOwnedPdfCreationSavedSession.js' ) : window.Layers.Editor.PageOwnedPdfCreationSavedSession;
+			const Bridge = common ? require( './PageOwnedEditorBridge.js' ) : window.Layers.Editor.PageOwnedEditorBridge;
+			const Coordinator = common ? require( './PageOwnedPdfEditorCoordinator.js' ) : window.Layers.Editor.PageOwnedPdfEditorCoordinator;
+			let prepared, patch, stage, committed = false;
+			try {
+				check = guard( record, record.generation, admit );
+				prepared = await Saved.prepare( this.captureDraftEnvelope(), dependencies, check, Array.from( record.contexts.values() ) ); check();
+				const { session, state, context, timelines } = prepared, { editor, canvas, store, history, Store } = record;
+				for ( const [ page, value ] of timelines ) timelines.set( page, history.preflightTimeline( value ) );
+				// Creation preserves finite layer values, including unknown null fields. Do not apply legacy clearing here.
+				const bridge = new ( class extends Bridge {
+					getLiveState() {
+						this._requireActive(); if ( !this.loaded || !store.isWorkingCopyAlive() ) throw unavailable();
+						const value = session.getEditorState(); value.layers = Store.copyWorkingCopyValue( store.get( 'layers' ) );
+						for ( const key of [ 'backgroundVisible', 'backgroundOpacity' ] ) {
+							if ( store.get( key ) !== undefined ) value.canvas[ key ] = store.get( key );
+						}
+						return value;
+					}
+				} )( editor, session ), coordinator = new Coordinator( bridge, dependencies.pdfReader );
+				bridge.isSlide = false; bridge.loaded = true; bridge.pdfCoordinator = coordinator; coordinator.timelines = timelines;
+				stage = canvas.stageExactBackground( context.rendition.url );
+				await stage.promise; check(); canvas.preflightStagedBackground( stage );
+				if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width || stage.info.height !== context.rendition.height ) throw unavailable();
+				await prepared.revalidate(); check();
+				patch = store.prepareWorkingCopyPatch( { values: { layers: state.layers, isSlide: false, isDirty: session.getStatus().dirty,
+					baseWidth: state.canvas.width, baseHeight: state.canvas.height, backgroundVisible: state.canvas.backgroundVisible,
+					backgroundOpacity: state.canvas.backgroundOpacity }, clear: [] } );
+				const stateCommit = store.prepareWorkingCopyPatchCommit( patch ); if ( !Store.isWorkingCopyPatchCommit( stateCommit ) ) throw unavailable();
+				const writes = [ ...assignments( history, timelines.get( context.page ) ),
+					...assignments( canvas, { baseWidth: state.canvas.width, baseHeight: state.canvas.height } ),
+					...assignments( editor, { page: context.page, pageCount: context.pageCount } ),
+					...assignments( editor.config, { imageUrl: context.rendition.url } ) ];
+				stateCommit.preflight(); canvas.preflightStagedBackground( stage ); check();
+				// Both models are private until this synchronous ownership transfer. No callbacks run between assignments.
+				prepared.activate(); stateCommit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
+				record.disposed = true; committed = true;
+				const result = { bridge, coordinator, creationBackup: prepared.creationBackup, remapping: prepared.remapping, needsRefresh: false };
+				try {
+					record.unsubscribers.forEach( unsubscribe => unsubscribe() ); record.transaction.dispose();
+					coordinator.initialize(); canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch );
+					history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
+					bridge.capture(); store.set( 'isDirty', session.getStatus().dirty );
+				} catch ( error ) { result.needsRefresh = true; session.blockPublication(); }
+				return result;
+			} catch ( error ) { if ( prepared && !committed ) prepared.session.dispose(); throw unavailable(); }
+			finally { if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( stage ) stage.dispose(); record.recovering = false; }
 		}
 
 		invalidate() { invalidate( data( this, false ) ); }
