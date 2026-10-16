@@ -248,6 +248,9 @@
 		}
 	}
 	class PageOwnedPdfCreationHost {
+		/** Inactive lifecycle admission requires the actual loaded host and its original editor. */
+		static ownsEditor( host, editor ) { try { return data( host ).editor === editor; } catch ( error ) { return false; } }
+
 		constructor( editor, nativePreparation, dependencies ) {
 			const { Transaction, Store } = classes(), transaction = new Transaction( nativePreparation, dependencies );
 			const store = editor.stateManager, canvas = editor.canvasManager, history = editor.historyManager;
@@ -317,6 +320,22 @@
 			return record.Store.copyWorkingCopyValue( { version: 1, phase: record.blockedPhase || record.transaction.getStatus().phase,
 				draft: record.transaction.getDraft(), history: this.captureDraftHistory(), confirmation: record.confirmation,
 				publicationBlocked: record.publicationBlocked, ...( retained ? { version: 2, publicationAttempt: record.transaction.getPublicationAttempt() } : {} ) } );
+		}
+
+		/** Exit preservation keeps real attempt evidence when present, without inventing it for cancelled review. */
+		captureExitEnvelope() {
+			const record = data( this );
+			return this.captureDraftEnvelope( record.transaction.getPublicationAttempt() === null ? undefined : { publicationAttempt: true } );
+		}
+
+		/** Complete synchronous exit witness; a later edit, hold, operation or disposal invalidates it. */
+		witnessLifecycleExit() {
+			const record = data( this ); capture( record );
+			const participants = guard( record, record.generation, alive );
+			const status = () => canonical( [ record.transaction.getStatus(), record.needsRefresh, record.saving, record.recovering,
+				record.publicationBlocked, record.blockedPhase, record.reviewBlocked, record.confirmation ] );
+			const before = status();
+			return () => { participants(); if ( status() !== before ) throw unavailable(); };
 		}
 
 		/** Prepare only local review; the caller must obtain explicit Restore before committing this handle. */
@@ -509,14 +528,14 @@
 		}
 
 		/** Inactive confirmed-first-Save handoff; callers must retain the returned bridge and backup. */
-		async handoffSavedSession( dependencies ) {
+		async handoffSavedSession( dependencies, ownerGuard ) {
 			const record = data( this );
 			const admit = value => {
 				alive( value );
 				if ( value.needsRefresh || value.saving || value.publicationBlocked || !value.confirmation ||
 					value.transaction.getStatus().phase !== 'confirmed' ) throw unavailable();
 			};
-			admit( record ); if ( record.recovering ) throw unavailable();
+			admit( record ); if ( record.recovering || ( ownerGuard !== undefined && typeof ownerGuard !== 'function' ) ) throw unavailable();
 			invalidate( record ); capture( record ); record.recovering = true;
 			let check;
 			const common = typeof module !== 'undefined' && module && typeof module.require === 'function';
@@ -525,7 +544,10 @@
 			const Coordinator = common ? require( './PageOwnedPdfEditorCoordinator.js' ) : window.Layers.Editor.PageOwnedPdfEditorCoordinator;
 			let prepared, patch, stage, committed = false;
 			try {
-				check = guard( record, record.generation, admit );
+				const participants = guard( record, record.generation, admit );
+				check = () => { participants(); if ( ownerGuard ) {
+					const result = ownerGuard(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
+				} participants(); };
 				prepared = await Saved.prepare( this.captureDraftEnvelope(), dependencies, check, Array.from( record.contexts.values() ) ); check();
 				const { session, state, context, timelines } = prepared, { editor, canvas, store, history, Store } = record;
 				for ( const [ page, value ] of timelines ) timelines.set( page, history.preflightTimeline( value ) );

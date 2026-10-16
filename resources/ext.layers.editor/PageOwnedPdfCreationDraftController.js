@@ -1,7 +1,7 @@
 /** Explicit local drafts for the new-PDF host; existing lifecycle/UI callers remain unchanged. */
 ( function () {
 	'use strict';
-	const records = new WeakMap(), candidates = new WeakMap();
+	const records = new WeakMap(), candidates = new WeakMap(), exitStores = new WeakMap();
 	const failure = () => Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } );
 	function canonical( value ) {
 		if ( Array.isArray( value ) ) return '[' + value.map( canonical ).join( ',' ) + ']';
@@ -30,6 +30,16 @@
 		return candidate;
 	}
 	class PageOwnedPdfCreationDraftController {
+		/** Lifecycle callers must use this actual controller with its original host and attempt retention. */
+		static ownsHost( controller, host ) {
+			try { const record = data( controller ); return record.host === host && record.retainAttempt; } catch ( error ) { return false; }
+		}
+
+		getLifecycleStatus() {
+			const record = data( this );
+			return { ready: record.ready, reviewing: record.reviewing, saving: record.saving, checking: record.checking, cancelled: record.cancelled };
+		}
+
 		/** The supplied PageOwnedDraftStore must have its own independent writer ID. */
 		constructor( host, store, identity, options ) {
 			if ( !host || !store || !identity || typeof identity.wiki !== 'string' || !identity.wiki ||
@@ -147,6 +157,41 @@
 					try { this.persist(); result.draftPersisted = true; } catch ( error ) { result.draftPersisted = false; }
 				}
 			}
+		}
+
+		/** Validate the separate destination before installing a lifecycle or offering recovery; creates no candidate. */
+		validateExitStore( store ) {
+			const record = data( this ), owned = store && exitStores.get( store );
+			if ( !record.retainAttempt || !store || store === record.store || store._storage !== record.storage ||
+				!/^[a-f0-9]{32}$/.test( store._writerId ) || store._writerId === record.writer ||
+				( owned && ( owned.record !== record || owned.writer !== store._writerId || owned.storage !== store._storage ||
+					owned.methods.some( binding => store[ binding.key ] !== binding.value ) ) ) ) throw failure();
+			store.selectRecovery( store._writerId ); if ( store.read( record.scope ) !== ( owned ? owned.raw : null ) ) throw failure();
+		}
+
+		/** Independent exit copy, including pending review/check/Save. Never rewrites the live or recovery writer. */
+		preserveForExit( store ) {
+			const record = data( this );
+			if ( !record.retainAttempt || !store || store === record.store || store._storage !== record.storage ||
+				!/^[a-f0-9]{32}$/.test( store._writerId ) || store._writerId === record.writer ) throw failure();
+			let owned = exitStores.get( store );
+			if ( !owned ) {
+				owned = { record, writer: store._writerId, storage: store._storage, raw: null,
+					methods: [ 'read', 'write', 'selectRecovery', '_read', '_write', '_validateAndBuildKey', '_recordKey' ].map( key => {
+						if ( typeof store[ key ] !== 'function' ) throw failure(); return { key, value: store[ key ] };
+					} ) };
+			}
+			const check = () => {
+				data( this ); if ( owned.record !== record || store._writerId !== owned.writer || store._storage !== owned.storage ||
+					owned.methods.some( method => store[ method.key ] !== method.value ) ) throw failure();
+			};
+			const read = () => { check(); store.selectRecovery( owned.writer ); return store.read( record.scope ); };
+			if ( read() !== owned.raw ) throw failure(); exitStores.set( store, owned );
+			const capture = () => JSON.stringify( { version: 1, scope: record.scope, pdfCreation: record.host.captureExitEnvelope() } );
+			const raw = capture(), witness = record.host.witnessLifecycleExit();
+			store.write( record.scope, raw ); if ( read() !== raw ) throw failure(); owned.raw = raw;
+			witness(); check(); if ( capture() !== raw ) throw failure();
+			return Object.freeze( { raw, preflight: () => { check(); if ( read() !== raw ) throw failure(); } } );
 		}
 
 		/** Disposal never deletes backups or transfers the recovery source's writer ownership. */
