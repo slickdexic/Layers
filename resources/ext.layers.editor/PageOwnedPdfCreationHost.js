@@ -1,7 +1,7 @@
 /** Explicit editor connection for a new page-owned PDF layer set; no callers are activated. */
 ( function () {
 	'use strict';
-	const records = new WeakMap();
+	const records = new WeakMap(), recoveries = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	function classes() {
@@ -21,8 +21,7 @@
 			editor.canvasManager !== canvas || editor.historyManager !== history || editor.config !== record.config ||
 			canvas.canvas !== record.element || canvas.config !== record.canvasConfig || canvas.isDestroyed ||
 			history.isDestroyed || history.batchMode || !store.isWorkingCopyAlive() || store.isLocked || store._isProcessingPending ||
-			store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ||
-			record.transaction.getStatus().phase !== 'ready' ) throw unavailable();
+			store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ) throw unavailable();
 		Store.checkWorkingCopyMethods( record.methods );
 		history.captureTimeline();
 		for ( const participant of [ canvas, canvas.selectionManager, canvas.transformController, canvas.drawingController ].filter( Boolean ) ) {
@@ -30,6 +29,10 @@
 				if ( participant[ flag ] ) throw unavailable();
 			}
 		}
+	}
+	function ready( record ) {
+		alive( record );
+		if ( record.needsRefresh || record.saving || record.transaction.getStatus().phase !== 'ready' ) throw unavailable();
 	}
 	function data( host, loaded = true ) {
 		const record = records.get( host );
@@ -69,7 +72,7 @@
 		} );
 	}
 	function guard( record, generation ) {
-		alive( record );
+		ready( record );
 		const { Store, editor, store, canvas, history } = record;
 		const observations = [ Store.observeWorkingCopyObject( editor, false ), Store.observeWorkingCopyObject( editor.config, false ),
 			Store.observeWorkingCopyObject( store, false ), Store.observeWorkingCopyObject( store.state ),
@@ -91,7 +94,7 @@
 		const draft = canonical( record.transaction.getDraft() ), timelines = canonical( Array.from( record.timelines ) );
 		const selected = canonical( [ canvas.selectedLayerIds || [], canvas.selectedLayerId || null ] );
 		return () => {
-			alive( record );
+			ready( record );
 			observations.forEach( Store.checkWorkingCopyObservation );
 			Store.checkWorkingCopyMethods( selectionMethods );
 			if ( generation !== record.generation || version !== record.version || url !== window.location.href ||
@@ -99,6 +102,49 @@
 				canonical( dimensions ) !== canonical( [ canvas.baseWidth, canvas.baseHeight, canvas.canvas.width, canvas.canvas.height ] ) ||
 				canonical( [ canvas.selectedLayerIds || [], canvas.selectedLayerId || null ] ) !== selected ||
 				canonical( record.transaction.getDraft() ) !== draft || canonical( Array.from( record.timelines ) ) !== timelines ) throw unavailable();
+		};
+	}
+	function shape( value, keys ) {
+		return value && !Array.isArray( value ) && Object.keys( value ).length === keys.length && keys.every( key => Object.hasOwn( value, key ) );
+	}
+	function recoveryCopy( record, input ) {
+		const envelope = record.Store.copyWorkingCopyValue( input ), current = record.transaction.getDraft();
+		if ( !shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked' ] ) || envelope.version !== 1 ||
+			typeof envelope.publicationBlocked !== 'boolean' ||
+			![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) || envelope.confirmation !== null ||
+			!envelope.draft || canonical( envelope.draft.creation ) !== canonical( current.creation ) ||
+			envelope.draft.pageCount !== current.pageCount ) throw unavailable();
+		const { draft, history } = envelope;
+		if ( !shape( history, [ 'version', 'creation', 'pageCount', 'activePage', 'members' ] ) || history.version !== 1 ||
+			canonical( history.creation ) !== canonical( draft.creation ) || history.pageCount !== draft.pageCount ||
+			history.activePage !== draft.activePage || !Array.isArray( history.members ) || !history.members.length ||
+			history.members.length > draft.pageCount || !draft.snapshot || !Array.isArray( draft.snapshot.surfaces ) ) throw unavailable();
+		const pages = new Set(), ids = new Set();
+		for ( const member of history.members ) {
+			if ( !shape( member, [ 'page', 'surfaceId', 'source', 'timeline' ] ) || !Number.isInteger( member.page ) ||
+				member.page < 1 || member.page > draft.pageCount || pages.has( member.page ) || ids.has( member.surfaceId ) ||
+				typeof member.surfaceId !== 'string' || !member.source || member.source.page !== member.page ||
+				!shape( member.timeline, [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ] ) ) throw unavailable();
+			member.timeline = record.history.preflightTimeline( member.timeline );
+			if ( !member.timeline.history.length || member.timeline.lastSaveHistoryIndex !== -1 ) throw unavailable();
+			pages.add( member.page ); ids.add( member.surfaceId );
+		}
+		if ( !pages.has( draft.activePage ) || !pages.has( draft.creation.anchorSurface.source.page ) ) throw unavailable();
+		for ( const surface of draft.snapshot.surfaces.slice( draft.creation.baseBundle ? draft.creation.baseBundle.snapshot.surfaces.length : 0 ) ) {
+			if ( !surface.source || !pages.has( surface.source.page ) ) throw unavailable();
+		}
+		return envelope;
+	}
+	function publicationGuard( record ) {
+		const { editor, canvas } = record, page = editor.page, count = editor.pageCount, url = window.location.href;
+		const image = canvas.backgroundImage, imageUrl = canvas.config.backgroundImageUrl, editorImageUrl = editor.config.imageUrl;
+		const dimensions = [ canvas.baseWidth, canvas.baseHeight, canvas.canvas.width, canvas.canvas.height ];
+		return () => {
+			alive( record );
+			if ( record.needsRefresh || editor.page !== page || editor.pageCount !== count || window.location.href !== url ||
+				canvas.backgroundImage !== image || canvas.config.backgroundImageUrl !== imageUrl || editor.config.imageUrl !== editorImageUrl ||
+				canonical( dimensions ) !== canonical( [ canvas.baseWidth, canvas.baseHeight, canvas.canvas.width, canvas.canvas.height ] ) ) throw unavailable();
+			capture( record );
 		};
 	}
 	function invalidate( record ) {
@@ -113,7 +159,8 @@
 		let record, operation, patch, committed = false;
 		try {
 			record = data( host, !initial );
-			if ( record.needsRefresh || ( initial && ( record.loaded || record.version !== 0 ) ) ) throw unavailable();
+			ready( record );
+			if ( record.recovering || ( initial && ( record.loaded || record.version !== 0 ) ) ) throw unavailable();
 			invalidate( record );
 			if ( !initial ) capture( record );
 			operation = { generation: record.generation, handle: null, stage: null };
@@ -198,7 +245,8 @@
 			[ editor, [ 'syncPageInUrl', 'refreshPageControls', 'notifyPdfPageNavigationFailure' ] ] ];
 			const record = { editor, store, canvas, history, Store, transaction, config: editor.config,
 				canvasConfig: canvas.config, element: canvas.canvas, disposed: false, loaded: false, committing: false,
-				version: 0, generation: 0, operation: null, needsRefresh: false, timelines: new Map(), contexts: new Map(), unsubscribers: [],
+				version: 0, generation: 0, operation: null, needsRefresh: false, saving: false, recovering: false,
+				publicationBlocked: false, blockedPhase: null, confirmation: null, timelines: new Map(), contexts: new Map(), unsubscribers: [],
 				methods: entries.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) ),
 				notify: editor.notifyPdfPageNavigationFailure };
 			alive( record );
@@ -213,8 +261,9 @@
 					if ( !record.committing && !record.disposed ) {
 						record.version++;
 						if ( record.loaded ) {
-							try { capture( record ); } catch ( error ) { /* Keep invalid newer editor work visible. */ }
-							store.set( 'isDirty', true );
+							let dirty = true;
+							try { capture( record ); dirty = record.transaction.getStatus().dirty; } catch ( error ) { /* Keep invalid newer editor work visible. */ }
+							store.set( 'isDirty', dirty );
 						}
 					}
 				} ) );
@@ -226,10 +275,11 @@
 		capture() { return capture( data( this ) ); }
 		getLiveState() { return live( data( this ) ); }
 		getStatus() { const record = data( this, false ); if ( record.loaded ) capture( record );
-			return { ...record.transaction.getStatus(), loaded: record.loaded, needsRefresh: record.needsRefresh }; }
+			return { ...record.transaction.getStatus(), loaded: record.loaded, needsRefresh: record.needsRefresh,
+				publicationBlocked: record.publicationBlocked, saving: record.saving, recovering: record.recovering }; }
 		getDraft() { const record = data( this ); capture( record ); return record.transaction.getDraft(); }
 
-		/** Isolated per-page timelines for future draft storage; this does not restore or publish anything. */
+		/** Isolated per-page timelines; capture itself does not restore or publish anything. */
 		captureDraftHistory() {
 			const record = data( this ); capture( record );
 			const draft = record.transaction.getDraft(), timelines = new Map( record.timelines );
@@ -242,6 +292,124 @@
 					const member = record.contexts.has( page ) ? record.contexts.get( page ).surface : draft.creation.anchorSurface;
 					return { page, surfaceId: member.id, source: member.source, timeline: record.history.copyTimeline( timeline ) };
 				} ).sort( ( left, right ) => left.page - right.page ) } );
+		}
+
+		captureDraftEnvelope() {
+			const record = data( this ); capture( record );
+			return record.Store.copyWorkingCopyValue( { version: 1, phase: record.blockedPhase || record.transaction.getStatus().phase,
+				draft: record.transaction.getDraft(), history: this.captureDraftHistory(), confirmation: record.confirmation,
+				publicationBlocked: record.publicationBlocked } );
+		}
+
+		/** Prepare only local review; the caller must obtain explicit Restore before committing this handle. */
+		prepareDraftRecovery( input ) {
+			const record = data( this ); ready( record ); if ( record.recovering ) throw unavailable();
+			capture( record ); const envelope = recoveryCopy( record, input );
+			if ( record.operation ) invalidate( record ); const check = guard( record, record.generation ), handle = Object.freeze( {} );
+			recoveries.set( handle, { host: this, record, envelope, check, generation: record.generation } );
+			const active = envelope.draft.snapshot.surfaces.find( member => member.id ===
+				envelope.history.members.find( member => member.page === envelope.draft.activePage ).surfaceId );
+			const timeline = envelope.history.members.find( member => member.page === envelope.draft.activePage ).timeline;
+			return { handle, preview: record.Store.copyWorkingCopyValue( { label: envelope.draft.creation.anchorSurface.label,
+				publicationBlocked: envelope.publicationBlocked || envelope.phase !== 'ready', editorState: { canvas: active ? active.canvas : {},
+					layers: timeline.history[ timeline.historyIndex ].layers } } ) };
+		}
+
+		releaseDraftRecovery( handle ) { const plan = recoveries.get( handle ); if ( plan && plan.host === this ) recoveries.delete( handle ); }
+
+		async commitDraftRecovery( handle, beforeCommit ) {
+			const plan = recoveries.get( handle ); if ( !plan || plan.host !== this ) throw unavailable();
+			const { record, envelope } = plan; plan.check();
+			if ( record.recovering || ( beforeCommit !== undefined && typeof beforeCommit !== 'function' ) ) throw unavailable();
+			recoveries.delete( handle ); record.recovering = true;
+			const operation = { generation: plan.generation, handle: null, stage: null }; record.operation = operation;
+			let patch, committed = false;
+			const check = () => { plan.check(); if ( record.operation !== operation ) throw unavailable();
+				if ( beforeCommit && beforeCommit() !== undefined ) throw unavailable(); plan.check(); };
+			try {
+				const prepared = await record.transaction.prepareDraft( envelope.draft, {
+					pages: envelope.history.members.map( member => member.page ), guard: check
+				} ); operation.handle = prepared.handle; check();
+				const contexts = new Map( prepared.contexts.map( context => [ context.page, context ] ) ), timelines = new Map();
+				for ( const member of envelope.history.members ) {
+					const context = contexts.get( member.page ), surface = prepared.draft.snapshot.surfaces.find( value => value.id === member.surfaceId );
+					if ( !context || context.surface.id !== member.surfaceId || canonical( context.surface.source ) !== canonical( member.source ) ||
+						canonical( member.timeline.history[ member.timeline.historyIndex ].layers ) !== canonical( surface ? surface.layers : [] ) ) throw unavailable();
+					timelines.set( member.page, record.history.preflightTimeline( member.timeline ) );
+				}
+				const context = contexts.get( prepared.draft.activePage ), surface = prepared.draft.snapshot.surfaces.find( value => value.id === context.surface.id ) || context.surface;
+				const state = { canvas: surface.canvas, layers: surface.layers }, { canvas, store, history, editor, Store } = record;
+				const stage = canvas.stageExactBackground( context.rendition.url ); operation.stage = stage;
+				await stage.promise; check(); canvas.preflightStagedBackground( stage );
+				if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width || stage.info.height !== context.rendition.height ) throw unavailable();
+				const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
+				patch = store.prepareWorkingCopyPatch( { values: { layers: state.layers, isSlide: false, isDirty: true, selectedLayerIds: [],
+					baseWidth: state.canvas.width, baseHeight: state.canvas.height, backgroundVisible: state.canvas.backgroundVisible,
+					backgroundOpacity: state.canvas.backgroundOpacity }, clear: [] } );
+				const stateCommit = store.prepareWorkingCopyPatchCommit( patch ); if ( !Store.isWorkingCopyPatchCommit( stateCommit ) ) throw unavailable();
+				const writes = [ ...assignments( history, timelines.get( context.page ) ),
+					...assignments( canvas, { baseWidth: state.canvas.width, baseHeight: state.canvas.height, selectedLayerIds: [], selectedLayerId: null } ),
+					...assignments( editor, { page: context.page, pageCount: context.pageCount } ), ...assignments( editor.config, { imageUrl: context.rendition.url } ) ];
+				if ( selection ) selection.preflight(); stateCommit.preflight(); canvas.preflightStagedBackground( stage ); check();
+				record.transaction.commit( prepared.handle ); stateCommit.commit();
+				for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
+				if ( selection ) selection.commit();
+				record.timelines = timelines; record.contexts = contexts;
+				record.publicationBlocked = record.publicationBlocked || envelope.publicationBlocked || envelope.phase !== 'ready';
+				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( envelope.phase === 'ready' ? 'uncertain' : envelope.phase ) : null; committed = true;
+				record.committing = true;
+				try {
+					canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch ); if ( selection ) selection.refresh();
+					history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
+				} finally { record.committing = false; }
+				capture( record ); return true;
+			} catch ( error ) { if ( committed ) record.needsRefresh = true; throw unavailable(); }
+			finally {
+				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( operation.handle ) record.transaction.cancel( operation.handle );
+				if ( operation.stage ) operation.stage.dispose(); if ( record.operation === operation ) record.operation = null; record.recovering = false;
+			}
+		}
+
+		blockPublication() { const record = data( this ); record.publicationBlocked = true; record.blockedPhase = 'uncertain'; }
+
+		/** Explicit first Save only. A confirmed result still requires fresh saved-session handoff. */
+		async save( summary = '', beforePublish, checkOwner ) {
+			const record = data( this ); ready( record );
+			if ( record.recovering || record.publicationBlocked || typeof summary !== 'string' || typeof beforePublish !== 'function' ||
+				( checkOwner !== undefined && typeof checkOwner !== 'function' ) ) throw unavailable();
+			invalidate( record ); capture( record ); const participants = publicationGuard( record );
+			const check = () => { participants(); if ( checkOwner && checkOwner() !== undefined ) throw unavailable(); participants(); };
+			record.saving = true;
+			let result;
+			try {
+				result = await record.transaction.save( summary, beforePublish, { guard: check } );
+				record.confirmation = record.Store.copyWorkingCopyValue( { revisionId: result.revisionId, snapshot: result.snapshot } );
+				check();
+				const timelines = new Map( record.timelines ), active = record.transaction.getStatus().page;
+				timelines.set( active, record.history.captureTimeline() );
+				const anchor = result.originalCreation.anchorSurface;
+				for ( const [ page, previous ] of timelines ) {
+					const timeline = record.history.copyTimeline( previous ); timeline.lastSaveHistoryIndex = -1;
+					const member = result.snapshot.surfaces.find( surface => surface.kind === 'pdf' && surface.label === anchor.label &&
+						surface.source.fileTitle === anchor.source.fileTitle && surface.source.page === page );
+					if ( member ) for ( let index = timeline.history.length - 1; index >= 0; index-- ) {
+						if ( canonical( timeline.history[ index ].layers ) === canonical( member.layers ) ) { timeline.lastSaveHistoryIndex = index; break; }
+					}
+					timelines.set( page, record.history.preflightTimeline( timeline ) );
+				}
+				const writes = assignments( record.history, timelines.get( active ) ); check();
+				for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor ); record.timelines = timelines;
+				record.store.set( 'isDirty', record.transaction.getStatus().dirty ); record.history.updateUndoRedoButtons();
+				return { ...result, currentSnapshot: record.transaction.getDraft().snapshot, hostReady: true, history: this.captureDraftHistory() };
+			} catch ( error ) {
+				if ( result ) { record.needsRefresh = true; return { ...result, hostReady: false }; }
+				throw error;
+			} finally {
+				record.saving = false;
+				if ( !record.disposed ) {
+					try { capture( record ); record.store.set( 'isDirty', record.transaction.getStatus().dirty ); } catch ( error ) { /* Retain newer invalid work. */ }
+				}
+			}
 		}
 
 		invalidate() { invalidate( data( this, false ) ); }

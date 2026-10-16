@@ -10,6 +10,9 @@
 		'layers-invalid-publication-request', 'layers-invalid-snapshot', 'layers-source-unavailable',
 		'layers-edit-conflict', 'layers-publication-disabled', 'layers-admission-unauthorized',
 		'layers-slot-removal-denied', 'layers-content-not-renderable', 'layers-edit-filtered' ] );
+	const additionalPublicationCodes = [ 'missingparam', 'outofrange', 'maxbytes', 'mustbeposted',
+		'layers-main-model-change-denied', 'layers-working-copy-import-unavailable' ];
+	additionalPublicationCodes.forEach( code => publicationCodes.add( code ) );
 	const nameKey = name => name.replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 	function canonical( value ) {
 		if ( Array.isArray( value ) ) return '[' + value.map( canonical ).join( ',' ) + ']';
@@ -98,6 +101,27 @@
 		return { version: 1, creation: identity( record.fixed ), pageCount: record.fixed.context.pageCount,
 			activePage: record.page, snapshot: snapshot( record ) };
 	}
+	/** Optional synchronous host guard and history-only pages; default preparation remains unchanged. */
+	function operationOptions( record, input, allowPages = false ) {
+		let guard, pages = [];
+		if ( input !== undefined ) {
+			if ( !input || Object.getPrototypeOf( input ) !== Object.prototype || Reflect.ownKeys( input ).some( key =>
+				key !== 'guard' && ( !allowPages || key !== 'pages' ) ) ) throw unavailable();
+			const properties = Object.getOwnPropertyDescriptors( input );
+			for ( const descriptor of Object.values( properties ) ) if ( !Object.hasOwn( descriptor, 'value' ) ) throw unavailable();
+			guard = properties.guard && properties.guard.value;
+			if ( guard !== undefined && typeof guard !== 'function' ) throw unavailable();
+			if ( properties.pages ) pages = clone( record.adapter, properties.pages.value );
+		}
+		if ( !Array.isArray( pages ) || pages.length > 100 || new Set( pages ).size !== pages.length ||
+			pages.some( page => !positive( page ) || page > record.fixed.context.pageCount ) ) throw unavailable();
+		return { pages, check: () => {
+			if ( guard ) {
+				const result = guard();
+				if ( result !== undefined && result !== true ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
+			}
+		} };
+	}
 	class PageOwnedPdfCreationTransaction {
 		/** Native preparation and injected native-read/publication transports; never a publication token. */
 		constructor( input, dependencies ) {
@@ -184,8 +208,9 @@
 		cancel( handle ) { const plan = preparations.get( handle ); if ( plan && plan.owner === this ) preparations.delete( handle ); }
 
 		/** Same-base recovery only. The host still owns explicit confirmation and per-page Undo validation. */
-		async prepareDraft( input ) {
+		async prepareDraft( input, options ) {
 			const record = data( this, true ), epoch = ++record.epoch, draft = clone( record.adapter, input );
+			const host = operationOptions( record, options, true ); host.check(); current( this, record, epoch );
 			if ( !draft || !equal( Object.keys( draft ).sort(), [ 'activePage', 'creation', 'pageCount', 'snapshot', 'version' ] ) ||
 				draft.version !== 1 || !equal( draft.creation, identity( record.fixed ) ) ||
 				draft.pageCount !== record.fixed.context.pageCount || !positive( draft.activePage ) || draft.activePage > draft.pageCount ) throw unavailable();
@@ -199,7 +224,12 @@
 				members.set( member.source.page, member ); wanted.add( member.source.page );
 			}
 			if ( !members.has( record.fixed.context.initialPage ) || members.size > draft.pageCount ) throw unavailable();
-			for ( const page of wanted ) pages.set( page, await readPage( this, record, page, epoch ) );
+			host.pages.forEach( page => wanted.add( page ) );
+			for ( const page of wanted ) {
+				host.check(); current( this, record, epoch );
+				pages.set( page, await readPage( this, record, page, epoch ) );
+				host.check(); current( this, record, epoch );
+			}
 			for ( const [ page, member ] of members ) {
 				const blank = pages.get( page ).surface;
 				const rebuilt = record.adapter.withEditorState( { schemaVersion: 1, surfaces: [ blank ] }, blank.id,
@@ -211,8 +241,9 @@
 			return { handle, draft: clone( record.adapter, draft ), contexts: clone( record.adapter, Array.from( pages.values() ) ) };
 		}
 
-		async save( summary = '', beforePublish ) {
+		async save( summary = '', beforePublish, options ) {
 			const record = data( this, true );
+			const host = operationOptions( record, options ); host.check(); current( this, record, record.epoch );
 			if ( typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) throw unavailable();
 			const sent = clone( record.adapter, snapshot( record ) ), target = record.fixed.target;
 			let publishing = false;
@@ -224,8 +255,10 @@
 					catch ( error ) { throw Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } ); }
 				}
 				current( this, record, null, 'saving' );
+				host.check(); current( this, record, null, 'saving' );
 				for ( const member of sent.surfaces.slice( record.base.surfaces.length ) ) {
 					await readPage( this, record, member.source.page, null, 'saving' );
+					host.check(); current( this, record, null, 'saving' );
 				}
 				current( this, record, null, 'saving' );
 				publishing = true;
@@ -244,7 +277,10 @@
 					error && error.code === 'layers-draft-storage-failed' ? error.code : 'layers-editor-session-unavailable';
 				if ( record.phase !== 'disposed' ) record.phase = code === 'layers-edit-conflict' ? 'conflict' :
 					code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
-				throw Object.assign( new Error( code ), { code } );
+				const description = code === 'layers-invalid-snapshot' && error && Object.getOwnPropertyDescriptor( error, 'message' );
+				const message = description && Object.hasOwn( description, 'value' ) && typeof description.value === 'string' &&
+					description.value.length <= 300 ? description.value : code;
+				throw Object.assign( new Error( message ), { code } );
 			}
 		}
 

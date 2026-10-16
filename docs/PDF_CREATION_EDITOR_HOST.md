@@ -49,20 +49,23 @@ initial anchor remains eligible for explicit first Save. The whole creation stay
 dirty before first Save, including when all current layers are empty.
 
 `capture()`, `getLiveState()`, `getDraft()` and `getStatus()` expose validated
-isolated work. `captureDraftHistory()` returns an isolated companion with the
+isolated work, including newer edits while a first Save is pending or confirmed.
+`captureDraftHistory()` returns an isolated companion with the
 complete creation identity, count, active page and per-page source/ID/timeline,
-including a stable empty initial anchor if it has not been visited. This is draft
-material only: no storage, recovery confirmation or restore is performed here.
+including a stable empty initial anchor if it has not been visited.
+`captureDraftEnvelope()` adds publication phase, holds and any confirmed receipt.
+The explicit recovery and first-Save methods and unregistered draft controller
+are described in [drafts and first Save](PDF_CREATION_DRAFTS_AND_SAVE.md).
 `invalidate()` cancels pending navigation. `dispose()` also unsubscribes only the
 host's own listeners and disposes its transaction, leaving editor work untouched.
 
 ## Integration still required
 
-The host and its ResourceLoader/bootstrap/editor callers remain inactive. Draft
-storage and the approved recovery dialog, same-base recovery, native proof for
-earlier creation recovery, explicit first Save with success-only saved markers,
-safe refusal descriptions and handoff to a freshly admitted saved session remain
-separate work. Do not expose creation overlays while those paths are incomplete.
+The host and its ResourceLoader/bootstrap/editor callers remain inactive. Scoped
+local drafts, explicit same-base recovery through the existing dialog and the
+first-Save client boundary are implemented. Fresh native saved-session handoff,
+confirmed/uncertain reconciliation and native proof for earlier creation recovery
+remain separate work. Do not expose creation overlays while those paths are incomplete.
 Existing sparse saved PDF sets continue through the saved-group path.
 
 Final HTTP privacy/errors, native/browser first Save and owning-page return,
