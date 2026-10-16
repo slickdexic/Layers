@@ -1,7 +1,7 @@
 /** Explicit first-Save model for a missing PDF layer set. No callers are activated here. */
 ( function () {
 	'use strict';
-	const records = new WeakMap(), preparations = new WeakMap();
+	const records = new WeakMap(), preparations = new WeakMap(), reconciliations = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -343,8 +343,38 @@
 			check(); return clone( record.adapter, outcome );
 		}
 
+		/** Fresh inspection prepares an owned, single-use transition; result objects grant no authority. */
+		async preparePublicationReconciliation( dependencies, options ) {
+			const record = data( this ), phase = record.phase, epoch = record.epoch;
+			const host = operationOptions( record, options, true );
+			const check = () => { current( this, record, epoch, phase ); host.check(); current( this, record, epoch, phase ); };
+			check(); const outcome = await inspectPublication.call( this, dependencies, options ); check();
+			const confirmation = outcome.outcome === 'payload-current' ?
+				{ revisionId: outcome.revisionId, snapshot: clone( record.adapter, record.attempt.snapshot ) } : null;
+			const handle = Object.freeze( {} );
+			reconciliations.set( handle, { owner: this, record, check, outcome, confirmation } );
+			return { handle, outcome: clone( record.adapter, outcome ), confirmation: clone( record.adapter, confirmation ) };
+		}
+
+		/** No await or notifications between validation and transition. Sent-attempt attribution stays unchanged. */
+		commitPublicationReconciliation( handle ) {
+			const plan = reconciliations.get( handle );
+			if ( !plan || plan.owner !== this ) throw unavailable();
+			reconciliations.delete( handle ); plan.check();
+			const { record, outcome, confirmation } = plan;
+			if ( outcome.outcome === 'changed' ) return { ...outcome, applied: false };
+			if ( outcome.outcome !== 'base-current' && outcome.outcome !== 'payload-current' ) throw unavailable();
+			record.confirmed = confirmation; record.phase = confirmation ? 'confirmed' : 'ready'; record.epoch++;
+			return { ...outcome, applied: true, holdCleared: true };
+		}
+
+		releasePublicationReconciliation( handle ) {
+			const plan = reconciliations.get( handle ); if ( plan && plan.owner === this ) reconciliations.delete( handle );
+		}
+
 		dispose() { const record = records.get( this ); if ( record ) { record.phase = 'disposed'; record.epoch++; } }
 	}
+	const inspectPublication = PageOwnedPdfCreationTransaction.prototype.inspectPublication;
 	window.Layers = window.Layers || {};
 	window.Layers.Editor = window.Layers.Editor || {};
 	window.Layers.Editor.PageOwnedPdfCreationTransaction = PageOwnedPdfCreationTransaction;

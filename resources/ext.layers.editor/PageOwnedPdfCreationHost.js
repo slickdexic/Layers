@@ -259,7 +259,7 @@
 			const record = { editor, store, canvas, history, Store, transaction, config: editor.config,
 				canvasConfig: canvas.config, element: canvas.canvas, disposed: false, loaded: false, committing: false,
 				version: 0, generation: 0, operation: null, needsRefresh: false, saving: false, recovering: false,
-				publicationBlocked: false, blockedPhase: null, confirmation: null, timelines: new Map(), contexts: new Map(), unsubscribers: [],
+				publicationBlocked: false, blockedPhase: null, reviewBlocked: false, confirmation: null, timelines: new Map(), contexts: new Map(), unsubscribers: [],
 				methods: entries.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) ),
 				notify: editor.notifyPdfPageNavigationFailure };
 			alive( record );
@@ -375,7 +375,9 @@
 				if ( selection ) selection.commit();
 				record.timelines = timelines; record.contexts = contexts;
 				record.publicationBlocked = record.publicationBlocked || envelope.publicationBlocked || envelope.phase !== 'ready';
-				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( envelope.phase === 'ready' ? 'uncertain' : envelope.phase ) : null; committed = true;
+				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( envelope.phase === 'ready' ? 'uncertain' : envelope.phase ) : null;
+				// Older envelopes cannot distinguish cancellation from uncertainty. Never clear an ambiguous persisted hold.
+				record.reviewBlocked = record.reviewBlocked || envelope.publicationBlocked; committed = true;
 				record.committing = true;
 				try {
 					canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch ); if ( selection ) selection.refresh();
@@ -406,7 +408,65 @@
 			} finally { record.recovering = false; }
 		}
 
-		blockPublication() { const record = data( this ); record.publicationBlocked = true; record.blockedPhase = 'uncertain'; }
+		/** Explicit opt-in only. verifyBackup must synchronously prove durable, independent pre-check bytes. */
+		async reconcilePublication( dependencies, verifyBackup ) {
+			const record = data( this );
+			const admit = value => {
+				alive( value ); const phase = value.transaction.getStatus().phase;
+				if ( value.needsRefresh || value.saving || value.reviewBlocked ||
+					!( [ 'conflict', 'uncertain' ].includes( phase ) || ( phase === 'ready' && value.publicationBlocked ) ) ) throw unavailable();
+			};
+			admit( record ); if ( record.recovering || typeof verifyBackup !== 'function' ) throw unavailable();
+			invalidate( record ); capture( record ); record.recovering = true;
+			let prepared, patch;
+			try {
+				const participants = guard( record, record.generation, admit ), history = this.captureDraftHistory();
+				const hold = canonical( [ record.publicationBlocked, record.blockedPhase, record.reviewBlocked, record.confirmation ] );
+				const check = () => {
+					participants(); if ( canonical( [ record.publicationBlocked, record.blockedPhase, record.reviewBlocked, record.confirmation ] ) !== hold ) throw unavailable();
+					const result = verifyBackup(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); } participants();
+					if ( canonical( [ record.publicationBlocked, record.blockedPhase, record.reviewBlocked, record.confirmation ] ) !== hold ) throw unavailable();
+				};
+				check(); prepared = await record.transaction.preparePublicationReconciliation( dependencies,
+					{ guard: check, pages: history.members.map( member => member.page ) } ); check();
+				if ( prepared.outcome.outcome === 'changed' ) return { ...prepared.outcome, applied: false, needsRefresh: false };
+				const timelines = new Map(), active = record.transaction.getStatus().page;
+				const anchor = record.transaction.getDraft().creation.anchorSurface, confirmation = prepared.confirmation;
+				for ( const member of history.members ) {
+					const timeline = record.history.copyTimeline( member.timeline );
+					if ( confirmation ) {
+						timeline.lastSaveHistoryIndex = -1;
+						const sent = confirmation.snapshot.surfaces.find( surface => surface.kind === 'pdf' && surface.label === anchor.label &&
+							surface.source.fileTitle === anchor.source.fileTitle && surface.source.page === member.page );
+						if ( sent ) for ( let index = timeline.history.length - 1; index >= 0; index-- ) {
+							if ( canonical( timeline.history[ index ].layers ) === canonical( sent.layers ) ) { timeline.lastSaveHistoryIndex = index; break; }
+						}
+					}
+					timelines.set( member.page, record.history.preflightTimeline( timeline ) );
+				}
+				const dirty = !confirmation || canonical( record.transaction.getDraft().snapshot ) !== canonical( confirmation.snapshot );
+				patch = record.store.prepareWorkingCopyPatch( { values: { isDirty: dirty }, clear: [] } );
+				const stateCommit = record.store.prepareWorkingCopyPatchCommit( patch );
+				if ( !record.Store.isWorkingCopyPatchCommit( stateCommit ) ) throw unavailable();
+				const writes = confirmation ? assignments( record.history, timelines.get( active ) ) : [];
+				stateCommit.preflight(); check();
+				// Final model/backup guard precedes all changes. No await, setters or notifications intervene.
+				const result = record.transaction.commitPublicationReconciliation( prepared.handle );
+				stateCommit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
+				if ( confirmation ) record.timelines = timelines;
+				record.confirmation = confirmation; record.publicationBlocked = false; record.blockedPhase = null;
+				try {
+					record.committing = true; record.store.notifyWorkingCopyPatch( patch ); record.history.updateUndoRedoButtons();
+				} catch ( error ) { record.needsRefresh = true; }
+				finally { record.committing = false; }
+				return { ...result, needsRefresh: record.needsRefresh };
+			} finally {
+				if ( prepared ) record.transaction.releasePublicationReconciliation( prepared.handle );
+				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); record.recovering = false;
+			}
+		}
+
+		blockPublication() { const record = data( this ); record.reviewBlocked = true; record.publicationBlocked = true; record.blockedPhase = 'uncertain'; }
 
 		/** Explicit first Save only. A confirmed result still requires fresh saved-session handoff. */
 		async save( summary = '', beforePublish, checkOwner ) {

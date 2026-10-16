@@ -48,11 +48,11 @@
 			records.set( this, { host, store, methods, writer: store._writerId, storage: store._storage, pageId: target.pageId,
 				read: store._read, write: store._write,
 				scope: { wiki: identity.wiki, user: identity.user, owner: target.owner, baseRevisionId: target.revisionId, surfaceId: target.surfaceId },
-				retainAttempt, disposed: false, ready: false, reviewing: false, saving: false, cancelled: false, lastOwnedRaw: null } );
+				retainAttempt, disposed: false, ready: false, reviewing: false, saving: false, checking: false, cancelled: false, lastOwnedRaw: null } );
 		}
 
 		persist() {
-			const record = data( this ); if ( !record.ready || record.reviewing || record.cancelled ) throw failure();
+			const record = data( this ); if ( !record.ready || record.reviewing || record.checking || record.cancelled ) throw failure();
 			const json = JSON.stringify( { version: 1, scope: record.scope, pdfCreation: record.retainAttempt ? record.host.captureDraftEnvelope( { publicationAttempt: true } ) : record.host.captureDraftEnvelope() } );
 			const current = readCandidate( record, record.writer );
 			if ( current !== null && current !== record.lastOwnedRaw ) throw failure();
@@ -82,7 +82,7 @@
 
 		/** Reuse the approved dialog's choose/confirm interface; neither step grants native authority. */
 		async review( ui ) {
-			const record = data( this ); if ( record.reviewing || record.saving || !ui || typeof ui.choose !== 'function' || typeof ui.confirm !== 'function' ) throw failure();
+			const record = data( this ); if ( record.reviewing || record.saving || record.checking || !ui || typeof ui.choose !== 'function' || typeof ui.confirm !== 'function' ) throw failure();
 			record.reviewing = true; record.ready = false; const plans = [];
 			try {
 				const handles = this.listCandidates();
@@ -106,13 +106,46 @@
 		}
 
 		async save( summary = '' ) {
-			const record = data( this ); if ( !record.ready || record.reviewing || record.saving || record.cancelled ) throw failure();
+			const record = data( this ); if ( !record.ready || record.reviewing || record.saving || record.checking || record.cancelled ) throw failure();
 			record.saving = true; let result;
 			try { result = await record.host.save( summary, () => { data( this ); this.persist(); }, () => { data( this ); } ); return result; }
 			finally {
 				record.saving = false;
 				try { this.persist(); if ( result ) result.draftPersisted = true; }
 				catch ( error ) { if ( result ) result.draftPersisted = false; }
+			}
+		}
+
+		/** Inactive explicit check. A caller supplies a fresh independent store to retain the exact pre-check backup. */
+		async reconcilePublication( dependencies, checkpointStore ) {
+			const record = data( this ), host = record.host, reconcile = host.reconcilePublication;
+			if ( !record.retainAttempt || !record.ready || record.reviewing || record.saving || record.checking || record.cancelled ||
+				typeof reconcile !== 'function' || !checkpointStore || checkpointStore === record.store ||
+				checkpointStore._storage !== record.storage || !/^[a-f0-9]{32}$/.test( checkpointStore._writerId ) ||
+				checkpointStore._writerId === record.writer ) throw failure();
+			const writer = checkpointStore._writerId, storage = checkpointStore._storage;
+			const bindings = [ 'read', 'write', 'selectRecovery', '_read', '_write', '_validateAndBuildKey', '_recordKey' ]
+				.map( key => { if ( typeof checkpointStore[ key ] !== 'function' ) throw failure(); return { key, value: checkpointStore[ key ] }; } );
+			const checkpointRead = () => {
+				if ( checkpointStore._writerId !== writer || checkpointStore._storage !== storage ||
+					bindings.some( binding => checkpointStore[ binding.key ] !== binding.value ) ) throw failure();
+				checkpointStore.selectRecovery( writer ); return checkpointStore.read( record.scope );
+			};
+			if ( checkpointRead() !== null ) throw failure();
+			const raw = this.persist(); checkpointStore.write( record.scope, raw );
+			const check = () => {
+				data( this ); if ( record.cancelled || record.reviewing || record.saving || !record.ready || host.reconcilePublication !== reconcile ||
+					readCandidate( record, record.writer ) !== raw || checkpointRead() !== raw ||
+					JSON.stringify( { version: 1, scope: record.scope, pdfCreation: host.captureDraftEnvelope( { publicationAttempt: true } ) } ) !== raw ) throw failure();
+				data( this );
+			};
+			check(); record.checking = true; let result;
+			try { result = await reconcile.call( host, dependencies, check ); return result; }
+			finally {
+				record.checking = false;
+				if ( result && result.applied ) {
+					try { this.persist(); result.draftPersisted = true; } catch ( error ) { result.draftPersisted = false; }
+				}
 			}
 		}
 
