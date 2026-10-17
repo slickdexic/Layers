@@ -57,6 +57,8 @@
 					notifyFailure: () => this.notify( 'layers-page-draft-failed' ), notifyBlocked: () => this.notify( 'layers-page-draft-blocked', 'warn' )
 				} );
 				await this.lifecycle.initialize(); this.alive(); this.loaded = true;
+				// Recovery presentation ran before unsavedPages could read the initialized host.
+				this.editor.refreshPageControls();
 				this.manager.pageOwnedRevisionControl = new this.classes.PageOwnedRevisionControl( {
 					check: () => this.manager.checkPageOwnedRevision(), message: ( ...args ) => mw.msg( ...args ) } );
 				this.manager.pageOwnedRevisionControl.mount( this.editor.uiManager.container );

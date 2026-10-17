@@ -111,3 +111,27 @@ it.each( [ 'throw', 'promise' ] )( 'retires creation subscriptions when installa
   expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
  } finally { if ( delivered ) delivered.bridge.dispose(); work.close(); }
 } );
+
+it( 'shows recovered unsaved PDF work immediately after initial review', async () => {
+ const slot = true;
+ const source = make( slot ), confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'confirm' ).mockResolvedValue( true );
+ let target;
+ try {
+  await source.manager.loadLayers(); source.edit( 'Recovered second page' );
+  await source.manager.pageOwnedCreation.turn( 1 ); source.edit( 'Recovered first page' );
+  await source.manager.pageOwnedCreation.turn( 2 ); source.manager.pageOwnedCreation.lifecycle.flush();
+  const raw = Array.from( source.storage.records.values() )[ 0 ], scope = JSON.parse( raw ).scope;
+  target = presented();
+  // Match the actual native preparation while retaining the real toolbar.
+  target.editor.config.pageOwned.pdfCreation = copy( source.native );
+  target.api.post.mockImplementation( async options => ( { layerspdfcreationread: preparation( slot, 2, options.pdfpage, 2 ) } ) );
+  new window.Layers.Editor.PageOwnedDraftStore( target.storage, 'a'.repeat( 32 ) ).write( scope, raw );
+  await target.manager.loadLayers();
+  expect( confirm ).toHaveBeenCalledTimes( 1 );
+  expect( target.editor.layers[ 0 ].text ).toBe( 'Recovered second page' );
+  expect( target.editor.unsavedPages() ).toEqual( [ 1, 2 ] );
+  expect( target.editor.toolbar.pageNavEls.label.textContent ).toBe( 'Page 2 / 2 •' );
+  expect( Array.from( target.storage.records.values() ) ).toContain( raw );
+  expect( target.api.postWithToken ).not.toHaveBeenCalled();
+ } finally { confirm.mockRestore(); if ( target ) target.close(); source.close(); }
+} );
