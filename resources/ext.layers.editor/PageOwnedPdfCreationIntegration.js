@@ -102,12 +102,15 @@
 		}
 
 		async handoff() {
-			this.alive(); const delivered = await this.lifecycle.handoffSavedSession( this.savedDependencies );
+			this.alive();
+			const delivered = await this.lifecycle.handoffSavedSession( this.savedDependencies, bridge => {
+				this.alive(); this.manager.pageOwnedBridge = bridge; this.savedBridge = bridge; this.transferred = true;
+				const draft = bridge.session.getDraft();
+				this.editor.config.pageOwned = { owner: draft.owner, pageId: this.preparation.target.pageId,
+					revisionId: draft.baseRevisionId, surfaceId: draft.surfaceId, readOnly: false, draftScope: this.identity };
+			} );
 			try { this.alive(); } catch ( error ) { delivered.bridge.dispose(); throw error; }
-			this.manager.pageOwnedBridge = delivered.bridge; this.savedBridge = delivered.bridge; this.transferred = true;
 			const manager = this.manager, draft = delivered.bridge.session.getDraft();
-			this.editor.config.pageOwned = { owner: draft.owner, pageId: this.preparation.target.pageId,
-				revisionId: draft.baseRevisionId, surfaceId: draft.surfaceId, readOnly: false, draftScope: this.identity };
 			if ( manager.pageOwnedRevisionControl ) manager.pageOwnedRevisionControl.dispose();
 			if ( manager.pageOwnedSummaryField ) manager.pageOwnedSummaryField.dispose();
 			if ( this.dialog ) this.dialog.dispose();

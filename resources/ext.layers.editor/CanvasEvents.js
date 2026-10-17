@@ -331,6 +331,10 @@
 					cm.finishDrawing( point );
 				} else {
 					cm.startDrawing( point );
+					// Text opens a modal which may receive the release event itself.
+					if ( cm.currentTool === 'text' ) {
+						cm.isDrawing = false;
+					}
 				}
 			}
 		}
@@ -447,6 +451,9 @@
 
 		handleMouseUp( e ) {
 			const cm = this.cm;
+			const wasDrawing = cm.isDrawing;
+			// Completion callbacks may capture history before returning early.
+			cm.isDrawing = false;
 
 			// Handle marquee selection completion
 			if ( cm.isMarqueeSelecting ) {
@@ -505,12 +512,11 @@
 				return;
 			}
 
-			if ( !cm.isDrawing ) {
+			if ( !wasDrawing ) {
 				return;
 			}
 
 			const point = cm.getMousePoint( e );
-			cm.isDrawing = false;
 
 			if ( cm.currentTool !== 'pointer' ) {
 				// For angle dimension 3-click flow: mouseUp after the initial click

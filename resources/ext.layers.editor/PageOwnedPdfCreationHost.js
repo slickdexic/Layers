@@ -225,12 +225,13 @@
 				canvas.commitStagedBackground( stage );
 				store.notifyWorkingCopyPatch( patch );
 				if ( selection ) selection.refresh();
-				history.updateUndoRedoButtons();
-				editor.syncPageInUrl( page );
-				editor.refreshPageControls();
 			} finally { record.committing = false; }
 			// A listener may have edited the newly visible page. Preserve that work as well.
 			capture( record );
+			// Presentation reads the completed state through the same strict host guard.
+			history.updateUndoRedoButtons();
+			editor.syncPageInUrl( page );
+			editor.refreshPageControls();
 			return true;
 		} catch ( error ) {
 			if ( record && committed ) record.needsRefresh = true;
@@ -400,9 +401,10 @@
 				record.committing = true;
 				try {
 					canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch ); if ( selection ) selection.refresh();
-					history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
 				} finally { record.committing = false; }
-				capture( record ); return true;
+				capture( record );
+				history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
+				return true;
 			} catch ( error ) { if ( committed ) record.needsRefresh = true; throw unavailable(); }
 			finally {
 				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( operation.handle ) record.transaction.cancel( operation.handle );
@@ -528,7 +530,8 @@
 		}
 
 		/** Inactive confirmed-first-Save handoff; callers must retain the returned bridge and backup. */
-		async handoffSavedSession( dependencies, ownerGuard ) {
+		async handoffSavedSession( dependencies, ownerGuard, installSavedOwner ) {
+			if ( installSavedOwner !== undefined && typeof installSavedOwner !== 'function' ) throw unavailable();
 			const record = data( this );
 			const admit = value => {
 				alive( value );
@@ -582,6 +585,11 @@
 				const result = { bridge, coordinator, creationBackup: prepared.creationBackup, remapping: prepared.remapping, needsRefresh: false };
 				try {
 					record.unsubscribers.forEach( unsubscribe => unsubscribe() ); record.transaction.dispose();
+					// Native callers install the saved owner before presentation reads it.
+					if ( installSavedOwner ) {
+						const installed = installSavedOwner( bridge );
+						if ( installed !== undefined ) { Promise.resolve( installed ).catch( () => {} ); throw unavailable(); }
+					}
 					coordinator.initialize(); canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch );
 					history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
 					bridge.capture(); store.set( 'isDirty', session.getStatus().dirty );

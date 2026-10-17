@@ -121,14 +121,14 @@
 		}
 
 		/** Return fresh saved ownership to the caller. No installation, Close or redirect is implicit. */
-		async handoffSavedSession( dependencies ) {
+		async handoffSavedSession( dependencies, installSavedOwner ) {
 			const record = data( this, true ); idle( record ); record.operation = 'handoff'; record.epoch++;
 			let result;
 			try {
 				const proof = record.controller.preserveForExit( record.exitStore ); proof.preflight();
 				result = await record.host.handoffSavedSession( dependencies, () => {
 					data( this, true ); if ( record.operation !== 'handoff' ) throw unavailable(); proof.preflight();
-				} );
+				}, installSavedOwner );
 				record.transferred = true; record.ready = false; detach( record ); record.controller.dispose();
 				return { ...result, exitBackup: proof.raw };
 			} finally { record.operation = null; if ( !result && record.pendingFlush ) this.flush(); }
