@@ -420,6 +420,8 @@ body.layers-editor-open .mw-body-content {
 	border-bottom: 1px solid #ddd;
 	padding: 8px 16px;
 	display: flex;
+	flex-wrap: wrap;
+	flex-shrink: 0;
 	align-items: center;
 	gap: 16px;
 	box-shadow: 0 2px 4px rgba( 0, 0, 0, 0.1 );
@@ -427,6 +429,7 @@ body.layers-editor-open .mw-body-content {
 
 .toolbar-group {
 	display: flex;
+	flex-shrink: 0;
 	align-items: center;
 	gap: 4px;
 	padding: 0 8px;
@@ -2602,6 +2605,10 @@ body.layers-editor-open .mw-body-content {
 		gap: 2px;
 		padding: 0 4px;
 		flex-shrink: 0;
+		min-width: 0;
+		max-width: 100%;
+		box-sizing: border-box;
+		flex-wrap: wrap;
 	}
 
 	.toolbar-button {

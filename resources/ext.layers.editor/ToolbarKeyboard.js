@@ -221,6 +221,8 @@
 					this.editor.canvasManager.tempLayer = null;
 					this.editor.canvasManager.renderLayers( this.editor.layers );
 					this.toolbar.selectTool( 'pointer' );
+				} else if ( this.editor.config && this.editor.config.pageOwned ) {
+					this.editor.cancel( true );
 				} else {
 					this.editor.cancel();
 				}
