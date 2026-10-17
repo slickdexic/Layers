@@ -42,7 +42,12 @@
 		this.api = new mw.Api();
 		this.pageOwnedBridge = null;
 		this.pageOwnedDrafts = null;
-		if ( editor && editor.config && editor.config.pageOwned ) {
+		this.pageOwnedCreation = null;
+		if ( editor && editor.config && editor.config.pageOwned && editor.config.pageOwned.pdfCreation ) {
+			const Integration = window.Layers && window.Layers.Editor && window.Layers.Editor.PageOwnedPdfCreationIntegration;
+			if ( !Integration ) throw new Error( 'layers-editor-session-unavailable' );
+			this.pageOwnedCreation = new Integration( this );
+		} else if ( editor && editor.config && editor.config.pageOwned ) {
 			const classes = window.Layers && window.Layers.Editor;
 			if ( !classes || !classes.PageOwnedEditorSession || !classes.PageOwnedEditorBridge ||
 				!classes.PageOwnedReadClient || !classes.PageOwnedPublishClient || !classes.PageOwnedSnapshotAdapter ) {
@@ -326,78 +331,15 @@
 	 * Load layers for the current file
 	 */
 	loadLayers() {
+		if ( this.pageOwnedCreation && !this.pageOwnedCreation.transferred ) {
+			return this.pageOwnedCreation.load();
+		}
 		if ( this.pageOwnedBridge ) {
 			return this.pageOwnedBridge.load().then( ( state ) => {
 				if ( this.pageOwnedBridge.session.getStatus().readOnly ) {
 					return state;
 				}
-				const classes = window.Layers.Editor;
-				if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
-					this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
-				} else if ( classes.PageOwnedCreationImportClient && classes.PageOwnedImportIntegration &&
-					classes.PageOwnedImportIntegration.supportsCreation( this.pageOwnedBridge ) ) {
-					this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
-				}
-				// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
-				const random = new Uint8Array( 16 );
-				window.crypto.getRandomValues( random );
-				const writerId = Array.from( random, ( value ) => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
-				const store = new classes.PageOwnedDraftStore( window.localStorage, writerId );
-				const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
-					new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
-				if ( this.pageOwnedImport ) { this.pageOwnedImport.enableDrafts( controller ); }
-				this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
-				this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
-					chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
-					confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
-					chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
-					notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
-					notifyFailure: () => mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } ),
-					notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
-				} );
-				if ( this.pageOwnedImport ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
-				return this.pageOwnedDrafts.initialize().then( () => {
-					if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
-						this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {
-							check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key )
-						} );
-						this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
-						const header = this.editor.uiManager.container.querySelector( '.layers-header' );
-						if ( header && this.pageOwnedImport ) {
-							this.pageOwnedImport.mount( header, header.querySelector( '.layers-header-right' ), this.pageOwnedDrafts,
-								() => this.generateLayerId(), mw.config.get( 'wgLayersMaxLayerCount' ) || 100, ( key, ...args ) => mw.msg( key, ...args ) );
-						}
-						if ( header && classes.PageOwnedNameControl ) {
-							this.pageOwnedNameControl = new classes.PageOwnedNameControl( {
-								getName: () => this.pageOwnedBridge.getName(),
-								rename: ( name ) => this.pageOwnedDrafts.rename( name ),
-								prompt: ( options ) => this.editor.uiManager.showPromptDialog( options ),
-								message: ( key, ...args ) => mw.msg( key, ...args ),
-								notify: ( text, type ) => mw.notify( text, { type } )
-							} );
-							this.pageOwnedNameControl.mount( header, header.querySelector( '.layers-header-right' ) );
-						}
-						const ownPageId = this.editor.config.pageOwned.pageId;
-						if ( header && classes.PageOwnedCopyPicker && ownPageId ) {
-							this.pageOwnedCopyPicker = new classes.PageOwnedCopyPicker( {
-								search: ( text ) => this.api.get( {
-									action: 'layersdrawings', search: text, exclude: ownPageId, format: 'json', formatversion: 2
-								} ).then( ( data ) => data.layersdrawings.pages ),
-								copyUrl: ( page, drawing ) => mw.util.getUrl( 'Special:CopyLayersDrawing', {
-									pageid: ownPageId, sourcepage: page.pageid, sourcesurface: drawing.id, sourcerev: page.revid
-								} ),
-								isDirty: () => this.editor.hasUnsavedChanges(),
-								message: ( key, ...args ) => mw.msg( key, ...args )
-							} );
-							this.pageOwnedCopyPicker.mount( header, header.querySelector( '.layers-header-right' ) );
-						}
-						if ( header && classes.PageOwnedSummaryField ) {
-							this.pageOwnedSummaryField = new classes.PageOwnedSummaryField( ( key ) => mw.msg( key ) );
-							this.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
-						}
-					}
-					return state;
-				} );
+				return this.initializePageOwnedDrafts( state );
 			} ).catch( ( error ) => {
 				if ( this.pageOwnedBridge.loaded && this.editor ) {
 					mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } );
@@ -467,6 +409,84 @@
 				const standardizedError = this.handleLoadError( code, result );
 				reject( standardizedError );
 			} );
+		} );
+	}
+
+	/** Install the existing saved lifecycle without reloading or replacing current editor work. */
+	initializePageOwnedDrafts( state, durable = false ) {
+		const classes = window.Layers.Editor;
+		if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
+			this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
+		} else if ( classes.PageOwnedCreationImportClient && classes.PageOwnedImportIntegration &&
+			classes.PageOwnedImportIntegration.supportsCreation( this.pageOwnedBridge ) ) {
+			this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
+		}
+		// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
+		const random = new Uint8Array( 16 );
+		window.crypto.getRandomValues( random );
+		const writerId = Array.from( random, ( value ) => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+		const Store = durable ? class extends classes.PageOwnedDraftStore {
+			write( scope, raw ) {
+				super.write( scope, raw );
+				if ( this._read( this._recordKey( this._validateAndBuildKey( scope ), this._writerId ) ) !== raw ) throw new Error( 'layers-draft-storage-failed' );
+			}
+		} : classes.PageOwnedDraftStore;
+		const store = new Store( window.localStorage, writerId );
+		const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
+			new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
+		if ( this.pageOwnedImport ) { this.pageOwnedImport.enableDrafts( controller ); }
+		this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
+		this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
+			chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
+			confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
+			chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
+			notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
+			notifyFailure: () => mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } ),
+			notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
+		} );
+		if ( durable ) this.pageOwnedCreation.savedDrafts = this.pageOwnedDrafts;
+		if ( this.pageOwnedImport ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
+		return this.pageOwnedDrafts.initialize().then( () => {
+			if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
+				this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {
+					check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key )
+				} );
+				this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
+				const header = this.editor.uiManager.container.querySelector( '.layers-header' );
+				if ( header && this.pageOwnedImport ) {
+					this.pageOwnedImport.mount( header, header.querySelector( '.layers-header-right' ), this.pageOwnedDrafts,
+						() => this.generateLayerId(), mw.config.get( 'wgLayersMaxLayerCount' ) || 100, ( key, ...args ) => mw.msg( key, ...args ) );
+				}
+				if ( header && classes.PageOwnedNameControl ) {
+					this.pageOwnedNameControl = new classes.PageOwnedNameControl( {
+						getName: () => this.pageOwnedBridge.getName(),
+						rename: ( name ) => this.pageOwnedDrafts.rename( name ),
+						prompt: ( options ) => this.editor.uiManager.showPromptDialog( options ),
+						message: ( key, ...args ) => mw.msg( key, ...args ),
+						notify: ( text, type ) => mw.notify( text, { type } )
+					} );
+					this.pageOwnedNameControl.mount( header, header.querySelector( '.layers-header-right' ) );
+				}
+				const ownPageId = this.editor.config.pageOwned.pageId;
+				if ( header && classes.PageOwnedCopyPicker && ownPageId ) {
+					this.pageOwnedCopyPicker = new classes.PageOwnedCopyPicker( {
+						search: ( text ) => this.api.get( {
+							action: 'layersdrawings', search: text, exclude: ownPageId, format: 'json', formatversion: 2
+						} ).then( ( data ) => data.layersdrawings.pages ),
+						copyUrl: ( page, drawing ) => mw.util.getUrl( 'Special:CopyLayersDrawing', {
+							pageid: ownPageId, sourcepage: page.pageid, sourcesurface: drawing.id, sourcerev: page.revid
+						} ),
+						isDirty: () => this.editor.hasUnsavedChanges(),
+						message: ( key, ...args ) => mw.msg( key, ...args )
+					} );
+					this.pageOwnedCopyPicker.mount( header, header.querySelector( '.layers-header-right' ) );
+				}
+				if ( header && classes.PageOwnedSummaryField ) {
+					this.pageOwnedSummaryField = new classes.PageOwnedSummaryField( ( key ) => mw.msg( key ) );
+					this.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
+				}
+			}
+			return state;
 		} );
 	}
 
@@ -765,7 +785,7 @@
 	 * Load a specific revision by ID
 	 */
 	loadRevisionById( revisionId ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 		}
 		return new Promise( ( resolve, reject ) => {
@@ -971,7 +991,7 @@
 	 * @return {Promise} Resolves with the layer data
 	 */
 	loadLayersBySetName( setName, options = {} ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 		}
 		return new Promise( ( resolve, reject ) => {
@@ -1097,6 +1117,7 @@
 	}
 	/** @return {Promise<Object>} Explicit read-only reconciliation; never retries a save */
 	checkPageOwnedRevision() {
+		if ( this.pageOwnedCreation && !this.pageOwnedCreation.transferred ) return this.pageOwnedCreation.check();
 		if ( !this.pageOwnedDrafts || !this.pageOwnedBridge ) {
 			return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
 		}
@@ -1123,6 +1144,9 @@
 	}
 
 	saveLayers() {
+		if ( this.pageOwnedCreation && !this.pageOwnedCreation.transferred ) {
+			return this.pageOwnedCreation.save().finally( () => { if ( this.editor ) this.hideSpinner(); } );
+		}
 		if ( this.pageOwnedBridge ) {
 			if ( !this.pageOwnedDrafts ) {
 				return Promise.reject( new Error( 'layers-editor-session-unavailable' ) );
@@ -1237,7 +1261,7 @@
 	 * @return {Promise} Resolves with the API response
 	 */
 	savePageLayers( entry ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 		}
 		if ( !entry || !Array.isArray( entry.layers ) ) {
@@ -1264,7 +1288,7 @@
 	}
 
 	buildSavePayload( entry ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			throw new Error( 'layers-editor-legacy-operation-denied' );
 		}
 		const state = this.editor.stateManager;
@@ -1335,7 +1359,7 @@
 	 *   page on screen, and so are wrong when writing a page that is not.
 	 */
 	performSaveWithRetry( payload, attempt, resolve, reject, options ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 			return;
 		}
@@ -1480,7 +1504,7 @@
 	}
 
 	reloadRevisions() {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return;
 		}
 		// Get the current set name to reload the correct set's data
@@ -1559,7 +1583,7 @@
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
 	deleteLayerSet( setName, allPages ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 		}
 		return new Promise( ( resolve, reject ) => {
@@ -1680,7 +1704,7 @@
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
 	renameLayerSet( oldName, newName, allPages ) {
-		if ( this.pageOwnedBridge ) {
+		if ( this.pageOwnedBridge || this.pageOwnedCreation ) {
 			return Promise.reject( new Error( 'layers-editor-legacy-operation-denied' ) );
 		}
 		return new Promise( ( resolve, reject ) => {
@@ -1975,7 +1999,12 @@
 	/**
 	 * Clean up resources and abort pending requests
 	 */
+	prepareDestroy() {
+		return !this.pageOwnedCreation || this.pageOwnedCreation.dispose( false );
+	}
+
 	destroy() {
+		if ( this.pageOwnedCreation ) this.pageOwnedCreation.dispose( true );
 		if ( this.pageOwnedImport ) { this.pageOwnedImport.dispose(); }
 		if ( this.pageOwnedRecoveryDialog ) {
 			this.pageOwnedRecoveryDialog.dispose();

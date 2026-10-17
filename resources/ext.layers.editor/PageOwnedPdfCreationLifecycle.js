@@ -155,18 +155,25 @@
 		releaseCleanClose( handle ) { const plan = closes.get( handle ); if ( plan && plan.owner === this ) closes.delete( handle ); }
 
 		/** Caller obtains explicit Discard first. Unresolved sent evidence is never retirement authority. */
-		prepareDiscard() {
-			const record = data( this, true ); idle( record );
+		prepareDiscard( options ) {
+			const property = options && Object.getOwnPropertyDescriptor( options, 'reviewCancelled' );
+			if ( options !== undefined && ( !property || !Object.hasOwn( property, 'value' ) || property.value !== true || Reflect.ownKeys( options ).length !== 1 ) ) throw unavailable();
+			const reviewCancelled = options !== undefined, record = data( this, !reviewCancelled );
+			if ( reviewCancelled ) {
+				const status = record.controller.getLifecycleStatus();
+				if ( record.operation || !status.cancelled || status.ready || status.reviewing || status.saving || status.checking ) throw unavailable();
+			} else idle( record );
 			const status = record.host.getStatus(), envelope = record.host.captureExitEnvelope(), attempt = envelope.publicationAttempt;
-			if ( status.saving || status.recovering || status.needsRefresh || status.publicationBlocked ||
+			if ( status.saving || status.recovering || status.needsRefresh || ( status.publicationBlocked && !reviewCancelled ) ||
 				![ 'ready', 'conflict', 'confirmed' ].includes( status.phase ) ||
+				( reviewCancelled && attempt ) ||
 				( attempt && ![ 'refused', 'confirmed' ].includes( attempt.dispatchState ) ) ) throw unavailable();
 			const bindings = [ 'prepareOwnedDiscard', 'commitOwnedDiscard', 'releaseOwnedDiscard' ].map( key => {
 				if ( typeof record.controller[ key ] !== 'function' ) throw unavailable(); return { key, value: record.controller[ key ] };
 			} );
-			const owned = record.controller.prepareOwnedDiscard( record.exitStore ), witness = record.host.witnessLifecycleExit();
+			const owned = record.controller.prepareOwnedDiscard( record.exitStore, options ), witness = record.host.witnessLifecycleExit();
 			const handle = Object.freeze( {} ), target = { owner: record.owner, revisionId: status.confirmedRevisionId || status.baseRevisionId };
-			discards.set( handle, { owner: this, record, epoch: record.epoch, owned, witness, bindings, target } );
+			discards.set( handle, { owner: this, record, epoch: record.epoch, owned, witness, bindings, target, reviewCancelled } );
 			return { handle, returnTarget: { ...target } };
 		}
 
@@ -175,7 +182,7 @@
 			const plan = discards.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable(); discards.delete( handle );
 			const check = () => {
 				const record = records.get( this );
-				if ( record !== plan.record || record.disposed || record.finalized || record.transferred || !record.ready ||
+				if ( record !== plan.record || record.disposed || record.finalized || record.transferred || ( !record.ready && !plan.reviewCancelled ) ||
 					record.operation || record.epoch !== plan.epoch || record.editor.isDestroyed || record.editor.stateManager !== record.state ||
 					plan.bindings.some( binding => record.controller[ binding.key ] !== binding.value ) ) throw unavailable();
 				for ( const binding of record.methods ) if ( binding.object[ binding.key ] !== binding.value ) throw unavailable();

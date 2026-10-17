@@ -29,10 +29,11 @@
 		if ( !candidate || candidate.record !== record || readCandidate( record, candidate.writer ) !== candidate.raw ) throw failure();
 		return candidate;
 	}
-	function discardable( record ) {
+	function discardable( record, reviewCancelled ) {
 		const status = record.host.getStatus(), attempt = record.host.captureExitEnvelope().publicationAttempt;
-		if ( !record.ready || record.reviewing || record.saving || record.checking || record.cancelled ||
-			status.saving || status.recovering || status.needsRefresh || status.publicationBlocked ||
+		if ( ( reviewCancelled ? !record.cancelled || record.ready || attempt : !record.ready || record.cancelled ) ||
+			record.reviewing || record.saving || record.checking ||
+			status.saving || status.recovering || status.needsRefresh || ( status.publicationBlocked && !reviewCancelled ) ||
 			![ 'ready', 'conflict', 'confirmed' ].includes( status.phase ) ||
 			( attempt && ![ 'refused', 'confirmed' ].includes( attempt.dispatchState ) ) ) throw failure();
 	}
@@ -202,9 +203,11 @@
 		}
 
 		/** Prepare exact owned-record retirement only. Recovery/checkpoint writers never become owned here. */
-		prepareOwnedDiscard( exitStore ) {
+		prepareOwnedDiscard( exitStore, options ) {
 			const record = data( this );
-			discardable( record );
+			const property = options && Object.getOwnPropertyDescriptor( options, 'reviewCancelled' );
+			if ( options !== undefined && ( !property || !Object.hasOwn( property, 'value' ) || property.value !== true || Reflect.ownKeys( options ).length !== 1 ) ) throw failure();
+			const reviewCancelled = options !== undefined; discardable( record, reviewCancelled );
 			this.validateExitStore( exitStore );
 			const exit = exitStores.get( exitStore ), storage = record.storage;
 			const bindings = [ [ record.store, [ '_validateAndBuildKey', '_recordKey' ] ],
@@ -216,7 +219,8 @@
 				{ key: exitStore._recordKey( exitStore._validateAndBuildKey( record.scope ), exitStore._writerId ), raw: exit ? exit.raw : null } ];
 			const writer = exitStore._writerId, witness = record.host.witnessLifecycleExit();
 			const checkBindings = () => {
-				if ( data( this, true ) !== record || record.reviewing || record.saving || record.checking || record.cancelled || !record.ready ||
+				if ( data( this, true ) !== record || record.reviewing || record.saving || record.checking ||
+					( reviewCancelled ? !record.cancelled || record.ready : record.cancelled || !record.ready ) ||
 					exitStore._storage !== storage || exitStore._writerId !== writer || exitStores.get( exitStore ) !== exit ||
 					bindings.some( binding => binding.object[ binding.key ] !== binding.value ) ) throw failure();
 			};

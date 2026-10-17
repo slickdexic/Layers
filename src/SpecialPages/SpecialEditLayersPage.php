@@ -52,6 +52,47 @@ class SpecialEditLayersPage extends SpecialPage {
 				}
 				$init = $this->pilot->prepareBoundEditor( (int)$pageId, (int)$revision, (int)$start,
 					$expected, $this->getAuthority() );
+				$newSurface = $init['pageOwned']['newSurface'] ?? null;
+				if ( is_array( $newSurface ) && ( $newSurface['kind'] ?? null ) === 'pdf' ) {
+					$targetPage = $newSurface['source']['page'] ?? null;
+					if ( !is_int( $targetPage ) || $targetPage < 1 ) {
+						throw new \DomainException( 'layers-editor-unavailable' );
+					}
+					$pdfCreation = $this->pilot->prepareMissingPdfEditor( (int)$pageId, (int)$revision,
+						(int)$start, $expected, $targetPage, $this->getAuthority() );
+					$target = $pdfCreation['target'] ?? null;
+					$selection = $pdfCreation['selection'] ?? null;
+					$anchor = $pdfCreation['anchorSurface'] ?? null;
+					$context = $pdfCreation['context'] ?? null;
+					$surface = is_array( $context ) ? ( $context['surface'] ?? null ) : null;
+					$rendition = is_array( $context ) ? ( $context['rendition'] ?? null ) : null;
+					$owner = $init['pageOwned']['owner'] ?? null;
+					if ( !is_array( $target ) || !is_array( $selection ) || !is_array( $anchor ) ||
+						!is_array( $context ) || !is_array( $surface ) || !is_array( $rendition ) ||
+						$target !== [ 'pageId' => (int)$pageId, 'owner' => $owner,
+							'revisionId' => (int)$revision, 'surfaceId' => $init['pageOwned']['surfaceId'] ] ||
+						$owner === null || $anchor !== $newSurface ||
+						$selection !== [ 'start' => (int)$start, 'expected' => $expected ] ||
+						( $context['owner'] ?? null ) !== $owner || ( $context['pageId'] ?? null ) !== (int)$pageId ||
+						( $context['revisionId'] ?? null ) !== (int)$revision ||
+						!is_int( $context['pageCount'] ?? null ) || $context['pageCount'] < 1 ||
+						$surface !== $newSurface ||
+						( $context['initialPage'] ?? null ) !== $targetPage ||
+						( $context['page'] ?? null ) !== $targetPage || ( $context['kind'] ?? null ) !== 'pdf' ||
+						( $surface['source']['page'] ?? null ) !== $targetPage ||
+						!is_string( $rendition['url'] ?? null ) || $rendition['url'] === '' ||
+						!is_int( $surface['canvas']['width'] ?? null ) ||
+						!is_int( $surface['canvas']['height'] ?? null ) ) {
+						throw new \DomainException( 'layers-editor-unavailable' );
+					}
+					$init['pageOwned']['pdfCreation'] = $pdfCreation;
+					$init['initialSetName'] = $anchor['label'];
+					$init['page'] = $targetPage;
+					$init['pageCount'] = $context['pageCount'];
+					$init['baseWidth'] = $surface['canvas']['width'];
+					$init['baseHeight'] = $surface['canvas']['height'];
+					$init['imageUrl'] = $rendition['url'];
+				}
 			} else {
 				// A deliberate current-editor link is distinct from an exact numeric link.
 				$owner = $request->getVal( 'owner' );

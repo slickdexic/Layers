@@ -1233,6 +1233,9 @@ class LayersEditor {
 	 * @return {number[]}
 	 */
 	unsavedPages () {
+		if ( this.apiManager && this.apiManager.pageOwnedCreation && !this.apiManager.pageOwnedCreation.transferred ) {
+			return this.apiManager.pageOwnedCreation.unsavedPages();
+		}
 		const pages = this.pageBuffer ? this.pageBuffer.dirtyPages() : [];
 		if ( this.stateManager && this.stateManager.get( 'isDirty' ) &&
 			pages.indexOf( this.page ) === -1
@@ -1585,6 +1588,9 @@ class LayersEditor {
 		if ( page === this.page ) {
 			return Promise.resolve( false );
 		}
+		if ( this.apiManager && this.apiManager.pageOwnedCreation && !this.apiManager.pageOwnedCreation.transferred ) {
+			return this.apiManager.pageOwnedCreation.turn( page );
+		}
 		if ( this.apiManager && this.apiManager.pageOwnedBridge && this.apiManager.pageOwnedBridge.pdfCoordinator ) {
 			return this.apiManager.pageOwnedBridge.pdfCoordinator.turn( page );
 		}
@@ -1709,6 +1715,9 @@ class LayersEditor {
 	}
 
 	performPageNavigation ( page ) {
+		if ( this.apiManager && this.apiManager.pageOwnedCreation && !this.apiManager.pageOwnedCreation.transferred ) {
+			return this.apiManager.pageOwnedCreation.turn( page );
+		}
 		if ( this.apiManager && this.apiManager.pageOwnedBridge && this.apiManager.pageOwnedBridge.pdfCoordinator ) {
 			return this.apiManager.pageOwnedBridge.pdfCoordinator.turn( page );
 		}
@@ -2253,6 +2262,8 @@ class LayersEditor {
 		}
 		const savedFilename = this.filename;
 		const finalize = ( discard = false ) => {
+			const creation = this.apiManager && this.apiManager.pageOwnedCreation;
+			if ( creation && !creation.transferred ) return !this._closeCompleted && creation.finalizeClose( discard );
 			const drafts = this.apiManager && this.apiManager.pageOwnedDrafts;
 			return !this._closeCompleted && ( !drafts || drafts.finalizeClose( discard ) );
 		};
@@ -2386,6 +2397,8 @@ class LayersEditor {
 		if ( this.isDestroyed ) {
 			return;
 		}
+		// Creation exit preservation must run while all editor participants are still alive.
+		if ( this.apiManager && typeof this.apiManager.prepareDestroy === 'function' && !this.apiManager.prepareDestroy() ) return;
 		this.isDestroyed = true;
 
 		// Clean up selection subscription

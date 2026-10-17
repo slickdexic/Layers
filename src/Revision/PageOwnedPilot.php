@@ -100,11 +100,34 @@ class PageOwnedPilot {
 
 	/** @param ApiMain $main @param string $name @return ApiLayersPdfCreationRead */
 	public function newPdfCreationReadApi( ApiMain $main, string $name ): ApiLayersPdfCreationRead {
+		return new ApiLayersPdfCreationRead( $main, $name, $this->newMissingPdfEditorReadService() );
+	}
+
+	/**
+	 * Compose the exact native missing-PDF preparation for a bound Special:EditLayersPage request.
+	 * This is initialization data only and does not authorize publication.
+	 *
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param int $targetPage
+	 * @param Authority $authority
+	 * @return array
+	 */
+	public function prepareMissingPdfEditor( int $pageId, int $revisionId, int $start, string $expected,
+		int $targetPage, Authority $authority
+	): array {
+		return $this->newMissingPdfEditorReadService()->read( $pageId, $revisionId, $start, $expected,
+			$targetPage, $authority );
+	}
+
+	private function newMissingPdfEditorReadService(): PageMissingPdfEditorReadService {
 		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
 			$this->services->getTitleFactory() );
-		return new ApiLayersPdfCreationRead( $main, $name, new PageMissingPdfEditorReadService(
+		return new PageMissingPdfEditorReadService(
 			$this, $this->newIdentityResolver(), $this->services->getRevisionLookup(), $this->reader,
-			$sources, $this->newDrawings, new SourceRenditions( $this->services->getUrlUtils() ) ) );
+			$sources, $this->newDrawings, new SourceRenditions( $this->services->getUrlUtils() ) );
 	}
 
 	/**
