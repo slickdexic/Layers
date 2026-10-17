@@ -21,6 +21,18 @@
 	],
 	"RestRoutes": [
 		{
+			"path": "/layers/v0/pdf/creation",
+			"method": "GET",
+			"class": "MediaWiki\\Extension\\Layers\\Rest\\CreationPdfHandler",
+			"services": [ "LayersMissingPdfViewerRead", "UserFactory", "LayersRateLimiter" ]
+		},
+		{
+			"path": "/layers/v0/pdf/creation",
+			"method": "HEAD",
+			"class": "MediaWiki\\Extension\\Layers\\Rest\\CreationPdfHandler",
+			"services": [ "LayersMissingPdfViewerRead", "UserFactory", "LayersRateLimiter" ]
+		},
+		{
 			"path": "/layers/v0/pdf",
 			"method": "GET",
 			"class": "MediaWiki\\Extension\\Layers\\Rest\\PinnedPdfHandler",
@@ -303,6 +315,10 @@
 		"EditSlide": "layers"
 	},
 	"APIModules": {
+		"layerspdfcreationview": {
+			"class": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersPdfCreationView",
+			"services": [ "LayersMissingPdfViewerRead" ]
+		},
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
 		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo",
 		"layersdelete": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete",
@@ -448,6 +464,7 @@
 				"ext.layers/viewer/PageOwnedRevisionView.js",
 				"ext.layers/viewer/PageOwnedRevisionRenderer.js",
 				"ext.layers/viewer/PageOwnedViewerAdapter.js",
+				"ext.layers/viewer/PageOwnedPdfCreationViewerAdapter.js",
 				"ext.layers/viewer/PageOwnedRevisionBootstrap.js"
 			],
 			"styles": [ "ext.layers/viewer/PageOwnedRevisionView.css" ],

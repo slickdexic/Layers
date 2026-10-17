@@ -244,3 +244,19 @@ IDs select internal data and are never author syntax. A selected choice must
 still pass the exact `layersworkingcopyimportread` admission and guarded editor
 application, with fresh visibility and target-base checks. Listing does not
 authorize Save. Whole-PDF Import and editor UI activation remain separate work.
+
+### layerspdfcreationview — POST (read-only)
+
+Read an empty page-owned PDF viewer from an exact current saved direct embed.
+Requires `pageid`, `baserevid`, UTF-8 byte offset `embedstart` and complete
+`embedtext`. The owner and file must be readable, the native revision visible,
+the owner eligible and migration complete; no stored member of that file/name
+may exist. A permitted reader need not have edit rights. This endpoint writes
+nothing and needs no CSRF token. Its response is private and zero-age.
+
+The response contains native PDF count/page geometry, an empty ephemeral anchor
+and an exact-source delivery descriptor. Opening/exporting revalidates it. The
+separate GET/HEAD delivery URL resolves the saved occurrence and compares its
+source digest; it does not accept a caller-selected file/version. See the
+[PDF creation viewer contract](../docs/PDF_CREATION_VIEWER.md) for response
+privacy, source capture, refusal rules and bounded acceptance limits.

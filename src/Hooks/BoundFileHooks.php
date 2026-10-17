@@ -53,7 +53,7 @@ class BoundFileHooks {
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
 			if ( isset( $named ) && $creationToken !== null ) {
 				return CreationOverlayControls::missing( $parser, $named, 'image', 'File:' . $fileKey,
-					$creationToken );
+					$creationToken, $sourcePage );
 			}
 			return false;
 		}

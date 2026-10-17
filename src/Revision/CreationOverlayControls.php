@@ -127,7 +127,7 @@ class CreationOverlayControls {
 			static fn ( array $match ): string => isset( $tokens[$match[1]] ) ? '' : $match[0], $class ) );
 		$candidate = $tokens[$token];
 		if ( !$file instanceof LocalFile || $candidate['target'] !== 'File:' . $file->getName() ||
-			!str_starts_with( $file->getMimeType(), 'image/' ) ) {
+			( !str_starts_with( $file->getMimeType(), 'image/' ) && $file->getMimeType() !== 'application/pdf' ) ) {
 			return true;
 		}
 		try {
@@ -140,7 +140,8 @@ class CreationOverlayControls {
 				return true;
 			}
 			$bound = BoundFileHooks::resolveNamed( $parser, $named['pageId'] . ':' . $named['name'],
-				$file->getName(), 1, $token );
+				$file->getName(), $file->getMimeType() === 'application/pdf' ?
+					max( 1, (int)( $handlerParams['page'] ?? 1 ) ) : 1, $token );
 			if ( !is_array( $bound ) || !isset( $bound['creation'] ) ) {
 				return true;
 			}
@@ -173,17 +174,34 @@ class CreationOverlayControls {
 	 * @param string $kind image or slide
 	 * @param string|null $target Canonical file title, or slide name
 	 * @param string|null $token Private temporary parse marker
+	 * @param int|null $sourcePage Native occurrence page
 	 * @return array|false Public occurrence only
 	 */
 	public static function missing( Parser $parser, array $named, string $kind, ?string $target,
-		?string $token
+		?string $token, ?int $sourcePage = null
 	) {
+		$file = null;
+		$page = null;
+		if ( $kind === 'image' ) {
+			$services = MediaWikiServices::getInstance();
+			$title = $services->getTitleFactory()->newFromText( $target );
+			$file = $title ? $services->getRepoGroup()->getLocalRepo()->findFile( $title ) : false;
+			if ( $file && $file->getMimeType() === 'application/pdf' ) {
+				$count = $file->pageCount();
+				if ( !is_int( $count ) || $count < 1 || $count > DocumentSchema::MAX_SURFACES ) {
+					return false;
+				}
+				$kind = 'pdf';
+				$page = min( $count, max( 1, $sourcePage ?? 1 ) );
+			}
+		}
+		$isFile = $kind === 'image' || $kind === 'pdf';
 		$tokens = self::$tokens && isset( self::$tokens[$parser] ) ? self::$tokens[$parser] : [];
 		$candidate = $token === null ? null : ( $tokens[$token] ?? null );
 		$revision = $parser->getRevisionRecordObject();
 		if ( !$candidate || !$revision || $revision->getPageId() !== $named['pageId'] ||
-			$candidate['kind'] !== ( $kind === 'image' ? 'file' : 'slide' ) ||
-			( $kind === 'image' && $candidate['target'] !== $target ) ||
+			$candidate['kind'] !== ( $isFile ? 'file' : 'slide' ) ||
+			( $isFile && $candidate['target'] !== $target ) ||
 			!MigrationState::forParser( $parser ) ) {
 			return false;
 		}
@@ -191,25 +209,23 @@ class CreationOverlayControls {
 			$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW );
 			if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ||
 				PageOwnedBinding::resolveNamed( $named, json_decode( $content->getText(), true )['surfaces'],
-					$kind === 'image' ? 'file' : 'slide', $kind === 'image' ? $target : null ) !== null ) {
+					$isFile ? 'file' : 'slide', $isFile ? $target : null ) !== null ) {
 				return false;
 			}
 		}
 		if ( $kind === 'image' ) {
-			$services = MediaWikiServices::getInstance();
-			$title = $services->getTitleFactory()->newFromText( $target );
-			$file = $title ? $services->getRepoGroup()->getLocalRepo()->findFile( $title ) : false;
 			if ( !$file || !$file->exists() || !str_starts_with( $file->getMimeType(), 'image/' ) ) {
 				return false;
 			}
 		}
 		$identity = self::identity( $revision->getPageId(), $revision->getId(), $kind,
-			$kind === 'image' ? $target : null, $named['name'] );
+			$isFile ? $target : null, $named['name'], $page );
 		$output = $parser->getOutput();
 		$output->setOutputFlag( ParserOutputFlags::VARY_REVISION );
 		$entries = $output->getExtensionData( self::DATA_KEY ) ?? [];
 		$entries[$identity] ??= [ 'identity' => $identity, 'label' => $named['name'], 'kind' => $kind,
-			'fileTitle' => $kind === 'image' ? $target : null ];
+			'fileTitle' => $isFile ? $target : null ] + ( $kind === 'pdf' ? [ 'page' => $page,
+				'selection' => [ 'start' => $candidate['start'], 'expected' => $candidate['raw'] ] ] : [] );
 		$output->setExtensionData( self::DATA_KEY, $entries );
 		$output->addModules( [ 'ext.layers.history' ] );
 		return [ 'creation' => $identity, 'noEdit' => in_array( 'noedit',
@@ -223,12 +239,14 @@ class CreationOverlayControls {
 	 * @param string $kind
 	 * @param string|null $fileTitle
 	 * @param string $name
+	 * @param int|null $page Internal PDF page; other media keep their existing identity
 	 * @return string
 	 */
 	public static function identity( int $pageId, int $revisionId, string $kind, ?string $fileTitle,
-		string $name
+		string $name, ?int $page = null
 	): string {
-		return json_encode( [ $pageId, $revisionId, $kind, $fileTitle, DrawingName::key( $name ) ],
+		return json_encode( array_merge( [ $pageId, $revisionId, $kind, $fileTitle, DrawingName::key( $name ) ],
+			$kind === 'pdf' ? [ $page ] : [] ),
 			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 	}
 
@@ -260,11 +278,8 @@ class CreationOverlayControls {
 		$edits = [];
 		$selections = $pilot->listCreationOverlaySelections( $revision->getPageId(), $revisionId, $authority );
 		foreach ( $selections as $entry ) {
-			if ( $entry['kind'] === 'pdf' ) {
-				continue;
-			}
 			$key = self::identity( $revision->getPageId(), $revisionId, $entry['kind'], $entry['fileTitle'],
-				$entry['label'] );
+				$entry['label'], $entry['page'] );
 			$edits[$key] = SpecialPage::getTitleFor( 'EditLayersPage' )->getLocalURL( $entry['params'] );
 		}
 		$config = $services->getMainConfig();
@@ -278,6 +293,24 @@ class CreationOverlayControls {
 		$controls = [];
 		foreach ( $entries as $key => $entry ) {
 			try {
+				if ( is_array( $entry ) && ( $entry['kind'] ?? null ) === 'pdf' ) {
+					$viewer = ( new PageMissingPdfViewerReadService( $services, $pilot->getScope() ) )->read(
+						$revision->getPageId(), $revisionId, $entry['selection']['start'],
+						$entry['selection']['expected'], $authority );
+					if ( self::identity( $viewer['pageId'], $viewer['revisionId'], 'pdf',
+						$viewer['pages'][0]['surface']['source']['fileTitle'], $viewer['label'],
+						$viewer['initialPage'] ) !== $key ) {
+						continue;
+					}
+					$controls[$key] = [ 'identity' => $key, 'label' => $viewer['label'], 'kind' => 'pdf',
+						'preview' => [ 'kind' => 'pdf', 'layers' => [], 'viewer' => $viewer,
+							'selection' => [ 'pageId' => $viewer['pageId'], 'revisionId' => $revisionId ] +
+								$entry['selection'] ] ];
+					if ( isset( $edits[$key] ) ) {
+						$controls[$key]['editUrl'] = $edits[$key];
+					}
+					continue;
+				}
 				if ( !is_array( $entry ) || !in_array( $entry['kind'] ?? null, [ 'image', 'slide' ], true ) ||
 					self::identity( $revision->getPageId(), $revisionId, $entry['kind'], $entry['fileTitle'],
 						$entry['label'] ) !== $key ) {

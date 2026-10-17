@@ -278,7 +278,7 @@ class CreationOverlayControlsTest extends RealAssetTestCase {
 		$this->assertSame( $before, $this->witness() );
 	}
 
-	public function testMissingPdfDoesNotEnterTheNewImageCreationIntegration(): void {
+	public function testMissingPdfUsesSeparateCreationIdentityWithoutPublishing(): void {
 		$file = $this->uploadFixtureFile( __DIR__ . '/../../fixtures/assets/test-multipage.pdf',
 			'File:Excluded-pdf-' . wfRandomString( 8 ) . '.pdf' );
 		$page = $this->getExistingTestPage();
@@ -288,9 +288,14 @@ class CreationOverlayControlsTest extends RealAssetTestCase {
 		$parsed = $this->getServiceContainer()->getParserFactory()->create()->parse( $text, $page->getTitle(),
 			ParserOptions::newFromAnon(), true, true, $revision );
 		$this->assertStringContainsString( '<img ', $parsed->getRawText() );
-		$this->assertStringNotContainsString( 'data-layers-creation', $parsed->getRawText() );
+		$this->assertStringContainsString( 'data-layers-creation', $parsed->getRawText() );
 		$this->assertStringNotContainsString( 'layerscreation-', $parsed->getRawText() );
-		$this->assertNull( $parsed->getExtensionData( CreationOverlayControls::DATA_KEY ) );
+		$entries = $parsed->getExtensionData( CreationOverlayControls::DATA_KEY );
+		$this->assertCount( 1, $entries );
+		$entry = reset( $entries );
+		$this->assertSame( 'pdf', $entry['kind'] );
+		$this->assertSame( 2, $entry['page'] );
+		$this->assertSame( 'abc', json_decode( $entry['identity'], true )[4] );
 		$this->assertSame( $before, $this->witness() );
 	}
 

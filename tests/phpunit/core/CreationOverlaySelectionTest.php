@@ -214,10 +214,6 @@ class CreationOverlaySelectionTest extends RealAssetTestCase {
 			'scanned' => $pilot->listBoundEditorSelections( $page->getId(), $revision, $actor ),
 			'originalPin' => $pin, 'replacementPin' => [ $new->getTimestamp(), $new->getSha1() ],
 			'selections' => $selections ] );
-		if ( $replacementPages === 1 ) {
-			$this->assertSame( [], $selections );
-			return;
-		}
 		$this->assertCount( 1, $selections );
 		$this->assertSame( 2, $selections[0]['page'] );
 		$surfaces = $this->assertDescriptors( $selections, $pilot, $actor );

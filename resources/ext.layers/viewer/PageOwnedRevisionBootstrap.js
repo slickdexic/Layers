@@ -88,7 +88,7 @@
 			}
 		};
 	}
-	function mountCreation( root, revisionId ) {
+	function mountCreation( root, revisionId, api ) {
 		const config = typeof mw !== 'undefined' && mw.config;
 		const entries = config && config.get( 'wgLayersCreationOverlays' );
 		const Overlay = window.Layers.Viewer.Overlay;
@@ -114,10 +114,21 @@
 				return;
 			}
 			const isImage = container.tagName === 'IMG';
-			if ( !Array.isArray( parts ) || parts.length !== 5 || parts[ 0 ] !== config.get( 'wgArticleId' ) ||
-				parts[ 1 ] !== revisionId || parts[ 2 ] !== ( isImage ? 'image' : 'slide' ) ||
+			const isPdf = isImage && Array.isArray( parts ) && parts[ 2 ] === 'pdf';
+			if ( !Array.isArray( parts ) || parts.length !== ( isPdf ? 6 : 5 ) ||
+				parts[ 0 ] !== config.get( 'wgArticleId' ) || parts[ 1 ] !== revisionId ||
+				parts[ 2 ] !== ( isPdf ? 'pdf' : isImage ? 'image' : 'slide' ) ||
 				!entry || entry.identity !== identity || entry.kind !== parts[ 2 ] || !entry.preview ||
-				entry.preview.kind !== entry.kind || !Array.isArray( entry.preview.layers ) || entry.preview.layers.length ) {
+				entry.preview.kind !== entry.kind || !Array.isArray( entry.preview.layers ) || entry.preview.layers.length ||
+				( isPdf && ( !Number.isInteger( parts[ 5 ] ) || parts[ 5 ] < 1 ||
+					!entry.preview.viewer || entry.preview.viewer.initialPage !== parts[ 5 ] ||
+					entry.preview.viewer.pageId !== parts[ 0 ] || entry.preview.viewer.revisionId !== parts[ 1 ] ||
+					!entry.preview.viewer.pages || !entry.preview.viewer.pages[ 0 ] ||
+					!entry.preview.viewer.pages[ 0 ].surface || !entry.preview.viewer.pages[ 0 ].surface.source ||
+					entry.preview.viewer.pages[ 0 ].surface.source.fileTitle !== parts[ 3 ] ||
+					typeof entry.preview.viewer.label !== 'string' ||
+					entry.preview.viewer.label.replace( /[\s_]+/gu, ' ' ).trim().toLowerCase() !== parts[ 4 ] ||
+					typeof window.Layers.Viewer.PageOwnedPdfCreationViewerAdapter !== 'function' ) ) ) {
 				return;
 			}
 			const host = isImage ? document.createElement( 'span' ) : container;
@@ -130,14 +141,21 @@
 			host.classList.add( 'layers-bound-controls' );
 			let disposed = false;
 			let session;
+			let context;
 			const overlay = new Overlay( { container: host,
 				canEdit: typeof entry.editUrl === 'string' && entry.editUrl.length > 0 &&
 					!container.hasAttribute( 'data-layers-noedit' ),
 				onEdit: () => { window.location.href = entry.editUrl; },
 				onView: ( opener ) => {
 					if ( !disposed ) {
-						lightbox.open( Object.assign( {}, entry.preview, { filename: entry.label,
-							explicitEmpty: true, opener } ) );
+						if ( isPdf ) {
+							context = new window.Layers.Viewer.PageOwnedPdfCreationViewerAdapter( {
+								api: api || new mw.Api(), viewer: entry.preview.viewer, selection: entry.preview.selection } );
+							lightbox.open( { filename: entry.label, pageOwned: context, opener } );
+						} else {
+							lightbox.open( Object.assign( {}, entry.preview, { filename: entry.label,
+								explicitEmpty: true, opener } ) );
+						}
 						session = lightbox._sessionToken;
 					}
 				} } );
@@ -147,7 +165,8 @@
 					return;
 				}
 				disposed = true;
-				if ( session !== undefined && lightbox.explicitEmpty && lightbox._sessionToken === session ) {
+				if ( session !== undefined && lightbox._sessionToken === session &&
+					( isPdf ? lightbox.pageOwned === context : lightbox.explicitEmpty ) ) {
 					lightbox.close( true );
 				}
 				overlay.destroy();
@@ -244,7 +263,7 @@
 	 * @return {Promise<Function>} Disposer
 	 */
 	function loadInline( root, api, owner, revisionId, fields ) {
-		const creationDispose = mountCreation( root, revisionId );
+		const creationDispose = mountCreation( root, revisionId, api );
 		const bindings = [];
 		root.querySelectorAll( HOSTS ).forEach( ( host ) => {
 			const binding = host.getAttribute( 'data-layers-binding' );
