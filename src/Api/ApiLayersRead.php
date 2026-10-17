@@ -67,6 +67,9 @@ class ApiLayersRead extends ApiBase {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}
 		try {
+			if ( $params['viewpage'] !== null && !$params['viewer'] ) {
+				throw new \DomainException( 'layers-revision-unavailable' );
+			}
 			if ( $params['editorpage'] !== null ) {
 				if ( !$this->pdfEditorReader || count( $params['binding'] ?? [] ) !== 1 ||
 					$params['viewer'] || $params['controls']
@@ -82,8 +85,11 @@ class ApiLayersRead extends ApiBase {
 				if ( !$this->viewerReader || count( $params['binding'] ?? [] ) !== 1 ) {
 					throw new \DomainException( 'layers-revision-unavailable' );
 				}
-				$viewer = ( $this->viewerReader )( $owner, $params['revid'], $params['binding'][0],
-					$this->getAuthority() );
+				$arguments = [ $owner, $params['revid'], $params['binding'][0], $this->getAuthority() ];
+				if ( $params['viewpage'] !== null ) {
+					$arguments[] = $params['viewpage'];
+				}
+				$viewer = ( $this->viewerReader )( ...$arguments );
 				$this->getResult()->addValue( null, $this->getModuleName(), [ 'viewer' => $viewer ] );
 				return;
 			}
@@ -129,6 +135,8 @@ class ApiLayersRead extends ApiBase {
 				self::PARAM_ISMULTI_LIMIT1 => 50, self::PARAM_ISMULTI_LIMIT2 => 50, self::PARAM_MAX_BYTES => 128 ],
 			'viewer' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
 			'controls' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
+			'viewpage' => [ self::PARAM_TYPE => 'integer', self::PARAM_MIN => 1,
+				self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
 			'editorpage' => [ self::PARAM_TYPE => 'integer', self::PARAM_MIN => 1,
 				self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ]
 		];

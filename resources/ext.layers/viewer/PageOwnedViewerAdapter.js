@@ -6,6 +6,10 @@
 			this.api = options.api;
 			this.bundle = options.bundle;
 			this.binding = options.binding;
+			if ( options.targetPage !== undefined && ( !Number.isInteger( options.targetPage ) || options.targetPage < 1 ) ) {
+				throw new Error( 'layers-revision-unavailable' );
+			}
+			this.targetPage = options.targetPage;
 			this.fields = JSON.parse( JSON.stringify( options.fields || {} ) );
 			this.pdfRenderer = options.pdfRenderer || null;
 			this.disposed = false;
@@ -17,10 +21,14 @@
 
 		read() {
 			const bundle = this.bundle;
-			return Promise.resolve().then( () => this.api.get( {
+			const parameters = {
 				action: 'layersread', formatversion: 2, owner: bundle.owner,
 				revid: bundle.revisionId, binding: this.binding, viewer: 1
-			} ) ).then( ( response ) => {
+			};
+			if ( this.targetPage !== undefined ) {
+				parameters.viewpage = this.targetPage;
+			}
+			return Promise.resolve().then( () => this.api.get( parameters ) ).then( ( response ) => {
 				if ( this.disposed ) {
 					throw this.unavailable();
 				}
@@ -82,7 +90,43 @@
 			if ( !selected ) {
 				throw this.unavailable();
 			}
-			return viewer;
+			if ( this.targetPage === undefined ) {
+				return viewer;
+			}
+			const targetPage = this.targetPage;
+			if ( anchor.kind !== 'pdf' || viewer.targetPage !== targetPage || targetPage > viewer.pageCount ) {
+				throw this.unavailable();
+			}
+			const targetEntry = viewer.pages.find( ( entry ) => entry.page === targetPage );
+			let display;
+			if ( targetEntry ) {
+				if ( viewer.display !== undefined ) {
+					throw this.unavailable();
+				}
+			} else {
+				display = viewer.display;
+				const pin = anchor.source;
+				if ( !display || display.page !== targetPage ||
+					!display.canvas || !Number.isFinite( display.canvas.width ) ||
+					!Number.isFinite( display.canvas.height ) || !( display.canvas.width > 0 && display.canvas.height > 0 ) ||
+					!display.source || display.source.page !== targetPage ||
+					[ 'repository', 'fileTitle', 'timestamp', 'sha1' ].some( ( key ) => display.source[ key ] !== pin[ key ] ) ||
+					!display.rendition || typeof display.rendition.url !== 'string' ||
+					( !/^https?:\/\//i.test( display.rendition.url ) && !/^\/(?!\/)/.test( display.rendition.url ) ) ||
+					!Number.isFinite( display.rendition.width ) || !Number.isFinite( display.rendition.height ) ||
+					!( display.rendition.width > 0 && display.rendition.height > 0 ) ) {
+					throw this.unavailable();
+				}
+				try {
+					const url = new URL( display.rendition.url, window.location.href );
+					if ( ![ 'http:', 'https:' ].includes( url.protocol ) || url.username || url.password ) {
+						throw this.unavailable();
+					}
+				} catch ( error ) {
+					throw this.unavailable();
+				}
+			}
+			return Object.assign( {}, viewer, { initialPage: targetPage } );
 		}
 
 		async loadPage( viewer, page, targetWidth = 1600 ) {

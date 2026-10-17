@@ -465,6 +465,7 @@
 				"ext.layers/viewer/PageOwnedRevisionRenderer.js",
 				"ext.layers/viewer/PageOwnedViewerAdapter.js",
 				"ext.layers/viewer/PageOwnedPdfCreationViewerAdapter.js",
+				"ext.layers/viewer/PageOwnedPdfPageBootstrap.js",
 				"ext.layers/viewer/PageOwnedRevisionBootstrap.js"
 			],
 			"styles": [ "ext.layers/viewer/PageOwnedRevisionView.css" ],

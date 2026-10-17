@@ -33,10 +33,13 @@ class PageViewerReadService {
 	 * @param int $revisionId Explicit displayed revision
 	 * @param string $binding Canonical owner/anchor identity
 	 * @param Authority $authority Original reader
+	 * @param int|null $targetPage Optional occurrence page, separate from the stored anchor
 	 * @return array Viewer identity, exact annotated pages and source delivery
 	 * @throws \DomainException Generic unavailable result
 	 */
-	public function read( Title $owner, int $revisionId, string $binding, Authority $authority ): array {
+	public function read( Title $owner, int $revisionId, string $binding, Authority $authority,
+		?int $targetPage = null
+	): array {
 		try {
 			$identity = PageOwnedBinding::parse( $binding );
 		} catch ( \InvalidArgumentException $e ) {
@@ -84,6 +87,29 @@ class PageViewerReadService {
 		} elseif ( $anchor['kind'] === 'image' ) {
 			$source = $this->renditions->forSurface( $files[$anchor['id']], $anchor, true );
 		}
+		$presentation = [];
+		if ( $targetPage !== null ) {
+			if ( $anchor['kind'] !== 'pdf' || $targetPage < 1 || $targetPage > $pageCount ) {
+				throw new \DomainException( 'layers-revision-unavailable' );
+			}
+			$presentation['targetPage'] = $targetPage;
+			if ( !isset( $pages[$targetPage] ) ) {
+				$file = $files[$anchor['id']];
+				$width = $file->getWidth( $targetPage );
+				$height = $file->getHeight( $targetPage );
+				if ( !is_int( $width ) || !is_int( $height ) || $width < 1 || $height < 1 ) {
+					throw new \DomainException( 'layers-revision-unavailable' );
+				}
+				$scale = min( 1, DocumentSchema::MAX_DIMENSION / max( $width, $height ) );
+				$canvas = [ 'width' => max( 1, (int)round( $width * $scale ) ),
+					'height' => max( 1, (int)round( $height * $scale ) ) ];
+				$pin = array_replace( $anchor['source'], [ 'page' => $targetPage ] );
+				// Presentation only: no ID, layers, stored surface or publication input is invented.
+				$presentation['display'] = [ 'page' => $targetPage, 'canvas' => $canvas, 'source' => $pin,
+					'rendition' => $this->renditions->forSurface( $file,
+						[ 'kind' => 'pdf', 'source' => $pin, 'canvas' => $canvas ] ) ];
+			}
+		}
 		// A transform or native file lookup may run hooks. Repeat admission before returning data.
 		$fresh = $this->access->read( $owner, $revisionId, $authority, $identity['pageId'] );
 		if ( $fresh->getText() !== $content->getText() ) {
@@ -94,6 +120,6 @@ class PageViewerReadService {
 		return [ 'owner' => $owner->getPrefixedDBkey(), 'pageId' => $identity['pageId'],
 			'revisionId' => $revisionId, 'binding' => $binding, 'kind' => $anchor['kind'],
 			'label' => $anchor['label'], 'initialPage' => $anchor['kind'] === 'pdf' ? $anchor['source']['page'] : 1,
-			'pageCount' => $pageCount, 'pages' => array_values( $pages ), 'source' => $source ];
+			'pageCount' => $pageCount, 'pages' => array_values( $pages ), 'source' => $source ] + $presentation;
 	}
 }

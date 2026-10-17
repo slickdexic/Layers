@@ -46,11 +46,12 @@ class SpecialEditLayersPage extends SpecialPage {
 				$start = $request->getVal( 'start' );
 				$expected = $request->getVal( 'expected' );
 				if ( array_key_exists( 'owner', $values ) || array_key_exists( 'surface', $values ) ||
+					array_key_exists( 'pdfpage', $values ) ||
 					!self::isDecimal( $pageId, false ) || !self::isDecimal( $revision, false ) ||
 					!self::isDecimal( $start, true ) || !is_string( $expected ) || $expected === '' ) {
 					throw new \DomainException( 'layers-editor-unavailable' );
 				}
-				$init = $this->pilot->prepareBoundEditor( (int)$pageId, (int)$revision, (int)$start,
+				$init = $this->pilot->prepareBoundEditorEntry( (int)$pageId, (int)$revision, (int)$start,
 					$expected, $this->getAuthority() );
 				$newSurface = $init['pageOwned']['newSurface'] ?? null;
 				if ( is_array( $newSurface ) && ( $newSurface['kind'] ?? null ) === 'pdf' ) {
@@ -101,9 +102,13 @@ class SpecialEditLayersPage extends SpecialPage {
 					!is_string( $owner ) || !is_string( $surface ) ) {
 					throw new \DomainException( 'layers-editor-unavailable' );
 				}
+				if ( $request->getCheck( 'pdfpage' ) && $revision === 'current' ) {
+					throw new \DomainException( 'layers-editor-unavailable' );
+				}
 				$init = $revision === 'current' ?
 					$this->pilot->prepareCurrentEditor( $owner, $surface, $this->getAuthority() ) :
-					$this->pilot->prepareEditor( $owner, (int)$revision, $surface, $this->getAuthority() );
+					$this->pilot->prepareEditor( $owner, (int)$revision, $surface, $this->getAuthority(),
+						$request->getCheck( 'pdfpage' ) ? self::pdfPage( $request->getVal( 'pdfpage' ) ) : null );
 			}
 			// The admitted owner is the return page, independent of the edited file.
 			$returnTitle = Title::newFromText( $init['pageOwned']['owner'] );
@@ -139,6 +144,14 @@ class SpecialEditLayersPage extends SpecialPage {
 		return is_string( $value ) &&
 			( ( $allowZero && $value === '0' ) || preg_match( '/^[1-9][0-9]{0,9}$/D', $value ) ) &&
 			(float)$value <= 2147483647;
+	}
+
+	/** @param mixed $value @return int */
+	private static function pdfPage( $value ): int {
+		if ( !self::isDecimal( $value, false ) ) {
+			throw new \DomainException( 'layers-editor-unavailable' );
+		}
+		return (int)$value;
 	}
 
 }

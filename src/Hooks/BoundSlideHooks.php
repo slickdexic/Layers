@@ -112,6 +112,38 @@ class BoundSlideHooks {
 	}
 
 	/**
+	 * A PDF occurrence may select an empty internal page of an existing set.
+	 * Its stored anchor identifies the set; it must never stand in for the displayed page.
+	 * @param Parser $parser
+	 * @param array $named
+	 * @param string $fileTitle
+	 * @param int $requestedPage Native option before current-upload clamping
+	 * @return array|null Stored anchor and distinct empty target, or null
+	 */
+	public static function emptyPdfPage( Parser $parser, array $named, string $fileTitle,
+		int $requestedPage
+	): ?array {
+		$revision = $parser->getRevisionRecordObject();
+		if ( !$revision || $revision->getPageId() !== $named['pageId'] ) {
+			return null;
+		}
+		$surfaces = self::pageDrawings( $parser );
+		$services = MediaWikiServices::getInstance();
+		$page = PinnedPdfRenderPage::effective( $surfaces, $fileTitle, $named['name'], $requestedPage,
+			$services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
+		if ( $page === null || PageOwnedBinding::resolveNamed( $named, $surfaces, 'file', $fileTitle,
+			$page ) !== null ) {
+			return null;
+		}
+		$members = array_values( array_filter( $surfaces, static fn ( array $surface ): bool =>
+			$surface['kind'] === 'pdf' && $surface['source']['fileTitle'] === $fileTitle &&
+			DrawingName::key( $surface['label'] ) === DrawingName::key( $named['name'] ) ) );
+		usort( $members, static fn ( array $a, array $b ): int => $a['source']['page'] <=> $b['source']['page'] );
+		return $members ? [ 'pageId' => $named['pageId'], 'surfaceId' => $members[0]['id'],
+			'pdfPage' => $page ] : null;
+	}
+
+	/**
 	 * Resolve an exact layer-set name, or one distinct numbered name, within this page's file.
 	 * PDF pages count as members of one normalized name; preserve its first stored spelling.
 	 * @param Parser $parser

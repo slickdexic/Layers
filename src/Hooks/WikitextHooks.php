@@ -385,7 +385,7 @@ class WikitextHooks {
 	 * @param int|null $requestedPage Native occurrence page before current-upload clamping
 	 */
 	private static function markGalleryDrawing( Parser $parser, string $filename, ?string $hint,
-		array &$attribs, int $sourcePage, ?int $requestedPage = null
+		array &$attribs, int $sourcePage, ?int $requestedPage = null, bool $noEdit = false
 	): void {
 		// Without a name a gallery image showed the file's latest set, except on the file's own page.
 		$value = $hint ?? ( self::isFilePageContext() ? null : 'on' );
@@ -404,6 +404,9 @@ class WikitextHooks {
 		$bound = $own === null ? false : BoundFileHooks::resolveNamed( $parser, $own, $filename, $sourcePage,
 			null, $requestedPage );
 		if ( $bound !== false ) {
+			if ( is_array( $bound ) ) {
+				$bound['noEdit'] = $noEdit;
+			}
 			BoundFileHooks::markImage( $attribs, $bound );
 			self::$pageHasLayers = true;
 		}
@@ -678,6 +681,8 @@ class WikitextHooks {
 				// Compatibility callbacks without native revision context cannot bind page-owned PDFs.
 				'requestedPage' => method_exists( $parser, 'getRevisionRecordObject' ) ?
 					ExpandedFileOptions::requestedPage( ExpandedFileOptions::options( $line ) ) : null,
+				'noEdit' => method_exists( $parser, 'getRevisionRecordObject' ) &&
+					self::hasNoEditOption( array_slice( ExpandedFileOptions::options( $line ), 1 ) ),
 			];
 			$tokensCreated[] = $tok;
 			$taggedTitle = $nativeTitle->getPrefixedDBkey() . '#' . $tok;
@@ -854,9 +859,13 @@ class WikitextHooks {
 		if ( $isWikitextRender ) {
 			$fileParams = $staged ?? self::getFileParamsForRender( $filename );
 			if ( is_array( $fileParams['binding'] ) && isset( $fileParams['binding']['named'] ) ) {
-				$fileParams['binding'] = BoundFileHooks::resolveNamed( $fileParams['binding']['parser'],
-					$fileParams['binding']['named'], $filename, self::sourcePage( $thumbnail ), null,
-					$fileParams['binding']['requestedPage'] ?? null );
+				$descriptor = $fileParams['binding'];
+				$bound = BoundFileHooks::resolveNamed( $descriptor['parser'], $descriptor['named'], $filename,
+					self::sourcePage( $thumbnail ), null, $descriptor['requestedPage'] ?? null );
+				if ( is_array( $bound ) ) {
+					$bound['noEdit'] = $descriptor['noEdit'] ?? false;
+				}
+				$fileParams['binding'] = $bound;
 			}
 			if ( $fileParams['binding'] !== null ) {
 				// A page-owned embed never shows a shared drawing, even when its binding was refused.
@@ -868,6 +877,7 @@ class WikitextHooks {
 		} else {
 			$hint = null;
 			$requestedPage = null;
+			$noEdit = false;
 			$galleryState = $parser ? ( self::$galleryStates[$parser] ?? null ) : null;
 			$desc = $galleryState ? $galleryState->staged : null;
 			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
@@ -877,6 +887,7 @@ class WikitextHooks {
 			) {
 				$galleryState->staged = null;
 				$requestedPage = $desc['requestedPage'] ?? null;
+				$noEdit = $desc['noEdit'] ?? false;
 				if ( $desc['setName'] !== null ) {
 					$hint = $desc['setName'];
 				} elseif ( $filename !== null && isset( self::$galleryHints[$filename] ) ) {
@@ -889,7 +900,7 @@ class WikitextHooks {
 				( $hint !== null && preg_match( '/\A\s*[0-9]+:/', $hint ) ) )
 			) {
 				self::markGalleryDrawing( $parser, $filename, $hint, $attribs,
-					self::sourcePage( $thumbnail ), $requestedPage );
+					self::sourcePage( $thumbnail ), $requestedPage, $noEdit );
 				return true;
 			}
 			if ( !$parser && MigrationState::isCompleteNow() ) {
@@ -1422,8 +1433,10 @@ class WikitextHooks {
 			self::logDebug( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
 			$expanded = $parser instanceof Parser ? ExpandedFileOptions::collect( $parser, $text ) : [];
 			$requestedPages = [];
+			$noEdits = [];
 			foreach ( $expanded as $occurrence ) {
 				$requestedPages[$occurrence['start']] = ExpandedFileOptions::requestedPage( $occurrence['options'] );
+				$noEdits[$occurrence['start']] = self::hasNoEditOption( $occurrence['options'] );
 			}
 			$defaults = [];
 			$affectedFiles = [];
@@ -1736,7 +1749,8 @@ class WikitextHooks {
 				} else {
 					$bound = $raw !== null ? BoundFileHooks::resolve( $parser, $raw ) :
 						[ 'named' => $named, 'parser' => $parser,
-							'requestedPage' => $requestedPages[$fileMatch['offset']] ?? null ];
+							'requestedPage' => $requestedPages[$fileMatch['offset']] ?? null,
+							'noEdit' => $noEdits[$fileMatch['offset']] ?? false ];
 				}
 				self::$fileBindings[$fileMatch['filename']][] = $bound;
 			}
@@ -1772,6 +1786,16 @@ class WikitextHooks {
 		}
 
 		return true;
+	}
+
+	/** @param string[] $options Complete ordered top-level occurrence options */
+	private static function hasNoEditOption( array $options ): bool {
+		foreach ( $options as $option ) {
+			if ( is_string( $option ) && strtolower( trim( $option ) ) === 'noedit' ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

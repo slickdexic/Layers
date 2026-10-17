@@ -51,6 +51,19 @@ class BoundFileHooks {
 			[ $binding, $revisionId ] = BoundSlideHooks::register( $parser,
 				BoundSlideHooks::named( $parser, $named, 'file', 'File:' . $fileKey, $sourcePage, $requestedPage ) );
 		} catch ( \DomainException | \InvalidArgumentException $e ) {
+			if ( isset( $named ) && $named !== null && ( $requestedPage ?? $sourcePage ) !== null ) {
+				try {
+					$empty = BoundSlideHooks::emptyPdfPage( $parser, $named, 'File:' . $fileKey,
+						$requestedPage ?? $sourcePage );
+					if ( $empty !== null ) {
+						[ $binding, $revisionId ] = BoundSlideHooks::register( $parser, $empty );
+						$parser->getOutput()->addModules( [ 'ext.layers.history' ] );
+						return [ 'binding' => $binding, 'revisionId' => $revisionId, 'pdfPage' => $empty['pdfPage'] ];
+					}
+				} catch ( \DomainException | \InvalidArgumentException $error ) {
+					return false;
+				}
+			}
 			if ( isset( $named ) && $creationToken !== null ) {
 				return CreationOverlayControls::missing( $parser, $named, 'image', 'File:' . $fileKey,
 					$creationToken, $sourcePage );
@@ -66,6 +79,16 @@ class BoundFileHooks {
 	 * @param array $bound Result of resolve()
 	 */
 	public static function markImage( array &$attribs, array $bound ): void {
+		if ( $bound['noEdit'] ?? false ) {
+			$attribs['data-layers-noedit'] = '1';
+		}
+		if ( isset( $bound['pdfPage'] ) ) {
+			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-bound-pdf-page' );
+			$attribs['data-layers-pdf-anchor'] = $bound['binding'];
+			$attribs['data-layers-pdf-revision'] = (string)$bound['revisionId'];
+			$attribs['data-layers-pdf-page'] = (string)$bound['pdfPage'];
+			return;
+		}
 		if ( isset( $bound['creation'] ) ) {
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-creation-image' );
 			$attribs['data-layers-creation'] = $bound['creation'];

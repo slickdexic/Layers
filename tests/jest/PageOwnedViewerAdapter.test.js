@@ -147,3 +147,89 @@ describe( 'Page-owned viewer response', () => {
 		} );
 	} );
 } );
+
+describe( 'Page-owned PDF viewer target page', () => {
+	function setup( targetPage = 1 ) {
+		const anchor = Object.assign( {}, JSON.parse( JSON.stringify( fixture.surfaces[ 0 ] ) ), { kind: 'pdf', source: {
+			repository: 'local', fileTitle: 'File:Plan.pdf', timestamp: '20261005120000', sha1: 'original', page: 2
+		} } );
+		const bundle = { owner: 'Owner', pageId: 10, revisionId: 42, surface: anchor };
+		const viewer = { ...bundle, binding: 'v1:10:presentation', kind: 'pdf', label: anchor.label,
+			initialPage: 2, pageCount: 3, pages: [ { page: 2, surface: anchor } ],
+			source: { url: '/rest.php/layers/v0/pdf?owner=Owner&revid=42&binding=v1%3A10%3Apresentation', exactVersion: true },
+			targetPage, display: { page: targetPage, canvas: { width: 800, height: 600 },
+				source: { repository: 'local', fileTitle: 'File:Plan.pdf', timestamp: '20261005120000', sha1: 'original', page: targetPage },
+				rendition: { url: '/rest.php/layers/v0/pdf-page?owner=Owner&page=1', width: 1600, height: 1200 } } };
+		const pdfRenderer = { renderPage: jest.fn( () => Promise.resolve( {
+			dataUrl: 'data:image/png;base64,page', width: 1600, height: 1200, pageCount: 3
+		} ) ), destroy: jest.fn() };
+		const api = { get: jest.fn( () => Promise.resolve( { layersread: { viewer } } ) ) };
+		return { anchor, bundle, viewer, api, pdfRenderer,
+			adapter: new Adapter( { api, bundle, binding: viewer.binding, targetPage, pdfRenderer } ) };
+	}
+
+	it( 'requests page 1 separately from the page 2 anchor and renders it without layers', async () => {
+		const { adapter, api, viewer, pdfRenderer } = setup();
+		const result = await adapter.read();
+		expect( api.get ).toHaveBeenCalledWith( { action: 'layersread', formatversion: 2, owner: 'Owner',
+			revid: 42, binding: 'v1:10:presentation', viewer: 1, viewpage: 1 } );
+		expect( result.initialPage ).toBe( 1 );
+		expect( result.pages ).toEqual( viewer.pages );
+		const page = await adapter.loadPage( result, 1 );
+		expect( page.imageUrl ).toBe( 'data:image/png;base64,page' );
+		expect( page.layerData ).toMatchObject( { width: 1600, height: 1200, baseWidth: 1600, baseHeight: 1200, layers: [] } );
+		const sibling = await adapter.loadPage( result, 2 );
+		expect( sibling.layerData.layers ).toEqual( viewer.pages[ 0 ].surface.layers );
+		expect( pdfRenderer.renderPage ).toHaveBeenNthCalledWith( 1, viewer.source.url, 1,
+			{ exactVersion: true, targetWidth: 1600, expectedPageCount: 3, isCurrent: expect.any( Function ) } );
+		expect( pdfRenderer.renderPage ).toHaveBeenNthCalledWith( 2, viewer.source.url, 2,
+			{ exactVersion: true, targetWidth: 1600, expectedPageCount: 3, isCurrent: expect.any( Function ) } );
+	} );
+
+	it.each( [
+		[ 'wrong target echo', viewer => { viewer.targetPage = 2; } ],
+		[ 'wrong display page', viewer => { viewer.display.page = 3; } ],
+		[ 'wrong source page', viewer => { viewer.display.source.page = 3; } ],
+		[ 'wrong archived pin', viewer => { viewer.display.source.sha1 = 'latest'; } ],
+		[ 'wrong file', viewer => { viewer.display.source.fileTitle = 'File:Other.pdf'; } ],
+		[ 'invalid canvas', viewer => { viewer.display.canvas.width = 0; } ],
+		[ 'unsafe rendition protocol', viewer => { viewer.display.rendition.url = 'javascript:alert(1)'; } ],
+		[ 'data rendition', viewer => { viewer.display.rendition.url = 'data:image/png;base64,abc'; } ],
+		[ 'credentialed rendition', viewer => { viewer.display.rendition.url = 'https://user:pass@cdn.example/page.png'; } ],
+		[ 'invalid rendition dimensions', viewer => { viewer.display.rendition.height = NaN; } ]
+	] )( 'refuses malformed target response: %s', async ( name, mutate ) => {
+		const { adapter, viewer } = setup();
+		mutate( viewer );
+		await expect( adapter.read() ).rejects.toThrow( 'layers-revision-unavailable' );
+	} );
+
+	it( 'accepts an authorized credential-free HTTPS CDN rendition', async () => {
+		const { adapter, viewer } = setup();
+		viewer.display.rendition.url = 'https://cdn.example/page.png';
+		await expect( adapter.read() ).resolves.toMatchObject( { initialPage: 1 } );
+	} );
+
+	it( 'refuses an echoed target outside the pinned page count', async () => {
+		const { adapter } = setup( 4 );
+		await expect( adapter.read() ).rejects.toThrow( 'layers-revision-unavailable' );
+	} );
+
+	it( 'keeps the default anchor-page request and response unchanged', async () => {
+		const { api, viewer, bundle } = setup();
+		const defaultAdapter = new Adapter( { api, bundle, binding: viewer.binding } );
+		const result = await defaultAdapter.read();
+		expect( api.get ).toHaveBeenCalledWith( { action: 'layersread', formatversion: 2,
+			owner: 'Owner', revid: 42, binding: 'v1:10:presentation', viewer: 1 } );
+		expect( result ).toBe( viewer );
+		expect( result.initialPage ).toBe( 2 );
+	} );
+
+	it( 'accepts a requested stored target without a display rendition', async () => {
+		const { adapter, api, viewer } = setup( 2 );
+		delete viewer.display;
+		const result = await adapter.read();
+		expect( result.initialPage ).toBe( 2 );
+		expect( result.pages[ 0 ].surface.layers ).toEqual( viewer.pages[ 0 ].surface.layers );
+		expect( api.get ).toHaveBeenCalledWith( expect.objectContaining( { viewpage: 2 } ) );
+	} );
+} );

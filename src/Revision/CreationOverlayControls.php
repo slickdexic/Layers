@@ -141,9 +141,14 @@ class CreationOverlayControls {
 			}
 			$bound = BoundFileHooks::resolveNamed( $parser, $named['pageId'] . ':' . $named['name'],
 				$file->getName(), $file->getMimeType() === 'application/pdf' ?
-					max( 1, (int)( $handlerParams['page'] ?? 1 ) ) : 1, $token );
-			if ( !is_array( $bound ) || !isset( $bound['creation'] ) ) {
+				max( 1, (int)( $handlerParams['page'] ?? 1 ) ) : 1, $token,
+				$file->getMimeType() === 'application/pdf' ?
+					ExpandedFileOptions::requestedPage( $candidate['options'] ) : 1 );
+			if ( !is_array( $bound ) || ( !isset( $bound['creation'] ) && !isset( $bound['pdfPage'] ) ) ) {
 				return true;
+			}
+			if ( isset( $bound['pdfPage'] ) ) {
+				$bound['noEdit'] = self::hasNoEditOption( $candidate['options'] );
 			}
 		} catch ( \DomainException | \InvalidArgumentException $error ) {
 			return true;
@@ -155,6 +160,16 @@ class CreationOverlayControls {
 				$query, $widthOption );
 		} finally {
 			self::$renderContext = $previous;
+		}
+		return false;
+	}
+
+	/** @param string[] $options Complete ordered direct-embed options */
+	private static function hasNoEditOption( array $options ): bool {
+		foreach ( $options as $option ) {
+			if ( is_string( $option ) && strtolower( trim( $option ) ) === 'noedit' ) {
+				return true;
+			}
 		}
 		return false;
 	}

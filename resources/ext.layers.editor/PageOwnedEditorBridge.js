@@ -583,6 +583,11 @@
 			const surface = draft.snapshot.surfaces.find( ( item ) => item.id === draft.surfaceId );
 			// The background must be the pinned file version the server issued; never draw one as a blank slide.
 			const config = this.editor.config || {};
+			const entryPage = config.pageOwned && config.pageOwned.pdfEntryPage;
+			if ( entryPage !== undefined && ( !this.pdfCoordinator || !Number.isInteger( entryPage ) ||
+				entryPage < 1 || entryPage > this.session.getPdfStatus().pageCount ) ) {
+				throw this._error( 'layers-editor-session-unavailable' );
+			}
 			if ( surface.kind === 'slide' ? config.isSlide === false : config.isSlide !== false || !config.imageUrl ) {
 				throw this._error( 'layers-editor-surface-unavailable' );
 			}
@@ -592,6 +597,13 @@
 			this.loaded = true;
 			if ( this.pdfCoordinator ) {
 				this.pdfCoordinator.initialize();
+				if ( entryPage !== undefined && entryPage !== this.session.getPdfStatus().page ) {
+					if ( !await this.pdfCoordinator.turn( entryPage ) ) {
+						this.loaded = false;
+						throw this._error( 'layers-editor-session-unavailable' );
+					}
+					return this.getLiveState();
+				}
 			}
 			return state;
 		}

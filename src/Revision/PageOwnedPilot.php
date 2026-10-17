@@ -441,11 +441,12 @@ class PageOwnedPilot {
 	 * @param int $revisionId Explicit current revision; no latest fallback
 	 * @param string $surfaceId Literal selected surface ID
 	 * @param Authority $authority Request authority, never a privileged substitute
+	 * @param int|null $targetPage Optional page in this saved PDF set; anchor identity stays unchanged
 	 * @return array Editor initialization without snapshot data; image/PDF surfaces carry their exact rendition URL
 	 * @throws \DomainException Fixed unavailable result
 	 */
 	public function prepareEditor( string $ownerText, int $revisionId, string $surfaceId,
-		Authority $authority
+		Authority $authority, ?int $targetPage = null
 	): array {
 		$owner = $this->services->getTitleFactory()->newFromText( $ownerText );
 		if ( !$owner || !$owner->canExist() || $owner->hasFragment() ||
@@ -477,6 +478,9 @@ class PageOwnedPilot {
 			}
 			$init = $this->editorInit( $owner, $revisionId, $current->getPageId(), $surface,
 				$bundle['sourceRenditions'][$surfaceId] ?? null, $authority );
+			if ( $targetPage !== null && ( $surface['kind'] !== 'pdf' || $targetPage < 1 ) ) {
+				throw new \DomainException( 'layers-editor-unavailable' );
+			}
 			if ( $surface['kind'] === 'pdf' && $this->isWholePdfGroup( $bundle['snapshot'], $surface ) ) {
 				try {
 					$context = $this->preparePdfEditorPage( $owner, $revisionId,
@@ -488,6 +492,14 @@ class PageOwnedPilot {
 				$init['page'] = $context['page'];
 				$init['pageCount'] = $context['pageCount'];
 				$init['imageUrl'] = $context['rendition']['url'];
+				if ( $targetPage !== null && $targetPage !== $context['page'] ) {
+					$this->preparePdfEditorPage( $owner, $revisionId,
+						$context['binding'], $targetPage, $authority );
+					$init['pageOwned']['pdfEntryPage'] = $targetPage;
+				}
+			}
+			if ( $targetPage !== null && !isset( $init['pageOwned']['pdfContext'] ) ) {
+				throw new \DomainException( 'layers-editor-unavailable' );
 			}
 			return $init;
 		}
@@ -1466,6 +1478,45 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * Native entry keeps a sparse PDF in its saved whole-set session.
+	 * Lower-level creation preparation and its existing callers retain their contract.
+	 * @param int $pageId
+	 * @param int $revisionId
+	 * @param int $start
+	 * @param string $expected
+	 * @param Authority $authority
+	 * @return array
+	 */
+	public function prepareBoundEditorEntry( int $pageId, int $revisionId, int $start, string $expected,
+		Authority $authority
+	): array {
+		$init = $this->prepareBoundEditor( $pageId, $revisionId, $start, $expected, $authority );
+		$target = $init['pageOwned']['newSurface'] ?? null;
+		if ( !is_array( $target ) || $target['kind'] !== 'pdf' || $init['pageOwned']['emptyBase'] ) {
+			return $init;
+		}
+		$owner = $this->services->getTitleFactory()->newFromID( $pageId, IDBAccessObject::READ_LATEST );
+		$bundle = $this->reader->read( $owner, $revisionId, $authority, $pageId, [] );
+		$members = array_values( array_filter( $bundle['snapshot']['surfaces'],
+			static fn ( array $surface ): bool => $surface['kind'] === 'pdf' &&
+				$surface['source']['fileTitle'] === $target['source']['fileTitle'] &&
+				DrawingName::key( $surface['label'] ) === DrawingName::key( $target['label'] ) ) );
+		if ( !$members ) {
+			return $init;
+		}
+		usort( $members, static fn ( array $a, array $b ): int => $a['source']['page'] <=> $b['source']['page'] );
+		$saved = $this->prepareEditor( $owner->getPrefixedDBkey(), $revisionId, $members[0]['id'], $authority,
+			$target['source']['page'] );
+		$anchor = $saved['pageOwned']['pdfContext']['surface'] ?? null;
+		if ( !$anchor || JsonSnapshotCodec::encode(
+			array_replace( $anchor['source'], [ 'page' => $target['source']['page'] ] ) ) !==
+			JsonSnapshotCodec::encode( $target['source'] ) || $anchor['label'] !== $target['label'] ) {
+			throw new \DomainException( 'layers-editor-unavailable' );
+		}
+		return $saved;
+	}
+
+	/**
 	 * Explicit current-editor entry. Resolve once, then use the exact editor admission path.
 	 * Does not reinterpret stale numeric revision links or affect historical reads.
 	 *
@@ -1667,10 +1718,11 @@ class PageOwnedPilot {
 	 * @param int $revisionId
 	 * @param string $binding
 	 * @param Authority $authority
+	 * @param int|null $targetPage Separate occurrence page within the authorized PDF
 	 * @return array
 	 */
 	public function prepareFullSizeViewer( \MediaWiki\Title\Title $owner, int $revisionId,
-		string $binding, Authority $authority
+		string $binding, Authority $authority, ?int $targetPage = null
 	): array {
 		if ( !$this->scope->includes( $owner ) ) {
 			throw new \DomainException( 'layers-revision-unavailable' );
@@ -1688,7 +1740,7 @@ class PageOwnedPilot {
 		$path = rtrim( (string)$config->get( 'RestPath' ), '/' ) . '/layers/v0/pdf';
 		$viewer = ( new PageViewerReadService( $access, $sources,
 			new SourceRenditions( $this->services->getUrlUtils() ), $path ) )
-			->read( $owner, $revisionId, $binding, $authority );
+			->read( $owner, $revisionId, $binding, $authority, $targetPage );
 		$viewer['editUrl'] = $editUrl;
 		return $viewer;
 	}
