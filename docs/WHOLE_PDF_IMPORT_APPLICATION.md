@@ -83,3 +83,17 @@ Save request/provenance wiring and saved-base reconciliation; missing target set
 and native/browser, supported-version/mobile and owner acceptance remain open.
 Explicit client application and group restoration do not establish native Save,
 draft recovery, existing Undo routing or milestone-1 completion.
+
+## Opt-in history routing follow-up
+
+`enableHistory()` now separately enables the actual HistoryManager route before
+preparation or application. Existing editor callers do not invoke it. With this
+opt-in, ordinary Undo/Redo reaches a complete-group transaction at Import markers
+and preserves later ordinary redo entries. Page-turn preflight, retirement after
+trimming or branching, and surviving refusal barriers are documented in
+[whole-PDF Import history routing](WHOLE_PDF_IMPORT_HISTORY.md).
+
+The earlier activation warning still applies to existing flows without this
+opt-in. Draft persistence/recovery, ordinary Save and saved-base reconciliation,
+missing target sets and native/browser/owner acceptance remain prerequisites to
+activating the complete editor Import flow.

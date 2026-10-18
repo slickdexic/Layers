@@ -3,6 +3,7 @@
 
 ( function () {
 	const instances = new WeakMap(), handles = new WeakMap(), commands = new WeakMap();
+	const historyRoutes = new WeakMap(), historyCertificates = new WeakMap();
 	const define = Object.defineProperty;
 	const fields = [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ];
 	function unavailable() {
@@ -57,6 +58,8 @@
 			[ selection, [ 'captureWorkingCopyImportSelection', 'prepareWorkingCopyImportSelection' ] ],
 			[ store, [ 'isWorkingCopyAlive', 'prepareWorkingCopyPatch', 'prepareWorkingCopyPatchCommit', 'notifyWorkingCopyPatch', 'releaseWorkingCopyPatch' ] ] ]
 			.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) );
+		methods.push( Store.captureWorkingCopyMethod( instance, 'enableHistory' ),
+			...[ 'enablePdfImportHistory', 'hasPdfImportHistory', 'preflightPdfImportTimeline' ].map( key => Store.captureWorkingCopyMethod( history, key ) ) );
 		const ready = () => {
 			if ( active( instance ) !== mode || mode.generation !== generation || bridge.editor !== editor || bridge.session !== mode.session ||
 				bridge.pdfCoordinator !== coordinator || editor.stateManager !== store || editor.historyManager !== history ||
@@ -171,7 +174,169 @@
 		for ( const handle of Array.from( mode.handles ) ) { try { instance.release( handle ); } catch ( ignored ) {} }
 		for ( const command of Array.from( mode.commands ) ) { try { instance.releaseCommand( command ); } catch ( ignored ) {} }
 	}
+	function marker( entry ) {
+		if ( !entry || !Object.hasOwn( entry, 'pdfImportGroup' ) ) { return null; }
+		const value = entry.pdfImportGroup;
+		if ( !value || typeof value !== 'object' || Object.keys( value ).length !== 2 ||
+			typeof value.id !== 'string' || !/^[a-f0-9]{32}$/.test( value.id ) || !Number.isInteger( value.page ) || value.page < 1 ) { throw unavailable(); }
+		return value;
+	}
+	function markImport( mode, timelines ) {
+		const route = historyRoutes.get( mode ); if ( !route ) { return null; }
+		const bytes = new Uint8Array( 16 ); window.crypto.getRandomValues( bytes );
+		const id = Array.from( bytes, value => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+		if ( route.bank.has( id ) ) { throw unavailable(); }
+		const entries = new Map();
+		for ( const page of timelines.pages ) {
+			const timeline = timelines.after.get( page ), entry = timeline.history[ timeline.historyIndex ];
+			entry.pdfImportGroup = { id, page }; entries.set( page, mode.Store.copyWorkingCopyValue( entry ) );
+		}
+		return { id, entries };
+	}
+	function location( route, record, timeline, page ) {
+		const matches = timeline.history.flatMap( ( entry, index ) => {
+			const value = marker( entry ); return value && value.id === record.id ? [ { entry, index, page: value.page } ] : [];
+		} );
+		if ( matches.length !== 1 || matches[ 0 ].page !== page || !equal( matches[ 0 ].entry, record.entries.get( page ) ) ) { throw unavailable(); }
+		return matches[ 0 ].index;
+	}
+	function routedTimelines( route, record, expected, target ) {
+		const { mode } = route, command = record.command;
+		if ( !mode.active || mode.busy || !command || command.released || command.phase !== expected ||
+			mode.history.isDestroyed || mode.history.batchMode || record.savedJson !== mode.session._savedJson ||
+			!mode.ownsSession.call( mode.binding, mode.session ) ) { throw unavailable(); }
+		const timelines = effectiveTimelines( mode );
+		for ( const page of command.timelines.pages ) {
+			const timeline = timelines.get( page ); if ( !timeline ) { throw unavailable(); }
+			const index = location( route, record, timeline, page );
+			if ( index < 1 || timeline.historyIndex !== ( expected === 'after' ? index : index - 1 ) ) { throw unavailable(); }
+			const original = command.timelines.after.get( page ), originalIndex = location( route, record, original, page );
+			if ( index > originalIndex || !equal( timeline.history.slice( 0, index ), original.history.slice( originalIndex - index, originalIndex ) ) ) { throw unavailable(); }
+			// Keep the current branch, including ordinary redo states after this Import.
+			timeline.historyIndex = target === 'after' ? index : index - 1;
+		}
+		return timelines;
+	}
+	function allowsTimeline( route, timeline, page = route.mode.session.getPdfStatus().page ) {
+		try {
+			for ( const entry of timeline.history ) {
+				const value = marker( entry );
+				if ( value && ( value.page !== page || !route.bank.has( value.id ) || !route.bank.get( value.id ).entries.has( page ) ) ) { return false; }
+			}
+			for ( const record of route.bank.values() ) {
+				if ( !record.entries.has( page ) ) { continue; }
+				const found = timeline.history.some( entry => { const value = marker( entry ); return value && value.id === record.id; } );
+				if ( !found ) {
+					// Only a currently owned timeline can establish an official trimmed/cleared gap.
+					const actual = route.mode.session.getPdfStatus().page === page ? route.mode.history.captureTimeline() : route.mode.coordinator.timelines.get( page );
+					if ( !actual || !equal( { ...timeline, historyIndex: actual.historyIndex }, actual ) ) { return false; }
+					continue;
+				}
+				const index = location( route, record, timeline, page );
+				if ( ( timeline.historyIndex >= index ) !== ( ( record.command ? record.command.phase : record.phase ) === 'after' ) ) { return false; }
+			}
+			return true;
+		} catch ( error ) { return false; }
+	}
+	function retireHistoryCommands( route ) {
+		const { mode } = route;
+		if ( !mode.active || mode.busy || mode.coordinator.committing || mode.coordinator.recovering || mode.coordinator.stage ||
+			mode.history.isDestroyed || mode.history.batchMode ) { return; }
+		try {
+			const timelines = effectiveTimelines( mode );
+			for ( const record of route.bank.values() ) {
+				let unreachable = false;
+				for ( const page of record.entries.keys() ) {
+					const timeline = timelines.get( page );
+					if ( !timeline ) { continue; }
+					const found = timeline.history.some( entry => { const value = marker( entry ); return value && value.id === record.id; } );
+					if ( !found ) { record.entries.delete( page ); unreachable = true; }
+					else if ( location( route, record, timeline, page ) < 1 ) { unreachable = true; }
+				}
+				if ( unreachable && record.command ) { route.instance.releaseCommand( record.token ); }
+				if ( !record.entries.size ) { route.bank.delete( record.id ); }
+			}
+		} catch ( error ) { /* Invalid markers remain refusal barriers. */ }
+	}
+	function restoreRouted( instance, token, expected, target ) {
+		const mode = active( instance ), route = historyRoutes.get( mode );
+		const record = route && Array.from( route.bank.values() ).find( value => value.token === token );
+		if ( !record ) { throw unavailable(); }
+		const guard = capture( instance, () => {} ), timelines = routedTimelines( route, record, expected, target );
+		let prepared, staged, result, committed = false;
+		mode.busy = true;
+		try {
+			prepared = mode.binding.prepareImportRestore( record.command[ expected ], record.command[ target ], guard.check );
+			const preview = mode.binding.inspectImportRestore( prepared ); staged = participants( guard, preview, timelines, [] );
+			result = mode.binding.commitImportRestore( prepared, staged.preflight ); prepared = null;
+			staged.commit(); committed = true; record.command.phase = target; mode.generation++;
+			result.diagnostics = staged.refresh(); return result;
+		} catch ( error ) { if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable(); }
+		finally {
+			mode.busy = false;
+			if ( prepared ) { try { mode.binding.releaseImportRestore( prepared ); } catch ( ignored ) {} }
+			if ( staged ) { try { staged.release(); } catch ( ignored ) {} }
+			retireHistoryCommands( route );
+			if ( !mode.active ) { cleanup( instance, mode ); }
+		}
+	}
+	function routeStep( route, undo, query ) {
+		try {
+			const history = route.mode.history, index = history.historyIndex, next = index + ( undo ? -1 : 1 );
+			const value = marker( history.history[ undo ? index : next ] );
+			if ( value ) {
+				const record = route.bank.get( value.id ); if ( !record ) { return false; }
+				routedTimelines( route, record, undo ? 'after' : 'before', undo ? 'before' : 'after' );
+				if ( !query ) { restoreRouted( route.instance, record.token, undo ? 'after' : 'before', undo ? 'before' : 'after' ); }
+				return true;
+			}
+			if ( next >= 0 && next < history.history.length && !allowsTimeline( route, { ...history.captureTimeline(), historyIndex: next } ) ) { return false; }
+			return null;
+		} catch ( error ) { return false; }
+	}
+	function createHistoryRoute( instance, mode ) {
+		const route = { instance, mode, bank: new Map() };
+		const certificate = Object.freeze( {
+			afterChange: () => retireHistoryCommands( route ),
+			tryUndo: () => routeStep( route, true, false ), tryRedo: () => routeStep( route, false, false ),
+			canUndo: () => routeStep( route, true, true ), canRedo: () => routeStep( route, false, true ),
+			allowsTimeline: ( timeline, page ) => allowsTimeline( route, timeline, page ),
+			allowsState: state => { const index = mode.history.history.indexOf( state );
+				return index >= 0 && allowsTimeline( route, { ...mode.history.captureTimeline(), historyIndex: index } ); },
+			allowsJump: target => {
+				try {
+					const index = mode.history.historyIndex;
+					if ( !Number.isInteger( target ) || target < 0 || target > index ) { return false; }
+					for ( let position = target + 1; position <= index; position++ ) { if ( marker( mode.history.history[ position ] ) ) { return false; } }
+					return allowsTimeline( route, { ...mode.history.captureTimeline(), historyIndex: target } );
+				} catch ( error ) { return false; }
+			}
+		} );
+		historyCertificates.set( certificate, route ); return { route, certificate };
+	}
 	class PageOwnedWholePdfImportApplication {
+		static isPdfImportHistoryRoute( value, history, application ) {
+			const route = historyCertificates.get( value );
+			return !!route && route.instance === application && route.mode.history === history && route.mode.active &&
+				historyRoutes.get( route.mode ) === route;
+		}
+
+		/** Explicit opt-in only; no existing editor/Import caller enables this route. */
+		enableHistory() {
+			try {
+				const mode = active( this );
+				if ( historyRoutes.has( mode ) || mode.busy || mode.handles.size || mode.commands.size ) { throw unavailable(); }
+				capture( this, () => {} ).check();
+				const { route, certificate } = createHistoryRoute( this, mode );
+				const History = load( 'HistoryManager', true );
+				historyRoutes.set( mode, route );
+				try {
+					History.prototype.enablePdfImportHistory.call( mode.history, this, certificate );
+					if ( !History.prototype.hasPdfImportHistory.call( mode.history, this ) ) { throw unavailable(); }
+				} catch ( error ) { historyRoutes.delete( mode ); throw error; }
+				mode.generation++;
+			} catch ( error ) { throw unavailable(); }
+		}
 		constructor( bridge, binding ) {
 			try {
 				const Binding = load( 'PageOwnedWholePdfImportSession' ), Bridge = load( 'PageOwnedEditorBridge' );
@@ -218,6 +383,7 @@
 				if ( mode.busy ) { throw unavailable(); } mode.busy = true; ownsBusy = true;
 				prepared = await mode.binding.prepareImportCommit( record.sourceHandle ); guard.check();
 				const preview = mode.binding.inspectImportCommit( prepared ), timelines = timelinesForImport( mode, preview );
+				const historyPlan = markImport( mode, timelines );
 				const page = preview.pages.find( value => value.page === preview.activePage );
 				staged = participants( guard, preview, timelines.after, page ? page.importedLayerIds : [] );
 				const token = Object.freeze( Object.create( null ) ), command = { mode, phase: 'after', timelines, released: false };
@@ -225,6 +391,7 @@
 				staged.commit(); committed = true; record.consumed = true;
 				command.before = result.beforeCheckpoint; command.after = result.checkpoint;
 				commands.set( token, command ); mode.commands.add( token ); mode.generation++;
+				if ( historyPlan ) { historyRoutes.get( mode ).bank.set( historyPlan.id, { ...historyPlan, token, command, savedJson: mode.session._savedJson } ); }
 				result.command = token; result.diagnostics = staged.refresh();
 				try { mode.binding.release( record.sourceHandle ); } catch ( error ) { result.diagnostics.push( 'working-copy-import-release-failed' ); }
 				return result;
@@ -233,12 +400,14 @@
 				if ( ownsBusy ) { record.mode.busy = false; }
 				if ( prepared ) { try { record.mode.binding.releaseImportCommit( prepared ); } catch ( ignored ) {} }
 				if ( staged ) { try { staged.release(); } catch ( ignored ) {} }
+				if ( ownsBusy && historyRoutes.has( record.mode ) ) { retireHistoryCommands( historyRoutes.get( record.mode ) ); }
 				if ( ownsBusy && !record.mode.active ) { cleanup( this, record.mode ); }
 			}
 		}
 		undo( command ) { return this._restore( command, 'after', 'before' ); }
 		redo( command ) { return this._restore( command, 'before', 'after' ); }
 		_restore( token, expected, target ) {
+			if ( historyRoutes.has( active( this ) ) ) { return restoreRouted( this, token, expected, target ); }
 			let prepared, staged, mode, ownsBusy = false, committed = false, result;
 			try {
 				mode = active( this ); const command = commands.get( token );
@@ -272,6 +441,12 @@
 		releaseCommand( token ) {
 			const mode = instances.get( this ), command = commands.get( token );
 			if ( !command || command.mode !== mode || command.released || mode.busy ) { throw unavailable(); }
+			const route = historyRoutes.get( mode );
+			if ( route ) {
+				const record = Array.from( route.bank.values() ).find( value => value.token === token );
+				if ( record ) { record.phase = command.phase; record.command = null; record.token = null; delete record.savedJson; }
+			}
+			commands.delete( token );
 			command.released = true; mode.commands.delete( token );
 			mode.binding.releaseImportCheckpoint( command.before ); mode.binding.releaseImportCheckpoint( command.after );
 		}

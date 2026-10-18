@@ -190,6 +190,9 @@
 					item.source.page === page ) || context.surface;
 				const target = editor.historyManager.preflightTimeline( this.timelines.has( page ) ?
 					this.timelines.get( page ) : this.freshTimeline( { layers: member.layers } ) );
+				if ( editor.historyManager.hasPdfImportHistory && editor.historyManager.hasPdfImportHistory() ) {
+					editor.historyManager.preflightPdfImportTimeline( target, page );
+				}
 				editor.canvasManager.preflightStagedBackground( stage );
 				if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width ||
 					stage.info.height !== context.rendition.height ) {

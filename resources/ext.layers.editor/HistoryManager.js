@@ -19,6 +19,7 @@
 	 * @class
 	 */
 	const workingCopyHistoryModes = new WeakMap();
+	const pdfImportHistoryRoutes = new WeakMap();
 	const workingCopyTimelineCopies = new WeakMap();
 	const workingCopyDraftTimelineCertificates = new WeakSet();
 
@@ -142,6 +143,26 @@
 	const creationHistoryCertificates = new WeakSet();
 
 	class HistoryManager {
+		/** Register only a privately certified, same-editor opt-in PDF route. */
+		enablePdfImportHistory( application, route ) {
+			const Application = typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
+				window.Layers.Editor.PageOwnedWholePdfImportApplication;
+			if ( pdfImportHistoryRoutes.has( this ) || workingCopyHistoryModes.has( this ) || this.isDestroyed || this.batchMode ||
+				!Application || !Application.isPdfImportHistoryRoute( route, this, application ) ) { throw workingHistoryError(); }
+			pdfImportHistoryRoutes.set( this, { application, route } );
+		}
+
+		hasPdfImportHistory( application ) {
+			const value = pdfImportHistoryRoutes.get( this );
+			return !!value && ( application === undefined || value.application === application );
+		}
+
+		/** Qualify a target page timeline before the coordinator changes any live page state. */
+		preflightPdfImportTimeline( input, page ) {
+			const timeline = this.preflightTimeline( input ), value = pdfImportHistoryRoutes.get( this );
+			if ( value && !value.route.allowsTimeline( timeline, page ) ) { throw workingHistoryError(); }
+			return timeline;
+		}
 		static isCreationRebaseHistory( value ) { return creationHistoryCertificates.has( value ); }
 
 		/** Capture all reachable private associations while creation conflict reconciliation is held. */
@@ -667,6 +688,8 @@
 		restoreTimeline( input ) {
 			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyTimelineRestore( input ); }
 			const timeline = this.preflightTimeline( input );
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute && !pdfRoute.route.allowsTimeline( timeline ) ) { throw workingHistoryError(); }
 			this.history = timeline.history;
 			this.historyIndex = timeline.historyIndex;
 			this.maxHistorySteps = timeline.maxHistorySteps;
@@ -797,6 +820,8 @@
 		 * @return {boolean} True if undo was performed
 		 */
 		undo() {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute ) { const result = pdfRoute.route.tryUndo(); if ( result !== null ) { return result; } }
 			if ( workingCopyHistoryModes.has( this ) ) { return this.historyIndex > 0 && this._workingCopyRestore( this.historyIndex - 1 ); }
 			if ( this.isDestroyed || !this.canUndo() ) {
 				return false;
@@ -826,6 +851,8 @@
 		 * @return {boolean} True if redo was performed
 		 */
 		redo() {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute ) { const result = pdfRoute.route.tryRedo(); if ( result !== null ) { return result; } }
 			if ( workingCopyHistoryModes.has( this ) ) { return this.historyIndex < this.history.length - 1 && this._workingCopyRestore( this.historyIndex + 1 ); }
 			if ( this.isDestroyed || !this.canRedo() ) {
 				return false;
@@ -855,6 +882,8 @@
 		 * @return {boolean} True if can undo
 		 */
 		canUndo() {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute ) { const result = pdfRoute.route.canUndo(); if ( result !== null ) { return result; } }
 			return this.historyIndex > 0;
 		}
 
@@ -864,6 +893,8 @@
 		 * @return {boolean} True if can redo
 		 */
 		canRedo() {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute ) { const result = pdfRoute.route.canRedo(); if ( result !== null ) { return result; } }
 			return this.historyIndex < this.history.length - 1;
 		}
 
@@ -873,6 +904,8 @@
 		 * @param {Object} state State object to restore
 		 */
 		restoreState( state ) {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute && !pdfRoute.route.allowsState( state ) ) { return false; }
 			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRestore( this.history.indexOf( state ) ); }
 			// Restore layers using efficient cloning if available
 			const cloneLayersEfficient = this._getCloneLayersEfficient();
@@ -934,6 +967,8 @@
 		 * Update undo/redo button states
 		 */
 		updateUndoRedoButtons() {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute ) { pdfRoute.route.afterChange(); }
 			const canUndo = this.canUndo();
 			const canRedo = this.canRedo();
 			const editor = this.getEditor();
@@ -1111,6 +1146,8 @@
 		 * @return {boolean} True if revert was successful
 		 */
 		revertTo( targetIndex ) {
+			const pdfRoute = pdfImportHistoryRoutes.get( this );
+			if ( pdfRoute && !pdfRoute.route.allowsJump( targetIndex ) ) { return false; }
 			if ( workingCopyHistoryModes.has( this ) ) { return targetIndex <= this.historyIndex && this._workingCopyRestore( targetIndex ); }
 			if (
 				targetIndex < 0 ||
