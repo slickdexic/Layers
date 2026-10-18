@@ -4,6 +4,8 @@
 ( function () {
 	const instances = new WeakMap(), handles = new WeakMap(), commands = new WeakMap();
 	const historyRoutes = new WeakMap(), historyCertificates = new WeakMap();
+	const draftRecoveryHandles = new WeakMap(), draftRecoverySets = new WeakMap();
+	const weakSet = Function.call.bind( WeakMap.prototype.set ), weakDelete = Function.call.bind( WeakMap.prototype.delete );
 	const define = Object.defineProperty;
 	const fields = [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ];
 	function unavailable() {
@@ -171,6 +173,7 @@
 		return diagnostics;
 	}
 	function cleanup( instance, mode ) {
+		for ( const handle of Array.from( draftRecoverySets.get( mode ) || [] ) ) { try { instance.releaseDraftRecovery( handle ); } catch ( ignored ) {} }
 		for ( const handle of Array.from( mode.handles ) ) { try { instance.release( handle ); } catch ( ignored ) {} }
 		for ( const command of Array.from( mode.commands ) ) { try { instance.releaseCommand( command ); } catch ( ignored ) {} }
 	}
@@ -350,7 +353,114 @@
 		return { version: 1, activePage: mode.session.getPdfStatus().page,
 			timelines: draftTimelineRows( mode, timelines ), groups: groups.sort( ( left, right ) => left.id.localeCompare( right.id ) ) };
 	}
+	function recoveryEntry( instance, handle ) {
+		const mode = active( instance ), record = draftRecoveryHandles.get( handle );
+		if ( !record || record.mode !== mode || record.consumed || record.released || record.bindingReleased ) { throw unavailable(); }
+		record.guard.check(); return record;
+	}
+	function recoveryTimelines( mode, preview ) {
+		const history = mode.Store.copyWorkingCopyValue( preview.history ), ids = new Map(), used = new Set();
+		for ( const group of history.groups ) {
+			const bytes = new Uint8Array( 16 ); window.crypto.getRandomValues( bytes );
+			const id = Array.from( bytes, value => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+			if ( used.has( id ) || history.groups.some( value => value.id === id ) ) { throw unavailable(); }
+			used.add( id ); ids.set( group.id, id );
+		}
+		const remap = timeline => {
+			for ( const entry of timeline.history ) {
+				const value = marker( entry ); if ( value && ids.has( value.id ) ) { value.id = ids.get( value.id ); }
+			}
+			return mode.history.preflightTimeline( timeline );
+		};
+		const rows = values => new Map( values.map( row => [ row.page, remap( row.timeline ) ] ) );
+		const timelines = rows( history.timelines ), bank = new Map(), commandSet = new Set(), commandRows = [];
+		if ( !timelines.has( preview.activePage ) ) {
+			const base = member( JSON.parse( mode.session._savedJson ), mode, preview.activePage );
+			timelines.set( preview.activePage, mode.coordinator.freshTimeline( { ...preview.editorState, id: preview.activeSurfaceId },
+				!!base && equal( base.layers, preview.editorState.layers ) ) );
+		}
+		for ( const group of history.groups ) {
+			const entries = new Map( group.entries.map( row => {
+				row.entry.pdfImportGroup.id = ids.get( group.id ); return [ row.page, row.entry ];
+			} ) );
+			let command = null, token = null;
+			if ( !group.retired ) {
+				const pair = preview.commands.find( row => row.id === group.id ); if ( !pair ) { throw unavailable(); }
+				token = Object.freeze( Object.create( null ) );
+				command = { mode, phase: group.phase, released: false, before: pair.beforeCheckpoint, after: pair.checkpoint,
+					timelines: { pages: group.timelines.pages.slice(), before: rows( group.timelines.before ), after: rows( group.timelines.after ) } };
+				commandSet.add( token ); commandRows.push( [ token, command ] );
+			}
+			bank.set( ids.get( group.id ), { id: ids.get( group.id ), entries, phase: group.phase, command, token,
+				...( command ? { savedJson: mode.session._savedJson } : {} ) } );
+		}
+		return { timelines, bank, commandSet, commandRows };
+	}
 	class PageOwnedWholePdfImportApplication {
+		/** Separately invoked recovery; existing draft storage and controls do not call this. */
+		async prepareDraftRecovery( input, assertCurrent = () => {} ) {
+			let native, mode;
+			try {
+				mode = active( this );
+				if ( !historyRoutes.has( mode ) || mode.busy || typeof assertCurrent !== 'function' ) { throw unavailable(); }
+				const original = capture( this, assertCurrent ), methods = [
+					[ this, [ 'prepareDraftRecovery', 'inspectDraftRecovery', 'commitDraftRecovery', 'releaseDraftRecovery' ] ],
+					[ mode.binding, [ 'prepareDraftRecovery', 'inspectDraftRecovery', 'revalidateDraftRecovery', 'commitDraftRecovery', 'releaseDraftRecovery' ] ]
+				].flatMap( ( [ object, keys ] ) => keys.map( key => mode.Store.captureWorkingCopyMethod( object, key ) ) );
+				const guard = { mode, check: () => { original.check(); mode.Store.checkWorkingCopyMethods( methods ); } };
+				native = await mode.binding.prepareDraftRecovery( input, guard.check ); guard.check();
+				const handle = Object.freeze( Object.create( null ) );
+				draftRecoveryHandles.set( handle, { mode, guard, native, consumed: false, released: false, bindingReleased: false } );
+				if ( !draftRecoverySets.has( mode ) ) { draftRecoverySets.set( mode, new Set() ); }
+				draftRecoverySets.get( mode ).add( handle ); return handle;
+			} catch ( error ) {
+				if ( native ) { try { mode.binding.releaseDraftRecovery( native ); } catch ( ignored ) {} } throw unavailable();
+			}
+		}
+
+		inspectDraftRecovery( handle ) {
+			try {
+				const record = recoveryEntry( this, handle ), preview = record.mode.binding.inspectDraftRecovery( record.native );
+				delete preview.commands; record.guard.check(); return preview;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		async commitDraftRecovery( handle ) {
+			let record, staged, result, committed = false, ownsBusy = false;
+			try {
+				record = recoveryEntry( this, handle ); const { mode, guard } = record;
+				if ( mode.busy ) { throw unavailable(); } mode.busy = true; ownsBusy = true;
+				await mode.binding.revalidateDraftRecovery( record.native ); recoveryEntry( this, handle );
+				const preview = mode.binding.inspectDraftRecovery( record.native ), history = recoveryTimelines( mode, preview );
+				staged = participants( guard, preview, history.timelines, [] );
+				const route = historyRoutes.get( mode ), oldCommands = Array.from( mode.commands, token => [ token, commands.get( token ) ] );
+				if ( !route || oldCommands.some( ( [ , command ] ) => !command || command.mode !== mode || command.released ) ) { throw unavailable(); }
+				result = mode.binding.commitDraftRecovery( record.native, staged.preflight );
+				staged.commit();
+				for ( const [ token, command ] of oldCommands ) { command.released = true; weakDelete( commands, token ); }
+				for ( const [ token, command ] of history.commandRows ) { weakSet( commands, token, command ); }
+				route.bank = history.bank; mode.commands = history.commandSet; mode.generation++;
+				record.consumed = true; committed = true;
+				result.diagnostics = staged.refresh(); return result;
+			} catch ( error ) {
+				if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable();
+			} finally {
+				if ( ownsBusy ) {
+					record.mode.busy = false;
+					try { record.mode.binding.releaseDraftRecovery( record.native ); } catch ( ignored ) {} record.bindingReleased = true;
+				}
+				if ( staged ) { try { staged.release(); } catch ( ignored ) {} }
+				if ( record && !record.mode.active ) { cleanup( this, record.mode ); }
+			}
+		}
+
+		releaseDraftRecovery( handle ) {
+			const mode = instances.get( this ), record = draftRecoveryHandles.get( handle );
+			if ( !record || record.mode !== mode || record.released || mode.busy ) { throw unavailable(); }
+			record.released = true; draftRecoverySets.get( mode ).delete( handle );
+			if ( !record.bindingReleased ) { mode.binding.releaseDraftRecovery( record.native ); record.bindingReleased = true; }
+		}
+
 		/** Capture a complete inert recovery record; never store it or restore capabilities. */
 		captureDraft() {
 			try {

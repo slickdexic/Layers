@@ -6,6 +6,8 @@
 	// Opt-in transaction state never becomes serialized session authority.
 	const transactions = new WeakMap(), checkpoints = new WeakMap(), citations = new WeakMap();
 	const checkpointClaims = new WeakMap(), restores = new WeakMap();
+	const draftRecoveries = new WeakMap();
+	const draftSourceTypes = new WeakMap();
 	const preparing = new WeakSet(), consumed = new WeakSet();
 	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
@@ -327,7 +329,228 @@
 			!equal( member, origins.get( member.id ) ) ).sort( ( left, right ) => left.id.localeCompare( right.id ) );
 	}
 
+	function draftCall( record, object, key, ...args ) {
+		record.check();
+		const entry = record.methods.find( value => value.object === object && value.key === key );
+		if ( !entry ) { throw unavailable(); }
+		const result = entry.descriptor.value.call( object, ...args ); record.check(); return result;
+	}
+	async function draftAwait( record, object, key, ...args ) {
+		record.check();
+		const entry = record.methods.find( value => value.object === object && value.key === key );
+		if ( !entry ) { throw unavailable(); }
+		const pending = Promise.resolve( entry.descriptor.value.call( object, ...args ) );
+		const cleanup = value => {
+			if ( object === record.state.source && key === 'prepareDraftReads' ) {
+				const release = record.methods.find( methodEntry => methodEntry.object === object && methodEntry.key === 'releaseDraftReads' );
+				try { release.descriptor.value.call( object, value ); } catch ( ignored ) {}
+			}
+		};
+		try { record.check(); } catch ( error ) { pending.then( cleanup, () => {} ); throw error; }
+		const result = await pending;
+		try { record.check(); } catch ( error ) { cleanup( result ); throw error; } return result;
+	}
+	function draftRecord( instance, token ) {
+		const state = active( instance ), store = draftRecoveries.get( instance ), record = store && store.get( token );
+		if ( !record || record.committed || record.released ) { throw unavailable(); }
+		record.check();
+		if ( !draftCall( record, record.Source, 'isDraftReadHandle', record.native, state.source ) ) { throw unavailable(); }
+		return { state, store, record };
+	}
+	function draftHolders( plan ) {
+		return [ plan.session, ...plan.history.groups.filter( group => !group.retired )
+			.flatMap( group => [ group.checkpoints.before, group.checkpoints.after ] ) ];
+	}
+	async function authorizeDraft( record ) {
+		const { state, witness, plan } = record, session = state.session, holders = draftHolders( plan );
+		const reads = draftCall( record, state.source, 'inspectDraftReads', record.native ), keys = new Map(), contexts = new Map();
+		for ( const { identity, data } of reads ) {
+			if ( data.target.owner !== session._owner || data.target.pageId !== session._pageId || data.target.revisionId !== session._revisionId ||
+				data.target.surfaceId !== session._surfaceId || !equal( data.targetBundle.snapshot, witness.base ) ||
+				data.targetGroup.pageCount !== session._pdf.pageCount || !equal( data.targetGroup.source, session._pdf.original ) ||
+				data.sourceGroup.source.fileTitle !== data.targetGroup.source.fileTitle ||
+				nameKey( data.sourceGroup.label ) !== nameKey( data.targetGroup.label ) ) { throw unavailable(); }
+			keys.set( JSON.stringify( [ identity.sourcePageId, identity.sourceRevisionId, identity.sourceSurfaceId ] ),
+				JSON.stringify( [ identity.sourcePageId, identity.sourceRevisionId, data.sourceGroup.source.fileTitle, nameKey( data.sourceGroup.label ) ] ) );
+			for ( const surface of data.admittedTargetSurfaces ) {
+				const context = admit( witness, nativeContext( data, surface ) ), existing = contexts.get( context.page );
+				if ( existing && !equal( existing, context ) ) { throw unavailable(); } contexts.set( context.page, context );
+			}
+		}
+		// This native editor read proves current edit access even when the draft has no source citations.
+		const current = copy( state, await invokeAsync( witness, state.pageReader, 'read', { owner: session._owner,
+			revisionId: session._revisionId, binding: 'v1:' + session._pageId + ':' + session._surfaceId, page: session._pdf.page } ) );
+		const currentContext = invoke( witness, session, '_pdfAdmit', current );
+		if ( currentContext.page !== session._pdf.page ) { throw unavailable(); }
+		const base = copy( state, await invokeAsync( witness, session._reader, 'read', { owner: session._owner, revisionId: session._revisionId } ) );
+		if ( base.revisionId !== session._revisionId || !equal( base.snapshot, witness.base ) ) { throw unavailable(); }
+		const histories = new Map(), origins = holders.flatMap( holder => holder.admissions );
+		// A currently viewed blank is also retained; it must not gain authority from stored draft data.
+		origins.push( ...witness.maps[ 1 ].data );
+		const checked = new Map();
+		for ( const [ id, origin ] of origins ) {
+			const key = JSON.stringify( [ id, origin ] ); if ( checked.has( key ) ) { continue; }
+			let context = contexts.get( origin.surface.source.page );
+			if ( !context ) {
+				const raw = copy( state, await invokeAsync( witness, state.pageReader, 'read', { owner: session._owner, revisionId: session._revisionId,
+					binding: 'v1:' + session._pageId + ':' + session._surfaceId, page: origin.surface.source.page } ) );
+				context = admit( witness, raw ); contexts.set( context.page, context );
+			}
+			if ( invoke( witness, session, '_pdfNativeId', origin ) !== id ) { throw unavailable(); }
+			if ( origin.revisionId === session._revisionId ) {
+				if ( !equal( origin.surface, context.surface ) ) { throw unavailable(); }
+			} else {
+				if ( !invoke( witness, session, '_pdfAssociation', origin, context ) ) { throw unavailable(); }
+				if ( !histories.has( origin.revisionId ) ) {
+					const historical = copy( state, await invokeAsync( witness, session._reader, 'read', { owner: session._owner, revisionId: origin.revisionId } ) );
+					if ( historical.revisionId !== origin.revisionId ) { throw unavailable(); } histories.set( origin.revisionId, historical.snapshot );
+				}
+				invoke( witness, session, '_pdfHistoricalOrigin', origin, histories.get( origin.revisionId ) );
+			}
+			checked.set( key, true );
+		}
+		const claims = [], cache = new Map();
+		for ( const holder of holders ) {
+			const group = invoke( witness, session, '_pdfGroup', holder.snapshot,
+				holder.snapshot.surfaces.find( value => value.id === session._surfaceId ), session._pdf.pageCount );
+			for ( const surface of group ) { state.copy.call( state.adapter, holder.snapshot, surface.id ); }
+			if ( !equal( originsFor( state, holder.snapshot, new Map( holder.admissions ) ), holder.admissionRevisions ) ) { throw unavailable(); }
+			const entries = holder.sources.map( citation => {
+				const key = keys.get( JSON.stringify( [ citation.sourcePageId, citation.sourceRevisionId, citation.sourceSurfaceId ] ) );
+				if ( !key ) { throw unavailable(); } return { key, citation: copy( state, citation ) };
+			} );
+			if ( new Set( entries.map( entry => entry.key ) ).size !== entries.length ) { throw unavailable(); }
+			const key = JSON.stringify( holder.sources.map( citation => [ citation.targetSurfaceId,
+				citation.sourcePageId, citation.sourceRevisionId, citation.sourceSurfaceId ] ) );
+			if ( !cache.has( key ) ) { cache.set( key, entries.length ? { scope: record.scope, entries } : undefined ); }
+			claims.push( cache.get( key ) );
+		}
+		record.check(); return { claims, currentContext };
+	}
+	function stageDraft( record, authority ) {
+		const { state, witness, plan } = record, session = state.session, data = plan.session;
+		const snapshot = copy( state, data.snapshot ), temporary = new Map( copy( state, data.temporary ) ), admitted = new Map( copy( state, data.admissions ) );
+		const member = selected( snapshot, session ).find( surface => surface.source.page === session._pdf.page );
+		const activeId = member ? member.id : session._pdf.activeSurfaceId;
+		if ( !member && !temporary.has( activeId ) ) {
+			const blank = session._pdf.temporary.get( activeId ), origin = session._pdf.admissions.get( activeId );
+			if ( !blank || !origin ) { throw unavailable(); }
+			temporary.set( activeId, copy( state, blank ) ); admitted.set( activeId, copy( state, origin ) );
+		}
+		const view = member ? snapshot : { ...snapshot, surfaces: snapshot.surfaces.concat( temporary.get( activeId ) ) };
+		const editorState = state.copy.call( state.adapter, view, activeId );
+		const preview = copy( state, { candidateSnapshot: snapshot, editorState, activeSurfaceId: activeId,
+			activePage: session._pdf.page, dirty: !equal( snapshot, witness.base ), sources: data.sources,
+			admissionRevisions: originsFor( state, snapshot, admitted ), history: plan.history } );
+		const checkpointStore = new Map(), pairs = [], rows = [], holders = draftHolders( plan );
+		let index = 1;
+		for ( const group of plan.history.groups.filter( value => !value.retired ) ) {
+			const tokens = [];
+			for ( const phase of [ 'before', 'after' ] ) {
+				const token = Object.freeze( Object.create( null ) ); tokens.push( token );
+				checkpointStore.set( token, { scope: record.scope, data: copy( state, group.checkpoints[ phase ] ) } );
+				pairs.push( [ token, authority.claims[ index++ ] ] );
+			}
+			rows.push( { id: group.id, beforeCheckpoint: tokens[ 0 ], checkpoint: tokens[ 1 ] } );
+		}
+		if ( holders.length !== index ) { throw unavailable(); }
+		const slots = [ [ session, '_snapshot', snapshot ], [ session._pdf, 'temporary', temporary ],
+			[ session._pdf, 'admissions', admitted ], [ session._pdf, 'activeSurfaceId', activeId ] ]
+			.map( ( [ object, key, value ] ) => ( { object, key, descriptor: writableSlot( object, key ), value } ) );
+		return { preview, rows, checkpointStore, pairs, claims: authority.claims[ 0 ], slots };
+	}
+
 	class PageOwnedWholePdfImportSession {
+		/** Prepare inert data privately; fresh native reads provide all admission authority. */
+		async prepareDraftRecovery( input, assertCurrent ) {
+			let record;
+			try {
+				if ( typeof assertCurrent !== 'function' ) { throw unavailable(); }
+				const state = active( this ), external = () => {
+					const result = assertCurrent();
+					if ( result !== undefined ) { if ( result instanceof Promise ) { Promise.prototype.catch.call( result, () => {} ); } throw unavailable(); }
+				};
+				const witness = capture( this, state, external ), scope = scopeOf( state );
+				const editor = typeof window !== 'undefined' && window.Layers && window.Layers.Editor;
+				const Plan = editor && editor.PageOwnedWholePdfImportDraftPlan || module.require( './PageOwnedWholePdfImportDraftPlan.js' );
+				const Source = draftSourceTypes.get( this );
+				const methods = [ ...[ 'prepareDraftRecovery', 'inspectDraftRecovery', 'revalidateDraftRecovery', 'commitDraftRecovery',
+					'releaseDraftRecovery', 'captureImportDraft' ].map( key => method( this, key ) ),
+				...[ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ].map( key => method( state.source, key ) ),
+				method( Source, 'isDraftReadHandle' ), method( Plan, 'prepare' ) ];
+				const initialClaims = claimsFor( state, scope ), initialCheckpoints = checkpoints.get( this );
+				record = { state, witness, scope, Source, methods, committed: false, released: false, ready: false, checking: false };
+				record.check = () => {
+					witness.check();
+					if ( record.released || record.committed || claimsFor( state, scope ) !== initialClaims || checkpoints.get( this ) !== initialCheckpoints ) { throw unavailable(); }
+					for ( const captured of methods ) {
+						const current = method( captured.object, captured.key );
+						if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); }
+					}
+					if ( record.stage ) { for ( const slot of record.stage.slots ) {
+						if ( !exactDescriptor( writableSlot( slot.object, slot.key ), slot.descriptor ) ) { throw unavailable(); }
+					} }
+				};
+				record.plan = draftCall( record, Plan, 'prepare', input, this.captureImportDraft() );
+				record.native = await draftAwait( record, state.source, 'prepareDraftReads', {
+					target: { pageId: scope.pageId, baseRevisionId: scope.baseRevisionId, surfaceId: scope.surfaceId },
+					sources: draftHolders( record.plan ).flatMap( holder => holder.sources ), assertCurrent: record.check } );
+				if ( !draftCall( record, Source, 'isDraftReadHandle', record.native, state.source ) ) { throw unavailable(); }
+				const authority = await authorizeDraft( record ); record.stage = stageDraft( record, authority ); record.check();
+				const token = Object.freeze( Object.create( null ) );
+				if ( !draftRecoveries.has( this ) ) { draftRecoveries.set( this, new Map() ); }
+				draftRecoveries.get( this ).set( token, record ); return token;
+			} catch ( error ) {
+				if ( record && record.native ) { try { record.state.source.releaseDraftReads( record.native ); } catch ( ignored ) {} }
+				throw unavailable();
+			}
+		}
+
+		inspectDraftRecovery( token ) {
+			try {
+				const { state, record } = draftRecord( this, token );
+				const result = { ...copy( state, record.stage.preview ), commands: record.stage.rows.map( row => ( { ...row } ) ) };
+				draftRecord( this, token ); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		async revalidateDraftRecovery( token ) {
+			let record;
+			try {
+				( { record } = draftRecord( this, token ) );
+				if ( record.checking ) { throw unavailable(); } record.checking = true; record.ready = false;
+				await draftAwait( record, record.state.source, 'revalidateDraftReads', record.native );
+				const authority = await authorizeDraft( record ); draftRecord( this, token );
+				if ( !equal( authority.claims, [ record.stage.claims, ...record.stage.pairs.map( pair => pair[ 1 ] ) ] ) ) { throw unavailable(); }
+				record.ready = true;
+			} catch ( error ) { throw unavailable(); }
+			finally { if ( record ) { record.checking = false; } }
+		}
+
+		commitDraftRecovery( token, beforeCommit ) {
+			try {
+				const { state, record } = draftRecord( this, token );
+				if ( !record.ready || record.checking || typeof beforeCommit !== 'function' ) { throw unavailable(); }
+				const stage = record.stage, result = copy( state, stage.preview );
+				const assignments = stage.slots.map( slot => ( { ...slot, descriptor: { ...slot.descriptor, value: slot.value } } ) );
+				const outcome = beforeCommit();
+				if ( outcome !== undefined ) { if ( outcome instanceof Promise ) { Promise.prototype.catch.call( outcome, () => {} ); } throw unavailable(); }
+				draftRecord( this, token );
+				// No callbacks or data validation follow the first native write.
+				for ( const assignment of assignments ) { define( assignment.object, assignment.key, assignment.descriptor ); }
+				weakSet( citations, state.session, stage.claims ); weakSet( checkpoints, this, stage.checkpointStore );
+				for ( const [ checkpoint, claims ] of stage.pairs ) { weakSet( checkpointClaims, checkpoint, claims ); }
+				record.committed = true; return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		releaseDraftRecovery( token ) {
+			const store = draftRecoveries.get( this ), record = store && store.get( token );
+			if ( !record ) { throw unavailable(); } mapDelete( store, token ); record.released = true;
+			const release = record.methods.find( value => value.object === record.state.source && value.key === 'releaseDraftReads' );
+			release.descriptor.value.call( record.state.source, record.native );
+		}
+
 		constructor( session, source, pageReader ) {
 			try {
 				const editor = typeof window !== 'undefined' && window.Layers && window.Layers.Editor;
@@ -342,6 +565,11 @@
 					method( pageReader, 'read' ), method( session._reader, 'read' ), method( session._publisher, 'publish' ),
 					method( adapter, 'toEditorState' ), method( adapter, 'withEditorState' ) ];
 				const values = [ [ session, '_reader' ], [ session, '_adapter' ] ];
+				methods.push( ...[ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ]
+					.map( key => method( source, key ) ), method( Source, 'isDraftReadHandle' ),
+				...[ 'prepareDraftRecovery', 'inspectDraftRecovery', 'revalidateDraftRecovery', 'commitDraftRecovery', 'releaseDraftRecovery' ]
+					.map( key => method( this, key ) ) );
+				draftSourceTypes.set( this, Source );
 				for ( const reader of [ session._reader, pageReader ] ) {
 					const api = descriptor( reader, 'api' ).value;
 					values.push( [ reader, 'api' ] ); methods.push( method( api, 'get' ) );
@@ -649,6 +877,8 @@
 		dispose() {
 			const state = instances.get( this );
 			if ( !state ) { throw unavailable(); }
+			const recovery = draftRecoveries.get( this );
+			if ( recovery ) { for ( const token of Array.from( recovery.keys() ) ) { try { this.releaseDraftRecovery( token ); } catch ( ignored ) {} } }
 			state.active = false;
 			for ( const handle of state.handles.keys() ) { try { this.release( handle ); } catch ( ignored ) {} }
 		}

@@ -64,3 +64,12 @@ Ordinary Save/provenance integration, saved-base reconciliation, missing target
 sets and native/browser, supported-version/mobile and owner acceptance remain
 open. Capture qualification alone does not activate Import recovery or complete
 Milestone 1.
+
+## Separately invoked recovery
+
+The opt-in transaction described in
+[whole-PDF draft recovery](WHOLE_PDF_IMPORT_DRAFT_RECOVERY.md) validates this inert
+capture, freshly authorizes current and active-checkpoint references and native
+origins, and reissues private capabilities before atomic recovery. It retains
+retired refusal barriers without reconstructing their unreachable authority.
+Existing draft storage, controls, editor callers and Save remain unchanged.

@@ -6,6 +6,7 @@
 ( function () {
 	const instances = new WeakMap();
 	const sessionResolvers = new WeakMap();
+	const draftReads = new WeakMap(), draftTokens = new WeakMap();
 	const own = ( value, key ) => Object.prototype.hasOwnProperty.call( value, key );
 	const nameKey = value => value.replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 	const identityKeys = [ 'targetPageId', 'targetBaseRevisionId', 'targetSurfaceId',
@@ -113,7 +114,85 @@
 		return ids.sort();
 	}
 
+	function checkDraftRead( instance, state, record ) {
+		check( instance, state, record.guard );
+		for ( const captured of record.methods ) {
+			const current = method( captured.object, captured.key );
+			if ( current.holder !== captured.holder || current.descriptor.value !== captured.descriptor.value ||
+				current.descriptor.writable !== captured.descriptor.writable || current.descriptor.enumerable !== captured.descriptor.enumerable ||
+				current.descriptor.configurable !== captured.descriptor.configurable ) { throw unavailable(); }
+		}
+	}
+	function draftReadRecord( instance, handle ) {
+		const state = active( instance ), store = draftReads.get( instance ), record = store && store.get( handle );
+		if ( !record || draftTokens.get( handle ) !== instance ) { throw unavailable(); }
+		checkDraftRead( instance, state, record ); return { state, record };
+	}
+
 	class PageOwnedWholePdfImportSource {
+		static isDraftReadHandle( handle, source ) {
+			try { return draftTokens.get( handle ) === source && !!draftReadRecord( source, handle ); }
+			catch ( error ) { return false; }
+		}
+
+		/** Reauthorize actual citations only; target editor authorization is separate. */
+		async prepareDraftReads( request ) {
+			try {
+				const state = active( this ), raw = fields( request, [ 'target', 'sources', 'assertCurrent' ] );
+				if ( typeof raw.assertCurrent !== 'function' ) { throw unavailable(); }
+				const target = clone( state, fields( raw.target, [ 'pageId', 'baseRevisionId', 'surfaceId' ] ) );
+				const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
+				const id = value => typeof value === 'string' && value.length && new TextEncoder().encode( value ).length <= 128;
+				if ( !positive( target.pageId ) || !positive( target.baseRevisionId ) || !id( target.surfaceId ) ) { throw unavailable(); }
+				const sources = clone( state, raw.sources ); if ( !Array.isArray( sources ) ) { throw unavailable(); }
+				const identities = [], seen = new Set();
+				for ( const input of sources ) {
+					const value = fields( input, [ 'targetSurfaceId', 'sourcePageId', 'sourceRevisionId', 'sourceSurfaceId' ] );
+					if ( value.targetSurfaceId !== target.surfaceId || !positive( value.sourcePageId ) || !positive( value.sourceRevisionId ) ||
+						!id( value.sourceSurfaceId ) || value.sourcePageId === target.pageId ) { throw unavailable(); }
+					const identity = { targetPageId: target.pageId, targetBaseRevisionId: target.baseRevisionId, targetSurfaceId: target.surfaceId,
+						sourcePageId: value.sourcePageId, sourceRevisionId: value.sourceRevisionId, sourceSurfaceId: value.sourceSurfaceId };
+					const key = JSON.stringify( [ value.sourcePageId, value.sourceRevisionId, value.sourceSurfaceId ] );
+					if ( !seen.has( key ) ) { identities.push( identity ); seen.add( key ); }
+				}
+				const methods = [ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ].map( key => method( this, key ) );
+				const guard = () => {
+					const result = raw.assertCurrent();
+					if ( result !== undefined ) { if ( result instanceof Promise ) { Promise.prototype.catch.call( result, () => {} ); } throw unavailable(); }
+				};
+				const record = { guard, methods, identities, reads: [] };
+				for ( const identity of identities ) {
+					checkDraftRead( this, state, record );
+					const response = await state.read.call( state.reader, clone( state, identity ) );
+					checkDraftRead( this, state, record ); record.reads.push( { identity, data: clone( state, response ) } );
+				}
+				checkDraftRead( this, state, record ); const handle = Object.freeze( Object.create( null ) );
+				if ( !draftReads.has( this ) ) { draftReads.set( this, new Map() ); }
+				draftReads.get( this ).set( handle, record ); draftTokens.set( handle, this ); return handle;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		inspectDraftReads( handle ) {
+			try { const { state, record } = draftReadRecord( this, handle ), result = clone( state, record.reads );
+				draftReadRecord( this, handle ); return result; } catch ( error ) { throw unavailable(); }
+		}
+
+		async revalidateDraftReads( handle ) {
+			try {
+				const { state, record } = draftReadRecord( this, handle );
+				for ( const read of record.reads ) {
+					const response = await state.read.call( state.reader, clone( state, read.identity ) );
+					if ( draftReadRecord( this, handle ).record !== record || !equal( clone( state, response ), read.data ) ) { throw unavailable(); }
+				}
+				draftReadRecord( this, handle );
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		releaseDraftReads( handle ) {
+			const store = draftReads.get( this ); if ( !store || !store.delete( handle ) ) { throw unavailable(); }
+			draftTokens.delete( handle );
+		}
+
 		/** @param {Object} api Native API transport; the qualified reader validates every response. */
 		constructor( api ) {
 			try {
@@ -132,6 +211,8 @@
 				instances.set( this, { active: true, handles: new WeakMap(), adapter, reader, planner: Planner,
 					read: read.descriptor.value, prepare: prepare.descriptor.value, copy: copy.descriptor.value,
 					methods: [ post, read, prepare, copy, ...bindings ] } );
+				instances.get( this ).methods.push( ...[ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ]
+					.map( key => method( this, key ) ), method( PageOwnedWholePdfImportSource, 'isDraftReadHandle' ) );
 			} catch ( error ) { throw unavailable(); }
 		}
 
@@ -251,6 +332,8 @@
 		dispose() {
 			const state = instances.get( this );
 			if ( !state ) { throw unavailable(); }
+			const store = draftReads.get( this );
+			if ( store ) { for ( const handle of store.keys() ) { draftTokens.delete( handle ); } store.clear(); }
 			state.active = false; state.handles = new WeakMap();
 		}
 	}
