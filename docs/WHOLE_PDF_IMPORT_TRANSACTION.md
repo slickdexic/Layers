@@ -84,3 +84,14 @@ remain required. Existing draft restoration also needs qualification for a newly
 admitted member intentionally left empty by Replace. This checkpoint does not
 claim draft recovery or complete editor compatibility. Missing target sets and
 native/browser, supported-version/mobile and owner acceptance remain open.
+
+## Separate application and group restoration
+
+An explicitly invoked [whole-PDF application component](WHOLE_PDF_IMPORT_APPLICATION.md)
+now stages and commits active editor state, selection and PDF timelines with the
+session transaction. Its explicit group Undo/Redo APIs use private expected/target
+checkpoint tokens and restore only the selected group, preserving unrelated live
+work and the active page. The original inspection-only checkpoint API remains;
+no serialized data can create a restore token. All previous default methods and
+existing editor/Undo/draft/Save callers remain unchanged. Existing Undo routing,
+draft and publication integration are still required before activation.

@@ -5,6 +5,7 @@
 	const instances = new WeakMap();
 	// Opt-in transaction state never becomes serialized session authority.
 	const transactions = new WeakMap(), checkpoints = new WeakMap(), citations = new WeakMap();
+	const checkpointClaims = new WeakMap(), restores = new WeakMap();
 	const preparing = new WeakSet(), consumed = new WeakSet();
 	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
@@ -313,6 +314,19 @@
 		return { state: checkTransaction( instance, handle ), handle, store };
 	}
 
+	function restoreRecord( instance, token ) {
+		const state = active( instance ), store = restores.get( instance ), record = store && store.get( token );
+		if ( !record ) { throw unavailable(); }
+		record.check();
+		return { state, store, record };
+	}
+
+	function checkpointGroup( state, snapshot, origins ) {
+		const ids = new Set( JSON.parse( state.session._savedJson ).surfaces.map( member => member.id ) );
+		return selected( snapshot, state.session ).filter( member => ids.has( member.id ) ||
+			!equal( member, origins.get( member.id ) ) ).sort( ( left, right ) => left.id.localeCompare( right.id ) );
+	}
+
 	class PageOwnedWholePdfImportSession {
 		constructor( session, source, pageReader ) {
 			try {
@@ -336,6 +350,97 @@
 					copy: method( adapter, 'toEditorState' ).descriptor.value,
 					values: values.map( ( [ object, key ] ) => ( { object, key, descriptor: descriptor( object, key ) } ) ), handles: new Map() } );
 			} catch ( error ) { throw unavailable(); }
+		}
+
+		/** Prove the actual live session association, rather than matching serialized IDs. */
+		ownsSession( session ) {
+			try { return active( this ).session === session; } catch ( error ) { return false; }
+		}
+
+		/** Prepare a private group checkpoint restore; preserve unrelated live work and selection. */
+		prepareImportRestore( expectedToken, targetToken, assertCurrent ) {
+			try {
+				if ( typeof assertCurrent !== 'function' ) { throw unavailable(); }
+				const state = active( this ), store = checkpoints.get( this ), expected = store && store.get( expectedToken );
+				const target = store && store.get( targetToken ), scope = scopeOf( state ), session = state.session;
+				if ( !expected || !target || !checkpointClaims.has( expectedToken ) || !checkpointClaims.has( targetToken ) ||
+					!equal( scope, expected.scope ) || !equal( scope, target.scope ) ) { throw unavailable(); }
+				const witness = capture( this, state, assertCurrent ), claims = claimsFor( state, scope );
+				if ( claims !== checkpointClaims.get( expectedToken ) ||
+					!equal( checkpointGroup( state, witness.snapshot, session._pdf.temporary ),
+						checkpointGroup( state, expected.data.snapshot, new Map( expected.data.temporary ) ) ) ) { throw unavailable(); }
+				const desired = copy( state, selected( target.data.snapshot, session ) );
+				const currentIds = new Set( selected( witness.snapshot, session ).map( member => member.id ) );
+				const desiredIds = new Set( desired.map( member => member.id ) ), next = copy( state, witness.snapshot );
+				next.surfaces = next.surfaces.filter( member => !currentIds.has( member.id ) || desiredIds.has( member.id ) )
+					.map( member => currentIds.has( member.id ) ? desired.find( value => value.id === member.id ) : member );
+				for ( const member of desired ) { if ( !next.surfaces.some( value => value.id === member.id ) ) { next.surfaces.push( member ); } }
+				invoke( witness, session, '_pdfGroup', next, next.surfaces.find( member => member.id === session._surfaceId ), session._pdf.pageCount );
+				const temporary = new Map( copy( state, target.data.temporary ) ), admitted = new Map( copy( state, target.data.admissions ) );
+				const expectedIds = new Set( expected.data.temporary.map( entry => entry[ 0 ] ) );
+				for ( const [ id, blank ] of witness.maps[ 0 ].data ) {
+					if ( !temporary.has( id ) && ( id === session._pdf.activeSurfaceId || !expectedIds.has( id ) ) ) {
+						const origin = session._pdf.admissions.get( id );
+						if ( !origin || !equal( origin.surface, blank ) || invoke( witness, session, '_pdfNativeId', origin ) !== id ||
+							!equal( invoke( witness, session, '_pdfPin', blank ), session._pdf.original ) ) { throw unavailable(); }
+						temporary.set( id, copy( state, blank ) ); admitted.set( id, copy( state, origin ) );
+					}
+				}
+				const activeId = session._pdf.activeSurfaceId, view = next.surfaces.some( member => member.id === activeId ) ? next :
+					{ ...next, surfaces: next.surfaces.concat( [ temporary.get( activeId ) ] ) };
+				const editorState = state.copy.call( state.adapter, view, activeId );
+				const preview = copy( state, { candidateSnapshot: next, editorState, activeSurfaceId: activeId,
+					activePage: session._pdf.page, dirty: !equal( next, witness.base ), sources: target.data.sources,
+					admissionRevisions: originsFor( state, next, admitted ) } );
+				const slots = [ [ session, '_snapshot', next ], [ session._pdf, 'temporary', temporary ], [ session._pdf, 'admissions', admitted ] ]
+					.map( ( [ object, key, value ] ) => ( { object, key, descriptor: writableSlot( object, key ), value } ) );
+				const methods = [ 'prepareImportRestore', 'inspectImportRestore', 'commitImportRestore', 'releaseImportRestore', 'ownsSession' ]
+					.map( key => method( this, key ) );
+				const check = () => {
+					witness.check();
+					if ( checkpoints.get( this ) !== store || store.get( expectedToken ) !== expected || store.get( targetToken ) !== target ||
+						claimsFor( state, scope ) !== claims ) { throw unavailable(); }
+					for ( const captured of methods ) {
+						const current = method( captured.object, captured.key );
+						if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); }
+					}
+					for ( const slot of slots ) { if ( !exactDescriptor( writableSlot( slot.object, slot.key ), slot.descriptor ) ) { throw unavailable(); } }
+				};
+				check(); const token = Object.freeze( Object.create( null ) );
+				if ( !restores.has( this ) ) { restores.set( this, new Map() ); }
+				restores.get( this ).set( token, { check, slots, preview, claims: checkpointClaims.get( targetToken ) } );
+				return token;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		inspectImportRestore( token ) {
+			try {
+				const { state, record } = restoreRecord( this, token ), result = copy( state, record.preview );
+				record.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		commitImportRestore( token, beforeCommit ) {
+			try {
+				const { state, store, record } = restoreRecord( this, token );
+				if ( typeof beforeCommit !== 'function' ) { throw unavailable(); }
+				const result = copy( state, record.preview ), assignments = record.slots.map( slot => ( { ...slot,
+					descriptor: { ...slot.descriptor, value: slot.value } } ) );
+				const outcome = beforeCommit();
+				if ( outcome !== undefined ) {
+					if ( outcome instanceof Promise ) { Promise.prototype.catch.call( outcome, () => {} ); }
+					throw unavailable();
+				}
+				record.check();
+				for ( const assignment of assignments ) { define( assignment.object, assignment.key, assignment.descriptor ); }
+				weakSet( citations, state.session, record.claims ); mapDelete( store, token );
+				return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		releaseImportRestore( token ) {
+			const store = restores.get( this );
+			if ( !store || !store.delete( token ) ) { throw unavailable(); }
 		}
 
 		/** Separately invoked complete-session transaction; no editor/Undo/draft integration. */
@@ -418,6 +523,7 @@
 				weakSet( citations, state.session, handle.nextClaims );
 				weakSet( checkpoints, this, checkpointStore );
 				mapSet( checkpointStore, beforeCheckpoint, before ); mapSet( checkpointStore, checkpoint, after );
+				weakSet( checkpointClaims, beforeCheckpoint, handle.claims ); weakSet( checkpointClaims, checkpoint, handle.nextClaims );
 				consume( consumed, handle.source ); mapDelete( store, token );
 				return result;
 			} catch ( error ) { throw unavailable(); }
