@@ -5,6 +5,7 @@
 
 ( function () {
 	const instances = new WeakMap();
+	const sessionResolvers = new WeakMap();
 	const own = ( value, key ) => Object.prototype.hasOwnProperty.call( value, key );
 	const nameKey = value => value.replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 	const identityKeys = [ 'targetPageId', 'targetBaseRevisionId', 'targetSurfaceId',
@@ -79,19 +80,37 @@
 	}
 
 	// Live layer/canvas edits are retained. Member identity must still match the saved native group.
-	function liveGroup( live, data ) {
+	function liveGroup( live, data, allowed = [] ) {
 		const anchor = live.surfaces.find( member => member.id === data.target.surfaceId );
 		if ( !anchor || anchor.kind !== 'pdf' || !anchor.source ) { throw unavailable(); }
 		const members = live.surfaces.filter( member => member.source &&
 			member.source.fileTitle === anchor.source.fileTitle && typeof member.label === 'string' &&
 			nameKey( member.label ) === nameKey( anchor.label ) );
-		if ( members.length !== data.targetGroup.members.length ) { throw unavailable(); }
+		if ( members.length !== data.targetGroup.members.length + allowed.length ) { throw unavailable(); }
 		for ( const item of data.targetGroup.members ) {
 			const saved = data.targetBundle.snapshot.surfaces.find( member => member.id === item.surfaceId );
 			const current = members.find( member => member.id === item.surfaceId );
 			if ( !current || current.kind !== saved.kind || current.label !== saved.label ||
 				!equal( current.source, saved.source ) ) { throw unavailable(); }
 		}
+		const stored = new Set( data.targetGroup.members.map( item => item.surfaceId ) );
+		for ( const id of allowed ) {
+			const current = members.find( member => member.id === id ), pin = current && { ...current.source };
+			if ( pin ) { delete pin.page; }
+			if ( stored.has( id ) || !current || current.kind !== 'pdf' || current.label !== data.targetGroup.label ||
+				!equal( pin, data.targetGroup.source ) || !Number.isInteger( current.source.page ) ||
+				current.source.page < 1 || current.source.page > data.targetGroup.pageCount ) { throw unavailable(); }
+		}
+	}
+
+	async function resolveMembers( instance, state, guard, resolver, data ) {
+		check( instance, state, guard );
+		const response = await resolver( clone( state, data ) );
+		check( instance, state, guard );
+		const ids = clone( state, response );
+		if ( !Array.isArray( ids ) || ids.some( id => typeof id !== 'string' || !id ) ||
+			new Set( ids ).size !== ids.length ) { throw unavailable(); }
+		return ids.sort();
 	}
 
 	class PageOwnedWholePdfImportSource {
@@ -133,6 +152,7 @@
 					![ 'empty', 'append', 'replace' ].includes( captured.mode ) ||
 					!Number.isInteger( captured.maxLayers ) || captured.maxLayers < 1 ) { throw unavailable(); }
 				const guard = captured.assertCurrent;
+				const resolver = sessionResolvers.get( request );
 				check( this, state, guard );
 				const identity = clone( state, fields( captured.identity, identityKeys ) );
 				const base = clone( state, captured.baseSnapshot ), target = clone( state, captured.targetSnapshot );
@@ -142,7 +162,11 @@
 				const data = clone( state, response );
 				check( this, state, guard );
 				if ( !equal( base, data.targetBundle.snapshot ) ) { throw unavailable(); }
-				liveGroup( target, data );
+				const allowed = resolver ? await resolveMembers( this, state, guard, resolver, data ) : [];
+				check( this, state, guard );
+				liveGroup( target, data, allowed );
+				const admissions = data.admittedTargetSurfaces.filter( member => !target.surfaces.some( current =>
+					allowed.includes( current.id ) && current.source.page === member.source.page ) );
 				const allocateId = () => {
 					check( this, state, guard );
 					const result = captured.allocateId();
@@ -151,7 +175,7 @@
 				};
 				const plan = state.prepare.call( state.planner, { targetSnapshot: target, targetSurfaceId: identity.targetSurfaceId,
 					sourceSnapshot: data.sourceBundle.snapshot, sourceSurfaceId: identity.sourceSurfaceId,
-					admittedTargetSurfaces: data.admittedTargetSurfaces, mode: captured.mode, maxLayers: captured.maxLayers, allocateId } );
+					admittedTargetSurfaces: admissions, mode: captured.mode, maxLayers: captured.maxLayers, allocateId } );
 				check( this, state, guard );
 				const preview = clone( state, { target: data.target, source: data.source, mode: captured.mode,
 					candidateSnapshot: plan.snapshot, importedLayerIds: plan.importedLayerIds, pages: plan.pages,
@@ -161,9 +185,23 @@
 					admittedTargetRenditions: data.admittedTargetRenditions } );
 				check( this, state, guard );
 				const handle = Object.freeze( Object.create( null ) );
-				state.handles.set( handle, { guard, identity, data, preview, checking: false } );
+				state.handles.set( handle, { guard, identity, data, preview, checking: false, resolver, allowed } );
 				return handle;
 			} catch ( error ) { throw unavailable(); }
+		}
+
+		/** Opt-in session admission checks; the callback supplies read evidence, never application authority. */
+		async prepareForSession( request, resolver ) {
+			let issued;
+			try {
+				const mode = request && Object.getOwnPropertyDescriptor( request, 'mode' );
+				if ( mode && own( mode, 'value' ) && mode.value === 'cancel' ) { return await this.prepare( request ); }
+				if ( typeof resolver !== 'function' ) { throw unavailable(); }
+				issued = fields( request, [ 'identity', 'baseSnapshot', 'targetSnapshot', 'mode', 'maxLayers', 'allocateId', 'assertCurrent' ] );
+				sessionResolvers.set( issued, resolver );
+				return await this.prepare( issued );
+			} catch ( error ) { throw unavailable(); }
+			finally { if ( issued ) { sessionResolvers.delete( issued ); } }
 		}
 
 		/** @param {Object} handle Issued handle @return {Object} Detached complete preview, never authority */
@@ -196,6 +234,10 @@
 				recordFor( this, handle );
 				const data = clone( state, response );
 				if ( recordFor( this, handle ).record !== record || !equal( record.data, data ) ) { throw unavailable(); }
+				if ( record.resolver ) {
+					const allowed = await resolveMembers( this, state, record.guard, record.resolver, data );
+					if ( recordFor( this, handle ).record !== record || !equal( allowed, record.allowed ) ) { throw unavailable(); }
+				}
 			} catch ( error ) { throw unavailable(); }
 			finally { if ( retained ) { retained.checking = false; } }
 		}
