@@ -15,6 +15,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\PageOwnedAdmissionHooks;
@@ -128,6 +129,18 @@ class PageOwnedPilot {
 		return new PageMissingPdfEditorReadService(
 			$this, $this->newIdentityResolver(), $this->services->getRevisionLookup(), $this->reader,
 			$sources, $this->newDrawings, new SourceRenditions( $this->services->getUrlUtils() ) );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersWorkingCopyPdfImportRead */
+	public function newWorkingCopyPdfImportReadApi( ApiMain $main, string $name ): ApiLayersWorkingCopyPdfImportRead {
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		return new ApiLayersWorkingCopyPdfImportRead( $main, $name,
+			new PageWorkingCopyPdfImportReadService( $this->newIdentityResolver(),
+				$this->services->getTitleFactory(), $this->scope,
+				new PageHistoryAccess( $this->services->getRevisionLookup() ), $sources,
+				new SourceRenditions( $this->services->getUrlUtils() ), $this->newDrawings ),
+			$this->services->getService( 'LayersRateLimiter' ) );
 	}
 
 	/**
