@@ -88,3 +88,13 @@ owning-page publication path. Wholly missing target layer sets still require
 creation admission. These dependencies must be qualified before editor callers
 activate this preparation. Native/browser, supported-version/mobile and owner
 acceptance remain open. This checkpoint does not complete milestone 1.
+
+## Separately invoked session transaction
+
+The read-only contract above describes the original preparation methods. A
+separate opt-in transaction now applies a prepared complete PDF group to the
+session snapshot and its temporary/admission maps together. See
+[whole-PDF session transactions](WHOLE_PDF_IMPORT_TRANSACTION.md) for the added
+methods and their guards. Existing callers and all default preparation methods
+remain unchanged. The transaction does not update the visible editor, selection,
+Undo, drafts or Save; those integrations remain required before activation.

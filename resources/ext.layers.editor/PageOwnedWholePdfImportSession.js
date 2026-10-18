@@ -3,6 +3,12 @@
 
 ( function () {
 	const instances = new WeakMap();
+	// Opt-in transaction state never becomes serialized session authority.
+	const transactions = new WeakMap(), checkpoints = new WeakMap(), citations = new WeakMap();
+	const preparing = new WeakSet(), consumed = new WeakSet();
+	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
+	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
+	const define = Object.defineProperty;
 	const own = ( object, key ) => Object.prototype.hasOwnProperty.call( object, key );
 	const nameKey = value => value.replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 	const sessionMethods = [ '_pdfCopy', '_selected', '_pdfGroup', '_pdfPin', '_pdfAdmit',
@@ -248,6 +254,65 @@
 		return { state, record };
 	}
 
+	function scopeOf( state ) {
+		const session = state.session;
+		return copy( state, { owner: session._owner, pageId: session._pageId, baseRevisionId: session._revisionId,
+			surfaceId: session._surfaceId, savedJson: session._savedJson, original: session._pdf.original,
+			pageCount: session._pdf.pageCount, initialPage: session._pdf.initialPage } );
+	}
+
+	function claimsFor( state, scope ) {
+		const claims = citations.get( state.session );
+		if ( claims && !equal( claims.scope, scope ) ) { throw unavailable(); }
+		return claims;
+	}
+
+	function originsFor( state, snapshot, admissionsMap ) {
+		const session = state.session, base = JSON.parse( session._savedJson );
+		const ids = new Set( base.surfaces.map( member => member.id ) ), result = [];
+		for ( const surface of selected( snapshot, session ) ) {
+			if ( ids.has( surface.id ) ) { continue; }
+			const origin = admissionsMap.get( surface.id );
+			if ( !origin || !Number.isInteger( origin.revisionId ) || origin.revisionId < 1 ||
+				origin.revisionId > session._revisionId || !equal( fixed( surface ), fixed( origin.surface ) ) ||
+				state.methods.find( entry => entry.object === session && entry.key === '_pdfNativeId' )
+					.descriptor.value.call( session, origin ) !== surface.id ) { throw unavailable(); }
+			if ( origin.revisionId !== session._revisionId ) { result.push( { surfaceId: surface.id, revisionId: origin.revisionId } ); }
+		}
+		return result.sort( ( left, right ) => left.surfaceId.localeCompare( right.surfaceId ) );
+	}
+
+	function writableSlot( object, key ) {
+		const value = descriptor( object, key );
+		if ( !value.writable ) { throw unavailable(); }
+		return value;
+	}
+
+	function transactionMethods( instance ) {
+		return [ 'prepareImportCommit', 'inspectImportCommit', 'commitPreparedImport', 'releaseImportCommit',
+			'inspectImportCheckpoint', 'releaseImportCheckpoint', 'getImportPublication', 'revalidate' ]
+			.map( key => method( instance, key ) );
+	}
+
+	function checkTransaction( instance, handle ) {
+		const { state } = recordFor( instance, handle.source );
+		if ( consumed.has( handle.source ) || claimsFor( state, handle.scope ) !== handle.claims ) { throw unavailable(); }
+		for ( const captured of handle.methods ) {
+			const current = method( captured.object, captured.key );
+			if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); }
+		}
+		for ( const slot of handle.slots ) {
+			if ( !exactDescriptor( writableSlot( slot.object, slot.key ), slot.descriptor ) ) { throw unavailable(); }
+		}
+		return state;
+	}
+
+	function commitRecord( instance, token ) {
+		const store = transactions.get( instance ), handle = store && store.get( token );
+		if ( !handle ) { throw unavailable(); }
+		return { state: checkTransaction( instance, handle ), handle, store };
+	}
+
 	class PageOwnedWholePdfImportSession {
 		constructor( session, source, pageReader ) {
 			try {
@@ -270,6 +335,121 @@
 				instances.set( this, { active: true, session, source, pageReader, adapter, methods,
 					copy: method( adapter, 'toEditorState' ).descriptor.value,
 					values: values.map( ( [ object, key ] ) => ( { object, key, descriptor: descriptor( object, key ) } ) ), handles: new Map() } );
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		/** Separately invoked complete-session transaction; no editor/Undo/draft integration. */
+		async prepareImportCommit( sourceHandle ) {
+			if ( sourceHandle === null ) { return null; }
+			let acquired = false;
+			try {
+				const { state, record } = recordFor( this, sourceHandle ), methods = transactionMethods( this );
+				if ( preparing.has( sourceHandle ) || consumed.has( sourceHandle ) ) { throw unavailable(); }
+				preparing.add( sourceHandle ); acquired = true;
+				await methods.find( entry => entry.key === 'revalidate' ).descriptor.value.call( this, sourceHandle );
+				recordFor( this, sourceHandle );
+				const session = state.session, scope = scopeOf( state ), claims = claimsFor( state, scope );
+				const preview = copy( state, record.preview ), snapshot = preview.candidateSnapshot;
+				const temporary = new Map( copy( state, Array.from( session._pdf.temporary ) ) );
+				const admitted = new Map( copy( state, Array.from( session._pdf.admissions ) ) );
+				const baseIds = new Set( record.witness.base.surfaces.map( member => member.id ) );
+				const group = invoke( record.witness, session, '_pdfGroup', snapshot,
+					snapshot.surfaces.find( member => member.id === session._surfaceId ), session._pdf.pageCount );
+				for ( const member of group ) {
+					if ( baseIds.has( member.id ) ) { continue; }
+					const prepared = preview.preparedMembers.find( value => value.surfaceId === member.id );
+					if ( !prepared || !equal( fixed( prepared.origin.surface ), fixed( member ) ) ) { throw unavailable(); }
+					temporary.set( member.id, copy( state, prepared.origin.surface ) );
+					admitted.set( member.id, copy( state, prepared.origin ) );
+				}
+				const evidence = invoke( record.witness, state.source, 'getReadEvidence', record.native ).result;
+				const citation = { targetSurfaceId: session._surfaceId, sourcePageId: evidence.source.pageId,
+					sourceRevisionId: evidence.source.revisionId, sourceSurfaceId: evidence.source.surfaceId };
+				const key = JSON.stringify( [ citation.sourcePageId, citation.sourceRevisionId,
+					evidence.sourceGroup.source.fileTitle, nameKey( evidence.sourceGroup.label ) ] );
+				const entries = preview.mode === 'append' && claims ? copy( state, claims.entries ) : [];
+				if ( !entries.some( entry => entry.key === key ) ) { entries.push( { key, citation } ); }
+				if ( entries.length > 32 ) { throw unavailable(); }
+				const sources = entries.map( entry => entry.citation ), admissionRevisions = originsFor( state, snapshot, admitted );
+				const before = { snapshot: record.witness.snapshot, temporary: record.witness.maps[ 0 ].data,
+					admissions: record.witness.maps[ 1 ].data, sources: claims ? claims.entries.map( entry => entry.citation ) : [],
+					admissionRevisions: originsFor( state, record.witness.snapshot, session._pdf.admissions ) };
+				const after = { snapshot, temporary: Array.from( temporary ), admissions: Array.from( admitted ), sources, admissionRevisions };
+				const token = Object.freeze( Object.create( null ) );
+				const handle = { source: sourceHandle, scope, claims, nextClaims: { scope, entries }, methods,
+					snapshot: copy( state, snapshot ), temporary, admitted, before: copy( state, before ), after: copy( state, after ),
+					preview: copy( state, { ...preview, dirty: !equal( snapshot, record.witness.base ), sources, admissionRevisions,
+						beforeSnapshot: record.witness.snapshot } ),
+					slots: [ [ session, '_snapshot' ], [ session._pdf, 'temporary' ], [ session._pdf, 'admissions' ] ]
+						.map( ( [ object, slot ] ) => ( { object, key: slot, descriptor: writableSlot( object, slot ) } ) ) };
+				checkTransaction( this, handle );
+				if ( !transactions.has( this ) ) { transactions.set( this, new Map() ); }
+				transactions.get( this ).set( token, handle );
+				return token;
+			} catch ( error ) { throw unavailable(); }
+			finally { if ( acquired ) { preparing.delete( sourceHandle ); } }
+		}
+
+		inspectImportCommit( token ) {
+			try {
+				const { state, handle } = commitRecord( this, token ), result = copy( state, handle.preview );
+				commitRecord( this, token ); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		commitPreparedImport( token, beforeCommit ) {
+			try {
+				const { state, handle, store } = commitRecord( this, token );
+				if ( typeof beforeCommit !== 'function' ) { throw unavailable(); }
+				const beforeCheckpoint = Object.freeze( Object.create( null ) ), checkpoint = Object.freeze( Object.create( null ) );
+				const result = { ...copy( state, handle.preview ), beforeCheckpoint, checkpoint };
+				const checkpointStore = checkpoints.get( this ) || new Map();
+				const before = { scope: handle.scope, data: handle.before }, after = { scope: handle.scope, data: handle.after };
+				const assignments = handle.slots.map( ( slot, index ) => ( { object: slot.object, key: slot.key,
+					descriptor: { ...slot.descriptor, value: [ handle.snapshot, handle.temporary, handle.admitted ][ index ] } } ) );
+				const outcome = beforeCommit();
+				if ( outcome !== undefined ) {
+					if ( outcome instanceof Promise ) { Promise.prototype.catch.call( outcome, () => {} ); }
+					throw unavailable();
+				}
+				commitRecord( this, token );
+				// All callbacks, cloning and fallible admission checks precede these native writes.
+				for ( const assignment of assignments ) { define( assignment.object, assignment.key, assignment.descriptor ); }
+				weakSet( citations, state.session, handle.nextClaims );
+				weakSet( checkpoints, this, checkpointStore );
+				mapSet( checkpointStore, beforeCheckpoint, before ); mapSet( checkpointStore, checkpoint, after );
+				consume( consumed, handle.source ); mapDelete( store, token );
+				return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		releaseImportCommit( token ) {
+			const store = transactions.get( this );
+			if ( !store || !store.delete( token ) ) { throw unavailable(); }
+		}
+
+		inspectImportCheckpoint( token ) {
+			try {
+				const state = active( this ), store = checkpoints.get( this ), checkpoint = store && store.get( token );
+				if ( !checkpoint || !equal( scopeOf( state ), checkpoint.scope ) ) { throw unavailable(); }
+				const witness = capture( this, state, () => {} ), result = copy( state, checkpoint.data );
+				witness.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		releaseImportCheckpoint( token ) {
+			const store = checkpoints.get( this );
+			if ( !store || !store.delete( token ) ) { throw unavailable(); }
+		}
+
+		getImportPublication() {
+			try {
+				const state = active( this ), witness = capture( this, state, () => {} ), scope = scopeOf( state );
+				const claims = claimsFor( state, scope ), result = copy( state, { owner: scope.owner, pageId: scope.pageId,
+					baseRevisionId: scope.baseRevisionId, surfaceId: scope.surfaceId,
+					sources: claims ? claims.entries.map( entry => entry.citation ) : [],
+					admissionRevisions: originsFor( state, state.session._snapshot, state.session._pdf.admissions ) } );
+				witness.check(); return result;
 			} catch ( error ) { throw unavailable(); }
 		}
 
