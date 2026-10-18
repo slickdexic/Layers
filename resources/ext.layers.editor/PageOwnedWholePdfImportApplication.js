@@ -314,7 +314,58 @@
 		} );
 		historyCertificates.set( certificate, route ); return { route, certificate };
 	}
+	function draftTimelineRows( mode, timelines ) {
+		return Array.from( timelines, ( [ page, timeline ] ) => {
+			if ( !Number.isInteger( page ) || page < 1 || page > mode.session._pdf.pageCount ) { throw unavailable(); }
+			return { page, timeline: mode.history.preflightTimeline( timeline ) };
+		} ).sort( ( left, right ) => left.page - right.page );
+	}
+	function draftHistory( route ) {
+		const { mode } = route, timelines = effectiveTimelines( mode ), groups = [], seen = new Set();
+		for ( const [ page, timeline ] of timelines ) { if ( !allowsTimeline( route, timeline, page ) ) { throw unavailable(); } }
+		for ( const record of route.bank.values() ) {
+			const command = record.command, phase = command ? command.phase : record.phase;
+			if ( ![ 'before', 'after' ].includes( phase ) || !record.entries.size ) { throw unavailable(); }
+			const entries = Array.from( record.entries, ( [ page, entry ] ) => {
+				const timeline = timelines.get( page ); if ( !timeline ) { throw unavailable(); }
+				const index = location( route, record, timeline, page );
+				if ( command && index < 1 ) { throw unavailable(); }
+				return { page, entry };
+			} ).sort( ( left, right ) => left.page - right.page );
+			let checkpointData = null, commandTimelines = null;
+			if ( command ) {
+				if ( command.mode !== mode || command.released || commands.get( record.token ) !== command ||
+					!mode.commands.has( record.token ) || record.savedJson !== mode.session._savedJson ||
+					command.timelines.pages.length !== entries.length ||
+					command.timelines.pages.some( page => !record.entries.has( page ) ) ) { throw unavailable(); }
+				seen.add( record.token );
+				checkpointData = { before: mode.binding.inspectImportCheckpoint( command.before ),
+					after: mode.binding.inspectImportCheckpoint( command.after ) };
+				commandTimelines = { pages: command.timelines.pages.slice(),
+					before: draftTimelineRows( mode, command.timelines.before ), after: draftTimelineRows( mode, command.timelines.after ) };
+			}
+			groups.push( { id: record.id, phase, retired: !command, entries, checkpoints: checkpointData, timelines: commandTimelines } );
+		}
+		if ( seen.size !== mode.commands.size ) { throw unavailable(); }
+		return { version: 1, activePage: mode.session.getPdfStatus().page,
+			timelines: draftTimelineRows( mode, timelines ), groups: groups.sort( ( left, right ) => left.id.localeCompare( right.id ) ) };
+	}
 	class PageOwnedWholePdfImportApplication {
+		/** Capture a complete inert recovery record; never store it or restore capabilities. */
+		captureDraft() {
+			try {
+				const mode = active( this ), route = historyRoutes.get( mode );
+				if ( !route || mode.busy ) { throw unavailable(); }
+				const guard = capture( this, () => {} ), methods = [
+					[ this, 'captureDraft' ], [ mode.binding, 'captureImportDraft' ],
+					[ mode.binding, 'inspectImportCheckpoint' ], [ mode.Store, 'copyWorkingCopyValue' ]
+				].map( ( [ object, key ] ) => mode.Store.captureWorkingCopyMethod( object, key ) );
+				const session = mode.binding.captureImportDraft(), history = draftHistory( route );
+				const result = mode.Store.copyWorkingCopyValue( { format: 'layers-whole-pdf-import-draft', version: 1, session, history } );
+				mode.Store.checkWorkingCopyMethods( methods ); guard.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
 		static isPdfImportHistoryRoute( value, history, application ) {
 			const route = historyCertificates.get( value );
 			return !!route && route.instance === application && route.mode.history === history && route.mode.active &&

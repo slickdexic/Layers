@@ -357,6 +357,19 @@
 			try { return active( this ).session === session; } catch ( error ) { return false; }
 		}
 
+		/** Detached draft data only; serialized origins and citations grant no authority. */
+		captureImportDraft() {
+			try {
+				const state = active( this ), witness = capture( this, state, () => {} ), scope = scopeOf( state );
+				const claims = claimsFor( state, scope );
+				const result = copy( state, { version: 1, scope, snapshot: witness.snapshot, pdf: witness.pdfData,
+					context: witness.context, temporary: witness.maps[ 0 ].data, admissions: witness.maps[ 1 ].data,
+					sources: claims ? claims.entries.map( entry => entry.citation ) : [],
+					admissionRevisions: originsFor( state, witness.snapshot, state.session._pdf.admissions ) } );
+				witness.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
 		/** Prepare a private group checkpoint restore; preserve unrelated live work and selection. */
 		prepareImportRestore( expectedToken, targetToken, assertCurrent ) {
 			try {

@@ -97,3 +97,15 @@ The earlier activation warning still applies to existing flows without this
 opt-in. Draft persistence/recovery, ordinary Save and saved-base reconciliation,
 missing target sets and native/browser/owner acceptance remain prerequisites to
 activating the complete editor Import flow.
+
+## Complete draft capture follow-up
+
+With the history route explicitly enabled, `captureDraft()` now captures a
+distinct versioned JSON recovery record from the actual editor/session and
+private group commands. It preserves content, native origins, source citations,
+per-page histories, both checkpoint sides and retired refusal barriers. The
+binding separately exposes read-only `captureImportDraft()` for its session data.
+Neither method stores a draft, rebuilds authority or restores work. Existing
+draft and editor callers remain unchanged. See
+[whole-PDF Import draft capture](WHOLE_PDF_IMPORT_DRAFT.md) for the data contract
+and the fresh authorization and atomic recovery still required before activation.
