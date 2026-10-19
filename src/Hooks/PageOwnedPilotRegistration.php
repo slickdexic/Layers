@@ -14,6 +14,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
@@ -111,6 +112,11 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 				'factory' => static function ( $main, $name ) {
 					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
 						->newWorkingCopyPdfImportReadApi( $main, $name );
+				} ],
+			'layersworkingcopypdfimportpublish' => [ 'class' => ApiLayersWorkingCopyPdfImportPublish::class,
+				'factory' => static function ( $main, $name ) {
+					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
+						->newWorkingCopyPdfImportPublishApi( $main, $name );
 				} ],
 			'layersworkingcopyimportcreationread' => [ 'class' => ApiLayersWorkingCopyImportCreationRead::class,
 				'factory' => static function ( $main, $name ) {

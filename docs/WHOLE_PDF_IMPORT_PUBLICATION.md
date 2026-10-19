@@ -53,3 +53,11 @@ owner and never retries automatically.
 This boundary alone does not activate whole-PDF Import. Editor/session/selection
 application, Undo/Redo, drafts, request controls, transport registration and
 native/browser/owner acceptance must be qualified before connecting callers.
+
+## Registered Save request boundary
+
+The [whole-PDF Import Save transport](WHOLE_PDF_IMPORT_SAVE_TRANSPORT.md) exposes
+this service through a separately registered native POST/CSRF API and an explicit
+client transport. The original service contract and transaction remain intact.
+Existing editor, controller and ordinary Save callers remain unchanged until
+confirmed publication, saved-base/history and recovery integration are qualified.
