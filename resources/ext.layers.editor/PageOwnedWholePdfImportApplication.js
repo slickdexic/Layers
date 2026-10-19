@@ -7,6 +7,7 @@
 	const draftRecoveryHandles = new WeakMap(), draftRecoverySets = new WeakMap();
 	const publicationRoutes = new WeakMap(), publicationModes = new WeakMap(), publicationProofs = new WeakMap();
 	const heldDraftRecoveries = new WeakMap();
+	const reconciliationRoutes = new WeakMap(), reconciliationModes = new WeakMap(), reconciliationPending = new WeakSet();
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), weakDelete = Function.call.bind( WeakMap.prototype.delete );
 	const define = Object.defineProperty;
 	const fields = [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ];
@@ -497,6 +498,45 @@
 		const check = () => { publicationParticipants( record ); checkSlots( slots ); observed.forEach( mode.Store.checkWorkingCopyObservation ); };
 		check(); return { check, commit: () => { for ( const value of slots ) { define( value.object, value.key, value.descriptor ); } } };
 	}
+	function reconciledTimelines( mode, source, preview ) {
+		const result = new Map();
+		for ( const [ page, previous ] of source ) {
+			const timeline = mode.history.copyTimeline( previous ), before = member( preview.baseSnapshot, mode, page ) ||
+				Array.from( mode.session._pdf.temporary.values() ).find( value => value.source.page === page );
+			const live = member( preview.liveSnapshot, mode, page ) || before, saved = member( preview.savedSnapshot, mode, page );
+			if ( saved && ( !before || !equal( before.layers, saved.layers ) ) && ( !live || !equal( live.layers, saved.layers ) ) ) {
+				for ( const entry of timeline.history ) {
+					if ( before && equal( entry.layers, before.layers ) ) { entry.layers = mode.Store.copyWorkingCopyValue( saved.layers ); }
+					else if ( !equal( entry.layers, saved.layers ) ) { throw unavailable(); }
+				}
+			}
+			result.set( page, mode.history.preflightTimeline( timeline ) );
+		}
+		return savedTimelines( mode, result, preview.savedSnapshot );
+	}
+	function reconciliationHistory( mode, preview ) {
+		const route = historyRoutes.get( mode ), timelines = reconciledTimelines( mode, effectiveTimelines( mode ), preview ), slots = [];
+		if ( !route ) { throw unavailable(); }
+		for ( const record of route.bank.values() ) {
+			const entries = new Map();
+			for ( const page of record.entries.keys() ) {
+				const original = effectiveTimelines( mode ).get( page ); location( route, record, original, page );
+				const matches = timelines.get( page ).history.filter( entry => { const value = marker( entry ); return value && value.id === record.id; } );
+				if ( matches.length !== 1 ) { throw unavailable(); } entries.set( page, mode.Store.copyWorkingCopyValue( matches[ 0 ] ) );
+			}
+			slots.push( slot( record, 'entries', entries ) );
+			if ( record.command ) {
+				if ( record.savedJson !== mode.session._savedJson || record.command.released || commands.get( record.token ) !== record.command ||
+					!mode.commands.has( record.token ) ) { throw unavailable(); }
+				slots.push( slot( record, 'savedJson', JSON.stringify( preview.savedSnapshot ) ), slot( record.command, 'timelines', {
+					...record.command.timelines, before: reconciledTimelines( mode, record.command.timelines.before, preview ),
+					after: reconciledTimelines( mode, record.command.timelines.after, preview ) } ) );
+			}
+		}
+		return { timelines, check: () => checkSlots( slots ), commit: () => {
+			for ( const assignment of slots ) { define( assignment.object, assignment.key, assignment.descriptor ); }
+		} };
+	}
 	function recoveryTimelines( mode, preview ) {
 		const history = mode.Store.copyWorkingCopyValue( preview.history ), ids = new Map(), used = new Set();
 		for ( const group of history.groups ) {
@@ -678,6 +718,57 @@
 		}
 
 		/** Keep the submitted bytes fixed; confirm every saved-base/history guard synchronously. */
+		/** Explicitly compose revision checking with the same private whole-PDF application. */
+		enableReconciliation() {
+			const mode = active( this );
+			if ( !historyRoutes.has( mode ) || !publicationModes.has( mode ) || reconciliationModes.has( mode ) || mode.busy ) { throw unavailable(); }
+			capture( this, () => {} ).check(); const certificate = Object.freeze( Object.create( null ) );
+			const record = { instance: this, mode }; reconciliationRoutes.set( certificate, record ); reconciliationModes.set( mode, record );
+			try { mode.bridge.enableWholePdfImportReconciliation( this, certificate ); }
+			catch ( error ) { reconciliationRoutes.delete( certificate ); reconciliationModes.delete( mode ); throw unavailable(); }
+			mode.generation++;
+		}
+		static isReconciliationRoute( certificate, bridge, application ) {
+			const record = reconciliationRoutes.get( certificate );
+			return !!record && record.instance === application && record.mode.bridge === bridge && record.mode.active &&
+				reconciliationModes.get( record.mode ) === record;
+		}
+		async reconcilePublication( certificate, revisionId ) {
+			const mode = active( this );
+			if ( !PageOwnedWholePdfImportApplication.isReconciliationRoute( certificate, mode.bridge, this ) || mode.busy ||
+				reconciliationPending.has( this ) || ![ 'ready', 'conflict', 'uncertain' ].includes( mode.session._phase ) ||
+				Array.from( mode.handles ).some( handle => { const record = handles.get( handle ); return !record || !record.consumed; } ) ) { throw unavailable(); }
+			mode.bridge._requireActive(); mode.bridge.capture();
+			const guard = captureForStorage( this, () => {} ), methods = [ mode.Store.captureWorkingCopyMethod( this, 'reconcilePublication' ),
+				...[ 'prepareImportReconciliation', 'inspectImportReconciliation', 'commitImportReconciliation', 'releaseImportReconciliation' ]
+					.map( key => mode.Store.captureWorkingCopyMethod( mode.binding, key ) ) ];
+			const check = () => { guard.check(); mode.Store.checkWorkingCopyMethods( methods ); };
+			const tokens = [];
+			for ( const token of mode.commands ) {
+				const command = commands.get( token ); if ( !command || command.released || command.mode !== mode ) { throw unavailable(); }
+				tokens.push( command.before, command.after );
+			}
+			let prepared, staged, result, committed = false; reconciliationPending.add( this );
+			try {
+				prepared = await mode.binding.prepareImportReconciliation( tokens, revisionId, check ); check();
+				const preview = mode.binding.inspectImportReconciliation( prepared ), history = reconciliationHistory( mode, preview );
+				const ids = new Set( preview.editorState.layers.map( layer => layer.id ) );
+				staged = participants( guard, preview, history.timelines, ( mode.selection.selectedLayerIds || [] ).filter( id => ids.has( id ) ) );
+				const preflight = () => { check(); staged.preflight(); history.check(); check(); };
+				mode.binding.commitImportReconciliation( prepared, preflight );
+				staged.commit(); history.commit(); mode.generation++; committed = true;
+				result = { phase: 'ready', revisionId, readOnly: false, dirty: preview.dirty, editorStateValid: true };
+				result.diagnostics = staged.refresh(); return result;
+			} catch ( error ) {
+				if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable();
+			} finally {
+				reconciliationPending.delete( this );
+				if ( prepared ) { try { mode.binding.releaseImportReconciliation( prepared ); } catch ( ignored ) {} }
+				if ( staged ) { try { staged.release(); } catch ( ignored ) {} }
+				if ( !mode.active ) { cleanup( this, mode ); }
+			}
+		}
+
 		async savePublication( certificate, summary = '', beforePublish ) {
 			const route = publicationRoutes.get( certificate ), mode = active( this );
 			if ( !route || !PageOwnedWholePdfImportApplication.isPublicationRoute( certificate, mode.bridge, this ) || mode.busy ||

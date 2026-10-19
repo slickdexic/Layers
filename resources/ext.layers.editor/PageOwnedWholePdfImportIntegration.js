@@ -37,6 +37,7 @@
 				this.application = new classes.PageOwnedWholePdfImportApplication( bridge, this.binding );
 				this.application.enableHistory();
 				this.application.enablePublication( publisher );
+				this.application.enableReconciliation();
 				// The existing dialog's two-argument preparation contract stays unchanged.
 				this.coordinator = Object.freeze( {
 					prepare: ( source, options ) => this._prepare( source, options ),

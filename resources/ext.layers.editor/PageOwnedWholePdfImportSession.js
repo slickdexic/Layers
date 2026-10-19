@@ -9,6 +9,7 @@
 	const draftRecoveries = new WeakMap();
 	const draftSourceTypes = new WeakMap();
 	const publications = new WeakMap(), publicationConfirmations = new WeakMap();
+	const reconciliations = new WeakMap();
 	const preparing = new WeakSet(), consumed = new WeakSet();
 	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
@@ -349,6 +350,29 @@
 		return claims;
 	}
 
+	function reconciliationShadow( record, snapshot, base = record.witness.base, revisionId = record.scope.baseRevisionId ) {
+		const session = record.state.session, shadow = Object.create( Object.getPrototypeOf( session ), Object.getOwnPropertyDescriptors( session ) );
+		shadow._snapshot = copy( record.state, snapshot ); shadow._savedJson = JSON.stringify( base ); shadow._revisionId = revisionId;
+		shadow._phase = 'ready'; shadow._pdf = { ...session._pdf, temporary: new Map( record.witness.maps[ 0 ].data ),
+			admissions: new Map( record.witness.maps[ 1 ].data ) };
+		return shadow;
+	}
+	function reconciliationCall( record, name, shadow, ...args ) {
+		record.check(); const captured = record.state.methods.find( entry => entry.object === record.state.session && entry.key === name );
+		if ( !captured ) { throw unavailable(); }
+		const result = captured.descriptor.value.call( shadow, ...args ); record.check(); return result;
+	}
+	function reconciliationSnapshot( record, snapshot ) {
+		const shadow = reconciliationShadow( record, snapshot );
+		reconciliationCall( record, '_pdfReconcile', shadow, record.server, record.revisionId );
+		return copy( record.state, shadow._snapshot );
+	}
+	function reconciliationRecord( instance, token ) {
+		const state = active( instance ), record = reconciliations.get( token );
+		if ( !record || record.instance !== instance || record.state !== state || record.released || record.committed ) { throw unavailable(); }
+		record.check(); return record;
+	}
+
 	function originsFor( state, snapshot, admissionsMap ) {
 		const session = state.session, base = JSON.parse( session._savedJson );
 		const ids = new Set( base.surfaces.map( member => member.id ) ), result = [];
@@ -643,6 +667,7 @@
 					...[ 'prepare', 'prepareForSession', 'inspect', 'getReadEvidence', 'revalidate', 'release' ].map( key => method( source, key ) ),
 					method( pageReader, 'read' ), method( session._reader, 'read' ), method( session._publisher, 'publish' ),
 					method( adapter, 'toEditorState' ), method( adapter, 'withEditorState' ) ];
+				methods.push( ...[ '_pdfReconcile', 'getStatus' ].map( key => method( session, key ) ) );
 				const values = [ [ session, '_reader' ], [ session, '_adapter' ] ];
 				methods.push( ...[ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ]
 					.map( key => method( source, key ) ), method( Source, 'isDraftReadHandle' ),
@@ -891,6 +916,117 @@
 		}
 
 		/** Prepare a real-session Save receipt; detached descriptors are never confirmation authority. */
+		/** Stage exact-read reconciliation and every private checkpoint before changing any participant. */
+		async prepareImportReconciliation( tokens, revisionId, assertCurrent ) {
+			try {
+				const state = active( this ), session = state.session;
+				if ( !Array.isArray( tokens ) || new Set( tokens ).size !== tokens.length || typeof assertCurrent !== 'function' ||
+					![ 'ready', 'conflict', 'uncertain' ].includes( session._phase ) || !Number.isInteger( revisionId ) ||
+					revisionId < session._revisionId || revisionId > 2147483647 ) { throw unavailable(); }
+				const witness = captureForStorage( this, state, assertCurrent ), scope = scopeOf( state ), store = checkpoints.get( this );
+				const claims = claimsFor( state, scope ), rows = Array.from( store || [] ).map( ( [ token, checkpoint ] ) => ( {
+					token, checkpoint, claims: checkpointClaims.get( token ), data: copy( state, checkpoint.data )
+				} ) );
+				if ( tokens.length !== rows.length || rows.some( row => !tokens.includes( row.token ) || !checkpointClaims.has( row.token ) ||
+					!equal( row.checkpoint.scope, scope ) ) ) { throw unavailable(); }
+				const methods = [ 'prepareImportReconciliation', 'inspectImportReconciliation', 'commitImportReconciliation', 'releaseImportReconciliation' ]
+					.map( key => method( this, key ) );
+				const record = { instance: this, state, witness, scope, store, claims, rows, revisionId, released: false, committed: false };
+				record.check = () => {
+					witness.check();
+					if ( record.released || record.committed || checkpoints.get( this ) !== store || claimsFor( state, scope ) !== claims ||
+						( store ? store.size : 0 ) !== rows.length ) { throw unavailable(); }
+					for ( const row of rows ) { if ( store.get( row.token ) !== row.checkpoint || checkpointClaims.get( row.token ) !== row.claims ||
+						!equal( row.checkpoint.scope, scope ) || !equal( row.checkpoint.data, row.data ) ) { throw unavailable(); } }
+					for ( const captured of methods ) { const current = method( captured.object, captured.key );
+						if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); } }
+				};
+				const bundle = copy( state, await invokeAsync( { ...witness, check: record.check }, session._reader, 'read', { owner: scope.owner, revisionId } ) );
+				if ( bundle.revisionId !== revisionId || ( revisionId === scope.baseRevisionId && !equal( bundle.snapshot, witness.base ) ) ) { throw unavailable(); }
+				record.server = copy( state, bundle.snapshot ); const next = reconciliationSnapshot( record, witness.snapshot );
+				const shadow = reconciliationShadow( record, next, record.server, revisionId );
+				const readContext = async page => {
+					const raw = copy( state, await invokeAsync( { ...witness, check: record.check }, state.pageReader, 'read', {
+						owner: scope.owner, revisionId, binding: 'v1:' + scope.pageId + ':' + scope.surfaceId, page } ) );
+					return reconciliationCall( record, '_pdfAdmit', shadow, raw );
+				};
+				// A fresh editor read verifies current edit/source access even when no origins need reauthorization.
+				await readContext( session._pdf.page );
+				const origins = new Map(), blanks = new Map();
+				for ( const [ id, origin ] of [ ...witness.maps[ 1 ].data, ...rows.flatMap( row => row.data.admissions ) ] ) {
+					if ( origins.has( id ) && !equal( origins.get( id ), origin ) ) { throw unavailable(); }
+					origins.set( id, origin ); blanks.set( id, origin.surface );
+				}
+				const histories = new Map();
+				for ( const [ id, origin ] of origins ) {
+					if ( !Number.isInteger( origin.revisionId ) || origin.revisionId < 1 || origin.revisionId > scope.baseRevisionId ||
+						invoke( { ...witness, check: record.check }, session, '_pdfNativeId', origin ) !== id ) { throw unavailable(); }
+					if ( !histories.has( origin.revisionId ) ) {
+						const history = copy( state, await invokeAsync( { ...witness, check: record.check }, session._reader, 'read', {
+							owner: scope.owner, revisionId: origin.revisionId } ) );
+						if ( history.revisionId !== origin.revisionId ) { throw unavailable(); } histories.set( origin.revisionId, history.snapshot );
+					}
+					invoke( { ...witness, check: record.check }, session, '_pdfHistoricalOrigin', origin, histories.get( origin.revisionId ) );
+					if ( !record.server.surfaces.some( member => member.id === id ) ) {
+						const context = await readContext( origin.surface.source.page );
+						if ( context.stored || ( origin.revisionId === revisionId ? !equal( origin.surface, context.surface ) :
+							!reconciliationCall( record, '_pdfAssociation', shadow, origin, context ) ) ) { throw unavailable(); }
+					}
+				}
+				const nextScope = { ...scope, baseRevisionId: revisionId, savedJson: JSON.stringify( record.server ) }, cache = new Map();
+				const nextClaims = value => {
+					if ( !value ) { return undefined; } if ( !equal( value.scope, scope ) ) { throw unavailable(); }
+					if ( !cache.has( value ) ) { cache.set( value, { scope: nextScope, entries: copy( state, value.entries ) } ); } return cache.get( value );
+				};
+				const sorted = snapshot => selected( snapshot, session ).slice().sort( ( a, b ) => a.id.localeCompare( b.id ) );
+				const represented = equal( sorted( record.server ), sorted( witness.snapshot ) );
+				const checkpointsNext = rows.map( row => {
+					const nextClaim = nextClaims( row.claims );
+					const data = represented ? publicationCheckpoint( state, row.data, record.server, revisionId, blanks, nextClaim ) : copy( state, row.data );
+					data.sources = nextClaim ? copy( state, nextClaim.entries.map( entry => entry.citation ) ) : [];
+					if ( represented ) {
+						// Matching server content is read evidence, not a publication acknowledgment.
+						// Preserve each explicit Undo side, including its exact admitted blank.
+						const desired = selected( data.snapshot, session ), ids = new Set( selected( next, session ).map( member => member.id ) );
+						data.snapshot = copy( state, next ); data.snapshot.surfaces = data.snapshot.surfaces.filter( member => !ids.has( member.id ) ).concat( desired );
+					} else { data.snapshot = reconciliationSnapshot( record, row.data.snapshot ); }
+					// Renaming is independent of the Import command's layer/content delta.
+					const label = next.surfaces.find( member => member.id === scope.surfaceId ).label;
+					for ( const member of selected( data.snapshot, session ) ) { member.label = label; }
+					invoke( { ...witness, check: record.check }, session, '_pdfGroup', data.snapshot,
+						data.snapshot.surfaces.find( member => member.id === scope.surfaceId ), session._pdf.pageCount );
+					data.admissionRevisions = publicationOrigins( state, data.snapshot, data.admissions, record.server, revisionId );
+					return { token: row.token, claims: nextClaim, checkpoint: { scope: nextScope, data } };
+				} );
+				const activeId = session._pdf.activeSurfaceId, view = next.surfaces.some( member => member.id === activeId ) ? next :
+					{ ...next, surfaces: next.surfaces.concat( session._pdf.temporary.get( activeId ) ) };
+				const editorState = state.copy.call( state.adapter, view, activeId );
+				record.preview = copy( state, { candidateSnapshot: next, savedSnapshot: record.server, baseSnapshot: witness.base,
+					liveSnapshot: witness.snapshot, editorState, activePage: session._pdf.page, activeSurfaceId: activeId,
+					revisionId, dirty: !equal( next, record.server ) } );
+				record.assignments = [ [ '_snapshot', next ], [ '_savedJson', nextScope.savedJson ], [ '_revisionId', revisionId ], [ '_phase', 'ready' ] ]
+					.map( ( [ key, value ] ) => ( { key, descriptor: { ...writableSlot( session, key ), value } } ) );
+				record.checkpointsNext = checkpointsNext; record.nextClaims = nextClaims( claims ); record.check();
+				const token = Object.freeze( Object.create( null ) ); reconciliations.set( token, record ); return token;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		inspectImportReconciliation( token ) {
+			const record = reconciliationRecord( this, token ), result = copy( record.state, record.preview ); record.check(); return result;
+		}
+		commitImportReconciliation( token, beforeCommit ) {
+			const record = reconciliationRecord( this, token ); if ( typeof beforeCommit !== 'function' ) { throw unavailable(); }
+			const result = copy( record.state, record.preview ), outcome = beforeCommit();
+			if ( outcome !== undefined ) { if ( outcome instanceof Promise ) { outcome.catch( () => {} ); } throw unavailable(); } record.check();
+			for ( const slot of record.assignments ) { define( record.state.session, slot.key, slot.descriptor ); }
+			for ( const row of record.checkpointsNext ) { mapSet( record.store, row.token, row.checkpoint ); weakSet( checkpointClaims, row.token, row.claims ); }
+			weakSet( citations, record.state.session, record.nextClaims ); record.committed = true; return result;
+		}
+		releaseImportReconciliation( token ) {
+			const record = reconciliations.get( token ); if ( !record || record.instance !== this || record.released ) { throw unavailable(); }
+			record.released = true; reconciliations.delete( token );
+		}
+
 		prepareImportPublication( tokens, assertInitial, assertPending ) {
 			try {
 				if ( !Array.isArray( tokens ) || new Set( tokens ).size !== tokens.length ||

@@ -73,3 +73,13 @@ selection, Append/Replace/Cancel, Save/reopen, recovery/conflict and export
 journeys, supported-version/mobile and upgrade checks, final HTTP privacy
 checks, and owner screen/flow acceptance. Preserve the existing image/slide
 Import, ordinary PDF editing, tools, viewers and entry points throughout.
+
+## Revision-check composition qualification
+
+The separately invoked composition now also enables the application's private
+whole-PDF revision-check route. Its staged session/checkpoint/source/history
+contract is documented in [whole-PDF reconciliation](WHOLE_PDF_IMPORT_RECONCILIATION.md).
+The existing non-opted reconciliation bodies remain intact. Client checks cover
+success, complete refusal, late work, uncertain outcomes, group Undo/Redo and
+draft recovery. Production APIManager callers and ResourceLoader activation
+remain off pending the other activation and native/browser prerequisites above.

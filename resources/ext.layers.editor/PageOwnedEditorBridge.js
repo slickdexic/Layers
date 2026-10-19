@@ -23,6 +23,7 @@
 	const workingCopyDraftRecoveries = new WeakMap();
 	const earlierCreationDraftRecoveries = new WeakMap();
 	const wholePdfImportPublications = new WeakMap();
+	const wholePdfImportReconciliations = new WeakMap();
 
 	function workingCopyDraftEqual( left, right ) {
 		if ( Object.is( left, right ) ) { return true; }
@@ -784,6 +785,16 @@
 		 * @return {Promise<Object>} Reconciled status; newer live edits remain dirty
 		 */
 		async reconcile( revisionId ) {
+			const reconciliation = wholePdfImportReconciliations.get( this );
+			if ( reconciliation ) {
+				const current = Object.getOwnPropertyDescriptor( reconciliation.Application.prototype, 'reconcilePublication' );
+				if ( Object.hasOwn( reconciliation.application, 'reconcilePublication' ) || !current ||
+					Reflect.ownKeys( reconciliation.descriptor ).some( key => current[ key ] !== reconciliation.descriptor[ key ] ) ||
+					!reconciliation.Application.isReconciliationRoute( reconciliation.certificate, this, reconciliation.application ) ) {
+					throw this._error( 'layers-working-copy-import-unavailable' );
+				}
+				return reconciliation.descriptor.value.call( reconciliation.application, reconciliation.certificate, revisionId );
+			}
 			if ( this.session.hasCreationImport() ) { return this._reconcileCreationImport( revisionId ); }
 			if ( this.pdfCoordinator ) {
 				this.pdfCoordinator.invalidate();
@@ -811,6 +822,18 @@
 			}
 			this._requireActive();
 			return { ...this.session.getStatus(), dirty: this.editor.stateManager.get( 'isDirty' ), editorStateValid };
+		}
+
+		/** Register only the same actual application's privately certified revision-check route. */
+		enableWholePdfImportReconciliation( application, certificate ) {
+			this._requireActive();
+			const Application = typeof module !== 'undefined' && typeof module.require === 'function' ?
+				module.require( './PageOwnedWholePdfImportApplication.js' ) : window.Layers.Editor.PageOwnedWholePdfImportApplication;
+			const descriptor = Object.getOwnPropertyDescriptor( Application.prototype, 'reconcilePublication' );
+			if ( wholePdfImportReconciliations.has( this ) || !( application instanceof Application ) || !descriptor ||
+				typeof descriptor.value !== 'function' || Object.hasOwn( application, 'reconcilePublication' ) ||
+				!Application.isReconciliationRoute( certificate, this, application ) ) { throw this._error( 'layers-working-copy-import-unavailable' ); }
+			wholePdfImportReconciliations.set( this, { application, certificate, Application, descriptor } );
 		}
 
 		/** Prepared session/history/configuration commit; live editor geometry and selection stay intact. */
