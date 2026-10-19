@@ -3,8 +3,138 @@
 	'use strict';
 	const workingCopyDraftControllers = new WeakSet();
 	const earlierCreationInspections = new WeakSet();
+	const wholePdfDraftControllers = new WeakMap(), wholePdfCandidates = new WeakMap(), wholePdfRecoveries = new WeakMap();
+	const wholePdfDraftActions = new WeakMap();
+	function wholePdfMode( controller ) {
+		const mode = wholePdfDraftControllers.get( controller );
+		if ( !mode ) { throw controller._error(); }
+		mode.Store.checkWorkingCopyMethods( mode.methods );
+		if ( controller.bridge !== mode.bridge || controller.store !== mode.store || controller.adapter !== mode.adapter ||
+			controller.wiki !== mode.wiki || controller.user !== mode.user || mode.bridge.disposed ||
+			!mode.application.ownsBridge( mode.bridge ) || mode.bridge.session.getStatus().readOnly ||
+			!mode.bridge.session.getPdfStatus() ) { throw controller._error(); }
+		return mode;
+	}
+	function wholePdfSource( controller, candidate ) {
+		const mode = wholePdfMode( controller ), record = wholePdfCandidates.get( candidate );
+		if ( !record || record.controller !== controller || record.mode !== mode ||
+			JSON.stringify( controller._scope() ) !== record.scope || mode.store._readWriterId !== record.writer ||
+			mode.store.read( JSON.parse( record.scope ) ) !== record.raw ) { throw controller._error(); }
+		return record;
+	}
 
 	class PageOwnedDraftController {
+		/** Explicit complete-PDF storage integration; legacy drafts retain their existing route. */
+		enableWholePdfDrafts( application ) {
+			const Application = window.Layers.Editor.PageOwnedWholePdfImportApplication, Store = window.Layers.Core.StateManager;
+			const Plan = window.Layers.Editor.PageOwnedWholePdfImportDraftPlan ||
+				( typeof module !== 'undefined' && module.require ? module.require( './PageOwnedWholePdfImportDraftPlan.js' ) : null );
+			if ( wholePdfDraftControllers.has( this ) || workingCopyDraftControllers.has( this ) || typeof Application !== 'function' ||
+				!( application instanceof Application ) || !this.bridge.session.getPdfStatus() || this.bridge.session.getStatus().readOnly || !Plan ) {
+				throw this._error();
+			}
+			const methods = [ 'ownsBridge', 'captureDraftForStorage', 'prepareDraftRecovery', 'inspectDraftRecovery',
+				'commitDraftRecovery', 'releaseDraftRecovery', 'holdDraftRecoveryPublication' ].map( key => Store.captureWorkingCopyMethod( application, key ) );
+			if ( methods.some( captured => captured.owner !== Application.prototype ) ) { throw this._error(); }
+			if ( !application.ownsBridge( this.bridge ) ) { throw this._error(); }
+			methods.push( Store.captureWorkingCopyMethod( Plan, 'prepare' ), Store.captureWorkingCopyMethod( this.bridge.session, 'blockPublication' ),
+				...[ '_scope', '_copyState', 'persistWholePdfDraft', 'inspectWholePdfDraft', 'wholePdfDraftChanged',
+					'prepareWholePdfDraftRecovery', 'commitWholePdfDraftRecovery', 'releaseWholePdfDraftRecovery', 'getWholePdfDraftActions' ]
+					.map( key => Store.captureWorkingCopyMethod( this, key ) ),
+				...[ 'read', 'write' ].map( key => Store.captureWorkingCopyMethod( this.store, key ) ) );
+			application.captureDraftForStorage();
+			wholePdfDraftControllers.set( this, { application, bridge: this.bridge, store: this.store, adapter: this.adapter,
+				wiki: this.wiki, user: this.user, Store, Plan, methods } );
+		}
+
+		hasWholePdfDrafts() { return wholePdfDraftControllers.has( this ); }
+
+		static isWholePdfDraftActions( value, controller ) { return wholePdfDraftActions.get( value ) === controller; }
+
+		getWholePdfDraftActions() {
+			const mode = wholePdfMode( this );
+			const invoke = ( key, ...args ) => {
+				wholePdfMode( this ); const method = mode.methods.find( value => value.object === this && value.key === key );
+				return method.method.apply( this, args );
+			};
+			const actions = Object.freeze( { preflight: () => { wholePdfMode( this ); },
+				changed: candidate => invoke( 'wholePdfDraftChanged', candidate ),
+				prepare: ( candidate, check ) => invoke( 'prepareWholePdfDraftRecovery', candidate, check ),
+				commit: handle => invoke( 'commitWholePdfDraftRecovery', handle ),
+				release: handle => invoke( 'releaseWholePdfDraftRecovery', handle ) } );
+			wholePdfDraftActions.set( actions, this ); return actions;
+		}
+
+		persistWholePdfDraft() {
+			const mode = wholePdfMode( this ); this.bridge.capture();
+			const scope = this._scope(), draft = mode.application.captureDraftForStorage();
+			const json = JSON.stringify( { version: 1, scope, phase: this.bridge.session.getStatus().phase,
+				label: this.bridge.session.getLabel(), editorState: this._copyState( this.bridge.getLiveState() ), wholePdfImportDraft: draft } );
+			wholePdfMode( this ); mode.store.write( scope, json );
+		}
+
+		inspectWholePdfDraft( envelope, scope, raw ) {
+			try {
+				const mode = wholePdfMode( this );
+				if ( envelope.version !== 1 || !envelope.scope || Object.keys( envelope.scope ).length !== Object.keys( scope ).length ||
+					Object.keys( scope ).some( key => envelope.scope[ key ] !== scope[ key ] ) ||
+					![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( envelope.phase ) || typeof envelope.label !== 'string' ||
+					[ 'pdfDraft', 'pdfHistory', 'workingCopyDraft', 'creationOrigin' ].some( key => Object.hasOwn( envelope, key ) ) ) { throw this._error(); }
+				const draft = mode.Plan.prepare( envelope.wholePdfImportDraft, mode.application.captureDraftForStorage().session );
+				const identity = draft.session.scope;
+				if ( identity.owner !== scope.owner || identity.baseRevisionId !== scope.baseRevisionId || identity.surfaceId !== scope.surfaceId ) { throw this._error(); }
+				const activeId = draft.session.pdf.activeSurfaceId, surface = draft.session.snapshot.surfaces.find( value => value.id === activeId ) ||
+					draft.session.temporary.find( row => row[ 0 ] === activeId )?.[ 1 ];
+				if ( !surface || surface.label !== envelope.label ) { throw this._error(); }
+				const editorState = this.adapter.toEditorState( { schemaVersion: 1, surfaces: [ surface ] }, activeId );
+				const candidate = { editorState, label: envelope.label, publicationBlocked: envelope.phase !== 'ready', wholePdfImportDraft: draft };
+				wholePdfMode( this );
+				wholePdfCandidates.set( candidate, { controller: this, mode, scope: JSON.stringify( scope ), writer: mode.store._readWriterId,
+					raw, draft: mode.Store.copyWorkingCopyValue( draft ), publicationBlocked: candidate.publicationBlocked } ); return candidate;
+			} catch ( error ) { throw this._error(); }
+		}
+
+		wholePdfDraftChanged( candidate ) {
+			const record = wholePdfSource( this, candidate ), current = record.mode.application.captureDraftForStorage();
+			const comparable = value => {
+				const result = record.mode.Store.copyWorkingCopyValue( value );
+				const trim = timeline => { for ( const entry of timeline.history ) { delete entry.timestamp; } };
+				for ( const row of result.history.timelines ) { trim( row.timeline ); }
+				for ( const group of result.history.groups ) {
+					if ( group.timelines ) { for ( const phase of [ 'before', 'after' ] ) { for ( const row of group.timelines[ phase ] ) { trim( row.timeline ); } } }
+				}
+				const canonical = data => !data || typeof data !== 'object' ? JSON.stringify( data ) : Array.isArray( data ) ?
+					'[' + data.map( canonical ).join( ',' ) + ']' : '{' + Object.keys( data ).sort().map( key => JSON.stringify( key ) + ':' + canonical( data[ key ] ) ).join( ',' ) + '}';
+				return canonical( result );
+			};
+			return record.publicationBlocked || comparable( record.draft ) !== comparable( current );
+		}
+
+		async prepareWholePdfDraftRecovery( candidate, assertCurrent ) {
+			const record = wholePdfSource( this, candidate );
+			if ( typeof assertCurrent !== 'function' ) { throw this._error(); }
+			const check = () => { wholePdfSource( this, candidate ); if ( assertCurrent() !== undefined ) { throw this._error(); } };
+			check(); const handle = await record.mode.application.prepareDraftRecovery( record.draft, check );
+			try {
+				check(); if ( record.publicationBlocked ) { record.mode.application.holdDraftRecoveryPublication( handle ); }
+				wholePdfRecoveries.set( handle, { controller: this, candidate, record, check } ); return handle;
+			}
+			catch ( error ) { record.mode.application.releaseDraftRecovery( handle ); throw error; }
+		}
+
+		async commitWholePdfDraftRecovery( handle ) {
+			const prepared = wholePdfRecoveries.get( handle );
+			if ( !prepared || prepared.controller !== this ) { throw this._error(); }
+			prepared.check(); const result = await prepared.record.mode.application.commitDraftRecovery( handle );
+			return result;
+		}
+
+		releaseWholePdfDraftRecovery( handle ) {
+			const prepared = wholePdfRecoveries.get( handle );
+			if ( !prepared || prepared.controller !== this ) { throw this._error(); }
+			wholePdfRecoveries.delete( handle ); prepared.record.mode.application.releaseDraftRecovery( handle );
+		}
+
 		/** Inactive preparation only; successful plans own the inspection until commit or release. */
 		async prepareEarlierCreationRecovery( handle, client ) {
 			let inspection;
@@ -179,6 +309,7 @@
 
 		/** Explicit persistence; the UI handles storage errors and scheduling. */
 		persist() {
+			if ( wholePdfDraftControllers.has( this ) ) { return this.persistWholePdfDraft(); }
 			const scope = this._scope();
 			let json;
 			try {
@@ -226,6 +357,7 @@
 			}
 			try {
 				const envelope = JSON.parse( raw );
+				if ( Object.hasOwn( envelope, 'wholePdfImportDraft' ) ) { return this.inspectWholePdfDraft( envelope, scope, raw ); }
 				if ( envelope.version !== 1 || !envelope.scope ||
 					Object.keys( envelope.scope ).length !== Object.keys( scope ).length ||
 					Object.keys( scope ).some( ( key ) => envelope.scope[ key ] !== scope[ key ] ) ||

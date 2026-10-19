@@ -6,6 +6,7 @@
 	const historyRoutes = new WeakMap(), historyCertificates = new WeakMap();
 	const draftRecoveryHandles = new WeakMap(), draftRecoverySets = new WeakMap();
 	const publicationRoutes = new WeakMap(), publicationModes = new WeakMap(), publicationProofs = new WeakMap();
+	const heldDraftRecoveries = new WeakMap();
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), weakDelete = Function.call.bind( WeakMap.prototype.delete );
 	const define = Object.defineProperty;
 	const fields = [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ];
@@ -72,6 +73,51 @@
 				store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ||
 				coordinator.stage || coordinator.committing || coordinator.recovering || history.batchMode ) { throw unavailable(); }
 			coordinator.assertReady(); Store.checkWorkingCopyMethods( methods );
+			const value = external();
+			if ( value !== undefined ) { if ( value instanceof Promise ) { Promise.prototype.catch.call( value, () => {} ); } throw unavailable(); }
+		};
+		ready();
+		if ( !equal( bridge.getLiveState(), mode.session.getEditorState() ) ||
+			!equal( history.captureTimeline().history[ history.historyIndex ].layers, bridge.getLiveState().layers ) ) { throw unavailable(); }
+		const observations = [ Store.observeWorkingCopyObject( bridge, false ), Store.observeWorkingCopyObject( editor, false ),
+			Store.observeWorkingCopyObject( editor.config ), Store.observeWorkingCopyObject( coordinator, false ),
+			Store.observeWorkingCopyObject( history, false ), Store.observeWorkingCopyObject( history.history ),
+			Store.observeWorkingCopyObject( history.batchChanges ), Store.observeWorkingCopyObject( store, false ),
+			Store.observeWorkingCopyObject( store.state ), Store.observeWorkingCopyObject( mode.canvas, false ) ];
+		const witness = coordinator.witness( true ), selectionWitness = selection.captureWorkingCopyImportSelection();
+		if ( !mode.Selection.isWorkingCopyImportSelection( selectionWitness ) ) { throw unavailable(); }
+		const check = () => {
+			ready(); observations.forEach( Store.checkWorkingCopyObservation ); selectionWitness.preflight();
+			if ( coordinator.witness( true ) !== witness ) { throw unavailable(); }
+		};
+		check(); return { mode, check };
+	}
+	function captureForStorage( instance, external ) {
+		const mode = active( instance ), { bridge, binding, editor, coordinator, store, history, selection, Store } = mode;
+		const generation = mode.generation, phase = mode.session._phase;
+		const methods = [ [ instance, [ 'prepare', 'inspect', 'apply', 'undo', 'redo', 'release', 'releaseCommand', 'dispose' ] ],
+			[ binding, [ 'ownsSession', 'prepare', 'inspect', 'prepareImportCommit', 'inspectImportCommit', 'commitPreparedImport',
+				'releaseImportCommit', 'release', 'prepareImportRestore', 'inspectImportRestore', 'commitImportRestore', 'releaseImportRestore' ] ],
+			[ bridge, [ 'getLiveState', 'capture' ] ], [ coordinator, [ 'witness', 'assertReady', 'freshTimeline' ] ],
+			[ history, [ 'captureTimeline', 'copyTimeline', 'preflightTimeline', 'updateUndoRedoButtons' ] ],
+			[ selection, [ 'captureWorkingCopyImportSelection', 'prepareWorkingCopyImportSelection' ] ],
+			[ store, [ 'isWorkingCopyAlive', 'prepareWorkingCopyPatch', 'prepareWorkingCopyPatchCommit', 'notifyWorkingCopyPatch', 'releaseWorkingCopyPatch' ] ] ]
+			.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) );
+		methods.push( Store.captureWorkingCopyMethod( instance, 'enableHistory' ),
+			...[ 'enablePdfImportHistory', 'hasPdfImportHistory', 'preflightPdfImportTimeline' ].map( key => Store.captureWorkingCopyMethod( history, key ) ) );
+		const ready = () => {
+			if ( active( instance ) !== mode || mode.generation !== generation || bridge.editor !== editor || bridge.session !== mode.session ||
+				bridge.pdfCoordinator !== coordinator || editor.stateManager !== store || editor.historyManager !== history ||
+				editor.canvasManager !== mode.canvas || mode.canvas.selectionManager !== selection || coordinator.bridge !== bridge ||
+				store.editor !== editor || history.editor !== editor || mode.canvas.editor !== editor || selection.canvasManager !== mode.canvas ||
+				!mode.ownsSession.call( binding, mode.session ) || !store.isWorkingCopyAlive() || store.isLocked || store._isProcessingPending ||
+				store.pendingOperations.length || store.lockingQueue.length || store.lockTimeout !== null || store.lockAutoRecoveryTimeout !== null ||
+				coordinator.stage || coordinator.committing || coordinator.recovering || history.batchMode ) { throw unavailable(); }
+			if ( mode.session._phase !== phase || ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( phase ) ||
+				mode.session._readOnly || bridge.disposed || !bridge.loaded || bridge.reconciling || editor.isDestroyed ||
+				mode.canvas.isDestroyed || history.isDestroyed ||
+				( phase === 'saving' ? !mode.busy || !bridge.saving || !publicationModes.has( mode ) : mode.busy || bridge.saving ) ) { throw unavailable(); }
+			Store.checkWorkingCopyMethods( methods );
 			const value = external();
 			if ( value !== undefined ) { if ( value instanceof Promise ) { Promise.prototype.catch.call( value, () => {} ); } throw unavailable(); }
 		};
@@ -354,6 +400,46 @@
 		return { version: 1, activePage: mode.session.getPdfStatus().page,
 			timelines: draftTimelineRows( mode, timelines ), groups: groups.sort( ( left, right ) => left.id.localeCompare( right.id ) ) };
 	}
+	function draftStorageHistory( route ) {
+		const { mode } = route, timelines = effectiveTimelines( mode ), groups = [], seen = new Set();
+		for ( const [ page, timeline ] of timelines ) { if ( !allowsTimeline( route, timeline, page ) ) { throw unavailable(); } }
+		for ( const record of route.bank.values() ) {
+			const original = record.command, phase = original ? original.phase : record.phase;
+			if ( ![ 'before', 'after' ].includes( phase ) || !record.entries.size ) { throw unavailable(); }
+			if ( original ) {
+				if ( original.mode !== mode || original.released || commands.get( record.token ) !== original ||
+					!mode.commands.has( record.token ) || record.savedJson !== mode.session._savedJson ) { throw unavailable(); }
+				seen.add( record.token );
+			}
+			const entries = Array.from( record.entries, ( [ page, entry ] ) => {
+				const timeline = timelines.get( page ); if ( !timeline ) { throw unavailable(); }
+				const present = timeline.history.some( value => { const hint = marker( value ); return hint && hint.id === record.id; } );
+				const index = present ? location( route, record, timeline, page ) : -1;
+				return { page, entry, index };
+			} ).filter( row => row.index >= 0 ).sort( ( left, right ) => left.page - right.page );
+			// Trimming already made this command unreachable. Store surviving refusal
+			// barriers without changing the pending publication or its private checkpoints.
+			const command = original && entries.length === record.entries.size && entries.every( row => row.index >= 1 ) ? original : null;
+			if ( !entries.length ) { continue; }
+			let checkpointData = null, commandTimelines = null;
+			if ( command ) {
+				if ( command.mode !== mode || command.released || commands.get( record.token ) !== command ||
+					!mode.commands.has( record.token ) || record.savedJson !== mode.session._savedJson ||
+					command.timelines.pages.length !== entries.length ||
+					command.timelines.pages.some( page => !record.entries.has( page ) ) ) { throw unavailable(); }
+				seen.add( record.token );
+				checkpointData = { before: mode.binding.inspectImportCheckpointForStorage( command.before ),
+					after: mode.binding.inspectImportCheckpointForStorage( command.after ) };
+				commandTimelines = { pages: command.timelines.pages.slice(),
+					before: draftTimelineRows( mode, command.timelines.before ), after: draftTimelineRows( mode, command.timelines.after ) };
+			}
+			groups.push( { id: record.id, phase, retired: !command, entries: entries.map( ( { page, entry } ) => ( { page, entry } ) ),
+				checkpoints: checkpointData, timelines: commandTimelines } );
+		}
+		if ( seen.size !== mode.commands.size ) { throw unavailable(); }
+		return { version: 1, activePage: mode.session.getPdfStatus().page,
+			timelines: draftTimelineRows( mode, timelines ), groups: groups.sort( ( left, right ) => left.id.localeCompare( right.id ) ) };
+	}
 	function recoveryEntry( instance, handle ) {
 		const mode = active( instance ), record = draftRecoveryHandles.get( handle );
 		if ( !record || record.mode !== mode || record.consumed || record.released || record.bindingReleased ) { throw unavailable(); }
@@ -488,12 +574,14 @@
 				staged = participants( guard, preview, history.timelines, [] );
 				const route = historyRoutes.get( mode ), oldCommands = Array.from( mode.commands, token => [ token, commands.get( token ) ] );
 				if ( !route || oldCommands.some( ( [ , command ] ) => !command || command.mode !== mode || command.released ) ) { throw unavailable(); }
+				const hold = heldDraftRecoveries.get( handle ); if ( hold ) { checkSlots( [ hold ] ); }
 				result = mode.binding.commitDraftRecovery( record.native, staged.preflight );
 				staged.commit();
 				for ( const [ token, command ] of oldCommands ) { command.released = true; weakDelete( commands, token ); }
 				for ( const [ token, command ] of history.commandRows ) { weakSet( commands, token, command ); }
 				route.bank = history.bank; mode.commands = history.commandSet; mode.generation++;
 				record.consumed = true; committed = true;
+				if ( hold ) { define( hold.object, hold.key, hold.descriptor ); }
 				result.diagnostics = staged.refresh(); return result;
 			} catch ( error ) {
 				if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable();
@@ -510,9 +598,38 @@
 		releaseDraftRecovery( handle ) {
 			const mode = instances.get( this ), record = draftRecoveryHandles.get( handle );
 			if ( !record || record.mode !== mode || record.released || mode.busy ) { throw unavailable(); }
+			heldDraftRecoveries.delete( handle );
 			record.released = true; draftRecoverySets.get( mode ).delete( handle );
 			if ( !record.bindingReleased ) { mode.binding.releaseDraftRecovery( record.native ); record.bindingReleased = true; }
 		}
+
+		/** A recovery hold can only restrict publication; it grants no authority. */
+		holdDraftRecoveryPublication( handle ) {
+			const record = recoveryEntry( this, handle ), hold = slot( record.mode.session, '_phase', 'uncertain' );
+			record.guard.check(); heldDraftRecoveries.set( handle, hold );
+		}
+
+		/** Same actual bridge, with complete group history enabled; no serialized authority. */
+		ownsBridge( bridge ) {
+			try { const mode = active( this ); return mode.bridge === bridge && historyRoutes.has( mode ); }
+			catch ( error ) { return false; }
+		}
+
+		/** Read-only backups remain available while saving or held for reconciliation. */
+		captureDraftForStorage() {
+			try {
+				const mode = active( this ), route = historyRoutes.get( mode );
+				if ( !route ) { throw unavailable(); }
+				const guard = captureForStorage( this, () => {} ), methods = [
+					[ this, 'captureDraftForStorage' ], [ mode.binding, 'captureImportDraftForStorage' ],
+					[ mode.binding, 'inspectImportCheckpointForStorage' ], [ mode.Store, 'copyWorkingCopyValue' ]
+				].map( ( [ object, key ] ) => mode.Store.captureWorkingCopyMethod( object, key ) );
+				const session = mode.binding.captureImportDraftForStorage(), history = draftStorageHistory( route );
+				const result = mode.Store.copyWorkingCopyValue( { format: 'layers-whole-pdf-import-draft', version: 1, session, history } );
+				mode.Store.checkWorkingCopyMethods( methods ); guard.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
 
 		/** Capture a complete inert recovery record; never store it or restore capabilities. */
 		captureDraft() {

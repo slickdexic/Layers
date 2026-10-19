@@ -144,6 +144,53 @@
 		return witness;
 	}
 
+	function captureForStorage( instance, state, external ) {
+		const session = state.session;
+		if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
+		const sessionWitness = objectWitness( session );
+		for ( const key of sessionWitness.keys ) { descriptor( session, key ); }
+		if ( ![ 'ready', 'saving', 'conflict', 'uncertain' ].includes( session._phase ) || session._readOnly !== false || session._reconciling !== false || session._pdfRecovery !== null ||
+			session._baseHasDrawings !== true || session._newSurface !== null || !session._pdf || !session._snapshot ||
+			typeof session._savedJson !== 'string' || !Number.isInteger( session._pageId ) || session._pageId < 1 ) { throw unavailable(); }
+		const pdfWitness = objectWitness( session._pdf );
+		for ( const witness of [ sessionWitness, pdfWitness ] ) {
+			for ( const key of witness.keys ) { descriptor( witness.object, key ); }
+		}
+		const maps = [ 'temporary', 'admissions' ].map( key => {
+			const map = session._pdf[ key ];
+			if ( !( map instanceof Map ) || Object.getPrototypeOf( map ) !== Map.prototype || Reflect.ownKeys( map ).length ) { throw unavailable(); }
+			const entries = Array.from( Map.prototype.entries.call( map ) );
+			return { key, map, entries, data: copy( state, entries ) };
+		} );
+		const pdfData = Object.fromEntries( pdfWitness.keys.filter( key => ![ 'temporary', 'admissions' ].includes( key ) )
+			.map( key => [ key, descriptor( session._pdf, key ).value ] ) );
+		const witness = { instance, state, external, sessionWitness, pdfWitness, maps,
+			mapMethods: maps.flatMap( value => [ 'entries', 'get', 'values', 'has' ].map( key => method( value.map, key ) ) ),
+			pdfData: copy( state, pdfData ), snapshot: copy( state, session._snapshot ),
+			context: copy( state, session._pdfContext ), base: copy( state, JSON.parse( session._savedJson ) ) };
+		witness.check = () => {
+			if ( active( instance ) !== state ) { throw unavailable(); }
+			if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
+			checkObject( sessionWitness ); checkObject( pdfWitness );
+			for ( const captured of witness.mapMethods ) {
+				const current = method( captured.object, captured.key );
+				if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); }
+			}
+			if ( !equal( copy( state, session._snapshot ), witness.snapshot ) ||
+				!equal( copy( state, session._pdfContext ), witness.context ) ||
+				!equal( copy( state, pdfData ), witness.pdfData ) ) { throw unavailable(); }
+			for ( const captured of maps ) {
+				if ( Reflect.ownKeys( captured.map ).length ) { throw unavailable(); }
+				const current = Array.from( Map.prototype.entries.call( captured.map ) );
+				if ( current.length !== captured.entries.length || current.some( ( entry, index ) =>
+					entry[ 0 ] !== captured.entries[ index ][ 0 ] || entry[ 1 ] !== captured.entries[ index ][ 1 ] ) ||
+					!equal( copy( state, current ), captured.data ) ) { throw unavailable(); }
+			}
+		};
+		witness.check();
+		return witness;
+	}
+
 	function invoke( witness, object, key, ...args ) {
 		witness.check();
 		const captured = witness.state.methods.find( entry => entry.object === object && entry.key === key );
@@ -618,6 +665,19 @@
 		}
 
 		/** Detached draft data only; serialized origins and citations grant no authority. */
+		/** Detached storage capture never enables mutation, publication or recovery. */
+		captureImportDraftForStorage() {
+			try {
+				const state = active( this ), witness = captureForStorage( this, state, () => {} ), scope = scopeOf( state );
+				const claims = claimsFor( state, scope );
+				const result = copy( state, { version: 1, scope, snapshot: witness.snapshot, pdf: witness.pdfData,
+					context: witness.context, temporary: witness.maps[ 0 ].data, admissions: witness.maps[ 1 ].data,
+					sources: claims ? claims.entries.map( entry => entry.citation ) : [],
+					admissionRevisions: originsFor( state, witness.snapshot, state.session._pdf.admissions ) } );
+				witness.check(); return result;
+			} catch ( error ) { throw unavailable(); }
+		}
+
 		captureImportDraft() {
 			try {
 				const state = active( this ), witness = capture( this, state, () => {} ), scope = scopeOf( state );
@@ -805,6 +865,15 @@
 		releaseImportCommit( token ) {
 			const store = transactions.get( this );
 			if ( !store || !store.delete( token ) ) { throw unavailable(); }
+		}
+
+		inspectImportCheckpointForStorage( token ) {
+			try {
+				const state = active( this ), store = checkpoints.get( this ), checkpoint = store && store.get( token );
+				if ( !checkpoint || !equal( scopeOf( state ), checkpoint.scope ) ) { throw unavailable(); }
+				const witness = captureForStorage( this, state, () => {} ), result = copy( state, checkpoint.data );
+				witness.check(); return result;
+			} catch ( error ) { throw unavailable(); }
 		}
 
 		inspectImportCheckpoint( token ) {

@@ -73,3 +73,11 @@ capture, freshly authorizes current and active-checkpoint references and native
 origins, and reissues private capabilities before atomic recovery. It retains
 retired refusal barriers without reconstructing their unreachable authority.
 Existing draft storage, controls, editor callers and Save remain unchanged.
+
+## Local storage and explicit recovery integration
+
+The [complete local draft integration](WHOLE_PDF_IMPORT_DRAFT_STORAGE.md) connects
+the existing controller, store and lifecycle to this record. It preserves saving,
+conflict and uncertain work, independent backups and explicit native-authorized
+Restore. Legacy PDF drafts retain their existing route. Production picker and
+recovery callers remain inactive; full native/browser acceptance remains open.

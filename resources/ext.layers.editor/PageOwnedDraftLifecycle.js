@@ -4,6 +4,7 @@
 	const keys = [ 'layers', 'slideCanvasWidth', 'slideCanvasHeight', 'slideBackgroundColor',
 		'backgroundVisible', 'backgroundOpacity' ];
 	const earlierCreationClients = new WeakMap();
+	const wholePdfControllers = new WeakMap();
 
 	// Stored revisions have sorted keys while editor objects keep creation order; order is not content.
 	function canonical( value ) {
@@ -28,6 +29,43 @@
 	}
 
 	class PageOwnedDraftLifecycle {
+		/** Existing explicit Restore/Keep actions, backed by the complete-PDF transaction. */
+		async initializeWholePdfRecovery( candidate ) {
+			const bridge = this.bridge, controller = this.controller, ui = this.ui, coordinator = bridge.pdfCoordinator;
+			const actions = wholePdfControllers.get( this );
+			if ( !actions ) { throw new Error( 'layers-invalid-page-owned-draft' ); }
+			const witness = coordinator.witness( true ), version = coordinator.version;
+			const check = () => {
+				actions.preflight();
+				if ( this.disposed || this.finalized || this.saving || this.checking || this.bridge !== bridge || this.controller !== controller ||
+					this.ui !== ui || bridge.disposed || bridge.pdfCoordinator !== coordinator || coordinator.version !== version ||
+					coordinator.witness( true ) !== witness ) { throw new Error( 'layers-editor-session-unavailable' ); }
+			};
+			check();
+			if ( actions.changed( candidate ) ) {
+				const restore = await ui.confirmRecovery( candidate ); check();
+				if ( !restore ) {
+					bridge.session.blockPublication(); ui.notifyBlocked(); return;
+				}
+				let handle;
+				try {
+					handle = await actions.prepare( candidate, check ); check();
+					await actions.commit( handle );
+				} finally { if ( handle ) { actions.release( handle ); } }
+				if ( this.disposed || this.finalized ) { return; }
+				if ( candidate.publicationBlocked ) { ui.notifyBlocked(); }
+			}
+			if ( this.disposed || this.finalized ) { return; }
+			this.ready = true;
+			for ( const key of keys ) {
+				this.unsubscribers.push( bridge.editor.stateManager.subscribe( key, () => {
+					if ( this.finalized || this.disposed ) { return; }
+					clearTimeout( this.timer ); this.timer = setTimeout( () => this.flush(), 1000 );
+				} ) );
+			}
+			window.addEventListener( 'pagehide', this.onPageHide );
+		}
+
 		/**
 		 * @param {Object} bridge Loaded editor bridge
 		 * @param {Object} controller Draft controller
@@ -45,6 +83,12 @@
 			this.timer = null;
 			this.unsubscribers = [];
 			this.onPageHide = () => this.flush();
+			const Controller = window.Layers && window.Layers.Editor && window.Layers.Editor.PageOwnedDraftController;
+			if ( Controller && controller instanceof Controller && Controller.prototype.hasWholePdfDrafts.call( controller ) ) {
+				const actions = Controller.prototype.getWholePdfDraftActions.call( controller );
+				if ( !Controller.isWholePdfDraftActions( actions, controller ) ) { throw new Error( 'layers-invalid-page-owned-draft' ); }
+				wholePdfControllers.set( this, actions );
+			}
 		}
 
 		/** Opt in only through the admitted creation Import integration. */
@@ -128,6 +172,7 @@
 				this.controller.selectRecovery( candidates[ selected ] );
 			}
 			const candidate = choice && choice.completed ? null : this.controller.inspectRecovery();
+			if ( candidate && candidate.wholePdfImportDraft ) { return this.initializeWholePdfRecovery( candidate ); }
 			if ( candidate && ( candidate.publicationBlocked ||
 				workingCopyDraftChanged( this.bridge, candidate ) ||
 				( typeof candidate.label === 'string' && candidate.label !== this.bridge.getName() ) ||
