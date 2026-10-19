@@ -5,6 +5,7 @@
 	const instances = new WeakMap(), handles = new WeakMap(), commands = new WeakMap();
 	const historyRoutes = new WeakMap(), historyCertificates = new WeakMap();
 	const draftRecoveryHandles = new WeakMap(), draftRecoverySets = new WeakMap();
+	const publicationRoutes = new WeakMap(), publicationModes = new WeakMap(), publicationProofs = new WeakMap();
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), weakDelete = Function.call.bind( WeakMap.prototype.delete );
 	const define = Object.defineProperty;
 	const fields = [ 'history', 'historyIndex', 'lastSaveHistoryIndex', 'maxHistorySteps' ];
@@ -358,6 +359,58 @@
 		if ( !record || record.mode !== mode || record.consumed || record.released || record.bindingReleased ) { throw unavailable(); }
 		record.guard.check(); return record;
 	}
+
+	function publicationFailure( code ) {
+		const error = new Error( code ); error.code = code; return error;
+	}
+	function publicationParticipants( record ) {
+		const { mode, instance, generation, methods } = record;
+		if ( active( instance ) !== mode || mode.generation !== generation || !mode.busy || !mode.bridge.saving ||
+			mode.bridge.disposed || mode.bridge.reconciling || !mode.bridge.loaded || mode.bridge.editor !== mode.editor ||
+			mode.bridge.session !== mode.session || mode.bridge.pdfCoordinator !== mode.coordinator ||
+			mode.coordinator.bridge !== mode.bridge || mode.coordinator.stage || mode.coordinator.committing || mode.coordinator.recovering ||
+			mode.editor.isDestroyed || mode.editor.canvasManager !== mode.canvas || mode.canvas.isDestroyed || mode.canvas.editor !== mode.editor ||
+			mode.editor.stateManager !== mode.store || mode.store.editor !== mode.editor ||
+			mode.editor.historyManager !== mode.history || mode.history.editor !== mode.editor ||
+			mode.canvas.selectionManager !== mode.selection || mode.selection.canvasManager !== mode.canvas ||
+			!mode.store.isWorkingCopyAlive() || mode.store.isLocked || mode.store._isProcessingPending ||
+			mode.store.pendingOperations.length || mode.store.lockingQueue.length || mode.store.lockTimeout !== null ||
+			mode.store.lockAutoRecoveryTimeout !== null || mode.history.isDestroyed || mode.history.batchMode ||
+			!mode.ownsSession.call( mode.binding, mode.session ) || mode.session._phase !== 'saving' ) { throw unavailable(); }
+		mode.Store.checkWorkingCopyMethods( methods );
+	}
+	function savedTimelines( mode, source, snapshot ) {
+		return new Map( Array.from( source, ( [ page, previous ] ) => {
+			const timeline = mode.history.copyTimeline( previous ), saved = member( snapshot, mode, page );
+			timeline.lastSaveHistoryIndex = -1;
+			if ( saved ) {
+				for ( let index = timeline.history.length - 1; index >= 0; index-- ) {
+					if ( equal( timeline.history[ index ].layers, saved.layers ) ) { timeline.lastSaveHistoryIndex = index; break; }
+				}
+			}
+			return [ page, mode.history.preflightTimeline( timeline ) ];
+		} ) );
+	}
+	function publicationHistory( record, request ) {
+		const { mode } = record, route = historyRoutes.get( mode ), base = JSON.parse( request.snapshotJson );
+		if ( !route ) { throw unavailable(); }
+		const timelines = savedTimelines( mode, effectiveTimelines( mode ), base ), current = timelines.get( mode.session.getPdfStatus().page );
+		if ( !current ) { throw unavailable(); }
+		const slots = fields.map( key => slot( mode.history, key, current[ key ] ) );
+		slots.push( slot( mode.coordinator, 'timelines', timelines ), slot( mode.bridge, 'saving', false ) );
+		for ( const entry of route.bank.values() ) {
+			if ( !entry.command ) { continue; }
+			if ( !mode.commands.has( entry.token ) || commands.get( entry.token ) !== entry.command || entry.command.released ||
+				entry.savedJson !== mode.session._savedJson ) { throw unavailable(); }
+			slots.push( slot( entry, 'savedJson', request.snapshotJson ), slot( entry.command, 'timelines', {
+				...entry.command.timelines, before: savedTimelines( mode, entry.command.timelines.before, base ),
+				after: savedTimelines( mode, entry.command.timelines.after, base ) } ) );
+		}
+		const observed = [ mode.Store.observeWorkingCopyObject( mode.history, false ), mode.Store.observeWorkingCopyObject( mode.history.history ),
+			mode.Store.observeWorkingCopyObject( mode.coordinator, false ) ];
+		const check = () => { publicationParticipants( record ); checkSlots( slots ); observed.forEach( mode.Store.checkWorkingCopyObservation ); };
+		check(); return { check, commit: () => { for ( const value of slots ) { define( value.object, value.key, value.descriptor ); } } };
+	}
 	function recoveryTimelines( mode, preview ) {
 		const history = mode.Store.copyWorkingCopyValue( preview.history ), ids = new Map(), used = new Set();
 		for ( const group of history.groups ) {
@@ -480,6 +533,111 @@
 			const route = historyCertificates.get( value );
 			return !!route && route.instance === application && route.mode.history === history && route.mode.active &&
 				historyRoutes.get( route.mode ) === route;
+		}
+
+		static isPublicationRoute( certificate, bridge, application ) {
+			const record = publicationRoutes.get( certificate );
+			return !!record && record.instance === application && record.mode.bridge === bridge && record.mode.active &&
+				publicationModes.get( record.mode ) === record;
+		}
+
+		static isConfirmedPublicationFor( proof, binding, token, request ) {
+			const record = publicationProofs.get( proof );
+			return !!record && record.binding === binding && record.token === token && record.mode.active &&
+				record.mode.busy && equal( record.request, request ) && proof.revisionId === record.revisionId;
+		}
+
+		/** Explicitly connect the real Bridge Save entry; no production controller enables it. */
+		enablePublication( publisher ) {
+			const mode = active( this ), Client = load( 'PageOwnedWholePdfImportPublishClient' );
+			if ( !( publisher instanceof Client ) || !historyRoutes.has( mode ) || publicationModes.has( mode ) || mode.busy ) { throw unavailable(); }
+			const guard = capture( this, () => {} ), captured = mode.Store.captureWorkingCopyMethod( publisher, 'publish' );
+			if ( captured.owner !== Client.prototype || captured.method !== Client.prototype.publish ) { throw unavailable(); }
+			const certificate = Object.freeze( Object.create( null ) ), record = { instance: this, mode, publisher, captured };
+			guard.check(); publicationRoutes.set( certificate, record ); publicationModes.set( mode, record );
+			try { mode.bridge.enableWholePdfImportPublication( this, certificate ); }
+			catch ( error ) { publicationRoutes.delete( certificate ); publicationModes.delete( mode ); throw unavailable(); }
+			mode.generation++;
+		}
+
+		/** Keep the submitted bytes fixed; confirm every saved-base/history guard synchronously. */
+		async savePublication( certificate, summary = '', beforePublish ) {
+			const route = publicationRoutes.get( certificate ), mode = active( this );
+			if ( !route || !PageOwnedWholePdfImportApplication.isPublicationRoute( certificate, mode.bridge, this ) || mode.busy ||
+				Array.from( mode.handles ).some( handle => { const record = handles.get( handle ); return !record || !record.consumed; } ) ||
+				typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) { throw unavailable(); }
+			mode.bridge._requireActive(); mode.coordinator.invalidate(); mode.bridge.capture();
+			const guard = capture( this, () => {} ), tokens = [];
+			for ( const token of mode.commands ) {
+				const command = commands.get( token );
+				if ( !command || command.mode !== mode || command.released ) { throw unavailable(); } tokens.push( command.before, command.after );
+			}
+			const methods = [ route.captured, mode.Store.captureWorkingCopyMethod( this, 'savePublication' ),
+				...[ 'prepareImportPublication', 'inspectImportPublication', 'beginImportPublication', 'preparePublicationConfirmation',
+					'commitPublicationConfirmation', 'releaseImportPublication' ].map( key => mode.Store.captureWorkingCopyMethod( mode.binding, key ) ),
+				...[ 'capture', 'getLiveState' ].map( key => mode.Store.captureWorkingCopyMethod( mode.bridge, key ) ),
+				...[ 'captureTimeline', 'copyTimeline', 'preflightTimeline' ].map( key => mode.Store.captureWorkingCopyMethod( mode.history, key ) ) ];
+			const record = { mode, instance: this, generation: mode.generation, methods }, check = () => publicationParticipants( record );
+			let token, proof, committed = false, dispatched = false, result;
+			try {
+				mode.Store.checkWorkingCopyMethods( methods );
+				token = mode.binding.prepareImportPublication( tokens, guard.check, check );
+				const request = mode.binding.inspectImportPublication( token ), bridgeLock = slot( mode.bridge, 'saving', true );
+				const publisher = request.sources.length ? route.captured : mode.Store.captureWorkingCopyMethod( mode.session._publisher, 'publish' );
+				if ( !request.sources.length ) { methods.push( publisher ); }
+				const outgoing = request.sources.length ? { ...request, summary } :
+					{ owner: mode.session._owner, pageId: request.pageId, baseRevisionId: request.baseRevisionId, snapshotJson: request.snapshotJson, summary };
+				checkSlots( [ bridgeLock ] ); mode.binding.beginImportPublication( token );
+				define( bridgeLock.object, bridgeLock.key, bridgeLock.descriptor ); mode.busy = true;
+				if ( beforePublish ) {
+					try { await beforePublish(); } catch ( error ) { throw publicationFailure( 'layers-draft-storage-failed' ); }
+				}
+				check(); mode.binding.inspectImportPublication( token ); dispatched = true;
+				const response = await publisher.descriptor.value.call( publisher.object, outgoing );
+				check(); mode.binding.inspectImportPublication( token );
+				if ( !response || !Number.isInteger( response.revisionId ) || response.revisionId < request.baseRevisionId ||
+					response.revisionId > 2147483647 || ( response.revisionId === request.baseRevisionId &&
+					( request.sources.length || !equal( JSON.parse( request.snapshotJson ), JSON.parse( mode.session._savedJson ) ) ) ) ) {
+					throw publicationFailure( 'layers-publication-outcome-unknown' );
+				}
+				// Only a response from the captured actual transport can mint this confirmation.
+				proof = Object.freeze( { revisionId: response.revisionId } );
+				publicationProofs.set( proof, { binding: mode.binding, token, mode, request, revisionId: response.revisionId } );
+				mode.bridge.capture(); check();
+				const confirmation = mode.binding.preparePublicationConfirmation( token, proof ), history = publicationHistory( record, request );
+				result = mode.binding.commitPublicationConfirmation( token, confirmation, history.check );
+				history.commit(); mode.generation++; committed = true;
+			} catch ( error ) {
+				const known = new Set( [ 'layers-edit-conflict', 'layers-draft-storage-failed', 'layers-working-copy-import-unavailable',
+					'layers-owner-edit-denied', 'layers-invalid-publication-request', 'layers-invalid-snapshot', 'layers-source-unavailable',
+					'layers-main-model-change-denied', 'layers-publication-disabled',
+					'layers-admission-unauthorized', 'layers-slot-removal-denied', 'layers-content-not-renderable', 'layers-edit-filtered',
+					'badtoken', 'missingparam', 'permissiondenied', 'ratelimited', 'mustbeposted', 'maxbytes', 'outofrange' ] );
+				let code = error && known.has( error.code ) ? error.code : 'layers-publication-outcome-unknown';
+				if ( dispatched && code === 'layers-working-copy-import-unavailable' && mode.session._phase === 'saving' ) {
+					// Local post-dispatch drift is uncertain; a native refusal keeps its explicit safe code.
+					try { check(); mode.binding.inspectImportPublication( token ); } catch ( ignored ) { code = 'layers-publication-outcome-unknown'; }
+				}
+				if ( mode.session._phase !== 'disposed' ) {
+					mode.session._phase = code === 'layers-edit-conflict' ? 'conflict' : code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
+				}
+				throw publicationFailure( code );
+			} finally {
+				mode.busy = false; mode.bridge.saving = false;
+				if ( proof ) { publicationProofs.delete( proof ); }
+				if ( token ) { try { mode.binding.releaseImportPublication( token ); } catch ( ignored ) {} }
+				if ( !committed && !mode.bridge.disposed ) {
+					try { mode.bridge.capture(); mode.store.set( 'isDirty', mode.session.getStatus().dirty ); }
+					catch ( ignored ) { try { mode.store.set( 'isDirty', true ); } catch ( ignoredAgain ) {} }
+				}
+				if ( !mode.active ) { cleanup( this, mode ); }
+			}
+			const diagnostics = [];
+			for ( const refresh of [ () => retireHistoryCommands( historyRoutes.get( mode ) ),
+				() => mode.store.set( 'isDirty', result.dirty ), () => mode.history.updateUndoRedoButtons() ] ) {
+				try { refresh(); } catch ( ignored ) { diagnostics.push( 'working-copy-import-refresh-failed' ); }
+			}
+			return { ...result, editorStateValid: true, diagnostics };
 		}
 
 		/** Explicit opt-in only; no existing editor/Import caller enables this route. */

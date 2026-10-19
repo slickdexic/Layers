@@ -22,6 +22,7 @@
 	const workingCopyDisplayCommits = new WeakSet();
 	const workingCopyDraftRecoveries = new WeakMap();
 	const earlierCreationDraftRecoveries = new WeakMap();
+	const wholePdfImportPublications = new WeakMap();
 
 	function workingCopyDraftEqual( left, right ) {
 		if ( Object.is( left, right ) ) { return true; }
@@ -718,7 +719,28 @@
 		 * @param {Function} [beforePublish] Persist a saving-phase draft before dispatch
 		 * @return {Promise<Object>} Confirmed save state, including whether newer editor data is valid
 		 */
+		enableWholePdfImportPublication( application, certificate ) {
+			this._requireActive();
+			const Application = typeof module !== 'undefined' && typeof module.require === 'function' ?
+				module.require( './PageOwnedWholePdfImportApplication.js' ) : window.Layers.Editor.PageOwnedWholePdfImportApplication;
+			const descriptor = Object.getOwnPropertyDescriptor( Application.prototype, 'savePublication' );
+			if ( wholePdfImportPublications.has( this ) || !( application instanceof Application ) ||
+				!Application.isPublicationRoute( certificate, this, application ) || !descriptor || typeof descriptor.value !== 'function' ||
+				Object.hasOwn( application, 'savePublication' ) ) { throw this._error( 'layers-working-copy-import-unavailable' ); }
+			wholePdfImportPublications.set( this, { application, certificate, Application, descriptor } );
+		}
+
 		async save( summary = '', beforePublish ) {
+			const publication = wholePdfImportPublications.get( this );
+			if ( publication ) {
+				const current = Object.getOwnPropertyDescriptor( publication.Application.prototype, 'savePublication' );
+				if ( Object.hasOwn( publication.application, 'savePublication' ) || !current ||
+					Reflect.ownKeys( publication.descriptor ).some( key => current[ key ] !== publication.descriptor[ key ] ) ||
+					!publication.Application.isPublicationRoute( publication.certificate, this, publication.application ) ) {
+					throw this._error( 'layers-working-copy-import-unavailable' );
+				}
+				return publication.descriptor.value.call( publication.application, publication.certificate, summary, beforePublish );
+			}
 			this._requireActive();
 			if ( this.pdfCoordinator ) {
 				this.pdfCoordinator.invalidate();

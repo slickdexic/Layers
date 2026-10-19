@@ -1,9 +1,11 @@
 # Whole-PDF Import publication boundary
 
-`PageWorkingCopyPdfImportPublicationService` is an unregistered native service
-for the first ordinary owning-page Save after whole-PDF Import. It advances
-Milestone 1 / HIST-4 / DATA-1 / SEC-2. It has no endpoint, editor caller or UI
-registration. Existing image/slide Import and ordinary Save callers are unchanged.
+`PageWorkingCopyPdfImportPublicationService` is a native service for the first
+owning-page Save after whole-PDF Import. It advances Milestone 1 / HIST-4 /
+DATA-1 / SEC-2 and is exposed through the registered native POST/CSRF write
+action described below. A separate opt-in editor Save integration is documented
+in [Whole-PDF Import editor Save](WHOLE_PDF_IMPORT_EDITOR_SAVE.md). Production
+editor/Import callers and existing default Save behavior remain unchanged.
 
 The service accepts the existing target page ID, its explicit current revision,
 the complete proposed document, the requesting native authority and an optional

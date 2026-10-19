@@ -8,6 +8,7 @@
 	const checkpointClaims = new WeakMap(), restores = new WeakMap();
 	const draftRecoveries = new WeakMap();
 	const draftSourceTypes = new WeakMap();
+	const publications = new WeakMap(), publicationConfirmations = new WeakMap();
 	const preparing = new WeakSet(), consumed = new WeakSet();
 	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
@@ -262,6 +263,37 @@
 		return copy( state, { owner: session._owner, pageId: session._pageId, baseRevisionId: session._revisionId,
 			surfaceId: session._surfaceId, savedJson: session._savedJson, original: session._pdf.original,
 			pageCount: session._pdf.pageCount, initialPage: session._pdf.initialPage } );
+	}
+
+	function publicationRecord( instance, token ) {
+		const state = active( instance ), record = publications.get( token );
+		if ( !record || record.instance !== instance || record.state !== state || record.released || record.committed ) { throw unavailable(); }
+		record.check(); return record;
+	}
+	function publicationOrigins( state, snapshot, rows, base, revisionId ) {
+		const ids = new Set( base.surfaces.map( surface => surface.id ) ), origins = new Map( rows ), result = [];
+		for ( const surface of selected( snapshot, state.session ) ) {
+			if ( ids.has( surface.id ) ) { continue; }
+			const origin = origins.get( surface.id );
+			if ( !origin || origin.revisionId > revisionId || !equal( fixed( surface ), fixed( origin.surface ) ) ||
+				state.session._pdfNativeId( origin ) !== surface.id ) { throw unavailable(); }
+			if ( origin.revisionId < revisionId ) { result.push( { surfaceId: surface.id, revisionId: origin.revisionId } ); }
+		}
+		return result.sort( ( left, right ) => left.surfaceId.localeCompare( right.surfaceId ) );
+	}
+	function publicationCheckpoint( state, data, base, revisionId, blanks, entries ) {
+		const next = copy( state, data ), group = selected( base, state.session );
+		for ( const stored of group ) {
+			if ( next.snapshot.surfaces.some( surface => surface.id === stored.id ) ) { continue; }
+			const blank = blanks.get( stored.id );
+			if ( !blank || !equal( fixed( blank ), fixed( stored ) ) || blank.layers.length ||
+				( blank.readingOrder && blank.readingOrder.length ) ) { throw unavailable(); }
+			// A formerly absent PDF member means its exact native blank, not saved imported layers.
+			next.snapshot.surfaces.push( copy( state, blank ) );
+		}
+		next.sources = entries ? copy( state, entries.entries.map( entry => entry.citation ) ) : [];
+		next.admissionRevisions = publicationOrigins( state, next.snapshot, next.admissions, base, revisionId );
+		return next;
 	}
 
 	function claimsFor( state, scope ) {
@@ -787,6 +819,139 @@
 		releaseImportCheckpoint( token ) {
 			const store = checkpoints.get( this );
 			if ( !store || !store.delete( token ) ) { throw unavailable(); }
+		}
+
+		/** Prepare a real-session Save receipt; detached descriptors are never confirmation authority. */
+		prepareImportPublication( tokens, assertInitial, assertPending ) {
+			try {
+				if ( !Array.isArray( tokens ) || new Set( tokens ).size !== tokens.length ||
+					typeof assertInitial !== 'function' || typeof assertPending !== 'function' ) { throw unavailable(); }
+				const state = active( this ), witness = capture( this, state, assertInitial ), scope = scopeOf( state );
+				const claims = claimsFor( state, scope ), store = checkpoints.get( this ), rows = Array.from( store || [] );
+				if ( tokens.length !== rows.length || rows.some( ( [ token, checkpoint ] ) =>
+					!tokens.includes( token ) || !checkpointClaims.has( token ) || !equal( checkpoint.scope, scope ) ) ) { throw unavailable(); }
+				const methods = [ 'prepareImportPublication', 'inspectImportPublication', 'beginImportPublication',
+					'preparePublicationConfirmation', 'commitPublicationConfirmation', 'releaseImportPublication' ].map( key => method( this, key ) );
+				const checkpointRows = rows.map( ( [ token, checkpoint ] ) => ( { token, checkpoint,
+					data: copy( state, checkpoint.data ), claims: checkpointClaims.get( token ) } ) );
+				const Application = typeof module !== 'undefined' && module.require ? module.require( './PageOwnedWholePdfImportApplication.js' ) :
+					window.Layers.Editor.PageOwnedWholePdfImportApplication;
+				methods.push( method( Application, 'isConfirmedPublicationFor' ), method( Application, 'isPublicationRoute' ) );
+				const record = { instance: this, state, scope, claims, store, checkpointRows, witness, methods, Application,
+					begun: false, released: false, committed: false, snapshotJson: JSON.stringify( state.session._snapshot ) };
+				record.request = copy( state, { pageId: scope.pageId, baseRevisionId: scope.baseRevisionId,
+					snapshotJson: record.snapshotJson, sources: claims ? claims.entries.map( entry => entry.citation ) : [],
+					admissionRevisions: originsFor( state, witness.snapshot, state.session._pdf.admissions ) } );
+				record.check = () => {
+					if ( active( this ) !== state || record.released || record.committed || claimsFor( state, scope ) !== claims ||
+						checkpoints.get( this ) !== store || ( store ? store.size : 0 ) !== rows.length ) { throw unavailable(); }
+					const session = state.session;
+					if ( session._phase !== ( record.begun ? 'saving' : 'ready' ) ) { throw unavailable(); }
+					if ( !record.begun ) { witness.check(); }
+					else {
+						const keys = Reflect.ownKeys( session );
+						if ( keys.length !== witness.sessionWitness.keys.length || keys.some( key => !witness.sessionWitness.keys.includes( key ) ) ) { throw unavailable(); }
+						for ( const key of keys ) {
+							const current = descriptor( session, key ), previous = witness.sessionWitness.descriptors[ key ];
+							if ( !exactDescriptor( current, [ '_phase', '_snapshot' ].includes( key ) ? { ...previous, value: current.value } : previous ) ) { throw unavailable(); }
+						}
+						checkObject( witness.pdfWitness );
+						if ( !equal( copy( state, session._pdfContext ), witness.context ) ||
+							!equal( copy( state, Object.fromEntries( witness.pdfWitness.keys.filter( key => ![ 'temporary', 'admissions' ].includes( key ) )
+								.map( key => [ key, descriptor( session._pdf, key ).value ] ) ) ), witness.pdfData ) ) { throw unavailable(); }
+						for ( const map of witness.maps ) {
+							const entries = Array.from( Map.prototype.entries.call( map.map ) );
+							if ( Reflect.ownKeys( map.map ).length || entries.length !== map.entries.length || entries.some( ( entry, index ) =>
+								entry[ 0 ] !== map.entries[ index ][ 0 ] || entry[ 1 ] !== map.entries[ index ][ 1 ] ) || !equal( copy( state, entries ), map.data ) ) { throw unavailable(); }
+						}
+						const outcome = assertPending();
+						if ( outcome !== undefined ) { if ( outcome instanceof Promise ) { outcome.catch( () => {} ); } throw unavailable(); }
+					}
+					for ( const captured of methods.concat( witness.mapMethods ) ) {
+						const current = method( captured.object, captured.key );
+						if ( current.holder !== captured.holder || !exactDescriptor( current.descriptor, captured.descriptor ) ) { throw unavailable(); }
+					}
+					for ( const row of checkpointRows ) {
+						if ( store.get( row.token ) !== row.checkpoint || checkpointClaims.get( row.token ) !== row.claims ||
+							!equal( row.checkpoint.scope, scope ) || !equal( row.checkpoint.data, row.data ) ) { throw unavailable(); }
+					}
+				};
+				record.check(); const token = Object.freeze( Object.create( null ) ); publications.set( token, record ); return token;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		inspectImportPublication( token ) {
+			const record = publicationRecord( this, token ), result = copy( record.state, record.request ); record.check(); return result;
+		}
+
+		beginImportPublication( token ) {
+			const record = publicationRecord( this, token );
+			if ( record.begun ) { throw unavailable(); }
+			const phase = writableSlot( record.state.session, '_phase' ); record.check();
+			define( record.state.session, '_phase', { ...phase, value: 'saving' } ); record.begun = true;
+		}
+
+		/** Stage every live checkpoint and claim set against the exact confirmed request. */
+		preparePublicationConfirmation( token, proof ) {
+			try {
+				const record = publicationRecord( this, token ), { state } = record;
+				const Application = record.Application;
+				if ( !record.begun || !Application.isConfirmedPublicationFor( proof, this, token, record.request ) ) { throw unavailable(); }
+				const revisionId = proof.revisionId, base = JSON.parse( record.snapshotJson ), session = state.session;
+				if ( !Number.isInteger( revisionId ) || revisionId < record.scope.baseRevisionId || revisionId > 2147483647 ||
+					( revisionId === record.scope.baseRevisionId && ( record.request.sources.length || !equal( base, record.witness.base ) ) ) ) { throw unavailable(); }
+				const current = copy( state, session._snapshot );
+				invoke( { ...record.witness, check: record.check }, session, '_pdfGroup', current,
+					current.surfaces.find( surface => surface.id === session._surfaceId ), session._pdf.pageCount );
+				const nextScope = { ...record.scope, baseRevisionId: revisionId, savedJson: record.snapshotJson };
+				const acknowledged = new Set( record.claims ? record.claims.entries.map( entry => entry.key ) : [] ), cache = new Map();
+				const nextClaims = claims => {
+					if ( !claims ) { return undefined; }
+					if ( !equal( claims.scope, record.scope ) ) { throw unavailable(); }
+					if ( !cache.has( claims ) ) {
+						const entries = copy( state, claims.entries.filter( entry => !acknowledged.has( entry.key ) ) );
+						cache.set( claims, entries.length ? { scope: nextScope, entries } : undefined );
+					}
+					return cache.get( claims );
+				};
+				const blanks = new Map( record.witness.maps[ 1 ].data.map( ( [ id, origin ] ) => [ id, origin.surface ] ) );
+				for ( const row of record.checkpointRows ) {
+					for ( const [ id, origin ] of row.data.admissions ) {
+						if ( blanks.has( id ) && !equal( blanks.get( id ), origin.surface ) ) { throw unavailable(); } blanks.set( id, origin.surface );
+					}
+				}
+				const checkpointsNext = record.checkpointRows.map( row => {
+					const claims = nextClaims( row.claims );
+					return { token: row.token, claims, checkpoint: { scope: nextScope,
+						data: publicationCheckpoint( state, row.data, base, revisionId, blanks, claims ) } };
+				} );
+				const assignments = [ [ '_revisionId', revisionId ], [ '_savedJson', record.snapshotJson ], [ '_baseHasDrawings', true ], [ '_phase', 'ready' ] ]
+					.map( ( [ key, value ] ) => ( { key, descriptor: { ...writableSlot( session, key ), value }, before: descriptor( session, key ) } ) );
+				const outcome = { phase: 'ready', revisionId, readOnly: false, dirty: !equal( current, base ) };
+				const confirmation = Object.freeze( Object.create( null ) ); record.check();
+				publicationConfirmations.set( confirmation, { record, proof, Application, assignments, checkpointsNext,
+					claims: nextClaims( record.claims ), current, outcome } ); return confirmation;
+			} catch ( error ) { throw unavailable(); }
+		}
+
+		commitPublicationConfirmation( token, confirmation, beforeCommit ) {
+			const record = publicationRecord( this, token ), prepared = publicationConfirmations.get( confirmation );
+			if ( !prepared || prepared.record !== record || typeof beforeCommit !== 'function' ||
+				!prepared.Application.isConfirmedPublicationFor( prepared.proof, this, token, record.request ) ) { throw unavailable(); }
+			const check = () => {
+				record.check(); if ( !equal( copy( record.state, record.state.session._snapshot ), prepared.current ) ) { throw unavailable(); }
+				for ( const slot of prepared.assignments ) { if ( !exactDescriptor( descriptor( record.state.session, slot.key ), slot.before ) ) { throw unavailable(); } }
+			};
+			check(); const result = copy( record.state, prepared.outcome ), value = beforeCommit();
+			if ( value !== undefined ) { if ( value instanceof Promise ) { value.catch( () => {} ); } throw unavailable(); } check();
+			for ( const slot of prepared.assignments ) { define( record.state.session, slot.key, slot.descriptor ); }
+			for ( const row of prepared.checkpointsNext ) { mapSet( record.store, row.token, row.checkpoint ); weakSet( checkpointClaims, row.token, row.claims ); }
+			weakSet( citations, record.state.session, prepared.claims ); record.committed = true; publicationConfirmations.delete( confirmation ); return result;
+		}
+
+		releaseImportPublication( token ) {
+			const record = publications.get( token );
+			if ( !record || record.instance !== this || record.released ) { throw unavailable(); } record.released = true; publications.delete( token );
 		}
 
 		getImportPublication() {

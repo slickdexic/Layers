@@ -64,3 +64,12 @@ approved recovery/storage controls, missing target sets and native browser,
 supported-version/mobile, upgrade and owner acceptance remain separate required
 work. Registering this request boundary does not complete Milestone 1 or enable
 the whole-PDF Import editor flow.
+
+## Separate editor Save integration
+
+The [opt-in editor integration](WHOLE_PDF_IMPORT_EDITOR_SAVE.md) can connect
+the existing `Bridge.save()` entry to this client. It captures actual private
+source claims and confirms the submitted base, remaining claims and complete
+group history only after successful publication. Newer edits stay dirty;
+refused or uncertain Saves do not confirm the base or acknowledge sources.
+Production editor, Import, picker and draft-controller callers remain inactive.
