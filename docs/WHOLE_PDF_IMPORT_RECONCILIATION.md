@@ -34,6 +34,11 @@ Undo and Redo. Remote-only layer changes on an untouched page also rebase its
 reachable timeline entries and group markers. Existing ambiguous merge rules
 continue to refuse conflicting checkpoint sides. If an older timeline state
 cannot be rebased safely, the entire revision check refuses before committing.
+The same refusal applies when a previously stored group page is removed or
+replaced under a different internal identity while its Import timeline remains
+reachable. Local content, source claims, drafts and both history sides stay
+intact. This does not refuse a native temporary blank solely because it has no
+saved member.
 
 When exact server group content already equals current local content, both
 explicit Undo sides remain available. Formerly absent members use their exact

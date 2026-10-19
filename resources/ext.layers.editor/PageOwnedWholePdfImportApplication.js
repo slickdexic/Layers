@@ -504,6 +504,8 @@
 			const timeline = mode.history.copyTimeline( previous ), before = member( preview.baseSnapshot, mode, page ) ||
 				Array.from( mode.session._pdf.temporary.values() ).find( value => value.source.page === page );
 			const live = member( preview.liveSnapshot, mode, page ) || before, saved = member( preview.savedSnapshot, mode, page );
+			// Stored-page removal/replacement cannot retain its existing Import timeline safely.
+			if ( member( preview.baseSnapshot, mode, page ) && ( !saved || saved.id !== before.id ) ) { throw unavailable(); }
 			if ( saved && ( !before || !equal( before.layers, saved.layers ) ) && ( !live || !equal( live.layers, saved.layers ) ) ) {
 				for ( const entry of timeline.history ) {
 					if ( before && equal( entry.layers, before.layers ) ) { entry.layers = mode.Store.copyWorkingCopyValue( saved.layers ); }

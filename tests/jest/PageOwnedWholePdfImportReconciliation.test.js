@@ -276,6 +276,26 @@ describe( 'Whole-PDF Import reconciliation through the actual Bridge', () => {
 		await expect( value.work.bridge.reconcile( 13 ) ).rejects.toBeInstanceOf( Error );
 		delete value.application.reconcilePublication; expect( complete( value ) ).toBe( before );
 	} );
+	it.each( [ [ 'removed', 'after' ], [ 'removed', 'before' ], [ 'replaced', 'after' ], [ 'replaced', 'before' ] ] )(
+		'refuses a remotely %s stored page with %s-phase Import history without changing complete work', async ( change, phase ) => {
+			const value = await setup( { sparse: false } ), { work } = value;
+			value.sourceApi.post.mockImplementation( () => Promise.resolve( { layersworkingcopypdfimportread: {
+				version: 1, data: JSON.stringify( importPayload( work, [ 2 ] ) ) } } ) );
+			await applyImport( work, value.application, value.request );
+			if ( phase === 'before' ) { expect( work.editor.historyManager.undo() ).toBe( true ); }
+			const server = value.getServer(), original = copy( server.surfaces.find( member => member.id === 'stored-first' ) );
+			server.surfaces = server.surfaces.filter( member => member.id !== original.id );
+			if ( change === 'replaced' ) { server.surfaces.push( { ...copy( original ), id: 'remote-replacement', layers: [] } ); }
+			value.setServer( server ); value.setRevision( 13 ); const before = complete( value );
+			await expect( work.bridge.reconcile( 13 ) ).rejects.toBeInstanceOf( Error ); expect( complete( value ) ).toBe( before );
+			expect( value.api.postWithToken ).not.toHaveBeenCalled();
+			expect( await work.bridge.pdfCoordinator.turn( 1 ) ).toBe( true );
+			expect( work.editor.stateManager.get( 'layers' ) ).toEqual( original.layers );
+			const timeline = work.editor.historyManager.captureTimeline();
+			expect( timeline.history[ timeline.historyIndex ].layers ).toEqual( original.layers );
+			const action = phase === 'before' ? 'redo' : 'undo', reverse = phase === 'before' ? 'undo' : 'redo';
+			expect( work.editor.historyManager[ action ]() ).toBe( true ); expect( work.editor.historyManager[ reverse ]() ).toBe( true );
+		} );
 	it( 'recovers a reconciled draft in a new actual session, then preserves group Undo and first-Save provenance', async () => {
 		const value = await setup( { sparse: false } ); await applyImport( value.work, value.application, value.request );
 		const server = await unrelatedRevision( value ); await value.work.bridge.reconcile( 13 );
