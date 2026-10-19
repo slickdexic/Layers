@@ -64,3 +64,9 @@ MediaWiki 1.44/mobile, upgrade and owner acceptance remain separate work. Draft
 discovery remains scoped to the loaded exact revision; older-revision backups
 are preserved without a new earlier-PDF recovery claim. This checkpoint does not
 complete Milestone 1.
+
+## Source discovery
+
+The [native whole-PDF catalog](WHOLE_PDF_IMPORT_CATALOG.md) supplies grouped
+owner/file/name choices for the approved picker. Those choices grant no recovery
+or publication authority; selected groups still require fresh native reads.

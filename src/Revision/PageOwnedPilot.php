@@ -15,6 +15,7 @@ use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportCreationRebase;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyImportRead;
+use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportCatalog;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersWorkingCopyPdfImportRead;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
@@ -1118,6 +1119,94 @@ class PageOwnedPilot {
 		$this->assertCopyScope( $pageId, $authority );
 		return $this->newDrawingCopy()->copy( $pageId, $revisionId, $start, $expected, $sourceRevisionId,
 			$authority, $note );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersWorkingCopyPdfImportCatalog */
+	public function newWorkingCopyPdfImportCatalogApi( ApiMain $main,
+		string $name
+	): ApiLayersWorkingCopyPdfImportCatalog {
+		return new ApiLayersWorkingCopyPdfImportCatalog( $main, $name, $this );
+	}
+
+	/**
+	 * Discover complete source groups through the existing bounded native page query.
+	 * @param string $search
+	 * @param int $pageId Current owner to exclude
+	 * @param int $limit
+	 * @param Authority $authority
+	 * @return array[] Authorized current owners and detached group choices
+	 */
+	public function searchPdfImportSources( string $search, int $pageId, int $limit, Authority $authority ): array {
+		try {
+			$this->assertCopyScope( $pageId, $authority );
+		} catch ( PublicationException $error ) {
+			return [];
+		}
+		return ( new DrawingCatalog( $this->services->getConnectionProvider(), $this->services->getSlotRoleStore(),
+			$this->services->getTitleFactory(), [ $this, 'getPdfImportSourceSelections' ] ) )
+			->search( $search, $pageId, max( 1, min( 20, $limit ) ), $authority );
+	}
+
+	/**
+	 * One choice per authorized owner/file/name. PDF pages and upload versions are not names.
+	 * Resolves visible retained source versions without preparing thumbnails or returning layers.
+	 * The selected Import read must freshly authorize both complete groups again.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return array[] Group metadata using the lowest stored PDF page as an internal anchor
+	 */
+	public function getPdfImportSourceSelections( \MediaWiki\Title\Title $owner, int $revisionId,
+		Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) || $owner->hasFragment() ||
+			$revisionId < 1 || $revisionId > 2147483647 ) {
+			return [];
+		}
+		$access = new PageHistoryAccess( $this->services->getRevisionLookup() );
+		$content = $access->read( $owner, $revisionId, $authority );
+		$snapshot = json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR );
+		$groups = [];
+		foreach ( $snapshot->surfaces as $surface ) {
+			$groups[LayerSetIdentity::key( $surface )][] = $surface;
+		}
+		$sources = new SourceVersionResolver( $this->services->getRepoGroup()->getLocalRepo(),
+			$this->services->getTitleFactory() );
+		$result = [];
+		foreach ( $groups as $members ) {
+			if ( $members[0]->kind !== 'pdf' ) {
+				continue;
+			}
+			$pin = (array)$members[0]->source;
+			unset( $pin['page'] );
+			$pages = $ids = [];
+			foreach ( $members as $surface ) {
+				$candidatePin = (array)$surface->source;
+				unset( $candidatePin['page'] );
+				if ( $surface->kind !== 'pdf' || $surface->label !== $members[0]->label ||
+					isset( $pages[$surface->source->page] ) ||
+					isset( $ids[$surface->id] ) ||
+					JsonSnapshotCodec::encode( $candidatePin ) !== JsonSnapshotCodec::encode( $pin ) ) {
+					continue 2;
+				}
+				$pages[$surface->source->page] = $surface;
+				$ids[$surface->id] = $surface->id;
+			}
+			try {
+				$files = $sources->resolve( $content, $authority, array_values( $ids ) );
+				if ( count( $files ) !== count( $ids ) ) {
+					continue;
+				}
+			} catch ( \DomainException $error ) {
+				continue;
+			}
+			ksort( $pages, SORT_NUMERIC );
+			$anchor = reset( $pages );
+			$result[] = [ 'id' => $anchor->id, 'label' => $anchor->label, 'kind' => 'pdf',
+				'canvas' => [ 'width' => $anchor->canvas->width, 'height' => $anchor->canvas->height ],
+				'fileTitle' => $anchor->source->fileTitle ];
+		}
+		return $result;
 	}
 
 	/**
