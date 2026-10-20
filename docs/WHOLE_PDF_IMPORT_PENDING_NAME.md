@@ -57,3 +57,8 @@ their pending-name refusal. Existing image/slide Import stays unchanged.
 This client qualification does not activate the feature or establish native
 HTTP/browser, supported-version/mobile, upgrade or owner acceptance. Creation of
 a completely absent target PDF group remains separate work before activation.
+
+Unchanged native historical names retain their exact saved spelling during
+draft inspection. Current canonical-name validation applies when a different
+name is proposed. See [historical-name compatibility](WHOLE_PDF_IMPORT_HISTORICAL_NAMES.md);
+the exception grants no native recovery or Save authority.

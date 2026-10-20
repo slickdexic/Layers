@@ -44,7 +44,8 @@
 	function groupOf( snapshot, scope ) {
 		const anchor = snapshot.surfaces.find( surface => surface.id === scope.surfaceId );
 		if ( !anchor || anchor.kind !== 'pdf' || !anchor.source || typeof anchor.label !== 'string' ) { throw unavailable(); }
-		if ( !validName( anchor.label ) ) { throw unavailable(); }
+		const stored = JSON.parse( scope.savedJson ).surfaces.find( surface => surface.id === scope.surfaceId );
+		if ( !stored || ( anchor.label !== stored.label && !validName( anchor.label ) ) ) { throw unavailable(); }
 		const key = value => String( value ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 		const result = snapshot.surfaces.filter( surface => surface.kind === 'pdf' && surface.source &&
 			surface.source.fileTitle === anchor.source.fileTitle && key( surface.label ) === key( anchor.label ) );
