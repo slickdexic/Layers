@@ -1,5 +1,6 @@
 'use strict';
 const { creationContext, clone, choose, tick } = require( './creationDraftAdmissionContext.js' );
+const { exactTextResponse } = require( './workingCopyImportContext.js' );
 async function rebaseContext( kind = 'slide', siblings = false ) {
 	const c = await creationContext( kind, siblings );
 	const previousPost = c.api.post.getMockImplementation();
@@ -20,12 +21,12 @@ async function rebaseContext( kind = 'slide', siblings = false ) {
 		if ( params.action === 'layersworkingcopyimportcreationrebase' ) {
 			if ( events.rebase ) { await events.rebase(); }
 			const response = { layersworkingcopyimportcreationrebase: clone( rebase ) };
-			return events.response ? events.response( response ) : response;
+			return exactTextResponse( events.response ? events.response( response ) : response, 'layersworkingcopyimportcreationrebase' );
 		}
 		if ( params.baserevid === 20 ) {
 			if ( events.source ) { await events.source(); }
 			const response = { layersworkingcopyimportcreationread: { creation: clone( creation ), source: clone( c.choice ), sourceBundle: clone( c.bundle ) } };
-			return events.response ? events.response( response ) : response;
+			return exactTextResponse( events.response ? events.response( response ) : response, 'layersworkingcopyimportcreationread' );
 		}
 		return previousPost( params );
 	} );

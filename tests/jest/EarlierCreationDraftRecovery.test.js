@@ -1,5 +1,6 @@
 'use strict';
 const { rebaseContext, clone, choose, tick, observed } = require( './fixtures/creationDraftRebaseContext.js' );
+const { exactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 const { CreationClient } = require( './fixtures/creationDraftAdmissionContext.js' );
 const Bridge = require( '../../resources/ext.layers.editor/PageOwnedEditorBridge.js' );
 beforeEach( () => { mw.msg = key => key; } );
@@ -13,7 +14,7 @@ async function setup( kind = 'image', slot = true, alterBackup ) {
 		if ( params.action !== 'layersworkingcopyimportcreationdraftrebase' ) { return previous( params ); }
 		events.proofs++; if ( events.proof ) { await events.proof(); }
 		const response = { layersworkingcopyimportcreationdraftrebase: clone( c.rebase ) };
-		return events.response ? events.response( response ) : response;
+		return exactTextResponse( events.response ? events.response( response ) : response, 'layersworkingcopyimportcreationdraftrebase' );
 	} );
 	const client = new CreationClient( c.api, c.currentSelection ), handles = c.controller.listEarlierCreationCandidates(); expect( handles ).toHaveLength( 1 );
 	return { ...c, client, handle: handles[ 0 ], events, nativeEvents };

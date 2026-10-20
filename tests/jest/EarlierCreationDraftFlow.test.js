@@ -1,5 +1,6 @@
 'use strict';
 const { rebaseContext, clone, choose, tick, observed } = require( './fixtures/creationDraftRebaseContext.js' );
+const { exactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 const Lifecycle = require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
 const Dialog = require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' );
 const en = require( '../../i18n/en.json' );
@@ -31,7 +32,7 @@ async function setup( kind = 'image', slot = true, options = {} ) {
 		if ( params.action !== 'layersworkingcopyimportcreationdraftrebase' ) { return post( params ); }
 		events.proofs++; if ( events.proof ) { await events.proof(); }
 		const response = { layersworkingcopyimportcreationdraftrebase: clone( c.rebase ) };
-		return events.response ? events.response( response ) : response;
+		return exactTextResponse( events.response ? events.response( response ) : response, 'layersworkingcopyimportcreationdraftrebase' );
 	} );
 	const dialog = new Dialog( msg ), ui = { chooseDraft: rows => dialog.choose( rows ),
 		chooseEarlierDraft: rows => dialog.chooseEarlierCreation( rows ), confirmRecovery: row => dialog.confirm( row ),

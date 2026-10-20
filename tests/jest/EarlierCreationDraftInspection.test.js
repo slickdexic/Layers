@@ -1,6 +1,7 @@
 'use strict';
 const { rebaseContext, clone, choose, tick, observed } = require( './fixtures/creationDraftRebaseContext.js' );
 const { CreationClient, Store, Controller } = require( './fixtures/creationDraftAdmissionContext.js' );
+const { exactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 
 async function setup( kind = 'image', slot = true ) {
 	const c = await rebaseContext( kind, slot ); await choose( c ); c.controller.persist(); await c.drafts.reconcile( async () => 20 );
@@ -9,7 +10,7 @@ async function setup( kind = 'image', slot = true ) {
 		if ( params.action !== 'layersworkingcopyimportcreationdraftrebase' ) { return prior( params ); }
 		if ( events.pause ) { await events.pause(); }
 		const response = { layersworkingcopyimportcreationdraftrebase: clone( c.rebase ) };
-		return events.mutate ? events.mutate( response ) : response;
+		return exactTextResponse( events.mutate ? events.mutate( response ) : response, 'layersworkingcopyimportcreationdraftrebase' );
 	} );
 	const client = new CreationClient( c.api, c.currentSelection ), handles = c.controller.listEarlierCreationCandidates();
 	expect( handles ).toHaveLength( 1 );
@@ -30,7 +31,7 @@ describe( 'inactive earlier creation draft inspection', () => {
 				expect( result.native ).toStrictEqual( c.rebase ); expect( result.scope.baseRevisionId ).toBe( 12 );
 				expect( result.envelope.workingCopyDraft.timeline.history ).toHaveLength( 2 );
 				expect( c.api.post ).toHaveBeenLastCalledWith( { action: 'layersworkingcopyimportcreationdraftrebase', formatversion: 2,
-					targetpageid: 7, baserevid: 20, originrevid: 12, originsurface: 'target' } );
+					targetpageid: 7, baserevid: 20, originrevid: 12, originsurface: 'target', exacttext: true } );
 				result.envelope.workingCopyDraft.workingState.layers[ 0 ].id = 'mutated copy';
 				expect( prepared.inspect().envelope ).toStrictEqual( JSON.parse( c.record.raw ) );
 				await prepared.revalidate(); await prepared.readSource( source() );

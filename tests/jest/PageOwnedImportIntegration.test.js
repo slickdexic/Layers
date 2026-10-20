@@ -1,5 +1,5 @@
 'use strict';
-const { context, clone, History } = require( './fixtures/workingCopyImportContext.js' );
+const { context, clone, exactTextResponse, History } = require( './fixtures/workingCopyImportContext.js' );
 const Integration = require( '../../resources/ext.layers.editor/PageOwnedImportIntegration.js' );
 require( '../../resources/ext.layers.editor/PageOwnedImportControl.js' );
 require( '../../resources/ext.layers.editor/PageOwnedWorkingCopyImportCatalogClient.js' );
@@ -116,8 +116,8 @@ describe( 'actual editor Import composition', () => {
             if ( params.action === 'layersread' ) { return { layersread: { revisionId: 12, snapshot: c.base, sourceGeometry: {} } }; }
             if ( params.action === 'layersdrawings' ) { return { layersdrawings: { pages: [ { title: 'Source Page', owner: 'Source Page', pageid: 9, revid: 42,
                 drawings: [ { id: 'source', label: 'Same', kind: 'image', canvas: { width: 200, height: 120 }, fileTitle: 'File:Exact.png' } ] } ] } }; }
-            return { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: c.choice,
-                targetBundle: { revisionId: 12, snapshot: c.base, sourceGeometry: [] }, sourceBundle: c.bundle } };
+            return exactTextResponse( { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: c.choice,
+                targetBundle: { revisionId: 12, snapshot: c.base, sourceGeometry: [] }, sourceBundle: c.bundle } }, 'layersworkingcopyimportread' );
         } );
         c.api.postWithToken = jest.fn().mockResolvedValue( { layerspublish: { result: 'Success', revid: 13 } } );
         mw.Api = jest.fn( () => c.api ); mw.msg = msg; mw.notify = jest.fn();

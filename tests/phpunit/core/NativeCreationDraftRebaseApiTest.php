@@ -136,7 +136,7 @@ class NativeCreationDraftRebaseApiTest extends NativeCreationImportApiTest {
 		$this->assertFalse( $module->isWriteMode() );
 		$this->assertFalse( $module->needsToken() );
 		$this->assertTrue( $module->mustBePosted() );
-		$this->assertSame( [ 'targetpageid', 'baserevid', 'originrevid', 'originsurface' ],
+		$this->assertSame( [ 'exacttext', 'targetpageid', 'baserevid', 'originrevid', 'originsurface' ],
 			array_keys( $module->getAllowedParams() ) );
 		$old = ( $definitions['layersworkingcopyimportcreationrebase']['factory'] )(
 			$module->getMain(), 'originalproofalias' );

@@ -11,6 +11,7 @@ const Source = require( '../../resources/ext.layers.editor/PageOwnedWorkingCopyI
 const Adapter = require( '../../resources/ext.layers.editor/PageOwnedSnapshotAdapter.js' );
 const Planner = require( '../../resources/ext.layers.editor/PageOwnedWorkingCopyImportPlan.js' );
 const ReadClient = require( '../../resources/ext.layers.editor/PageOwnedWorkingCopyImportReadClient.js' );
+const { exactTextResponse, rawExactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 const Coordinator = require( process.env.LAYERS_IMPORT_COORDINATOR_SOURCE || '../../resources/ext.layers.editor/PageOwnedWorkingCopyImportCoordinator.js' );
 const clone = value => State.copyWorkingCopyValue( value );
 
@@ -58,10 +59,10 @@ async function context( kind = 'slide', populated = false ) {
 	const choice = { owner: 'Source Page', pageId: 9, revisionId: 42, surfaceId: 'source' };
 	const nativeOptions = { targetPageId: 7, targetBaseRevisionId: 12, targetSurfaceId: 'target', sourcePageId: 9, sourceRevisionId: 42, sourceSurfaceId: 'source' };
 	const api = { get: jest.fn( async params => {
-		counts.native++; expect( params ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source' } );
+		counts.native++; expect( params ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source', exacttext: true } );
 		if ( hooks.native ) { await hooks.native(); }
-		return { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: clone( choice ),
-			targetBundle: { revisionId: 12, snapshot: clone( base ), sourceGeometry: [] }, sourceBundle: clone( bundle ) } };
+		return exactTextResponse( { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: clone( choice ),
+			targetBundle: { revisionId: 12, snapshot: clone( base ), sourceGeometry: [] }, sourceBundle: clone( bundle ) } }, 'layersworkingcopyimportread' );
 	} ) };
 	const client = new ReadClient( api );
 	return { base, bundle, hooks, counts, editor, store, history, session, bridge, selection, adapter, publisher, choice, nativeOptions, api, client,
@@ -121,7 +122,7 @@ describe( 'inactive native-ID Import composition through actual I/C/G1', () => {
 		const ctx = await context(), coordinator = new Coordinator( ctx.dependencies ), choice = { ...ctx.choice }, options = ctx.options();
 		const pending = coordinator.prepare( choice, options ); choice.pageId = 88; choice.owner = 'later'; choice.surfaceId = 'later'; options.mode = 'replace';
 		const handle = await pending; expect( ctx.api.get ).toHaveBeenCalledTimes( 1 );
-		expect( ctx.api.get.mock.calls[ 0 ][ 0 ] ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source' } );
+		expect( ctx.api.get.mock.calls[ 0 ][ 0 ] ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source', exacttext: true } );
 		expect( coordinator.inspect( handle ).source.owner ).toBe( 'Source Page' ); coordinator.release( handle );
 	} );
 	test( 'complete detached native source bundle reaches actual C unchanged', async () => {
@@ -136,13 +137,21 @@ describe( 'inactive native-ID Import composition through actual I/C/G1', () => {
 	} );
 	test.each( [ 'source', 'target' ] )( 'canonical %s owner mismatch refuses without writes', async descriptor => {
 		const ctx = await context(), original = ctx.api.get.getMockImplementation();
-		ctx.api.get.mockImplementation( async params => { const response = await original( params ); response.layersworkingcopyimportread[ descriptor ].owner = 'Substituted Canonical Owner'; return response; } );
+		ctx.api.get.mockImplementation( async params => {
+			const response = rawExactTextResponse( await original( params ), 'layersworkingcopyimportread' );
+			response.layersworkingcopyimportread[ descriptor ].owner = 'Substituted Canonical Owner';
+			return exactTextResponse( response, 'layersworkingcopyimportread' );
+		} );
 		const coordinator = new Coordinator( ctx.dependencies ), before = witness( ctx );
 		await expect( coordinator.prepare( ctx.choice, ctx.options() ) ).rejects.toMatchObject( { code: 'layers-working-copy-import-unavailable' } ); preserved( before ); expect( ctx.counts.allocate ).toBe( 0 );
 	} );
 	test.each( [ 'pageId', 'revisionId', 'surfaceId' ] )( 'source %s response mismatch refuses without writes', async field => {
 		const ctx = await context(), original = ctx.api.get.getMockImplementation();
-		ctx.api.get.mockImplementation( async params => { const response = await original( params ); response.layersworkingcopyimportread.source[ field ] = field === 'surfaceId' ? 'other' : 99; return response; } );
+		ctx.api.get.mockImplementation( async params => {
+			const response = rawExactTextResponse( await original( params ), 'layersworkingcopyimportread' );
+			response.layersworkingcopyimportread.source[ field ] = field === 'surfaceId' ? 'other' : 99;
+			return exactTextResponse( response, 'layersworkingcopyimportread' );
+		} );
 		const coordinator = new Coordinator( ctx.dependencies ), before = witness( ctx ); await expect( coordinator.prepare( ctx.choice, ctx.options() ) ).rejects.toThrow(); preserved( before );
 	} );
 	test.each( [ [ 'pageId', 7 ], [ 'pageId', 0 ], [ 'pageId', 2147483648 ], [ 'pageId', '9' ], [ 'revisionId', 0 ], [ 'surfaceId', '' ], [ 'surfaceId', '世'.repeat( 43 ) ], [ 'owner', '' ] ] )( 'malformed or same-owner source %s %s is rejected before reads', async ( field, value ) => {

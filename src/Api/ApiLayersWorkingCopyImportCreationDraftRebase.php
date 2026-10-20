@@ -27,6 +27,15 @@ class ApiLayersWorkingCopyImportCreationDraftRebase extends ApiBase {
 		try {
 			$data = $this->pilot->prepareCreationDraftRebase( $params['targetpageid'], $params['baserevid'],
 				$params['originsurface'], $params['originrevid'], $this->getAuthority() );
+			if ( $params['exacttext'] ) {
+				// ASCII JSON preserves stored values through native API normalization and metadata handling.
+				$payload = json_encode( $data, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION );
+				if ( !$this->getResult()->addValue( null, $this->getModuleName(),
+					[ 'version' => 1, 'data' => $payload ] ) ) {
+					throw new \DomainException();
+				}
+				return;
+			}
 		} catch ( \Throwable $error ) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-working-copy-import-unavailable' );
 		}
@@ -43,6 +52,7 @@ class ApiLayersWorkingCopyImportCreationDraftRebase extends ApiBase {
 		$integer = [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
 			self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ];
 		return [
+			'exacttext' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
 			'targetpageid' => $integer, 'baserevid' => $integer, 'originrevid' => $integer,
 			'originsurface' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => 128 ]

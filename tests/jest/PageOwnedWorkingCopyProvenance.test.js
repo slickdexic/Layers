@@ -4,6 +4,7 @@ const { context, clone, Coordinator, State } = require( './fixtures/workingCopyI
 const Controller = require( '../../resources/ext.layers.editor/PageOwnedDraftController.js' );
 const DraftStore = require( '../../resources/ext.layers.editor/PageOwnedDraftStore.js' );
 const Lifecycle = require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
+const { exactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 
 async function setup( kind = 'slide', populated = false ) {
     const c = await context( kind, populated );
@@ -247,13 +248,13 @@ describe( 'opt-in working-copy Import provenance', () => {
 
     test( 'multiple native sources are recorded while Replace drops obsolete image contributions', async () => {
         const c = await setup( 'image', true ); await c.import( 'append' );
-        c.api.get.mockImplementation( async params => ( { layersworkingcopyimportread: {
+        c.api.get.mockImplementation( async params => exactTextResponse( { layersworkingcopyimportread: {
             target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' },
             source: { owner: params.sourcepageid === 9 ? 'Source Page' : 'Second Page', pageId: params.sourcepageid,
                 revisionId: params.sourcerevid, surfaceId: 'source' },
             targetBundle: { revisionId: 12, snapshot: clone( c.base ), sourceGeometry: [] },
             sourceBundle: { ...clone( c.bundle ), revisionId: params.sourcerevid }
-        } } ) );
+        } }, 'layersworkingcopyimportread' ) );
         const second = { owner: 'Second Page', pageId: 10, revisionId: 43, surfaceId: 'source' };
         let handle = await c.coordinator.prepare( second, c.options( 'append' ) ); await c.coordinator.apply( handle ); c.coordinator.release( handle );
         expect( c.session.captureWorkingCopyImportProvenance() ).toHaveLength( 2 );

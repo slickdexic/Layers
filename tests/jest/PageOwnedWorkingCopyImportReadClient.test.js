@@ -3,6 +3,7 @@
 const { TextEncoder } = require( 'util' );
 global.TextEncoder = TextEncoder;
 const Client = require( '../../resources/ext.layers.editor/PageOwnedWorkingCopyImportReadClient.js' );
+const { exactTextResponse } = require( './fixtures/workingCopyImportContext.js' );
 const CODE = 'layers-working-copy-import-unavailable';
 const clone = ( value ) => JSON.parse( JSON.stringify( value ) );
 const OPTIONS = { targetPageId: 1, targetBaseRevisionId: 2, targetSurfaceId: 'presentation',
@@ -27,7 +28,7 @@ describe( 'PageOwnedWorkingCopyImportReadClient', () => {
 	let api, client;
 	beforeEach( () => {
 		api = { get: jest.fn( () => Promise.resolve( response() ) ) };
-		client = new Client( api );
+		client = new Client( { get: async params => exactTextResponse( await api.get( params ), 'layersworkingcopyimportread' ) } );
 	} );
 
 	async function fixedRefusal( options = OPTIONS ) {
@@ -56,11 +57,12 @@ describe( 'PageOwnedWorkingCopyImportReadClient', () => {
 		expect( result ).toStrictEqual( response().layersworkingcopyimportread );
 		expect( api.get ).toHaveBeenCalledWith( { action: 'layersworkingcopyimportread', formatversion: 2,
 			targetpageid: 1, baserevid: 2, targetsurface: 'presentation', sourcepageid: 2,
-			sourcerevid: 4, sourcesurface: 'presentation' } );
+			sourcerevid: 4, sourcesurface: 'presentation', exacttext: true } );
 		if ( process.env.LAYERS_IMPORT_NATIVE_FIXTURE ) {
 			const records = require( 'fs' ).readFileSync( process.env.LAYERS_IMPORT_NATIVE_FIXTURE, 'utf8' )
 				.trim().split( /\r?\n/ ).map( ( line ) => JSON.parse( line ) );
-			const native = records[ 0 ].response.layersworkingcopyimportread;
+			const nativeValue = records[ 0 ].response.layersworkingcopyimportread;
+			const native = nativeValue && nativeValue.version === 1 && typeof nativeValue.data === 'string' ? JSON.parse( nativeValue.data ) : nativeValue;
 			expect( native.targetBundle.snapshot ).toStrictEqual( NATIVE_SNAPSHOT );
 			expect( native.sourceBundle.snapshot ).toStrictEqual( NATIVE_SNAPSHOT );
 			api.get.mockResolvedValueOnce( records[ 0 ].response );

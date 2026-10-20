@@ -72,6 +72,54 @@
 		return result;
 	}
 
+	// Native JSON syntax is checked first; this pass rejects equivalent repeated object keys.
+	function uniqueKeys( json ) {
+		const stack = [];
+		for ( let i = 0; i < json.length; i++ ) {
+			const char = json[ i ];
+			if ( char === '"' ) {
+				const start = i++;
+				while ( json[ i ] !== '"' ) {
+					if ( json[ i ] === '\\' ) { i++; }
+					i++;
+				}
+				let next = i + 1;
+				while ( /\s/u.test( json[ next ] || '' ) ) { next++; }
+				if ( json[ next ] === ':' ) {
+					const key = JSON.parse( json.slice( start, i + 1 ) ), keys = stack[ stack.length - 1 ];
+					if ( keys.has( key ) ) { throw unavailable(); }
+					keys.add( key );
+				}
+			} else if ( char === '{' || char === '[' ) {
+				stack.push( char === '{' ? new Set() : null );
+			} else if ( char === '}' || char === ']' ) {
+				stack.pop();
+			}
+		}
+	}
+
+	function ascii( value ) {
+		for ( let i = 0; i < value.length; i++ ) {
+			if ( value.charCodeAt( i ) > 127 ) { return false; }
+		}
+		return true;
+	}
+
+	function exactResponse( value ) {
+		const envelope = value;
+		if ( !exactKeys( envelope, [ 'version', 'data' ] ) || envelope.version !== 1 ||
+			typeof envelope.data !== 'string' || !ascii( envelope.data ) ) {
+			throw unavailable();
+		}
+		try {
+			const result = JSON.parse( envelope.data );
+			uniqueKeys( envelope.data );
+			return detach( result );
+		} catch ( error ) {
+			throw unavailable();
+		}
+	}
+
 	function descriptorMatches( descriptor, pageId, revisionId, surfaceId ) {
 		return exactKeys( descriptor, DESCRIPTOR_FIELDS ) && descriptor.pageId === pageId &&
 			descriptor.revisionId === revisionId && descriptor.surfaceId === surfaceId &&
@@ -129,14 +177,14 @@
 			}
 			return new Promise( ( resolve ) => {
 				resolve( this.api.get( {
-					action: 'layersworkingcopyimportread', formatversion: 2,
+					action: 'layersworkingcopyimportread', formatversion: 2, exacttext: true,
 					targetpageid: captured.targetPageId, baserevid: captured.targetBaseRevisionId,
 					targetsurface: captured.targetSurfaceId, sourcepageid: captured.sourcePageId,
 					sourcerevid: captured.sourceRevisionId, sourcesurface: captured.sourceSurfaceId
 				} ) );
 			} ).then( ( response ) => {
 				const safe = detach( response );
-				const data = safe && safe.layersworkingcopyimportread;
+				const data = exactResponse( safe && safe.layersworkingcopyimportread );
 				if ( safe.error || !exactKeys( data, [ 'target', 'source', 'targetBundle', 'sourceBundle' ] ) ||
 					!descriptorMatches( data.target, captured.targetPageId,
 						captured.targetBaseRevisionId, captured.targetSurfaceId ) ||

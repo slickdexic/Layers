@@ -12,7 +12,64 @@ const Planner = require( '../../../resources/ext.layers.editor/PageOwnedWorkingC
 const ReadClient = require( '../../../resources/ext.layers.editor/PageOwnedWorkingCopyImportReadClient.js' );
 const Coordinator = require( process.env.LAYERS_IMPORT_COORDINATOR_SOURCE || '../../../resources/ext.layers.editor/PageOwnedWorkingCopyImportCoordinator.js' );
 const clone = value => State.copyWorkingCopyValue( value );
-function surface( id, kind, populated ) {
+
+function asciiJson( value ) {
+	const seen = new Set();
+	const visit = item => {
+		if ( item === null || typeof item === 'string' || typeof item === 'boolean' ) { return; }
+		if ( typeof item === 'number' ) { if ( !Number.isFinite( item ) ) { throw new Error( 'unsafe JSON' ); } return; }
+		if ( typeof item !== 'object' || seen.has( item ) ) { throw new Error( 'unsafe JSON' ); }
+		seen.add( item );
+		if ( Array.isArray( item ) ) {
+			for ( const key of Reflect.ownKeys( item ) ) {
+				if ( typeof key !== 'string' || ( key !== 'length' && !/^(?:0|[1-9][0-9]*)$/.test( key ) ) ) { throw new Error( 'unsafe JSON' ); }
+			}
+			for ( let index = 0; index < item.length; index++ ) {
+				if ( !Object.hasOwn( item, index ) ) { throw new Error( 'unsafe JSON' ); }
+				visit( Object.getOwnPropertyDescriptor( item, String( index ) ).value );
+			}
+		} else {
+			const prototype = Object.getPrototypeOf( item );
+			if ( prototype !== Object.prototype && prototype !== null ) { throw new Error( 'unsafe JSON' ); }
+			for ( const key of Reflect.ownKeys( item ) ) {
+				if ( typeof key !== 'string' || key === '__proto__' ) { throw new Error( 'unsafe JSON' ); }
+				const descriptor = Object.getOwnPropertyDescriptor( item, key );
+				if ( !descriptor.enumerable || !Object.hasOwn( descriptor, 'value' ) || key === 'toJSON' ) { throw new Error( 'unsafe JSON' ); }
+				visit( descriptor.value );
+			}
+		}
+		seen.delete( item );
+	};
+	visit( value );
+	return JSON.stringify( value ).replace( /[^\x00-\x7f]/g, character => '\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) );
+}
+
+function exactTextResponse( response, moduleName ) {
+	if ( !response || typeof response !== 'object' || !Object.hasOwn( response, moduleName ) ) { return response; }
+	const moduleDescriptor = Object.getOwnPropertyDescriptor( response, moduleName );
+	if ( !moduleDescriptor || !Object.hasOwn( moduleDescriptor, 'value' ) ) { return { [ moduleName ]: { version: 1, data: '' } }; }
+	const current = moduleDescriptor.value;
+	if ( current && current.version === 1 && typeof current.data === 'string' ) { return response; }
+	const envelope = value => ( { version: 1, data: value } );
+	try {
+		const safe = {};
+		for ( const key of Reflect.ownKeys( response ) ) {
+			const descriptor = Object.getOwnPropertyDescriptor( response, key );
+			if ( typeof key !== 'string' || key === '__proto__' || key === 'toJSON' || !descriptor.enumerable || !Object.hasOwn( descriptor, 'value' ) ) { throw new Error( 'unsafe response' ); }
+			safe[ key ] = key === moduleName ? envelope( asciiJson( current ) ) : descriptor.value;
+		}
+		return safe;
+	} catch { return { [ moduleName ]: envelope( '' ) }; }
+}
+
+function rawExactTextResponse( response, moduleName ) {
+	if ( !response || typeof response !== 'object' || !Object.hasOwn( response, moduleName ) ) { return response; }
+	const value = response[ moduleName ];
+	if ( !value || value.version !== 1 || typeof value.data !== 'string' ) { return response; }
+	try { return { ...response, [ moduleName ]: JSON.parse( value.data ) }; } catch { return response; }
+}
+
+function surface( id, kind, populated ) {
 	return { id, kind, label: 'Same', canvas: { width: 100, height: 50, backgroundColor: 'white', extra: [ null, false, 0, '' ] },
 		...( kind === 'image' ? { source: { fileTitle: 'File:Exact.png', sha1: 'pin', timestamp: '20261001010101', page: 1 } } : {} ),
 		layers: populated ? [ { id: 'old', type: 'text', text: 'old' } ] : [], ...( populated ? { readingOrder: [ 'old' ] } : {} ) };
@@ -46,10 +103,10 @@ async function context( kind = 'slide', populated = false, saved = null, revisio
 	const choice = { owner: 'Source Page', pageId: 9, revisionId: 42, surfaceId: 'source' };
 	const nativeOptions = { targetPageId: 7, targetBaseRevisionId: 12, targetSurfaceId: 'target', sourcePageId: 9, sourceRevisionId: 42, sourceSurfaceId: 'source' };
 	const api = { get: jest.fn( async params => {
-		counts.native++; expect( params ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source' } );
+		counts.native++; expect( params ).toStrictEqual( { action: 'layersworkingcopyimportread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target', sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source', exacttext: true } );
 		if ( hooks.native ) { await hooks.native(); }
-		return { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: clone( choice ),
-			targetBundle: { revisionId: 12, snapshot: clone( base ), sourceGeometry: [] }, sourceBundle: clone( bundle ) } };
+		return exactTextResponse( { layersworkingcopyimportread: { target: { owner: 'Target Page', pageId: 7, revisionId: 12, surfaceId: 'target' }, source: clone( choice ),
+			targetBundle: { revisionId: 12, snapshot: clone( base ), sourceGeometry: [] }, sourceBundle: clone( bundle ) } }, 'layersworkingcopyimportread' );
 	} ) };
 	const client = new ReadClient( api );
 	return { reader, base, bundle, hooks, counts, editor, store, history, session, bridge, selection, adapter, publisher, choice, nativeOptions, api, client,
@@ -57,4 +114,4 @@ async function context( kind = 'slide', populated = false, saved = null, revisio
 		dependencies: { bridge, session, readClient: client, Source, planner: Planner, adapter } };
 }
 
-module.exports = { context, clone, Session, Bridge, History, State, Coordinator };
+module.exports = { context, clone, exactTextResponse, rawExactTextResponse, Session, Bridge, History, State, Coordinator };

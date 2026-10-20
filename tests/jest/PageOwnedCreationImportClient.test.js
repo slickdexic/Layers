@@ -13,7 +13,7 @@ describe( 'native creation Import transport', () => {
         c.hooks.response = () => native;
         const input = readOptions(), pending = client.read( input ); input.sourcePageId = 99; const result = await pending;
         expect( c.api.post ).toHaveBeenLastCalledWith( { action: 'layersworkingcopyimportcreationread', formatversion: 2, targetpageid: 7, baserevid: 12, targetsurface: 'target',
-            embedstart: c.selection.start, embedtext: c.selection.expected, sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source' } );
+            embedstart: c.selection.start, embedtext: c.selection.expected, sourcepageid: 9, sourcerevid: 42, sourcesurface: 'source', exacttext: true } );
         expect( result ).toEqual( native.layersworkingcopyimportcreationread ); expect( result ).not.toHaveProperty( 'targetBundle' );
         result.sourceBundle.extra.values.push( 'changed detached result' ); expect( native.layersworkingcopyimportcreationread.sourceBundle.extra.values ).toHaveLength( 3 );
     } );

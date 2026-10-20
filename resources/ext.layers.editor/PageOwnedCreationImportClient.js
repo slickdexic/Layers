@@ -29,6 +29,53 @@
 	function bundle( value, revisionId ) {
 		if ( !value || value.revisionId !== revisionId || !value.snapshot || value.snapshot.schemaVersion !== 1 || !Array.isArray( value.snapshot.surfaces ) ) { throw unavailable(); }
 	}
+	// Native JSON syntax is checked first; this pass rejects equivalent repeated object keys.
+	function uniqueKeys( json ) {
+		const stack = [];
+		for ( let i = 0; i < json.length; i++ ) {
+			const char = json[ i ];
+			if ( char === '"' ) {
+				const start = i++;
+				while ( json[ i ] !== '"' ) {
+					if ( json[ i ] === '\\' ) { i++; }
+					i++;
+				}
+				let next = i + 1;
+				while ( /\s/u.test( json[ next ] || '' ) ) { next++; }
+				if ( json[ next ] === ':' ) {
+					const key = JSON.parse( json.slice( start, i + 1 ) ), keys = stack[ stack.length - 1 ];
+					if ( keys.has( key ) ) { throw unavailable(); }
+					keys.add( key );
+				}
+			} else if ( char === '{' || char === '[' ) {
+				stack.push( char === '{' ? new Set() : null );
+			} else if ( char === '}' || char === ']' ) {
+				stack.pop();
+			}
+		}
+	}
+
+	function ascii( value ) {
+		for ( let i = 0; i < value.length; i++ ) {
+			if ( value.charCodeAt( i ) > 127 ) { return false; }
+		}
+		return true;
+	}
+
+	function exactResponse( value ) {
+		const envelope = fields( value, [ 'version', 'data' ] );
+		if ( envelope.version !== 1 || typeof envelope.data !== 'string' || !ascii( envelope.data ) ) {
+			throw unavailable();
+		}
+		try {
+			const result = JSON.parse( envelope.data );
+			uniqueKeys( envelope.data );
+			return copy( result );
+		} catch ( error ) {
+			throw unavailable();
+		}
+	}
+
 	class PageOwnedCreationImportClient {
 		static isPreparedRebase( value ) { return rebaseCertificates.has( value ); }
 		static isPreparedDraftRebase( value ) { return draftRebaseCertificates.has( value ); }
@@ -63,12 +110,12 @@
 					observations.forEach( Store.checkWorkingCopyObservation ); Store.checkWorkingCopyMethods( methods );
 				};
 				const post = methods.find( method => method.key === 'post' ).method;
-				const parameters = { action: 'layersworkingcopyimportcreationdraftrebase', formatversion: 2,
+				const parameters = { action: 'layersworkingcopyimportcreationdraftrebase', formatversion: 2, exacttext: true,
 					targetpageid: request.pageId, baserevid: request.currentRevisionId,
 					originrevid: origin.revisionId, originsurface: origin.surfaceId };
 				const fetch = async () => {
 					check(); const response = clone( await post.call( this.api, clone( parameters ) ) ); check();
-					const result = fields( response.layersworkingcopyimportcreationdraftrebase, [ 'origin', 'creation' ] );
+					const result = fields( exactResponse( response.layersworkingcopyimportcreationdraftrebase ), [ 'origin', 'creation' ] );
 					const nativeOrigin = fields( result.origin, [ 'pageId', 'revisionId', 'surfaceId', 'selection' ] );
 					const creation = fields( result.creation, [ 'target', 'selection', 'hasLayersSlot', 'baseBundle', 'newSurface' ] );
 					const target = fields( creation.target, descriptors ), next = fields( creation.selection, [ 'start', 'expected' ] );
@@ -121,12 +168,12 @@
 			};
 			check();
 			const response = clone( await methods.find( method => method.key === 'post' ).method.call( this.api, {
-				action: 'layersworkingcopyimportcreationrebase', formatversion: 2, targetpageid: request.pageId,
+				action: 'layersworkingcopyimportcreationrebase', formatversion: 2, exacttext: true, targetpageid: request.pageId,
 				baserevid: request.currentRevisionId, targetsurface: request.surfaceId, originrevid: request.originRevisionId,
 				originstart: selection.start, origintext: selection.expected
 			} ) );
 			check();
-			const result = fields( response.layersworkingcopyimportcreationrebase, [ 'origin', 'creation' ] );
+			const result = fields( exactResponse( response.layersworkingcopyimportcreationrebase ), [ 'origin', 'creation' ] );
 			const origin = fields( result.origin, [ 'pageId', 'revisionId', 'surfaceId', 'selection' ] );
 			const creation = fields( result.creation, [ 'target', 'selection', 'hasLayersSlot', 'baseBundle', 'newSurface' ] );
 			const next = fields( creation.selection, [ 'start', 'expected' ] ), target = fields( creation.target, descriptors );
@@ -170,12 +217,12 @@
 				if ( confirmedRevisions.get( this ) !== null ) { return this.stored.read( request ); }
 			} catch ( error ) { return Promise.reject( unavailable() ); }
 			return Promise.resolve().then( () => this.api.post( {
-				action: 'layersworkingcopyimportcreationread', formatversion: 2,
+				action: 'layersworkingcopyimportcreationread', formatversion: 2, exacttext: true,
 				targetpageid: request.targetPageId, baserevid: request.targetBaseRevisionId, targetsurface: request.targetSurfaceId,
 				embedstart: this.selection.start, embedtext: this.selection.expected,
 				sourcepageid: request.sourcePageId, sourcerevid: request.sourceRevisionId, sourcesurface: request.sourceSurfaceId
 			} ) ).then( response => {
-				const safe = copy( response ), result = fields( safe.layersworkingcopyimportcreationread, [ 'creation', 'source', 'sourceBundle' ] );
+				const safe = copy( response ), result = fields( exactResponse( safe.layersworkingcopyimportcreationread ), [ 'creation', 'source', 'sourceBundle' ] );
 				const creation = fields( result.creation, [ 'target', 'selection', 'hasLayersSlot', 'baseBundle', 'newSurface' ] );
 				if ( safe.error || !matches( creation.target, request.targetPageId, request.targetBaseRevisionId, request.targetSurfaceId ) ||
 					!matches( result.source, request.sourcePageId, request.sourceRevisionId, request.sourceSurfaceId ) ||

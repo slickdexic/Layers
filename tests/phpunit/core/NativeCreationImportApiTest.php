@@ -424,7 +424,7 @@ class NativeCreationImportApiTest extends \MediaWiki\Tests\Api\ApiTestCase {
 				$this->assertSame( $modules, $GLOBALS['wgAPIModules'] );
 			}
 		}
-		$this->assertSame( [ 'targetpageid', 'baserevid', 'targetsurface', 'sourcepageid',
+		$this->assertSame( [ 'exacttext', 'targetpageid', 'baserevid', 'targetsurface', 'sourcepageid',
 			'sourcerevid', 'sourcesurface' ], array_keys(
 			$this->pilot->newWorkingCopyImportReadApi( $main, 'oldread' )->getAllowedParams() ) );
 	}

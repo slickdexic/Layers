@@ -107,3 +107,23 @@ Omit exacttext for the legacy response. As with native boolean flags, supplying
 the parameter enables it regardless of its value.
 First Save still uses its existing result/revid response. Editor callers must
 explicitly adopt exact read transport before claiming complete Import support.
+
+## Exact transport in existing image and slide Import clients
+
+Saved working-copy Import read and historical creation-draft rebase also accept
+exacttext=1. Omission keeps their legacy response shapes. Exact mode returns
+version 1 and an ASCII-JSON data string with native result limits still enforced.
+Saved read keeps GET; creation read, historical rebase and draft rebase keep POST.
+All existing authorization and visibility checks remain in place.
+
+The existing image/slide Import clients request exact mode for saved read,
+creation read, historical rebase and historical draft rebase. They require the
+exact version/data envelope, ASCII JSON and unique literal object keys, including
+equivalent escaped keys. Malformed, partial, non-ASCII and legacy plain responses
+are refused; there is no fallback that silently normalizes stored content.
+Decoded data still passes the original shape, identity and participant checks.
+Preparation, revalidation, cancellation and refusal retain their existing draft,
+selection, Undo and publication safeguards. First Save and its receipt are unchanged.
+
+This transport correction does not establish complete missing-PDF Import,
+HTTP/session privacy, browser/mobile, supported-version, upgrade or owner acceptance.
