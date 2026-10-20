@@ -86,3 +86,24 @@ Existing byte limits, schema validation, owner/source checks, CSRF requirements,
 rate limits and failure handling continue to apply. Titles and edit summaries
 retain their existing native parameter handling. This preservation correction
 does not activate additional editor callers or change the Import interface.
+
+Creation Import for image and slide targets also preserves literal saved content.
+The layersworkingcopyimportcreationread embedtext parameter,
+layersworkingcopyimportcreationpublish embedtext and data parameters, and
+layersworkingcopyimportcreationrebase origintext parameter use native raw
+handling. Exact embedding witnesses retain their original UTF-8 byte offsets
+and Unicode spelling; valid captions are not normalized before comparison with
+the saved revision. Imported layer text and unrelated sibling content retain
+their original spelling at first Save. The existing native byte limits,
+authorization, schema, source, provenance and refusal checks remain in force.
+
+Creation read and historical rebase callers can request exacttext=1. In this
+mode the existing private POST route returns version 1 and an ASCII-JSON data
+string; decode data to obtain the same service result. This preserves Unicode
+and stored keys through native API result handling. Result-size checks remain
+enabled, and an oversized result is refused without a partial module payload.
+The default response remains compatible; exact transport requires opt-in.
+Omit exacttext for the legacy response. As with native boolean flags, supplying
+the parameter enables it regardless of its value.
+First Save still uses its existing result/revid response. Editor callers must
+explicitly adopt exact read transport before claiming complete Import support.
