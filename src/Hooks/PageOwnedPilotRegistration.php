@@ -6,6 +6,8 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
 use MediaWiki\Extension\Layers\Api\ApiLayersMergeHistory;
+use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportPublish;
+use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPdfCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
@@ -99,6 +101,16 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 				return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
 					->newReadApi( $main, $name );
 			} ],
+			'layersmissingpdfimportread' => [ 'class' => ApiLayersMissingPdfImportRead::class,
+				'factory' => static function ( $main, $name ) {
+					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
+						->newMissingPdfImportReadApi( $main, $name );
+				} ],
+			'layersmissingpdfimportpublish' => [ 'class' => ApiLayersMissingPdfImportPublish::class,
+				'factory' => static function ( $main, $name ) {
+					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )
+						->newMissingPdfImportPublishApi( $main, $name );
+				} ],
 			'layerspdfcreationread' => [ 'class' => ApiLayersPdfCreationRead::class,
 				'factory' => static function ( $main, $name ) {
 					return MediaWikiServices::getInstance()->getService( 'LayersPageOwnedPilot' )

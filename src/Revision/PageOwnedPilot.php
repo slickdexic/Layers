@@ -7,6 +7,8 @@ namespace MediaWiki\Extension\Layers\Revision;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
+use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportPublish;
+use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPdfCreationRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersRead;
@@ -131,6 +133,35 @@ class PageOwnedPilot {
 		return new PageMissingPdfEditorReadService(
 			$this, $this->newIdentityResolver(), $this->services->getRevisionLookup(), $this->reader,
 			$sources, $this->newDrawings, new SourceRenditions( $this->services->getUrlUtils() ) );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersMissingPdfImportRead */
+	public function newMissingPdfImportReadApi( ApiMain $main, string $name ): ApiLayersMissingPdfImportRead {
+		return new ApiLayersMissingPdfImportRead( $main, $name, $this->newMissingPdfImportPreparation(),
+			$this->services->getService( 'LayersRateLimiter' ) );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersMissingPdfImportPublish */
+	public function newMissingPdfImportPublishApi( ApiMain $main, string $name ): ApiLayersMissingPdfImportPublish {
+		$services = $this->services;
+		$access = new PageHistoryAccess( $services->getRevisionLookup() );
+		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
+		return new ApiLayersMissingPdfImportPublish( $main, $name,
+			new PageMissingPdfImportPublicationService( $this->newMissingPdfImportPreparation(), $this->publisher,
+				$this->newIdentityResolver(), $services->getTitleFactory(), $this->scope,
+				$services->getRevisionLookup(), $access, $sources, $services->getConnectionProvider() ) );
+	}
+
+	private function newMissingPdfImportPreparation(): PageMissingPdfImportPreparation {
+		$services = $this->services;
+		$access = new PageHistoryAccess( $services->getRevisionLookup() );
+		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
+		$renditions = new SourceRenditions( $services->getUrlUtils() );
+		return new PageMissingPdfImportPreparation(
+			new PageMissingPdfSetPreparation( $this, $this->newIdentityResolver(), $services->getRevisionLookup(),
+				$this->reader, $sources, $this->newDrawings, $renditions ),
+			new PageWorkingCopyPdfImportReadService( $this->newIdentityResolver(), $services->getTitleFactory(),
+				$this->scope, $access, $sources, $renditions, $this->newDrawings ) );
 	}
 
 	/** @param ApiMain $main @param string $name @return ApiLayersWorkingCopyPdfImportRead */

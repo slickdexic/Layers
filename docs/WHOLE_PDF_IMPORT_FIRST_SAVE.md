@@ -36,3 +36,38 @@ checks; the service does not retry against a newer revision.
 Preparation results are detached evidence, not authorization tokens. Complete
 editor application, Undo/drafts, HTTP delivery and browser acceptance remain
 required before activation.
+
+## Registered native request boundary
+
+Separate native API callers extend the service-only scope above. They are
+registered; production editor and Import controls remain unconnected to them.
+Existing stored-target APIs and interfaces keep their existing behavior.
+
+The POST-only layersmissingpdfimportread action requires targetpageid, baserevid,
+embedstart, embedtext, sourcepageid, sourcerevid and sourcesurface. It repeats
+native admission and returns a version-1 ASCII-JSON data envelope containing
+targetAdmission, source, sourceBundle and sourceGroup. Responses request private
+zero-age caching. The native read rate limiter still applies. A preparation is
+never a token authorizing application, recovery or Save.
+
+Embed text, source member IDs and submitted JSON use native raw parameters:
+their exact UTF-8 bytes are preserved without Unicode normalization. Native byte
+limits and the services' syntax, identity and authorization checks still apply.
+
+The layersmissingpdfimportpublish action requires POST, a CSRF token, editlayers
+and native Save rate checks. It takes targetpageid, baserevid, embedstart,
+embedtext, data and importsources, with optional summary. Each source record
+contains exactly sourcePageId, sourceRevisionId and sourceSurfaceId. Literal
+duplicate JSON member names and malformed records refuse before publication;
+identical repeated records receive only one native source citation. Arbitrary
+maintext replacement is refused.
+
+A successful write returns version 1, result Success and the new revid. If
+publication committed but the success response cannot be delivered, the result
+is layers-publication-outcome-unknown. Callers must not treat that as a refused
+Save or retry automatically. Exact embedding bytes, current revision and fresh
+per-side visibility/file checks are repeated by the native services.
+
+Native API execution does not qualify final HTTP/session headers, editor
+application, pending names, historical temporary IDs, browser/mobile or owner
+acceptance. Those remain required before complete Import activation.
