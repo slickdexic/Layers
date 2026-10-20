@@ -58,6 +58,12 @@
 			}
 		}
 
+		/** Separate opt-in; default construction preserves pending-name refusal. */
+		enablePendingRenames() {
+			if ( this.disposed ) { throw unavailable(); }
+			this.binding.enablePendingRenames();
+		}
+
 		/** Install before constructing the actual lifecycle, so it captures the complete-PDF recovery actions. */
 		enableDrafts( controller ) {
 			if ( this.disposed || this.controller || !controller || controller.bridge !== this.bridge ) { throw unavailable(); }

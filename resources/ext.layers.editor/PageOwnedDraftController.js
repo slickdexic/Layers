@@ -85,7 +85,8 @@
 				if ( identity.owner !== scope.owner || identity.baseRevisionId !== scope.baseRevisionId || identity.surfaceId !== scope.surfaceId ) { throw this._error(); }
 				const activeId = draft.session.pdf.activeSurfaceId, surface = draft.session.snapshot.surfaces.find( value => value.id === activeId ) ||
 					draft.session.temporary.find( row => row[ 0 ] === activeId )?.[ 1 ];
-				if ( !surface || surface.label !== envelope.label ) { throw this._error(); }
+				const anchor = draft.session.snapshot.surfaces.find( value => value.id === identity.surfaceId );
+				if ( !surface || !anchor || anchor.label !== envelope.label ) { throw this._error(); }
 				const editorState = this.adapter.toEditorState( { schemaVersion: 1, surfaces: [ surface ] }, activeId );
 				const candidate = { editorState, label: envelope.label, publicationBlocked: envelope.phase !== 'ready', wholePdfImportDraft: draft };
 				wholePdfMode( this );

@@ -83,3 +83,12 @@ The existing non-opted reconciliation bodies remain intact. Client checks cover
 success, complete refusal, late work, uncertain outcomes, group Undo/Redo and
 draft recovery. Production APIManager callers and ResourceLoader activation
 remain off pending the other activation and native/browser prerequisites above.
+
+## Pending target names
+
+The composition also exposes a separate `enablePendingRenames()` opt-in. It
+preserves exact saved-name discovery and native evidence while importing into a
+coherently renamed live target. Construction keeps the original refusal path.
+See [pending-name preparation and recovery](WHOLE_PDF_IMPORT_PENDING_NAME.md)
+for identity, Undo, draft and authorization boundaries. This does not activate
+production editor callers or change existing controls or wording.

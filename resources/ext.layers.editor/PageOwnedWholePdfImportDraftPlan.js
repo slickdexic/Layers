@@ -36,9 +36,15 @@
 	function object( value ) { return !!value && typeof value === 'object' && !Array.isArray( value ); }
 	function exact( value, keys ) { return object( value ) && Object.keys( value ).sort().join( '\u0000' ) === keys.slice().sort().join( '\u0000' ); }
 	function id( value ) { return typeof value === 'string' && value.length > 0 && new TextEncoder().encode( value ).length <= 128; }
+	function validName( value ) {
+		return typeof value === 'string' && value === value.replace( /\s+/gu, ' ' ).trim() && Array.from( value ).length > 0 &&
+			Array.from( value ).length <= 255 && !Array.from( value ).some( char => char.charCodeAt( 0 ) < 32 ||
+				char.charCodeAt( 0 ) === 127 || '|[]{}<>:'.includes( char ) );
+	}
 	function groupOf( snapshot, scope ) {
 		const anchor = snapshot.surfaces.find( surface => surface.id === scope.surfaceId );
 		if ( !anchor || anchor.kind !== 'pdf' || !anchor.source || typeof anchor.label !== 'string' ) { throw unavailable(); }
+		if ( !validName( anchor.label ) ) { throw unavailable(); }
 		const key = value => String( value ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
 		const result = snapshot.surfaces.filter( surface => surface.kind === 'pdf' && surface.source &&
 			surface.source.fileTitle === anchor.source.fileTitle && key( surface.label ) === key( anchor.label ) );
@@ -73,7 +79,7 @@
 			const surface = row[ 1 ];
 			if ( surface.id !== row[ 0 ] || baseIds.has( row[ 0 ] ) || ids.has( surface.id ) || surface.kind !== 'pdf' ||
 				!surface.source || !Number.isInteger( surface.source.page ) || surface.source.page < 1 || surface.source.page > scope.pageCount ||
-				surface.label !== group[ 0 ].label || !same( sourcePin( surface.source ), sourcePin( group[ 0 ].source ) ) ||
+				typeof surface.label !== 'string' || !same( sourcePin( surface.source ), sourcePin( group[ 0 ].source ) ) ||
 				!Array.isArray( surface.layers ) || surface.layers.length !== 0 ) { throw unavailable(); }
 			ids.add( surface.id ); pages.add( surface.source.page );
 			const origin = admissions.find( item => item[ 0 ] === surface.id );
@@ -155,7 +161,7 @@
 		checkSources( value.sources, session.scope );
 		validatePairRows( value.temporary, value.admissions );
 		const baseGroup = groupOf( base, session.scope ), baseById = new Map( baseGroup.map( member => [ member.id, member ] ) );
-		if ( baseGroup.some( member => !group.some( valueMember => valueMember.id === member.id && valueMember.label === member.label && same( fixed( member ), fixed( valueMember ) ) ) ) ||
+		if ( baseGroup.some( member => !group.some( valueMember => valueMember.id === member.id && same( fixed( member ), fixed( valueMember ) ) ) ) ||
 			group.some( member => {
 				if ( baseById.has( member.id ) ) { return false; }
 				const origin = value.admissions.find( row => row[ 0 ] === member.id );
@@ -293,18 +299,18 @@
 				const root = value => { const result = { ...value }; delete result.surfaces; return result; };
 				if ( !same( root( data.session.snapshot ), root( current.snapshot ) ) ) { throw unavailable(); }
 				if ( !group.length || !currentGroup.length ) { throw unavailable(); }
-				const selectedKey = surface => surface.kind === 'pdf' && surface.source && surface.source.fileTitle === group[ 0 ].source.fileTitle &&
-					String( surface.label ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase() === String( group[ 0 ].label ).replace( /[\s_]+/gu, ' ' ).trim().toLowerCase();
+				const selectedIds = new Set( [ ...currentGroup, ...groupOf( current.snapshot, scope ) ].map( surface => surface.id ) );
+				const selectedKey = surface => selectedIds.has( surface.id );
 				if ( !same( data.session.snapshot.surfaces.filter( member => !selectedKey( member ) ),
 					current.snapshot.surfaces.filter( member => !selectedKey( member ) ) ) ) { throw unavailable(); }
 				validatePairRows( data.session.temporary, data.session.admissions );
 				if ( currentGroup.some( member => {
 					const original = group.find( item => item.id === member.id );
-					if ( original ) { return !same( fixed( original ), fixed( member ) ) || original.label !== member.label; }
+					if ( original ) { return !same( fixed( original ), fixed( member ) ); }
 					const temp = data.session.temporary.find( row => row[ 0 ] === member.id );
 					const origin = data.session.admissions.find( row => row[ 0 ] === member.id );
 					return !temp || !origin || !same( fixed( temp[ 1 ] ), fixed( origin[ 1 ].surface ) ) ||
-						!same( fixed( member ), fixed( origin[ 1 ].surface ) ) || member.label !== group[ 0 ].label;
+						!same( fixed( member ), fixed( origin[ 1 ].surface ) ) || member.label !== currentGroup[ 0 ].label;
 				} ) || group.some( original => !currentGroup.some( member => member.id === original.id ) ) ) { throw unavailable(); }
 				const temp = mapRows( data.session.temporary, scope, base, currentGroup, group, data.session.temporary, data.session.admissions );
 				if ( data.session.admissions.length !== data.session.temporary.length || data.session.temporary.length !== temp.ids.size ) { throw unavailable(); }

@@ -10,6 +10,7 @@
 	const draftSourceTypes = new WeakMap();
 	const publications = new WeakMap(), publicationConfirmations = new WeakMap();
 	const reconciliations = new WeakMap();
+	const pendingRenameModes = new WeakSet();
 	const preparing = new WeakSet(), consumed = new WeakSet();
 	const mapSet = Function.call.bind( Map.prototype.set ), mapDelete = Function.call.bind( Map.prototype.delete );
 	const weakSet = Function.call.bind( WeakMap.prototype.set ), consume = Function.call.bind( WeakSet.prototype.add );
@@ -100,6 +101,7 @@
 
 	function capture( instance, state, external ) {
 		const session = state.session;
+		const pendingNameMode = pendingRenameModes.has( instance );
 		if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
 		const sessionWitness = objectWitness( session );
 		for ( const key of sessionWitness.keys ) { descriptor( session, key ); }
@@ -123,6 +125,7 @@
 			pdfData: copy( state, pdfData ), snapshot: copy( state, session._snapshot ),
 			context: copy( state, session._pdfContext ), base: copy( state, JSON.parse( session._savedJson ) ) };
 		witness.check = () => {
+			if ( pendingRenameModes.has( instance ) !== pendingNameMode ) { throw unavailable(); }
 			if ( active( instance ) !== state ) { throw unavailable(); }
 			if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
 			checkObject( sessionWitness ); checkObject( pdfWitness );
@@ -147,6 +150,7 @@
 
 	function captureForStorage( instance, state, external ) {
 		const session = state.session;
+		const pendingNameMode = pendingRenameModes.has( instance );
 		if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
 		const sessionWitness = objectWitness( session );
 		for ( const key of sessionWitness.keys ) { descriptor( session, key ); }
@@ -170,6 +174,7 @@
 			pdfData: copy( state, pdfData ), snapshot: copy( state, session._snapshot ),
 			context: copy( state, session._pdfContext ), base: copy( state, JSON.parse( session._savedJson ) ) };
 		witness.check = () => {
+			if ( pendingRenameModes.has( instance ) !== pendingNameMode ) { throw unavailable(); }
 			if ( active( instance ) !== state ) { throw unavailable(); }
 			if ( external() !== undefined || active( instance ) !== state ) { throw unavailable(); }
 			checkObject( sessionWitness ); checkObject( pdfWitness );
@@ -224,6 +229,25 @@
 		const result = { ...surface };
 		for ( const key of [ 'canvas', 'layers', 'readingOrder', 'label' ] ) { delete result[ key ]; }
 		return result;
+	}
+
+	function pendingNameProjection( witness ) {
+		const { state } = witness, session = state.session;
+		const anchor = witness.snapshot.surfaces.find( member => member.id === session._surfaceId );
+		const saved = witness.base.surfaces.find( member => member.id === session._surfaceId );
+		if ( !anchor || !saved || anchor.kind !== 'pdf' || saved.kind !== 'pdf' ) { throw unavailable(); }
+		if ( anchor.label === saved.label ) { return null; }
+		// Mirror the existing rename admission; projection must not hide an invalid live name.
+		const label = anchor.label, chars = typeof label === 'string' ? Array.from( label ) : [];
+		if ( !chars.length || chars.length > 255 || label !== label.replace( /\s+/gu, ' ' ).trim() ||
+			chars.some( char => char.charCodeAt( 0 ) < 32 || char.charCodeAt( 0 ) === 127 || '|[]{}<>:'.includes( char ) ) ) { throw unavailable(); }
+		const members = invoke( witness, session, '_pdfGroup', witness.snapshot, anchor, witness.pdfData.pageCount );
+		const stored = invoke( witness, session, '_pdfGroup', witness.base, saved, witness.pdfData.pageCount );
+		const ids = new Set( members.map( member => member.id ) );
+		if ( stored.some( member => !ids.has( member.id ) ) ) { throw unavailable(); }
+		const snapshot = copy( state, witness.snapshot );
+		for ( const member of snapshot.surfaces ) { if ( ids.has( member.id ) ) { member.label = saved.label; } }
+		witness.check(); return { snapshot, label };
 	}
 
 	function nativeContext( data, surface ) {
@@ -668,6 +692,7 @@
 					method( pageReader, 'read' ), method( session._reader, 'read' ), method( session._publisher, 'publish' ),
 					method( adapter, 'toEditorState' ), method( adapter, 'withEditorState' ) ];
 				methods.push( ...[ '_pdfReconcile', 'getStatus' ].map( key => method( session, key ) ) );
+				methods.push( method( this, 'enablePendingRenames' ) );
 				const values = [ [ session, '_reader' ], [ session, '_adapter' ] ];
 				methods.push( ...[ 'prepareDraftReads', 'inspectDraftReads', 'revalidateDraftReads', 'releaseDraftReads' ]
 					.map( key => method( source, key ) ), method( Source, 'isDraftReadHandle' ),
@@ -687,6 +712,14 @@
 		/** Prove the actual live session association, rather than matching serialized IDs. */
 		ownsSession( session ) {
 			try { return active( this ).session === session; } catch ( error ) { return false; }
+		}
+
+		/** Explicit session-only opt-in; native Source/Planner defaults remain strict. */
+		enablePendingRenames() {
+			const state = active( this );
+			if ( pendingRenameModes.has( this ) ) { return; }
+			if ( state.handles.size || state.session._phase !== 'ready' ) { throw unavailable(); }
+			pendingRenameModes.add( this );
 		}
 
 		/** Detached draft data only; serialized origins and citations grant no authority. */
@@ -1190,14 +1223,18 @@
 					prepared = result.prepared;
 					return result.allowed;
 				};
+				const projection = pendingRenameModes.has( this ) ? pendingNameProjection( witness ) : null;
 				const native = await invokeAsync( witness, state.source, 'prepareForSession', { identity: {
 					targetPageId: session._pageId, targetBaseRevisionId: session._revisionId, targetSurfaceId: session._surfaceId,
 					sourcePageId: source.pageId, sourceRevisionId: source.revisionId, sourceSurfaceId: source.surfaceId
-				}, baseSnapshot: witness.base, targetSnapshot: witness.snapshot, mode: input.mode,
+				}, baseSnapshot: witness.base, targetSnapshot: projection ? projection.snapshot : witness.snapshot, mode: input.mode,
 				maxLayers: input.maxLayers, allocateId: input.allocateId, assertCurrent: witness.check }, resolver );
 				cleanup = { state, native };
 				witness.check();
 				const preview = invoke( witness, state.source, 'inspect', native );
+				if ( projection ) {
+					for ( const member of selected( preview.candidateSnapshot, session ) ) { member.label = projection.label; }
+				}
 				const activeId = witness.pdfData.activeSurfaceId;
 				const blank = session._pdf.temporary.get( activeId );
 				const view = preview.candidateSnapshot.surfaces.some( member => member.id === activeId ) ? preview.candidateSnapshot :
