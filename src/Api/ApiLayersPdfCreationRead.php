@@ -27,6 +27,15 @@ class ApiLayersPdfCreationRead extends ApiBase {
 		try {
 			$preparation = $this->reader->read( $params['pageid'], $params['baserevid'],
 				$params['embedstart'], $params['embedtext'], $params['pdfpage'], $this->getAuthority() );
+			if ( $params['exacttext'] ) {
+				// ASCII JSON retains literal saved values through native API formatting.
+				$payload = json_encode( $preparation, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION );
+				if ( !$this->getResult()->addValue( null, $this->getModuleName(),
+					[ 'version' => 1, 'data' => $payload ] ) ) {
+					throw new \DomainException();
+				}
+				return;
+			}
 		} catch ( \Throwable $error ) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
 		}
@@ -43,9 +52,10 @@ class ApiLayersPdfCreationRead extends ApiBase {
 		$integer = [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
 			self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ];
 		return [
+			'exacttext' => [ self::PARAM_TYPE => 'boolean', self::PARAM_DFLT => false ],
 			'pageid' => $integer, 'baserevid' => $integer,
 			'embedstart' => array_replace( $integer, [ self::PARAM_MIN => 0 ] ),
-			'embedtext' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
+			'embedtext' => [ self::PARAM_TYPE => 'raw', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
 			'pdfpage' => array_replace( $integer, [ self::PARAM_MAX => DocumentSchema::MAX_SURFACES ] )
 		];

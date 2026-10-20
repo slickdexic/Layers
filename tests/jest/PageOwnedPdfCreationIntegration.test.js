@@ -11,6 +11,11 @@ window.Layers.Editor.ExportController = class {};
 require( '../../resources/ext.layers.editor/APIManager.js' );
 require( '../../resources/ext.layers.editor/LayersEditor.js' );
 const APIManager = window.Layers.Core.APIManager, Editor = window.Layers.Core.Editor;
+function exactTextResponse( value ) {
+	const data = JSON.stringify( value.layerspdfcreationread ).split( '' ).map( character => character.charCodeAt( 0 ) > 127 ?
+		'\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) : character ).join( '' );
+	return { layerspdfcreationread: { version: 1, data } };
+}
 function localStorage() {
 	const records = new Map(); return { records, get length() { return records.size; }, key: i => Array.from( records.keys() )[ i ] || null,
 		getItem: key => records.get( key ) ?? null, setItem: ( key, raw ) => records.set( key, raw ), removeItem: key => records.delete( key ) };
@@ -26,7 +31,7 @@ function make( slot = true, initial = 2, storage = localStorage() ) {
 		const member = members.find( surface => surface.source.page === page ); value.stored = Boolean( member );
 		if ( member ) value.surface = copy( member ); return value;
 	};
-	const api = { post: jest.fn( async options => ( { layerspdfcreationread: preparation( slot, initial, options.pdfpage, 2 ) } ) ),
+	const api = { post: jest.fn( async options => exactTextResponse( { layerspdfcreationread: preparation( slot, initial, options.pdfpage, 2 ) } ) ),
 		postWithToken: jest.fn( async ( token, options ) => {
 			remote.snapshot = JSON.parse( options.data ); remote.revisionId = 13;
 			return { layerspublish: { result: 'Success', revid: remote.revisionId } };
@@ -248,7 +253,7 @@ it( 'refuses source changes during loading without falling back or replacing new
 	try {
 		work.api.post.mockReturnValueOnce( pending.promise ); const loading = work.manager.loadLayers(); work.edit( 'New during load' );
 		const value = preparation( true, 2, 2, 2 ); value.context.surface.source.sha1 = 'b'.repeat( 31 );
-		pending.resolve( { layerspdfcreationread: value } ); await expect( loading ).rejects.toThrow();
+		pending.resolve( exactTextResponse( { layerspdfcreationread: value } ) ); await expect( loading ).rejects.toThrow();
 		expect( work.editor.layers[ 0 ].text ).toBe( 'New during load' ); expect( work.api.get ).not.toHaveBeenCalled(); expect( work.api.postWithToken ).not.toHaveBeenCalled();
 	} finally { work.close(); }
 } );
@@ -268,7 +273,7 @@ it( 'cancels the initial canvas background loader before exact native creation s
 		const destroy = jest.fn( () => { cancelled = true; } ); work.editor.canvasManager.imageLoader = { destroy };
 		work.api.post.mockImplementationOnce( async options => {
 			if ( !cancelled ) { work.editor.canvasManager.backgroundImage = { lateInitialRaster: true }; work.editor.canvasManager.canvas.height++; }
-			return { layerspdfcreationread: preparation( true, 2, options.pdfpage, 2 ) };
+			return exactTextResponse( { layerspdfcreationread: preparation( true, 2, options.pdfpage, 2 ) } );
 		} );
 		await work.manager.loadLayers(); expect( destroy ).toHaveBeenCalledTimes( 1 ); expect( work.editor.page ).toBe( 2 );
 		expect( work.editor.canvasManager.imageLoader ).toBeNull(); expect( work.editor.canvasManager.backgroundImage.height ).toBe( 417 );

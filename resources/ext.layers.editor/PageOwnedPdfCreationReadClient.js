@@ -24,6 +24,43 @@
 			id: 'transport-copy', kind: 'slide', canvas: { value }, layers: []
 		} ] }, 'transport-copy' ).canvas.value;
 	}
+	// Parse valid JSON first, then reject equivalent repeated object member names.
+	function uniqueKeys( json ) {
+		const stack = [];
+		for ( let i = 0; i < json.length; i++ ) {
+			const character = json[ i ];
+			if ( character === '"' ) {
+				const start = i++;
+				while ( json[ i ] !== '"' ) {
+					if ( json[ i ] === '\\' ) { i++; }
+					i++;
+				}
+				let next = i + 1;
+				while ( /\s/u.test( json[ next ] || '' ) ) { next++; }
+				if ( json[ next ] === ':' ) {
+					const key = JSON.parse( json.slice( start, i + 1 ) ), keys = stack[ stack.length - 1 ];
+					if ( keys.has( key ) ) throw failure( 'layers-reading-failed' );
+					keys.add( key );
+				}
+			} else if ( character === '{' || character === '[' ) {
+				stack.push( character === '{' ? new Set() : null );
+			} else if ( character === '}' || character === ']' ) {
+				stack.pop();
+			}
+		}
+	}
+	function exactResponse( adapter, input ) {
+		const envelope = clone( adapter, input );
+		if ( !envelope || Array.isArray( envelope ) || Object.keys( envelope ).length !== 2 ||
+			!Object.hasOwn( envelope, 'version' ) || !Object.hasOwn( envelope, 'data' ) ||
+			envelope.version !== 1 || typeof envelope.data !== 'string' ) throw failure( 'layers-reading-failed' );
+		for ( let i = 0; i < envelope.data.length; i++ ) {
+			if ( envelope.data.charCodeAt( i ) > 127 ) throw failure( 'layers-reading-failed' );
+		}
+		const result = JSON.parse( envelope.data );
+		uniqueKeys( envelope.data );
+		return clone( adapter, result );
+	}
 	class PageOwnedPdfCreationReadClient {
 		constructor( api ) {
 			if ( !api || typeof api.post !== 'function' ) throw failure( 'layers-invalid-read-request' );
@@ -44,7 +81,7 @@
 					typeof options.selection.expected !== 'string' || !options.selection.expected ) throw failure( 'layers-invalid-read-request' );
 			} catch ( error ) { return Promise.reject( failure( 'layers-invalid-read-request' ) ); }
 			return new Promise( ( resolve, reject ) => {
-				const request = this.api.post( { action: 'layerspdfcreationread', formatversion: 2,
+				const request = this.api.post( { action: 'layerspdfcreationread', formatversion: 2, exacttext: true,
 					pageid: options.pageId, baserevid: options.revisionId, embedstart: options.selection.start,
 					embedtext: options.selection.expected, pdfpage: options.page } );
 				// MediaWiki deferreds supply (code, result); preserve safe codes, never diagnostic text.
@@ -54,7 +91,7 @@
 			} ).then( response => {
 				response = clone( adapter, response );
 				if ( response && response.error ) throw response;
-				const value = clone( adapter, response.layerspdfcreationread ), target = value && value.target;
+				const value = exactResponse( adapter, response.layerspdfcreationread ), target = value && value.target;
 				if ( !target || target.owner !== options.owner || target.pageId !== options.pageId ||
 					target.revisionId !== options.revisionId || target.surfaceId !== options.surfaceId ||
 					!value.selection || value.selection.start !== options.selection.start || value.selection.expected !== options.selection.expected ||

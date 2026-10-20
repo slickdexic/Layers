@@ -127,3 +127,25 @@ selection, Undo and publication safeguards. First Save and its receipt are uncha
 
 This transport correction does not establish complete missing-PDF Import,
 HTTP/session privacy, browser/mobile, supported-version, upgrade or owner acceptance.
+
+## Exact admission reads for a new PDF layer set
+
+The existing POST-only `layerspdfcreationread` action accepts optional
+`exacttext`. Omitted by legacy callers, it retains their structured response.
+Exact mode returns only version 1 and an ASCII-JSON `data` string, preserving
+literal main text, original layers content, sibling layer sets and native PDF
+admissions through MediaWiki formatting. Normal result-size limits still apply;
+an oversized result refuses rather than returning a partial preparation.
+
+The saved embedding uses a native raw parameter with its existing byte limit.
+Its exact bytes and offset remain subject to native saved-embedding admission;
+canonically equivalent Unicode is not substituted for the stored occurrence.
+
+The existing PDF creation reader requests exact mode. It rejects malformed,
+non-ASCII, duplicate-key and legacy responses before the original owner, revision,
+selection, page and model checks. Empty admissions remain separate from the real
+saved base, including an absent layers slot. Page turns, drafts and first-Save
+revalidation use that same fresh read. No new Import control is activated here.
+
+This advances page ownership and data preservation. Complete missing-target PDF
+Import, final HTTP/session delivery and browser/owner acceptance remain open.

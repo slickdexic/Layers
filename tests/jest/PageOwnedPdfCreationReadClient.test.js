@@ -6,6 +6,11 @@ const copy = value => JSON.parse( JSON.stringify( value ) );
 const fs = require( 'fs' );
 const vm = require( 'vm' );
 const path = require( 'path' );
+function exactTextResponse( value ) {
+	const data = JSON.stringify( value.layerspdfcreationread ).split( '' ).map( character => character.charCodeAt( 0 ) > 127 ?
+		'\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) : character ).join( '' );
+	return { layerspdfcreationread: { version: 1, data } };
+}
 function preparation( page = 1, slot = false ) {
 	const surface = number => ( { id: Ids.surfaceId( 7, 12, 'File:Document.pdf', 'ABC', number ), kind: 'pdf', label: 'ABC',
 		source: { repository: 'local', fileTitle: 'File:Document.pdf', timestamp: '20261015120000', sha1: 'a'.repeat( 31 ), page: number },
@@ -22,7 +27,8 @@ function preparation( page = 1, slot = false ) {
 			rendition: { url: '/pinned/page-' + page + '.jpg', width: target.canvas.width, height: target.canvas.height + ( page === 2 ? 1 : 0 ) } } };
 }
 function setup( page = 1, slot = false ) {
-	const value = preparation( page, slot ), api = { post: jest.fn().mockResolvedValue( { layerspdfcreationread: value } ) };
+	const value = preparation( page, slot ), api = { post: jest.fn().mockImplementation( async () =>
+		exactTextResponse( { layerspdfcreationread: value } ) ) };
 	const options = { ...value.target, selection: copy( value.selection ), page };
 	return { value, api, options, client: new Client( api ) };
 }
@@ -31,7 +37,7 @@ describe( 'Missing PDF creation native read client', () => {
 		const { value, api, options, client } = setup( page, slot ); const result = await client.read( options );
 		expect( result ).toEqual( value ); expect( result ).not.toBe( value );
 		expect( api.post ).toHaveBeenCalledWith( { action: 'layerspdfcreationread', formatversion: 2,
-			pageid: 7, baserevid: 12, embedstart: 13, embedtext: options.selection.expected, pdfpage: page } );
+			pageid: 7, baserevid: 12, embedstart: 13, embedtext: options.selection.expected, pdfpage: page, exacttext: true } );
 		expect( result.context.surface.source.page ).toBe( page ); expect( result.context.label ).toBe( 'ABC' );
 		if ( slot ) expect( result.baseText ).toBe( value.baseText ); else expect( result.baseText ).toBeNull();
 	} );
@@ -72,7 +78,7 @@ describe( 'Missing PDF creation native read client', () => {
 		const { value, client, options } = setup( 1, true ); mutate( value ); await expect( client.read( options ) ).rejects.toHaveProperty( 'code', 'layers-reading-failed' );
 	} );
 	it( 'rejects wrong-page native output even if every other field is valid', async () => {
-		const { client, api, options } = setup(); api.post.mockResolvedValueOnce( { layerspdfcreationread: preparation( 2 ) } );
+		const { client, api, options } = setup(); api.post.mockResolvedValueOnce( exactTextResponse( { layerspdfcreationread: preparation( 2 ) } ) );
 		await expect( client.read( options ) ).rejects.toHaveProperty( 'code', 'layers-reading-failed' );
 	} );
 	it.each( [ 'missingparam', 'outofrange', 'maxbytes', 'permissiondenied', 'mustbeposted', 'layers-revision-unavailable' ] )(
@@ -102,7 +108,8 @@ describe( 'Missing PDF creation native read client', () => {
 		expect( () => new Client( { get() {} } ) ).toThrow(); expect( () => new Client( null ) ).toThrow();
 	} );
 	it( 'composes with the actual creation model for page preparation and first-Save revalidation', async () => {
-		const { client, api } = setup( 2, true ); api.post.mockImplementation( async request => ( { layerspdfcreationread: preparation( request.pdfpage, true ) } ) );
+		const { client, api } = setup( 2, true ); api.post.mockImplementation( async request =>
+			exactTextResponse( { layerspdfcreationread: preparation( request.pdfpage, true ) } ) );
 		const publisher = { publish: jest.fn().mockResolvedValue( { revisionId: 13 } ) };
 		const transaction = new Transaction( preparation( 2, true ), { reader: client, publisher } );
 		const prepared = await transaction.preparePage( 1 ); transaction.commit( prepared.handle );
@@ -116,12 +123,13 @@ describe( 'Missing PDF creation native read client', () => {
 		for ( const file of [ 'PageOwnedSnapshotAdapter', 'PageOwnedPdfWorkingSet', 'PageOwnedPdfCreationTransaction', 'PageOwnedPdfCreationReadClient' ] ) {
 			vm.runInContext( fs.readFileSync( path.join( __dirname, '../../resources/ext.layers.editor/', file + '.js' ), 'utf8' ), sandbox );
 		}
-		vm.runInContext( 'const fixture = JSON.parse(' + JSON.stringify( JSON.stringify( preparation( 1 ) ) ) + ');', sandbox );
+		vm.runInContext( 'const fixture = JSON.parse(' + JSON.stringify( JSON.stringify( preparation( 1 ) ) ) + ');' +
+			'const wireFixture = JSON.parse(' + JSON.stringify( JSON.stringify( exactTextResponse( { layerspdfcreationread: preparation( 1 ) } ) ) ) + ');', sandbox );
 		if ( component === 'model' ) {
 			const page = vm.runInContext( 'new window.Layers.Editor.PageOwnedPdfCreationTransaction(fixture, { reader: { read() {} }, publisher: { publish() {} } }).getStatus().page', sandbox );
 			expect( page ).toBe( 1 );
 		} else {
-			const result = await vm.runInContext( 'new window.Layers.Editor.PageOwnedPdfCreationReadClient({ post() { return Promise.resolve({ layerspdfcreationread: fixture }); } }).read({ ...fixture.target, selection: fixture.selection, page: 1 })', sandbox );
+			const result = await vm.runInContext( 'new window.Layers.Editor.PageOwnedPdfCreationReadClient({ post() { return Promise.resolve(wireFixture); } }).read({ ...fixture.target, selection: fixture.selection, page: 1 })', sandbox );
 			expect( result.context.page ).toBe( 1 );
 		}
 		expect( forbidden ).not.toHaveBeenCalled();
