@@ -41,7 +41,8 @@ function asciiJson( value ) {
 		seen.delete( item );
 	};
 	visit( value );
-	return JSON.stringify( value ).replace( /[^\x00-\x7f]/g, character => '\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) );
+	return JSON.stringify( value ).split( '' ).map( character => character.charCodeAt( 0 ) > 127 ?
+		'\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) : character ).join( '' );
 }
 
 function exactTextResponse( response, moduleName ) {

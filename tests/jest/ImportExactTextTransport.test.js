@@ -12,8 +12,8 @@ const readOptions = () => ( { targetPageId: 7, targetBaseRevisionId: 12, targetS
 	sourcePageId: 9, sourceRevisionId: 42, sourceSurfaceId: 'source' } );
 const rebaseOptions = () => ( { pageId: 7, originRevisionId: 12, surfaceId: 'target', currentRevisionId: 20 } );
 const nfd = 'Cafe\u0301 and π';
-const asciiJson = value => JSON.stringify( value ).replace( /[^\x00-\x7f]/g,
-	character => '\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) );
+const asciiJson = value => JSON.stringify( value ).split( '' ).map( character => character.charCodeAt( 0 ) > 127 ?
+	'\\u' + character.charCodeAt( 0 ).toString( 16 ).padStart( 4, '0' ) : character ).join( '' );
 const invalidEnvelopes = [
 	[ 'plain object', { safe: true } ],
 	[ 'wrong version', { version: 2, data: '{"safe":true}' } ],
