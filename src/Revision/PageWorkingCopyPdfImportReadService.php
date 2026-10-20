@@ -145,6 +145,49 @@ class PageWorkingCopyPdfImportReadService {
 		}
 	}
 
+	/**
+	 * Separately invoked read-only source boundary for missing-target preparation.
+	 * Existing stored-target reads and publication admission remain unchanged.
+	 *
+	 * @param int $pageId
+	 * @param int $revisionId Exact readable revision, including history
+	 * @param string $surfaceId Stored PDF anchor
+	 * @param Authority $authority
+	 * @param bool $render False only for a fresh witness without rendition hooks
+	 * @return array Exact source descriptor, bundle, group and ephemeral comparison witness
+	 */
+	public function readSource( int $pageId, int $revisionId, string $surfaceId, Authority $authority,
+		bool $render = true
+	): array {
+		try {
+			foreach ( [ $pageId, $revisionId ] as $id ) {
+				if ( $id < 1 || $id > 2147483647 ) {
+					throw new \DomainException();
+				}
+			}
+			if ( $surfaceId === '' ) {
+				throw new \DomainException();
+			}
+			$owner = $this->sourceOwner( $pageId );
+			$group = $this->group( $owner, $pageId, $revisionId, $surfaceId, $authority, $render );
+			$freshOwner = $this->sourceOwner( $pageId );
+			$this->assertSameOwner( $freshOwner, $owner, $pageId );
+			$fresh = $this->group( $freshOwner, $pageId, $revisionId, $surfaceId, $authority, false );
+			$witness = [];
+			foreach ( [ 'text', 'members', 'pin', 'pageCount', 'geometry', 'addresses' ] as $key ) {
+				if ( $fresh[$key] !== $group[$key] ) {
+					throw new \DomainException();
+				}
+				$witness[$key] = $fresh[$key];
+			}
+			return [ 'source' => $this->descriptor( $freshOwner, $pageId, $revisionId, $surfaceId ),
+				'bundle' => $this->bundle( $group, $revisionId ), 'group' => $this->inventory( $group ),
+				'witness' => $witness ];
+		} catch ( \Throwable $error ) {
+			throw new \DomainException( 'layers-working-copy-import-unavailable' );
+		}
+	}
+
 	private function group( Title $owner, int $pageId, int $revisionId, string $anchorId,
 		Authority $authority, bool $render
 	): array {
