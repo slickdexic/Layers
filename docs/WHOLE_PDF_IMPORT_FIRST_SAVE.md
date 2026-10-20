@@ -71,3 +71,18 @@ per-side visibility/file checks are repeated by the native services.
 Native API execution does not qualify final HTTP/session headers, editor
 application, pending names, historical temporary IDs, browser/mobile or owner
 acceptance. Those remain required before complete Import activation.
+
+## Literal Unicode in existing Save requests
+
+The existing layerspublish data parameter and
+layersworkingcopypdfimportpublish data parameter preserve literal UTF-8 snapshot
+text using MediaWiki's native raw parameter type. The ordinary layerspublish
+maintext parameter likewise preserves submitted wikitext. A decomposed accent
+and its composed equivalent remain distinct, whether the caller uses literal
+Unicode or JSON escape sequences. Snapshot serialization still uses the existing
+canonical JSON format; content strings are not normalized or repaired.
+
+Existing byte limits, schema validation, owner/source checks, CSRF requirements,
+rate limits and failure handling continue to apply. Titles and edit summaries
+retain their existing native parameter handling. This preservation correction
+does not activate additional editor callers or change the Import interface.

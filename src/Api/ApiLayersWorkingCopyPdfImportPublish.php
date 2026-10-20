@@ -93,7 +93,7 @@ class ApiLayersWorkingCopyPdfImportPublish extends ApiBase {
 			self::PARAM_MIN => 1, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ];
 		return [
 			'targetpageid' => $integer, 'baserevid' => $integer,
-			'data' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
+			'data' => [ self::PARAM_TYPE => 'raw', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
 			'importsources' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => 16384 ],

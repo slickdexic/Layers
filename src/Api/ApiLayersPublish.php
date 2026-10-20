@@ -124,9 +124,9 @@ class ApiLayersPublish extends ApiBase {
 				self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
 			'baserevid' => [ self::PARAM_TYPE => 'integer', self::PARAM_REQUIRED => true,
 				self::PARAM_MIN => 0, self::PARAM_MAX => 2147483647, self::PARAM_RANGE_ENFORCE => true ],
-			'data' => [ self::PARAM_TYPE => 'string', self::PARAM_REQUIRED => true,
+			'data' => [ self::PARAM_TYPE => 'raw', self::PARAM_REQUIRED => true,
 				self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
-			'maintext' => [ self::PARAM_TYPE => 'string', self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
+			'maintext' => [ self::PARAM_TYPE => 'raw', self::PARAM_MAX_BYTES => DocumentSchema::MAX_BYTES ],
 			'summary' => [ self::PARAM_TYPE => 'string', self::PARAM_DFLT => '', self::PARAM_MAX_CHARS => 500 ],
 			'importsources' => [ self::PARAM_TYPE => 'string', self::PARAM_MAX_BYTES => 16384 ]
 		];
