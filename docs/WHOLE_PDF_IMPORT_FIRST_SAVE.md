@@ -10,10 +10,13 @@ The request supplies the current revision, exact embedding bytes and byte
 offset, plus exact source owners, revisions and member anchors.
 
 Native admission supplies every PDF page. All internal pages keep the same
-visible layer-set name and native current-base member IDs. The saved file pin
-must match each imported source group exactly: file, timestamp and hash.
-Changing a PDF version, pending renames and older temporary member IDs are
-separate integration work.
+visible layer-set name and native current-base member IDs. Different readable
+versions of the same PDF are permitted. Source layers match destination pages
+by page number; the destination retains its admitted file version, canvas and
+background. Layer coordinates are not automatically scaled. Both file versions
+remain subject to independent exact-version and visibility checks. The approved
+version-difference notice belongs to the separate interface integration.
+Pending renames and older temporary member IDs remain separate integration work.
 
 The proposed document must retain the complete original root and sibling layer
 sets. Only canvas, layers and reading order may change on the admitted members.

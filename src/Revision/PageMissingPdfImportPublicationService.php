@@ -76,11 +76,6 @@ class PageMissingPdfImportPublicationService {
 					throw new \DomainException();
 				}
 				$target = $read['targetAdmission'];
-				foreach ( [ 'fileTitle', 'timestamp', 'sha1' ] as $field ) {
-					if ( $target['source'][$field] !== $read['sourceGroup']['source'][$field] ) {
-						throw new \DomainException();
-					}
-				}
 				$this->proposed( $document, $target );
 				$key = JsonSnapshotCodec::encode( [ $descriptor['sourcePageId'], $descriptor['sourceRevisionId'],
 					$read['sourceGroup']['source']['fileTitle'], DrawingName::key( $read['sourceGroup']['label'] ) ] );
