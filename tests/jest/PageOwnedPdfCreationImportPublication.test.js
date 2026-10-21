@@ -187,9 +187,12 @@ describe( 'Explicit creation transaction first Save after whole-PDF Import', () 
 		await expect( work.transaction.saveImport( '', undefined, { guard: () => { if ( !allowed ) throw new Error( 'changed' ); } } ) ).rejects.toThrow();
 		expect( work.api.postWithToken ).not.toHaveBeenCalled();
 	} );
-	it( 'requires explicit publication opt-in and a nonempty bounded claim set', async () => {
-		const work = await setup( true, false ); await expect( work.transaction.saveImport() ).rejects.toThrow();
-		expect( work.api.postWithToken ).not.toHaveBeenCalled(); expect( work.transaction.getImportPublicationState().attempt ).toBeNull();
+	it( 'supports source-free Save after explicit publication opt-in', async () => {
+		const work = await setup( true, false ); work.ordinary.publish.mockResolvedValue( { revisionId: 13 } );
+		await work.transaction.saveImport();
+		expect( work.api.postWithToken ).not.toHaveBeenCalled();
+		expect( work.ordinary.publish ).toHaveBeenCalledTimes( 1 );
+		expect( work.transaction.getImportPublicationState().attempt ).toMatchObject( { version: 2, dispatchState: 'confirmed' } );
 		expect( () => work.transaction.enableImportPublication( work.api ) ).toThrow();
 	} );
 	it( 'isolates every returned capsule, attempt and request from live publication authority', async () => {

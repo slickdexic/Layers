@@ -147,8 +147,11 @@
 		enablePdfImportHistory( application, route ) {
 			const Application = typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
 				window.Layers.Editor.PageOwnedWholePdfImportApplication;
+			const Creation = typeof window !== 'undefined' && window.Layers && window.Layers.Editor &&
+				window.Layers.Editor.PageOwnedPdfCreationHost;
 			if ( pdfImportHistoryRoutes.has( this ) || workingCopyHistoryModes.has( this ) || this.isDestroyed || this.batchMode ||
-				!Application || !Application.isPdfImportHistoryRoute( route, this, application ) ) { throw workingHistoryError(); }
+				!( Application && Application.isPdfImportHistoryRoute( route, this, application ) ||
+					Creation && Creation.isPdfImportHistoryRoute( route, this, application ) ) ) { throw workingHistoryError(); }
 			pdfImportHistoryRoutes.set( this, { application, route } );
 		}
 

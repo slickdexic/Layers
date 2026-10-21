@@ -290,6 +290,40 @@
 	async function validateImportPublicationAttempt( transaction, live, attempt ) {
 		if ( attempt === null ) return;
 		const { record, mode, check } = live;
+		if ( attempt && attempt.version === 2 ) {
+			if ( !equal( Object.keys( attempt ).sort(), [ 'capsule', 'code', 'dispatchState', 'request', 'revisionId', 'sequence', 'version' ] ) ||
+				!positive( attempt.sequence ) || ![ 'prepared', 'dispatched', 'refused', 'unknown', 'confirmed' ].includes( attempt.dispatchState ) ) throw unavailable();
+			const confirmed = attempt.dispatchState === 'confirmed', unknown = attempt.dispatchState === 'unknown';
+			if ( confirmed ? !positive( attempt.revisionId ) || attempt.revisionId <= record.fixed.target.revisionId : attempt.revisionId !== null ) throw unavailable();
+			if ( unknown ? attempt.code !== 'layers-publication-outcome-unknown' : attempt.dispatchState === 'refused' ?
+				!publicationCodes.has( attempt.code ) && ![ 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) :
+				attempt.code !== null ) throw unavailable();
+			const capsule = attempt.capsule, draft = capsule && capsule.draft;
+			if ( !capsule || !equal( Object.keys( capsule ).sort(), [ 'draft', 'sources', 'version' ] ) || capsule.version !== 1 ||
+				!Array.isArray( capsule.sources ) || capsule.sources.length !== 0 ||
+				!draft || !equal( Object.keys( draft ).sort(), [ 'activePage', 'creation', 'pageCount', 'snapshot', 'version' ] ) ||
+				draft.version !== 1 || !equal( draft.creation, identity( record.fixed ) ) || draft.pageCount !== record.fixed.context.pageCount ||
+				!positive( draft.activePage ) || draft.activePage > draft.pageCount || !draft.snapshot || !Array.isArray( draft.snapshot.surfaces ) ) throw unavailable();
+			const sentMembers = draft.snapshot.surfaces.slice( record.base.surfaces.length ), pages = new Map();
+			const wanted = new Set( [ draft.activePage, record.fixed.context.initialPage ] );
+			for ( const member of sentMembers ) {
+				if ( !member || !member.source || !positive( member.source.page ) ) throw unavailable();
+				wanted.add( member.source.page );
+			}
+			for ( const page of wanted ) {
+				check(); pages.set( page, await readPage( transaction, record, page, null, 'ready' ) ); check();
+			}
+			const normalized = { version: 1, sequence: attempt.sequence, baseRevisionId: record.fixed.target.revisionId,
+				snapshot: draft.snapshot, dispatchState: confirmed ? 'dispatched' : attempt.dispatchState,
+				revisionId: null, code: attempt.code };
+			if ( normalized.dispatchState === 'dispatched' && normalized.code !== null ) throw unavailable();
+			validateAttempt( record, normalized, pages );
+			const request = attempt.request;
+			if ( !request || typeof request.summary !== 'string' || Array.from( request.summary ).length > 500 ||
+				!equal( request, { owner: record.fixed.target.owner, pageId: record.fixed.target.pageId, baseRevisionId: record.fixed.target.revisionId,
+				snapshotJson: JSON.stringify( draft.snapshot ), summary: request.summary } ) ) throw unavailable();
+			return;
+		}
 		if ( !attempt || !equal( Object.keys( attempt ).sort(), [ 'capsule', 'code', 'dispatchState', 'request', 'revisionId', 'sequence', 'version' ] ) ||
 			attempt.version !== 1 || !positive( attempt.sequence ) ||
 			![ 'prepared', 'dispatched', 'refused', 'unknown', 'confirmed' ].includes( attempt.dispatchState ) ) throw unavailable();
@@ -485,17 +519,18 @@
 			importMode( this );
 			if ( typeof summary !== 'string' || Array.from( summary ).length > 500 ||
 				( beforePublish !== undefined && typeof beforePublish !== 'function' ) ||
-				mode.claims.length < 1 || mode.claims.length > 32 || !positive( publication.sequence + 1 ) ) throw unavailable();
+			mode.claims.length > 32 || !positive( publication.sequence + 1 ) ) throw unavailable();
 			const host = operationOptions( record, options ); host.check(); importMode( this );
-			const capsule = importCapsule( record, mode ), sent = capsule.draft.snapshot;
+			const capsule = importCapsule( record, mode ), sent = capsule.draft.snapshot, sourceFree = capsule.sources.length === 0;
 			const sources = capsule.sources.map( citation => {
 				if ( citation.targetSurfaceId !== record.fixed.target.surfaceId ) throw unavailable();
 				const source = importSource( record, citation.source );
 				return { sourcePageId: source.pageId, sourceRevisionId: source.revisionId, sourceSurfaceId: source.surfaceId };
 			} );
-			const request = { pageId: record.fixed.target.pageId, baseRevisionId: record.fixed.target.revisionId,
-				selection: clone( record.adapter, record.fixed.selection ), snapshotJson: JSON.stringify( sent ), sources, summary };
-			publication.attempt = { version: 1, sequence: ++publication.sequence, capsule, request: clone( record.adapter, request ),
+			const request = { ...( sourceFree ? { owner: record.fixed.target.owner } : {} ), pageId: record.fixed.target.pageId,
+				baseRevisionId: record.fixed.target.revisionId, ...( sourceFree ? {} : { selection: clone( record.adapter, record.fixed.selection ) } ),
+				snapshotJson: JSON.stringify( sent ), ...( sourceFree ? {} : { sources } ), summary };
+			publication.attempt = { version: sourceFree ? 2 : 1, sequence: ++publication.sequence, capsule, request: clone( record.adapter, request ),
 				dispatchState: 'prepared', revisionId: null, code: null };
 			record.phase = 'saving'; record.epoch++; mode.generation++;
 			const generation = mode.generation, claims = clone( record.adapter, mode.claims );
@@ -514,20 +549,39 @@
 					catch ( ignored ) { throw Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } ); }
 				}
 				check(); const reads = [];
-				for ( const claim of claims ) {
-					const native = await readImport( this, record, mode, claim.citation.source, check );
-					if ( importKey( native.result ) !== claim.key ) throw unavailable();
-					const members = importMembers( record, sent, native.contexts, capsule.draft.activePage );
-					if ( members.size !== record.fixed.context.pageCount ) throw unavailable();
-					reads.push( native.result );
-				}
-				for ( let index = 0; index < claims.length; index++ ) {
-					const fresh = await readImport( this, record, mode, claims[ index ].citation.source, check );
-					if ( !equal( reads[ index ], fresh.result ) ) throw unavailable();
+				if ( sourceFree ) {
+					for ( const member of sent.surfaces.slice( record.base.surfaces.length ) ) {
+						await readPage( this, record, member.source.page, null, 'saving' ); check();
+					}
+				} else {
+					for ( const claim of claims ) {
+						const native = await readImport( this, record, mode, claim.citation.source, check );
+						if ( importKey( native.result ) !== claim.key ) throw unavailable();
+						const members = importMembers( record, sent, native.contexts, capsule.draft.activePage );
+						if ( members.size !== record.fixed.context.pageCount ) throw unavailable();
+						reads.push( native.result );
+					}
+					for ( let index = 0; index < claims.length; index++ ) {
+						const fresh = await readImport( this, record, mode, claims[ index ].citation.source, check );
+						if ( !equal( reads[ index ], fresh.result ) ) throw unavailable();
+					}
 				}
 				check(); dispatched = true; publication.attempt.dispatchState = 'dispatched';
-				const proof = await publication.publish.call( publication.client, request );
+				const proof = sourceFree ? await record.publish.call( record.publisher, { owner: record.fixed.target.owner,
+					pageId: record.fixed.target.pageId, baseRevisionId: record.fixed.target.revisionId,
+					snapshotJson: request.snapshotJson, summary } ) : await publication.publish.call( publication.client, request );
 				check();
+				if ( sourceFree ) {
+					const result = clone( record.adapter, proof );
+					if ( !result || !positive( result.revisionId ) || result.revisionId <= record.fixed.target.revisionId ) {
+						throw Object.assign( new Error( 'layers-publication-outcome-unknown' ), { code: 'layers-publication-outcome-unknown' } );
+					}
+					const output = clone( record.adapter, { revisionId: result.revisionId, snapshot: sent, currentSnapshot: snapshot( record ),
+						activePage: record.page, originalCreation: identity( record.fixed ) } );
+					check(); record.confirmed = { revisionId: result.revisionId, snapshot: sent };
+					publication.attempt.dispatchState = 'confirmed'; publication.attempt.revisionId = result.revisionId;
+					record.phase = 'confirmed'; record.epoch++; return output;
+				}
 				if ( !publication.confirm.call( publication.Client, proof, publication.client, request ) ) {
 					throw Object.assign( new Error( 'layers-publication-outcome-unknown' ), { code: 'layers-publication-outcome-unknown' } );
 				}

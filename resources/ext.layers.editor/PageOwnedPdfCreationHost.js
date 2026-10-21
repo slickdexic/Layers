@@ -2,6 +2,7 @@
 ( function () {
 	'use strict';
 	const records = new WeakMap(), recoveries = new WeakMap(), imports = new WeakMap();
+	const historyCertificates = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	function classes() {
@@ -68,6 +69,139 @@
 			historyIndex: 0, lastSaveHistoryIndex: -1, maxHistorySteps: record.history.maxHistorySteps
 		} );
 	}
+	function groupMarker( entry ) {
+		if ( !entry || !Object.hasOwn( entry, 'pdfImportGroup' ) ) return null;
+		const value = entry.pdfImportGroup;
+		if ( !shape( value, [ 'id', 'page' ] ) || typeof value.id !== 'string' || !/^[a-f0-9]{32}$/.test( value.id ) ||
+			!Number.isInteger( value.page ) || value.page < 1 ) throw unavailable();
+		return value;
+	}
+	function effectiveTimelines( record ) {
+		const timelines = new Map( record.timelines );
+		timelines.set( record.transaction.getStatus().page, record.history.captureTimeline() ); return timelines;
+	}
+	function groupLocation( group, timeline, page ) {
+		const found = timeline.history.flatMap( ( entry, index ) => {
+			const marker = groupMarker( entry ); return marker && marker.id === group.id ? [ { entry, index, page: marker.page } ] : [];
+		} );
+		const original = group.entries.find( value => value.page === page );
+		if ( found.length !== 1 || !original || found[ 0 ].page !== page ||
+			canonical( found[ 0 ].entry ) !== canonical( original.entry ) ) throw unavailable();
+		return found[ 0 ].index;
+	}
+	function allowsGroupTimeline( record, timeline, page = record.transaction.getStatus().page, bank = record.importHistory ) {
+		try {
+			for ( const entry of timeline.history ) {
+				const marker = groupMarker( entry ); if ( !marker ) continue;
+				const group = bank && bank.get( marker.id );
+				if ( !group || marker.page !== page ) return false;
+				const index = groupLocation( group, timeline, page );
+				if ( ( timeline.historyIndex >= index ) !== ( group.phase === 'after' ) ) return false;
+			}
+			if ( bank === record.importHistory ) for ( const group of bank.values() ) {
+				if ( !group.entries.some( row => row.page === page ) || timeline.history.some( entry => {
+					const marker = groupMarker( entry ); return marker && marker.id === group.id;
+				} ) ) continue;
+				// Only an already-owned branch can establish an official trim or clear.
+				const actual = effectiveTimelines( record ).get( page );
+				if ( actual && canonical( { ...timeline, historyIndex: actual.historyIndex } ) !== canonical( actual ) ) return false;
+			}
+			return true;
+		} catch ( error ) { return false; }
+	}
+	function groupTimelines( record, group, undo ) {
+		ready( record );
+		if ( record.operation || record.recovering || record.publicationBlocked || group.phase !== ( undo ? 'after' : 'before' ) ) throw unavailable();
+		const timelines = effectiveTimelines( record );
+		const current = record.transaction.getImportPublicationState().capsule, expected = group[ undo ? 'after' : 'before' ];
+		if ( !expected || canonical( current.sources ) !== canonical( expected.sources ) ) throw unavailable();
+		for ( const row of group.entries ) {
+			const context = record.contexts.get( row.page ); if ( !context ) throw unavailable();
+			const actualMember = current.draft.snapshot.surfaces.find( member => member.id === context.surface.id ) || context.surface;
+			const expectedMember = expected.draft.snapshot.surfaces.find( member => member.id === context.surface.id ) || context.surface;
+			if ( canonical( actualMember ) !== canonical( expectedMember ) ) throw unavailable();
+			const timeline = record.history.copyTimeline( timelines.get( row.page ) ), index = groupLocation( group, timeline, row.page );
+			if ( index < 1 || timeline.historyIndex !== index - ( undo ? 0 : 1 ) ||
+				canonical( timeline.history[ index - 1 ] ) !== canonical( row.previous ) ) throw unavailable();
+			timeline.historyIndex += undo ? -1 : 1; timelines.set( row.page, timeline );
+		}
+		return timelines;
+	}
+	async function restoreGroup( host, group, undo ) {
+		const record = data( host ); let prepared, patch, committed = false;
+		try {
+			capture( record ); const timelines = groupTimelines( record, group, undo );
+			const participants = guard( record, record.generation );
+			const check = () => { participants(); groupTimelines( record, group, undo ); };
+			const capsule = record.Store.copyWorkingCopyValue( group[ undo ? 'before' : 'after' ] );
+			capsule.draft.activePage = record.transaction.getStatus().page;
+			prepared = await record.transaction.prepareImportRecovery( capsule, { guard: check, pages: Array.from( timelines.keys() ) } );
+			check(); const { state } = prepared.preview, { store, history, canvas, Store } = record;
+			const context = prepared.preview.contexts.find( value => value.page === capsule.draft.activePage );
+			if ( !context || context.rendition.url !== record.editor.config.imageUrl ||
+				state.canvas.width !== canvas.baseWidth || state.canvas.height !== canvas.baseHeight ) throw unavailable();
+			const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
+			const values = { layers: state.layers, isDirty: true, selectedLayerIds: [] }, clear = [];
+			for ( const key of [ 'backgroundVisible', 'backgroundOpacity' ] ) {
+				if ( Object.hasOwn( state.canvas, key ) ) values[ key ] = state.canvas[ key ]; else clear.push( key );
+			}
+			patch = store.prepareWorkingCopyPatch( { values, clear } );
+			const commit = store.prepareWorkingCopyPatchCommit( patch ); if ( !Store.isWorkingCopyPatchCommit( commit ) ) throw unavailable();
+			const writes = [ ...assignments( history, timelines.get( capsule.draft.activePage ) ),
+				...assignments( canvas, { selectedLayerIds: [], selectedLayerId: null } ) ];
+			const preflight = () => { check(); commit.preflight(); if ( selection ) selection.preflight(); check(); };
+			preflight(); record.transaction.commitImportPlan( prepared.handle, preflight ); prepared = null;
+			commit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
+			if ( selection ) selection.commit(); record.timelines = timelines;
+			group.phase = undo ? 'before' : 'after'; record.version++; committed = true; record.committing = true;
+			try { store.notifyWorkingCopyPatch( patch ); if ( selection ) selection.refresh(); }
+			finally { record.committing = false; }
+			capture( record ); history.updateUndoRedoButtons(); return true;
+		} catch ( error ) { if ( committed ) record.needsRefresh = true; return committed; }
+		finally { if ( prepared ) record.transaction.releaseImportPlan( prepared.handle ); if ( patch ) record.store.releaseWorkingCopyPatch( patch ); }
+	}
+	function groupStep( host, undo, query ) {
+		try {
+			const record = data( host ), history = record.history, next = history.historyIndex + ( undo ? -1 : 1 );
+			const marker = groupMarker( history.history[ undo ? history.historyIndex : next ] );
+			if ( marker ) {
+				const group = record.importHistory.get( marker.id ); if ( !group ) return false;
+				groupTimelines( record, group, undo ); return query ? true : restoreGroup( host, group, undo );
+			}
+			if ( next >= 0 && next < history.history.length && !allowsGroupTimeline( record, { ...history.captureTimeline(), historyIndex: next } ) ) return false;
+			return null;
+		} catch ( error ) { return false; }
+	}
+	function retireGroups( record ) {
+		if ( record.committing || record.disposed || record.recovering || record.saving ) return;
+		try {
+			const timelines = effectiveTimelines( record );
+			for ( const [ id ] of record.importHistory ) {
+				if ( !Array.from( timelines.values() ).some( timeline => timeline.history.some( entry => {
+					const marker = groupMarker( entry ); return marker && marker.id === id;
+				} ) ) ) record.importHistory.delete( id );
+			}
+		} catch ( error ) { /* Invalid surviving markers remain refusal barriers. */ }
+	}
+	function importHistoryCopy( record, input, timelines ) {
+		if ( !shape( input, [ 'version', 'groups' ] ) || input.version !== 1 || !Array.isArray( input.groups ) ) throw unavailable();
+		const bank = new Map();
+		for ( const group of input.groups ) {
+			if ( !shape( group, [ 'id', 'phase', 'before', 'after', 'entries' ] ) || typeof group.id !== 'string' || !/^[a-f0-9]{32}$/.test( group.id ) ||
+				bank.has( group.id ) || ![ 'before', 'after' ].includes( group.phase ) || !Array.isArray( group.entries ) ||
+				group.entries.length !== modelDraft( record ).pageCount ) throw unavailable();
+			const pages = new Set();
+			for ( const row of group.entries ) {
+				if ( !shape( row, [ 'page', 'entry', 'previous' ] ) || pages.has( row.page ) ||
+					!Number.isInteger( row.page ) || row.page < 1 || row.page > group.entries.length ||
+					canonical( groupMarker( row.entry ) ) !== canonical( { id: group.id, page: row.page } ) ) throw unavailable();
+				pages.add( row.page );
+			}
+			bank.set( group.id, group );
+		}
+		for ( const [ page, timeline ] of timelines ) if ( !allowsGroupTimeline( record, timeline, page, bank ) ) throw unavailable();
+		return bank;
+	}
 	// Prepare writable data assignments before the final check. No setters or UI callbacks run here.
 	function assignments( object, values ) {
 		return Object.entries( values ).map( ( [ key, value ] ) => {
@@ -115,6 +249,10 @@
 	}
 	function recoveryCopy( record, input ) {
 		const envelope = record.Store.copyWorkingCopyValue( input ), current = modelDraft( record );
+		let importHistory;
+		if ( envelope.version === 4 && record.importHistory && shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked', 'importPublication', 'importHistory' ] ) ) {
+			importHistory = envelope.importHistory; delete envelope.importHistory; envelope.version = 3;
+		}
 		let importPublication;
 		if ( record.imports && envelope.version === 3 && shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked', 'importPublication' ] ) ) {
 			importPublication = envelope.importPublication;
@@ -165,7 +303,9 @@
 				if ( !member || !member.source || !pages.has( member.source.page ) ) throw unavailable();
 			}
 		}
-		return importPublication ? { ...envelope, importPublication } : retainedAttempt ? { ...envelope, publicationAttempt } : envelope;
+		if ( record.importHistory ) importHistoryCopy( record, importHistory || { version: 1, groups: [] },
+			new Map( history.members.map( member => [ member.page, member.timeline ] ) ) );
+		return importPublication ? { ...envelope, importPublication, ...( importHistory ? { importHistory } : {} ) } : retainedAttempt ? { ...envelope, publicationAttempt } : envelope;
 	}
 	function publicationGuard( record ) {
 		const { editor, canvas } = record, page = editor.page, count = editor.pageCount, url = window.location.href;
@@ -214,8 +354,8 @@
 			canvas.preflightStagedBackground( stage );
 			if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width ||
 				stage.info.height !== context.rendition.height ) throw unavailable();
-			const target = history.preflightTimeline( !initial && page === previous ? timeline :
-				record.timelines.get( page ) || freshTimeline( record, state ) );
+			const target = history.preflightPdfImportTimeline( !initial && page === previous ? timeline :
+				record.timelines.get( page ) || freshTimeline( record, state ), page );
 			if ( canonical( target.history[ target.historyIndex ].layers ) !== canonical( state.layers ) ||
 				target.lastSaveHistoryIndex !== -1 ) throw unavailable();
 			const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
@@ -274,6 +414,10 @@
 	class PageOwnedPdfCreationHost {
 		/** Inactive lifecycle admission requires the actual loaded host and its original editor. */
 		static ownsEditor( host, editor ) { try { return data( host ).editor === editor; } catch ( error ) { return false; } }
+		static isPdfImportHistoryRoute( route, history, host ) {
+			const record = records.get( host ); return !!record && !record.disposed && record.history === history &&
+				record.importHistory && historyCertificates.get( route ) === record;
+		}
 
 		constructor( editor, nativePreparation, dependencies ) {
 			const { Transaction, Store } = classes(), transaction = new Transaction( nativePreparation, dependencies );
@@ -322,6 +466,26 @@
 			record.imports = true; record.version++;
 		}
 
+		/** Route the existing Undo/Redo controls across every page of a creation Import. */
+		enableImportHistory() {
+			const record = data( this ); ready( record );
+			if ( !record.imports || record.importHistory || record.operation || record.recovering || record.publicationBlocked ) throw unavailable();
+			const route = Object.freeze( {
+				tryUndo: () => groupStep( this, true, false ), tryRedo: () => groupStep( this, false, false ),
+				canUndo: () => groupStep( this, true, true ), canRedo: () => groupStep( this, false, true ),
+				afterChange: () => retireGroups( record ), allowsTimeline: ( timeline, page ) => allowsGroupTimeline( record, timeline, page ),
+				allowsState: state => { const index = record.history.history.indexOf( state ); return index >= 0 &&
+					allowsGroupTimeline( record, { ...record.history.captureTimeline(), historyIndex: index } ); },
+				allowsJump: index => { try { return Number.isInteger( index ) && index >= 0 && index <= record.history.historyIndex &&
+					!record.history.history.slice( index + 1, record.history.historyIndex + 1 ).some( groupMarker ) &&
+					allowsGroupTimeline( record, { ...record.history.captureTimeline(), historyIndex: index } ); } catch ( error ) { return false; } }
+			} );
+			record.importHistory = new Map(); historyCertificates.set( route, record );
+			try { record.history.enablePdfImportHistory( this, route ); }
+			catch ( error ) { record.importHistory = null; historyCertificates.delete( route ); throw unavailable(); }
+			record.version++;
+		}
+
 		/** Prepare complete model, active state and per-page timelines without changing the editor. */
 		async prepareImport( source, options ) {
 			const record = data( this ); ready( record );
@@ -339,6 +503,14 @@
 				const { preview } = prepared, before = modelDraft( record ), after = preview.capsule.draft;
 				const contexts = new Map( preview.contexts.map( context => [ context.page, context ] ) );
 				const timelines = new Map( record.timelines ); timelines.set( before.activePage, record.history.captureTimeline() );
+				let group;
+				if ( record.importHistory ) {
+					const bytes = new Uint8Array( 16 ); window.crypto.getRandomValues( bytes );
+					const id = Array.from( bytes, value => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+					if ( record.importHistory.has( id ) ) throw unavailable();
+					group = { id, phase: 'after', before: record.transaction.getImportPublicationState().capsule,
+						after: record.Store.copyWorkingCopyValue( preview.capsule ), entries: [] };
+				}
 				for ( const [ page, context ] of contexts ) {
 					const previous = before.snapshot.surfaces.find( surface => surface.id === context.surface.id ) || context.surface;
 					const next = after.snapshot.surfaces.find( surface => surface.id === context.surface.id );
@@ -348,6 +520,10 @@
 					timeline.history = timeline.history.slice( 0, timeline.historyIndex + 1 );
 					timeline.history.push( { layers: next.layers, description: 'Import', timestamp: Date.now() } );
 					timeline.historyIndex++;
+					if ( group ) {
+						const entry = timeline.history[ timeline.historyIndex ]; entry.pdfImportGroup = { id: group.id, page };
+						group.entries.push( record.Store.copyWorkingCopyValue( { page, entry, previous: timeline.history[ timeline.historyIndex - 1 ] } ) );
+					}
 					if ( timeline.lastSaveHistoryIndex >= timeline.historyIndex ) timeline.lastSaveHistoryIndex = -1;
 					if ( timeline.history.length > timeline.maxHistorySteps ) {
 						const removed = timeline.history.length - timeline.maxHistorySteps;
@@ -372,7 +548,7 @@
 					record.transaction.inspectImportPlan( operation.handle ); commit.preflight(); if ( selection ) selection.preflight(); check();
 				};
 				preflight(); const handle = Object.freeze( {} );
-				imports.set( handle, { host: this, record, operation, preview, timelines, contexts, commit, selection, writes, preflight } );
+				imports.set( handle, { host: this, record, operation, preview, timelines, contexts, commit, selection, writes, preflight, group } );
 				return { handle, preview: record.Store.copyWorkingCopyValue( preview ) };
 			} catch ( error ) {
 				if ( operation.handle ) record.transaction.releaseImportPlan( operation.handle );
@@ -395,13 +571,15 @@
 			commit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
 			if ( selection ) selection.commit();
 			record.timelines = plan.timelines; record.contexts = plan.contexts; record.operation = null;
+			if ( plan.group ) record.importHistory.set( plan.group.id, plan.group );
 			record.version++; imports.delete( handle ); record.committing = true;
 			try {
 				record.store.notifyWorkingCopyPatch( operation.patch ); if ( selection ) selection.refresh();
-				record.history.updateUndoRedoButtons(); record.editor.refreshPageControls();
 			} catch ( error ) { record.needsRefresh = true; }
 			finally { record.committing = false; record.store.releaseWorkingCopyPatch( operation.patch ); }
-			capture( record ); return { applied: true, needsRefresh: record.needsRefresh };
+			try { capture( record ); record.history.updateUndoRedoButtons(); record.editor.refreshPageControls(); }
+			catch ( error ) { record.needsRefresh = true; }
+			return { applied: true, needsRefresh: record.needsRefresh };
 		}
 
 		releaseImport( handle ) {
@@ -445,7 +623,8 @@
 			return record.Store.copyWorkingCopyValue( { version: 1, phase: record.blockedPhase || record.transaction.getStatus().phase,
 				draft: modelDraft( record ), history: this.captureDraftHistory(), confirmation: record.confirmation,
 				publicationBlocked: record.publicationBlocked, ...( record.imports ? { version: 3,
-					importPublication: record.transaction.getImportPublicationState() } : retained ? { version: 2, publicationAttempt: attempt( record ) } : {} ) } );
+					importPublication: record.transaction.getImportPublicationState(), ...( record.importHistory ? { version: 4,
+						importHistory: { version: 1, groups: Array.from( record.importHistory.values() ) } } : {} ) } : retained ? { version: 2, publicationAttempt: attempt( record ) } : {} ) } );
 		}
 
 		/** Exit preservation keeps real attempt evidence when present, without inventing it for cancelled review. */
@@ -507,6 +686,7 @@
 					timelines.set( member.page, record.history.preflightTimeline( member.timeline ) );
 				}
 				const context = contexts.get( prepared.draft.activePage ), surface = prepared.draft.snapshot.surfaces.find( value => value.id === context.surface.id ) || context.surface;
+				const bank = record.importHistory ? importHistoryCopy( record, envelope.importHistory || { version: 1, groups: [] }, timelines ) : null;
 				const state = { canvas: surface.canvas, layers: surface.layers }, { canvas, store, history, editor, Store } = record;
 				const stage = canvas.stageExactBackground( context.rendition.url ); operation.stage = stage;
 				await stage.promise; check(); canvas.preflightStagedBackground( stage );
@@ -526,6 +706,7 @@
 				for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
 				if ( selection ) selection.commit();
 				record.timelines = timelines; record.contexts = contexts;
+				if ( bank ) record.importHistory = bank;
 				const phase = envelope.importPublication ? prepared.phase : envelope.phase;
 				record.publicationBlocked = record.publicationBlocked || envelope.publicationBlocked || phase !== 'ready';
 				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( phase === 'ready' ? 'uncertain' : phase ) : null;
@@ -557,6 +738,8 @@
 			const admit = value => { alive( value ); if ( value.needsRefresh || value.saving ||
 				![ 'ready', 'conflict', 'uncertain', 'confirmed' ].includes( value.transaction.getStatus().phase ) ) throw unavailable(); };
 			admit( record ); if ( record.recovering || ( ownerGuard !== undefined && typeof ownerGuard !== 'function' ) ) throw unavailable();
+			// Group history must be transferred as a group, never downgraded to per-page Undo.
+			if ( record.importHistory && record.importHistory.size ) throw unavailable();
 			invalidate( record ); capture( record ); record.recovering = true;
 			try {
 				const participants = guard( record, record.generation, admit ), history = this.captureDraftHistory();

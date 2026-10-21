@@ -120,7 +120,43 @@ references and the sent attempt through that handoff.
 
 This connects the real host, editor state/history classes, local draft controller
 and transport in client tests. It does not activate an Import control, establish
-a native browser journey, or complete Milestone 1. Whole-group Undo/Redo,
-source-free Save after opting into Import, advanced-base outcome confirmation,
-the approved version notice and final UI connection remain open. Existing ordinary
-creation and stored-target editor paths retain their defaults.
+a native browser journey, or complete Milestone 1. Advanced-base outcome
+confirmation, the approved version notice and final UI connection remain open.
+Existing ordinary creation and stored-target editor paths retain their defaults.
+
+## Creation Import group history and source-free Save
+
+The creation host's separate `enableImportHistory()` opt-in connects the existing
+Undo/Redo controls to one complete Import operation. Undo restores all PDF members
+and the prior source references; Redo reauthorizes the imported source and restores
+the complete group. The current page, destination dimensions and unrelated layer
+sets remain intact. Later edits on another page must be undone before crossing the
+group boundary. Ordinary edits and their Redo branches keep their existing order.
+
+History markers are bound to the host's private group records. Direct timeline,
+state and jump operations cannot reverse only one member. Trimming or branching
+away from a member makes that group unavailable, retaining surviving markers as
+refusal barriers while ordinary later history remains usable. A refused or stale
+restore preserves the complete editor state. If presentation fails after a
+completed transition, the host records that a refresh is needed and reports the
+completed transition accurately.
+
+Version-4 drafts retain the complete before/after group capsules, exact timeline
+entries, source references and publication attempt. The actual draft controller
+stores and restores them after explicit confirmation. Restoring a group performs
+fresh native admission; serialized source associations grant no authority.
+Earlier version-3 Import drafts remain readable without fabricated group history.
+
+When no source references remain, including after group Undo, Save uses the
+ordinary publisher. Its version-2 retained attempt contains the exact ordinary
+request and attempted source-free capsule. The backup is written before dispatch;
+newer work and group Redo associations remain separate. Source-bearing Save keeps
+its existing version-1 request-bound confirmation. Any non-null serialized attempt
+restores uncertain and cannot authorize an automatic retry or mark work saved.
+
+This qualification covers client creation history, drafts and Save. A host with
+retained group history currently refuses saved-session handoff rather than
+silently converting group Undo into per-page Undo. Complete group transfer into
+the saved editor session is the next integration step. Production Import callers
+remain inactive until that transfer, outcome confirmation and the remaining
+approved UI/native/browser journeys are qualified.
