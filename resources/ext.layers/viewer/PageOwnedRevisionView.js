@@ -51,6 +51,7 @@
 		 * @param {Function} options.render Injected synchronous renderer factory
 		 * @param {Function} options.message Injected localization function
 		 * @param {boolean} [options.inline] Replace an embedded image: no caption block, canvas fills the host
+		 * @param {boolean} [options.caption] Show revision context; false for slides embedded in wiki pages
 		 * @param {string} [options.label] Accessible name for an inline canvas, such as the image's alt text
 		 */
 		constructor( options ) {
@@ -137,6 +138,7 @@
 			this._render = render;
 			this._message = message;
 			this._inline = options.inline === true;
+			this._caption = options.caption !== false;
 			this._label = typeof options.label === 'string' ? options.label : '';
 
 			this._mounted = false;
@@ -218,7 +220,7 @@
 			status.setAttribute( 'role', 'status' );
 			status.setAttribute( 'aria-live', 'polite' );
 
-			if ( !inline ) {
+			if ( !inline && this._caption ) {
 				figure.appendChild( caption );
 			}
 			figure.appendChild( canvas );

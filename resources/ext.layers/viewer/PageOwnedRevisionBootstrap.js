@@ -207,7 +207,7 @@
 			}
 			if ( !isFile ) {
 				container.textContent = '';
-				const viewDispose = mount( container, bundle );
+				const viewDispose = mount( container, bundle, { caption: false } );
 				const controlsDispose = mountControls( container, admitted, binding, fields, api );
 				const dispose = () => {
 					if ( mounted.get( container ) === dispose ) {
