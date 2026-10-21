@@ -92,3 +92,35 @@ coherently renamed live target. Construction keeps the original refusal path.
 See [pending-name preparation and recovery](WHOLE_PDF_IMPORT_PENDING_NAME.md)
 for identity, Undo, draft and authorization boundaries. This does not activate
 production editor callers or change existing controls or wording.
+
+## Missing-target creation host connection
+
+The existing PDF creation host now has an explicit Import connection to the
+qualified missing-target reader, model and publisher. It prepares the complete
+PDF group privately, applies the active editor state and every page timeline
+together, and preserves destination geometry, unrelated content and source
+references. Cancellation, late edits, changed native evidence and a newly imposed
+recovery hold refuse before applying the prepared Import. A page turn invalidates
+the preview; releasing it afterward is safe.
+
+Version-3 creation drafts retain both the live Import capsule and the exact sent
+publication attempt alongside complete per-page history. The actual creation
+draft controller stores and explicitly restores that envelope through fresh
+native admission. Serialized attempts restore only as uncertain. Ready older
+source-free drafts remain recoverable without inventing source references;
+older ambiguous attempts are not converted into Import authority.
+
+First Save writes the complete backup before the source-aware publication
+request. Only the actual publisher's request-bound confirmation acknowledges
+success. A lost response retains the complete work and attempt and prevents
+another Save; the older snapshot-only check cannot clear this Import hold.
+After known success, fresh saved-session admission preserves newer edits and
+both-page history. The returned creation backup keeps all original source
+references and the sent attempt through that handoff.
+
+This connects the real host, editor state/history classes, local draft controller
+and transport in client tests. It does not activate an Import control, establish
+a native browser journey, or complete Milestone 1. Whole-group Undo/Redo,
+source-free Save after opting into Import, advanced-base outcome confirmation,
+the approved version notice and final UI connection remain open. Existing ordinary
+creation and stored-target editor paths retain their defaults.

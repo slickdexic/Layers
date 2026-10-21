@@ -93,7 +93,7 @@
 				const envelope = JSON.parse( candidate.raw );
 				if ( !envelope || Object.keys( envelope ).length !== 3 || envelope.version !== 1 ||
 					canonical( envelope.scope ) !== canonical( record.scope ) || !envelope.pdfCreation ||
-					( envelope.pdfCreation.version === 2 && !record.retainAttempt ) ) throw failure();
+					( [ 2, 3 ].includes( envelope.pdfCreation.version ) && !record.retainAttempt ) ) throw failure();
 				return envelope.pdfCreation;
 			} catch ( error ) { throw failure(); }
 		}

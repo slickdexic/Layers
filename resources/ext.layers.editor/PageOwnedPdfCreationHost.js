@@ -1,7 +1,7 @@
 /** Explicit editor connection for a new page-owned PDF layer set; no callers are activated. */
 ( function () {
 	'use strict';
-	const records = new WeakMap(), recoveries = new WeakMap();
+	const records = new WeakMap(), recoveries = new WeakMap(), imports = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	function classes() {
@@ -14,6 +14,12 @@
 		if ( value && typeof value === 'object' ) return '{' + Object.keys( value ).sort()
 			.map( key => JSON.stringify( key ) + ':' + canonical( value[ key ] ) ).join( ',' ) + '}';
 		return JSON.stringify( value );
+	}
+	function modelDraft( record ) {
+		return record.imports ? record.transaction.getImportPublicationState().capsule.draft : record.transaction.getDraft();
+	}
+	function attempt( record ) {
+		return record.imports ? record.transaction.getImportPublicationState().attempt : record.transaction.getPublicationAttempt();
 	}
 	function alive( record ) {
 		const { editor, store, canvas, history, Store } = record;
@@ -91,7 +97,7 @@
 		}
 		const version = record.version, url = window.location.href;
 		const dimensions = [ canvas.baseWidth, canvas.baseHeight, canvas.canvas.width, canvas.canvas.height ];
-		const draft = canonical( record.transaction.getDraft() ), timelines = canonical( Array.from( record.timelines ) );
+		const beforeDraft = canonical( modelDraft( record ) ), timelines = canonical( Array.from( record.timelines ) );
 		const selected = canonical( [ canvas.selectedLayerIds || [], canvas.selectedLayerId || null ] );
 		return () => {
 			admission( record );
@@ -101,14 +107,27 @@
 				canvas.backgroundImage !== image || canvas.selectionManager !== selection || canvas.renderer !== renderer ||
 				canonical( dimensions ) !== canonical( [ canvas.baseWidth, canvas.baseHeight, canvas.canvas.width, canvas.canvas.height ] ) ||
 				canonical( [ canvas.selectedLayerIds || [], canvas.selectedLayerId || null ] ) !== selected ||
-				canonical( record.transaction.getDraft() ) !== draft || canonical( Array.from( record.timelines ) ) !== timelines ) throw unavailable();
+				canonical( modelDraft( record ) ) !== beforeDraft || canonical( Array.from( record.timelines ) ) !== timelines ) throw unavailable();
 		};
 	}
 	function shape( value, keys ) {
 		return value && !Array.isArray( value ) && Object.keys( value ).length === keys.length && keys.every( key => Object.hasOwn( value, key ) );
 	}
 	function recoveryCopy( record, input ) {
-		const envelope = record.Store.copyWorkingCopyValue( input ), current = record.transaction.getDraft();
+		const envelope = record.Store.copyWorkingCopyValue( input ), current = modelDraft( record );
+		let importPublication;
+		if ( record.imports && envelope.version === 3 && shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked', 'importPublication' ] ) ) {
+			importPublication = envelope.importPublication;
+			if ( !importPublication || canonical( importPublication.capsule && importPublication.capsule.draft ) !== canonical( envelope.draft ) ) throw unavailable();
+			delete envelope.importPublication; envelope.version = 1;
+		} else if ( record.imports ) {
+			// A ready older draft has no source association to invent. Preserve its complete work.
+			if ( envelope.version === 2 && envelope.publicationAttempt === null ) {
+				delete envelope.publicationAttempt; envelope.version = 1;
+			}
+			if ( envelope.version !== 1 || envelope.phase !== 'ready' ) throw unavailable();
+			importPublication = { version: 1, capsule: { version: 1, draft: envelope.draft, sources: [] }, attempt: null };
+		} else if ( envelope.version === 3 ) throw unavailable();
 		let publicationAttempt, retainedAttempt = false;
 		if ( shape( envelope, [ 'version', 'phase', 'draft', 'history', 'confirmation', 'publicationBlocked', 'publicationAttempt' ] ) && envelope.version === 2 ) {
 			publicationAttempt = envelope.publicationAttempt;
@@ -146,7 +165,7 @@
 				if ( !member || !member.source || !pages.has( member.source.page ) ) throw unavailable();
 			}
 		}
-		return retainedAttempt ? { ...envelope, publicationAttempt } : envelope;
+		return importPublication ? { ...envelope, importPublication } : retainedAttempt ? { ...envelope, publicationAttempt } : envelope;
 	}
 	function publicationGuard( record ) {
 		const { editor, canvas } = record, page = editor.page, count = editor.pageCount, url = window.location.href;
@@ -163,7 +182,11 @@
 	function invalidate( record ) {
 		record.generation++;
 		if ( record.operation ) {
-			if ( record.operation.handle ) record.transaction.cancel( record.operation.handle );
+			if ( record.operation.handle ) {
+				if ( record.operation.import ) record.transaction.releaseImportPlan( record.operation.handle );
+				else record.transaction.cancel( record.operation.handle );
+			}
+			if ( record.operation.patch ) record.store.releaseWorkingCopyPatch( record.operation.patch );
 			if ( record.operation.stage ) record.operation.stage.dispose();
 			record.operation = null;
 		}
@@ -262,7 +285,7 @@
 			[ editor, [ 'syncPageInUrl', 'refreshPageControls', 'notifyPdfPageNavigationFailure' ] ] ];
 			const record = { editor, store, canvas, history, Store, transaction, config: editor.config,
 				canvasConfig: canvas.config, element: canvas.canvas, disposed: false, loaded: false, committing: false,
-				version: 0, generation: 0, operation: null, needsRefresh: false, saving: false, recovering: false,
+				version: 0, generation: 0, operation: null, needsRefresh: false, saving: false, recovering: false, imports: false,
 				publicationBlocked: false, blockedPhase: null, reviewBlocked: false, confirmation: null, timelines: new Map(), contexts: new Map(), unsubscribers: [],
 				methods: entries.flatMap( ( [ object, keys ] ) => keys.map( key => Store.captureWorkingCopyMethod( object, key ) ) ),
 				notify: editor.notifyPdfPageNavigationFailure };
@@ -289,24 +312,125 @@
 
 		load() { const record = data( this, false ); return navigate( this, record.transaction.getStatus().page, true ); }
 		turn( page ) { return navigate( this, page, false ); }
+
+		/** Connect the actual Import readers/publisher; UI activation still belongs to the integration. */
+		enableImports( api ) {
+			const record = data( this ); ready( record );
+			if ( record.imports || record.operation || record.recovering || record.publicationBlocked ||
+				!api || typeof api.post !== 'function' || typeof api.postWithToken !== 'function' ) throw unavailable();
+			record.transaction.enableImports( api ); record.transaction.enableImportPublication( api );
+			record.imports = true; record.version++;
+		}
+
+		/** Prepare complete model, active state and per-page timelines without changing the editor. */
+		async prepareImport( source, options ) {
+			const record = data( this ); ready( record );
+			if ( !record.imports || record.recovering || record.publicationBlocked || !options ) throw unavailable();
+			invalidate( record ); capture( record );
+			const operation = { generation: record.generation, handle: null, stage: null, patch: null, import: true };
+			record.operation = operation;
+			const participants = guard( record, operation.generation );
+			const check = () => { participants(); if ( record.publicationBlocked || record.recovering ) throw unavailable(); };
+			try {
+				const prepared = await record.transaction.prepareImport( { source, mode: options.mode,
+					maxLayers: options.maxLayers, allocateId: options.allocateId }, { guard: check } );
+				if ( !prepared ) { record.operation = null; return null; }
+				operation.handle = prepared.handle; check();
+				const { preview } = prepared, before = modelDraft( record ), after = preview.capsule.draft;
+				const contexts = new Map( preview.contexts.map( context => [ context.page, context ] ) );
+				const timelines = new Map( record.timelines ); timelines.set( before.activePage, record.history.captureTimeline() );
+				for ( const [ page, context ] of contexts ) {
+					const previous = before.snapshot.surfaces.find( surface => surface.id === context.surface.id ) || context.surface;
+					const next = after.snapshot.surfaces.find( surface => surface.id === context.surface.id );
+					if ( !next ) throw unavailable();
+					const timeline = record.history.copyTimeline( timelines.get( page ) || freshTimeline( record, previous ) );
+					if ( canonical( timeline.history[ timeline.historyIndex ].layers ) !== canonical( previous.layers ) ) throw unavailable();
+					timeline.history = timeline.history.slice( 0, timeline.historyIndex + 1 );
+					timeline.history.push( { layers: next.layers, description: 'Import', timestamp: Date.now() } );
+					timeline.historyIndex++;
+					if ( timeline.lastSaveHistoryIndex >= timeline.historyIndex ) timeline.lastSaveHistoryIndex = -1;
+					if ( timeline.history.length > timeline.maxHistorySteps ) {
+						const removed = timeline.history.length - timeline.maxHistorySteps;
+						timeline.history.splice( 0, removed ); timeline.historyIndex -= removed;
+						timeline.lastSaveHistoryIndex = Math.max( -1, timeline.lastSaveHistoryIndex - removed );
+					}
+					timelines.set( page, record.history.preflightTimeline( timeline ) );
+				}
+				const state = preview.state, { store, canvas, history, Store } = record;
+				const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
+				const values = { layers: state.layers, isSlide: false, isDirty: true, selectedLayerIds: [],
+					baseWidth: state.canvas.width, baseHeight: state.canvas.height }, clear = [];
+				for ( const key of [ 'backgroundVisible', 'backgroundOpacity' ] ) {
+					if ( Object.hasOwn( state.canvas, key ) ) values[ key ] = state.canvas[ key ]; else clear.push( key );
+				}
+				const patch = store.prepareWorkingCopyPatch( { values, clear } ); operation.patch = patch;
+				const commit = store.prepareWorkingCopyPatchCommit( patch ); if ( !Store.isWorkingCopyPatchCommit( commit ) ) throw unavailable();
+				const writes = [ ...assignments( history, timelines.get( after.activePage ) ),
+					...assignments( canvas, { selectedLayerIds: [], selectedLayerId: null } ) ];
+				const preflight = () => {
+					check(); if ( record.operation !== operation ) throw unavailable();
+					record.transaction.inspectImportPlan( operation.handle ); commit.preflight(); if ( selection ) selection.preflight(); check();
+				};
+				preflight(); const handle = Object.freeze( {} );
+				imports.set( handle, { host: this, record, operation, preview, timelines, contexts, commit, selection, writes, preflight } );
+				return { handle, preview: record.Store.copyWorkingCopyValue( preview ) };
+			} catch ( error ) {
+				if ( operation.handle ) record.transaction.releaseImportPlan( operation.handle );
+				if ( operation.patch ) record.store.releaseWorkingCopyPatch( operation.patch );
+				if ( record.operation === operation ) record.operation = null;
+				throw unavailable();
+			}
+		}
+
+		inspectImport( handle ) {
+			const plan = imports.get( handle ); if ( !plan || plan.host !== this ) throw unavailable();
+			plan.preflight(); return plan.record.Store.copyWorkingCopyValue( plan.preview );
+		}
+
+		commitImport( handle ) {
+			const plan = imports.get( handle ); if ( !plan || plan.host !== this ) throw unavailable();
+			const { record, operation, commit, writes, selection } = plan;
+			plan.preflight();
+			record.transaction.commitImportPlan( operation.handle, plan.preflight );
+			commit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
+			if ( selection ) selection.commit();
+			record.timelines = plan.timelines; record.contexts = plan.contexts; record.operation = null;
+			record.version++; imports.delete( handle ); record.committing = true;
+			try {
+				record.store.notifyWorkingCopyPatch( operation.patch ); if ( selection ) selection.refresh();
+				record.history.updateUndoRedoButtons(); record.editor.refreshPageControls();
+			} catch ( error ) { record.needsRefresh = true; }
+			finally { record.committing = false; record.store.releaseWorkingCopyPatch( operation.patch ); }
+			capture( record ); return { applied: true, needsRefresh: record.needsRefresh };
+		}
+
+		releaseImport( handle ) {
+			const plan = imports.get( handle ); if ( !plan || plan.host !== this ) return;
+			imports.delete( handle );
+			// Page turns, Save or disposal may already have released the private plan and patch.
+			if ( plan.record.operation !== plan.operation ) return;
+			plan.record.transaction.releaseImportPlan( plan.operation.handle );
+			if ( plan.operation.patch ) plan.record.store.releaseWorkingCopyPatch( plan.operation.patch );
+			if ( plan.record.operation === plan.operation ) plan.record.operation = null;
+		}
 		capture() { return capture( data( this ) ); }
 		getLiveState() { return live( data( this ) ); }
 		getStatus() { const record = data( this, false ); if ( record.loaded ) capture( record );
 			return { ...record.transaction.getStatus(), loaded: record.loaded, needsRefresh: record.needsRefresh,
 				publicationBlocked: record.publicationBlocked, saving: record.saving, recovering: record.recovering }; }
-		getDraft() { const record = data( this ); capture( record ); return record.transaction.getDraft(); }
+		getDraft() { const record = data( this ); capture( record ); return modelDraft( record ); }
 
 		/** Isolated per-page timelines; capture itself does not restore or publish anything. */
 		captureDraftHistory() {
 			const record = data( this ); capture( record );
-			const draft = record.transaction.getDraft(), timelines = new Map( record.timelines );
-			timelines.set( draft.activePage, record.history.captureTimeline() );
-			if ( !timelines.has( draft.creation.anchorSurface.source.page ) ) {
-				timelines.set( draft.creation.anchorSurface.source.page, freshTimeline( record, { layers: [] } ) );
+			const currentDraft = modelDraft( record ), timelines = new Map( record.timelines );
+			timelines.set( currentDraft.activePage, record.history.captureTimeline() );
+			if ( !timelines.has( currentDraft.creation.anchorSurface.source.page ) ) {
+				timelines.set( currentDraft.creation.anchorSurface.source.page, freshTimeline( record, { layers: [] } ) );
 			}
-			return record.Store.copyWorkingCopyValue( { version: 1, creation: draft.creation, pageCount: draft.pageCount,
-				activePage: draft.activePage, members: Array.from( timelines, ( [ page, timeline ] ) => {
-					const member = record.contexts.has( page ) ? record.contexts.get( page ).surface : draft.creation.anchorSurface;
+			return record.Store.copyWorkingCopyValue( { version: 1, creation: currentDraft.creation, pageCount: currentDraft.pageCount,
+				activePage: currentDraft.activePage, members: Array.from( timelines, ( [ page, timeline ] ) => {
+					const member = record.contexts.has( page ) ? record.contexts.get( page ).surface : currentDraft.creation.anchorSurface;
 					return { page, surfaceId: member.id, source: member.source, timeline: record.history.copyTimeline( timeline ) };
 				} ).sort( ( left, right ) => left.page - right.page ) } );
 		}
@@ -315,18 +439,19 @@
 			const record = data( this ); capture( record );
 			const retained = options !== undefined;
 			if ( retained && ( record.blockedPhase || record.transaction.getStatus().phase ) !== 'ready' &&
-				record.transaction.getPublicationAttempt() === null ) throw unavailable();
+				attempt( record ) === null ) throw unavailable();
 			if ( retained && ( !shape( options, [ 'publicationAttempt' ] ) ||
 				!Object.hasOwn( Object.getOwnPropertyDescriptor( options, 'publicationAttempt' ), 'value' ) || options.publicationAttempt !== true ) ) throw unavailable();
 			return record.Store.copyWorkingCopyValue( { version: 1, phase: record.blockedPhase || record.transaction.getStatus().phase,
-				draft: record.transaction.getDraft(), history: this.captureDraftHistory(), confirmation: record.confirmation,
-				publicationBlocked: record.publicationBlocked, ...( retained ? { version: 2, publicationAttempt: record.transaction.getPublicationAttempt() } : {} ) } );
+				draft: modelDraft( record ), history: this.captureDraftHistory(), confirmation: record.confirmation,
+				publicationBlocked: record.publicationBlocked, ...( record.imports ? { version: 3,
+					importPublication: record.transaction.getImportPublicationState() } : retained ? { version: 2, publicationAttempt: attempt( record ) } : {} ) } );
 		}
 
 		/** Exit preservation keeps real attempt evidence when present, without inventing it for cancelled review. */
 		captureExitEnvelope() {
 			const record = data( this );
-			return this.captureDraftEnvelope( record.transaction.getPublicationAttempt() === null ? undefined : { publicationAttempt: true } );
+			return this.captureDraftEnvelope( attempt( record ) === null ? undefined : { publicationAttempt: true } );
 		}
 
 		/** Complete synchronous exit witness; a later edit, hold, operation or disposal invalidates it. */
@@ -365,10 +490,15 @@
 			const check = () => { plan.check(); if ( record.operation !== operation ) throw unavailable();
 				if ( beforeCommit && beforeCommit() !== undefined ) throw unavailable(); plan.check(); };
 			try {
-				const prepared = await record.transaction.prepareDraft( envelope.draft, {
-					pages: envelope.history.members.map( member => member.page ), guard: check,
-					...( Object.hasOwn( envelope, 'publicationAttempt' ) ? { publicationAttempt: envelope.publicationAttempt } : {} )
-				} ); operation.handle = prepared.handle; check();
+				const options = { pages: envelope.history.members.map( member => member.page ), guard: check };
+				let prepared;
+				if ( envelope.importPublication ) {
+					const imported = await record.transaction.prepareImportPublicationRecovery( envelope.importPublication, options );
+					prepared = { handle: imported.handle, contexts: imported.preview.contexts,
+						draft: imported.preview.publicationState.capsule.draft, phase: imported.preview.phase };
+				} else prepared = await record.transaction.prepareDraft( envelope.draft, {
+					...options, ...( Object.hasOwn( envelope, 'publicationAttempt' ) ? { publicationAttempt: envelope.publicationAttempt } : {} ) } );
+				operation.handle = prepared.handle; check();
 				const contexts = new Map( prepared.contexts.map( context => [ context.page, context ] ) ), timelines = new Map();
 				for ( const member of envelope.history.members ) {
 					const context = contexts.get( member.page ), surface = prepared.draft.snapshot.surfaces.find( value => value.id === member.surfaceId );
@@ -390,12 +520,15 @@
 					...assignments( canvas, { baseWidth: state.canvas.width, baseHeight: state.canvas.height, selectedLayerIds: [], selectedLayerId: null } ),
 					...assignments( editor, { page: context.page, pageCount: context.pageCount } ), ...assignments( editor.config, { imageUrl: context.rendition.url } ) ];
 				if ( selection ) selection.preflight(); stateCommit.preflight(); canvas.preflightStagedBackground( stage ); check();
-				record.transaction.commit( prepared.handle ); stateCommit.commit();
+				if ( envelope.importPublication ) record.transaction.commitImportPublicationRecovery( prepared.handle, check );
+				else record.transaction.commit( prepared.handle );
+				stateCommit.commit();
 				for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
 				if ( selection ) selection.commit();
 				record.timelines = timelines; record.contexts = contexts;
-				record.publicationBlocked = record.publicationBlocked || envelope.publicationBlocked || envelope.phase !== 'ready';
-				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( envelope.phase === 'ready' ? 'uncertain' : envelope.phase ) : null;
+				const phase = envelope.importPublication ? prepared.phase : envelope.phase;
+				record.publicationBlocked = record.publicationBlocked || envelope.publicationBlocked || phase !== 'ready';
+				record.blockedPhase = record.publicationBlocked ? record.blockedPhase || ( phase === 'ready' ? 'uncertain' : phase ) : null;
 				// Older envelopes cannot distinguish cancellation from uncertainty. Never clear an ambiguous persisted hold.
 				record.reviewBlocked = record.reviewBlocked || envelope.publicationBlocked; committed = true;
 				record.committing = true;
@@ -407,7 +540,12 @@
 				return true;
 			} catch ( error ) { if ( committed ) record.needsRefresh = true; throw unavailable(); }
 			finally {
-				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( operation.handle ) record.transaction.cancel( operation.handle );
+				if ( patch ) record.store.releaseWorkingCopyPatch( patch );
+				if ( operation.handle ) {
+					if ( envelope.importPublication ) {
+						if ( !committed ) record.transaction.releaseImportPublicationRecovery( operation.handle );
+					} else record.transaction.cancel( operation.handle );
+				}
 				if ( operation.stage ) operation.stage.dispose(); if ( record.operation === operation ) record.operation = null; record.recovering = false;
 			}
 		}
@@ -415,6 +553,7 @@
 		/** Explicit read-only outcome inspection; preserves current work and every publication/recovery hold. */
 		async inspectPublication( dependencies, ownerGuard ) {
 			const record = data( this );
+			if ( record.imports ) throw unavailable();
 			const admit = value => { alive( value ); if ( value.needsRefresh || value.saving ||
 				![ 'ready', 'conflict', 'uncertain', 'confirmed' ].includes( value.transaction.getStatus().phase ) ) throw unavailable(); };
 			admit( record ); if ( record.recovering || ( ownerGuard !== undefined && typeof ownerGuard !== 'function' ) ) throw unavailable();
@@ -432,6 +571,7 @@
 		/** Explicit opt-in only. verifyBackup must synchronously prove durable, independent pre-check bytes. */
 		async reconcilePublication( dependencies, verifyBackup ) {
 			const record = data( this );
+			if ( record.imports ) throw unavailable();
 			const admit = value => {
 				alive( value ); const phase = value.transaction.getStatus().phase;
 				if ( value.needsRefresh || value.saving || value.reviewBlocked ||
@@ -495,11 +635,15 @@
 			if ( record.recovering || record.publicationBlocked || typeof summary !== 'string' || typeof beforePublish !== 'function' ||
 				( checkOwner !== undefined && typeof checkOwner !== 'function' ) ) throw unavailable();
 			invalidate( record ); capture( record ); const participants = publicationGuard( record );
-			const check = () => { participants(); if ( checkOwner && checkOwner() !== undefined ) throw unavailable(); participants(); };
+			const check = () => {
+				participants(); if ( record.imports && record.publicationBlocked ) throw unavailable();
+				if ( checkOwner && checkOwner() !== undefined ) throw unavailable();
+				participants(); if ( record.imports && record.publicationBlocked ) throw unavailable();
+			};
 			record.saving = true;
 			let result;
 			try {
-				result = await record.transaction.save( summary, beforePublish, { guard: check } );
+				result = await record.transaction[ record.imports ? 'saveImport' : 'save' ]( summary, beforePublish, { guard: check } );
 				record.confirmation = record.Store.copyWorkingCopyValue( { revisionId: result.revisionId, snapshot: result.snapshot } );
 				check();
 				const timelines = new Map( record.timelines ), active = record.transaction.getStatus().page;
@@ -517,7 +661,7 @@
 				const writes = assignments( record.history, timelines.get( active ) ); check();
 				for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor ); record.timelines = timelines;
 				record.store.set( 'isDirty', record.transaction.getStatus().dirty ); record.history.updateUndoRedoButtons();
-				return { ...result, currentSnapshot: record.transaction.getDraft().snapshot, hostReady: true, history: this.captureDraftHistory() };
+				return { ...result, currentSnapshot: modelDraft( record ).snapshot, hostReady: true, history: this.captureDraftHistory() };
 			} catch ( error ) {
 				if ( result ) { record.needsRefresh = true; return { ...result, hostReady: false }; }
 				throw error;
@@ -551,7 +695,12 @@
 				check = () => { participants(); if ( ownerGuard ) {
 					const result = ownerGuard(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
 				} participants(); };
-				prepared = await Saved.prepare( this.captureDraftEnvelope(), dependencies, check, Array.from( record.contexts.values() ) ); check();
+				const completeBackup = this.captureDraftEnvelope();
+				const savedEnvelope = record.imports ? { version: 1, phase: completeBackup.phase, draft: completeBackup.draft,
+					history: completeBackup.history, confirmation: completeBackup.confirmation, publicationBlocked: completeBackup.publicationBlocked } : completeBackup;
+				prepared = await Saved.prepare( savedEnvelope, dependencies, check, Array.from( record.contexts.values() ) );
+				if ( record.imports ) prepared.creationBackup = completeBackup;
+				check();
 				const { session, state, context, timelines } = prepared, { editor, canvas, store, history, Store } = record;
 				for ( const [ page, value ] of timelines ) timelines.set( page, history.preflightTimeline( value ) );
 				// Creation preserves finite layer values, including unknown null fields. Do not apply legacy clearing here.
