@@ -2,6 +2,7 @@
 ( function () {
 	'use strict';
 	const records = new WeakMap(), preparations = new WeakMap(), reconciliations = new WeakMap();
+	const importModes = new WeakMap(), importPlans = new WeakMap(), importCheckpoints = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -148,6 +149,130 @@
 		}
 		return attempt;
 	}
+	function importTypes() {
+		return typeof module !== 'undefined' && module && typeof module.require === 'function' ? {
+			Reader: require( './PageOwnedMissingPdfImportReadClient.js' ), Planner: require( './PageOwnedWholePdfImportPlan.js' )
+		} : { Reader: window.Layers.Editor.PageOwnedMissingPdfImportReadClient, Planner: window.Layers.Editor.PageOwnedWholePdfImportPlan };
+	}
+	function importMode( transaction ) {
+		const record = data( transaction, true ), mode = importModes.get( transaction );
+		if ( !mode || !mode.active || mode.reader.read !== mode.read || mode.reader.dispose !== mode.dispose ||
+			mode.Planner.prepare !== mode.plan || record.adapter.toEditorState !== mode.toState ||
+			record.adapter.withEditorState !== mode.withState ||
+			window.Layers.Editor.PageOwnedSnapshotAdapter !== mode.adapterClass ) throw unavailable();
+		return { record, mode };
+	}
+	function importCapsule( record, mode ) {
+		return clone( record.adapter, { version: 1, draft: envelope( record ), sources: mode.claims.map( value => value.citation ) } );
+	}
+	function importGuard( transaction, record, mode, epoch, options ) {
+		const host = operationOptions( record, options, true ), generation = mode.generation;
+		if ( host.publicationAttempt !== undefined && host.publicationAttempt !== null ) throw unavailable();
+		const check = () => {
+			const currentMode = importMode( transaction );
+			if ( currentMode.record !== record || currentMode.mode !== mode || mode.generation !== generation ) throw unavailable();
+			current( transaction, record, epoch ); host.check(); current( transaction, record, epoch );
+		};
+		check(); return { check, pages: host.pages };
+	}
+	function importContext( record, entry ) {
+		const fixed = record.fixed;
+		return admit( record, { ...fixed, context: { ...fixed.context, page: entry.page,
+			surface: entry.surface, sourceGeometry: entry.sourceGeometry, rendition: entry.rendition } }, entry.page );
+	}
+	async function readImport( transaction, record, mode, source, check ) {
+		check();
+		const result = clone( record.adapter, await mode.read.call( mode.reader, {
+			target: record.fixed.target, selection: record.fixed.selection, source
+		} ) ); check();
+		const target = result.targetAdmission, fixed = record.fixed;
+		for ( const key of [ 'target', 'selection', 'hasLayersSlot', 'mainText', 'baseText', 'baseBundle' ] ) {
+			if ( !equal( target[ key ], fixed[ key ] ) ) throw unavailable();
+		}
+		if ( target.initialPage !== fixed.context.initialPage || target.pageCount !== fixed.context.pageCount ||
+			target.label !== fixed.anchorSurface.label || !equal( target.source, pin( fixed.anchorSurface ) ) ||
+			!equal( target.pages[ target.initialPage - 1 ].surface, fixed.anchorSurface ) ) throw unavailable();
+		const contexts = new Map();
+		for ( const entry of target.pages ) contexts.set( entry.page, importContext( record, entry ) );
+		check(); return { result, contexts };
+	}
+	const importFixed = member => { const value = { ...member }; delete value.canvas; delete value.layers; delete value.readingOrder; return value; };
+	function importMembers( record, candidate, contexts, activePage ) {
+		const base = record.base, members = new Map(); let previous = 0;
+		if ( !candidate || !Array.isArray( candidate.surfaces ) ||
+			!equal( { ...candidate, surfaces: [] }, { ...base, surfaces: [] } ) ||
+			!equal( candidate.surfaces.slice( 0, base.surfaces.length ), base.surfaces ) ) throw unavailable();
+		for ( const member of candidate.surfaces.slice( base.surfaces.length ) ) {
+			const page = member && member.source && member.source.page, context = contexts.get( page ), blank = context && context.surface;
+			if ( !blank || page <= previous || members.has( page ) || !equal( importFixed( member ), importFixed( blank ) ) ||
+				!member.canvas || member.canvas.width !== blank.canvas.width || member.canvas.height !== blank.canvas.height ) throw unavailable();
+			previous = page;
+			const seeded = { ...blank, layers: member.layers, ...( Object.hasOwn( member, 'readingOrder' ) ? { readingOrder: member.readingOrder } : {} ) };
+			const rebuilt = record.adapter.withEditorState( { schemaVersion: 1, surfaces: [ seeded ] }, blank.id,
+				{ canvas: member.canvas, layers: member.layers } ).surfaces[ 0 ];
+			if ( !equal( rebuilt, member ) ) throw unavailable();
+			members.set( page, member );
+		}
+		if ( !members.has( record.fixed.context.initialPage ) || members.size > record.fixed.context.pageCount || !contexts.has( activePage ) ) throw unavailable();
+		return members;
+	}
+	function importKey( result ) {
+		return JSON.stringify( [ result.source.pageId, result.source.revisionId, result.sourceGroup.source.fileTitle,
+			nameKey( result.sourceGroup.label ) ] );
+	}
+	function importSource( record, source ) {
+		const value = clone( record.adapter, source );
+		if ( !value || !equal( Object.keys( value ).sort(), [ 'owner', 'pageId', 'revisionId', 'surfaceId' ] ) ||
+			!positive( value.pageId ) || !positive( value.revisionId ) || value.pageId === record.fixed.target.pageId ||
+			typeof value.owner !== 'string' || !value.owner || value.owner === record.fixed.target.owner ||
+			typeof value.surfaceId !== 'string' || !value.surfaceId ) throw unavailable();
+		return value;
+	}
+	function importPlan( transaction, handle ) {
+		const plan = importPlans.get( handle );
+		if ( !plan || plan.owner !== transaction ) throw unavailable();
+		plan.check(); return plan;
+	}
+	async function prepareImportRestore( transaction, input, options ) {
+		const { record, mode } = importMode( transaction ), epoch = ++record.epoch;
+		const capsule = clone( record.adapter, input ), guard = importGuard( transaction, record, mode, epoch, options ), check = guard.check;
+		if ( !capsule || !equal( Object.keys( capsule ).sort(), [ 'draft', 'sources', 'version' ] ) || capsule.version !== 1 ||
+			!Array.isArray( capsule.sources ) || capsule.sources.length > 32 ) throw unavailable();
+		const draft = capsule.draft;
+		if ( !draft || !equal( Object.keys( draft ).sort(), [ 'activePage', 'creation', 'pageCount', 'snapshot', 'version' ] ) ||
+			draft.version !== 1 || !equal( draft.creation, identity( record.fixed ) ) ||
+			draft.pageCount !== record.fixed.context.pageCount || !positive( draft.activePage ) || draft.activePage > draft.pageCount ) throw unavailable();
+		const claims = [], seen = new Set(), reads = []; let contexts = new Map(), targetWitness;
+		for ( const citation of capsule.sources ) {
+			if ( !citation || !equal( Object.keys( citation ).sort(), [ 'source', 'targetSurfaceId' ] ) ||
+				citation.targetSurfaceId !== record.fixed.target.surfaceId ) throw unavailable();
+			const source = importSource( record, citation.source ), native = await readImport( transaction, record, mode, source, check );
+			if ( targetWitness && !equal( targetWitness, native.result.targetAdmission ) ) throw unavailable();
+			targetWitness = native.result.targetAdmission; reads.push( { source, value: native.result } );
+			const key = importKey( native.result ); if ( seen.has( key ) ) throw unavailable(); seen.add( key );
+			claims.push( { key, citation: clone( record.adapter, citation ) } ); contexts = native.contexts;
+		}
+		const wanted = new Set( [ draft.activePage, record.fixed.context.initialPage, ...guard.pages ] );
+		if ( !draft.snapshot || !Array.isArray( draft.snapshot.surfaces ) ) throw unavailable();
+		for ( const member of draft.snapshot.surfaces.slice( record.base.surfaces.length ) ) {
+			if ( !member || !member.source || !positive( member.source.page ) ) throw unavailable(); wanted.add( member.source.page );
+		}
+		for ( const page of wanted ) {
+			check(); if ( !contexts.has( page ) ) contexts.set( page, await readPage( transaction, record, page, epoch ) ); check();
+		}
+		const members = importMembers( record, draft.snapshot, contexts, draft.activePage );
+		if ( claims.length && members.size !== draft.pageCount ) throw unavailable();
+		for ( const read of reads ) {
+			const fresh = await readImport( transaction, record, mode, read.source, check );
+			if ( !equal( fresh.result, read.value ) ) throw unavailable();
+		}
+		const member = members.get( draft.activePage ) || contexts.get( draft.activePage ).surface;
+		const stateValue = record.adapter.toEditorState( { schemaVersion: 1, surfaces: [ member ] }, member.id );
+		const handle = Object.freeze( {} ); check();
+		importPlans.set( handle, { owner: transaction, record, mode, check, members, contexts, page: draft.activePage,
+			claims, capsule, state: stateValue, preview: { capsule, contexts: Array.from( contexts.values() ), state: stateValue } } );
+		return { handle, preview: clone( record.adapter, { capsule, contexts: Array.from( contexts.values() ), state: stateValue } ) };
+	}
 	class PageOwnedPdfCreationTransaction {
 		/** Native preparation and injected native-read/publication transports; never a publication token. */
 		constructor( input, dependencies ) {
@@ -187,8 +312,101 @@
 			records.set( this, record );
 		}
 
+		/** Explicit model-only opt-in. Host/history/draft/publication callers are deliberately separate. */
+		enableImports( api ) {
+			const record = data( this, true );
+			if ( importModes.has( this ) || record.attempt !== null ) throw unavailable();
+			const { Reader, Planner } = importTypes(), reader = new Reader( api );
+			if ( window.Layers.Editor.PageOwnedSnapshotAdapter && window.Layers.Editor.PageOwnedSnapshotAdapter !== record.adapter.constructor ) throw unavailable();
+			importModes.set( this, { active: true, generation: 0, reader, read: reader.read, dispose: reader.dispose,
+				Planner, plan: Planner.prepare, claims: [], toState: record.adapter.toEditorState,
+				withState: record.adapter.withEditorState, adapterClass: window.Layers.Editor.PageOwnedSnapshotAdapter } );
+			importMode( this );
+		}
+
+		getImportCapsule() { const { record, mode } = importMode( this ); return importCapsule( record, mode ); }
+
+		captureImportCheckpoint() {
+			const { record, mode } = importMode( this ), handle = Object.freeze( {} );
+			importCheckpoints.set( handle, { owner: this, capsule: importCapsule( record, mode ) } ); return handle;
+		}
+
+		inspectImportCheckpoint( handle ) {
+			const { record } = importMode( this ), value = importCheckpoints.get( handle );
+			if ( !value || value.owner !== this ) throw unavailable(); return clone( record.adapter, value.capsule );
+		}
+
+		releaseImportCheckpoint( handle ) {
+			const value = importCheckpoints.get( handle ); if ( !value || value.owner !== this ) throw unavailable(); importCheckpoints.delete( handle );
+		}
+
+		/** Privately prepare all pages and citation changes, then repeat the native source/target read. */
+		async prepareImport( input, options ) {
+			if ( !input || ![ Object.prototype, null ].includes( Object.getPrototypeOf( input ) ) ) throw unavailable();
+			const { record, mode } = importMode( this ), fields = input && Object.getOwnPropertyDescriptors( input );
+			if ( !fields || !fields.mode || !Object.hasOwn( fields.mode, 'value' ) ) throw unavailable();
+			if ( fields.mode.value === 'cancel' ) return null;
+			if ( !equal( Reflect.ownKeys( fields ).sort(), [ 'allocateId', 'maxLayers', 'mode', 'source' ] ) ||
+				Object.values( fields ).some( field => !field.enumerable || !Object.hasOwn( field, 'value' ) ) ||
+				typeof fields.allocateId.value !== 'function' ) throw unavailable();
+			const source = importSource( record, fields.source.value ), epoch = ++record.epoch;
+			const { check } = importGuard( this, record, mode, epoch, options );
+			const native = await readImport( this, record, mode, source, check );
+			const target = snapshot( record ), all = Array.from( native.contexts.values() ).map( context =>
+				record.members.get( context.page ) || context.surface );
+			const targetSnapshot = { ...target, surfaces: target.surfaces.slice( 0, record.base.surfaces.length ).concat( all ) };
+			check();
+			const candidate = mode.plan.call( mode.Planner, { targetSnapshot, targetSurfaceId: record.fixed.target.surfaceId,
+				sourceSnapshot: native.result.sourceBundle.snapshot, sourceSurfaceId: source.surfaceId, admittedTargetSurfaces: [],
+				mode: fields.mode.value, maxLayers: fields.maxLayers.value, allocateId: () => {
+					check(); const id = Reflect.apply( fields.allocateId.value, undefined, [] ); check(); return id;
+				} } ); check();
+			const fresh = await readImport( this, record, mode, source, check );
+			if ( !equal( native.result, fresh.result ) ) throw unavailable();
+			const members = importMembers( record, candidate.snapshot, fresh.contexts, record.page ), key = importKey( fresh.result );
+			const claims = fields.mode.value === 'append' ? clone( record.adapter, mode.claims ) : [];
+			if ( !claims.some( value => value.key === key ) ) claims.push( { key,
+				citation: { targetSurfaceId: record.fixed.target.surfaceId, source: fresh.result.source } } );
+			if ( claims.length > 32 ) throw unavailable();
+			const capsule = { version: 1, draft: { ...envelope( record ), snapshot: candidate.snapshot }, sources: claims.map( value => value.citation ) };
+			const value = members.get( record.page ), stateValue = record.adapter.toEditorState( { schemaVersion: 1, surfaces: [ value ] }, value.id );
+			const preview = { capsule, contexts: Array.from( fresh.contexts.values() ), state: stateValue,
+				mode: fields.mode.value, source: fresh.result.source, sourceLabel: fresh.result.sourceGroup.label,
+				importedLayerIds: candidate.importedLayerIds, pages: candidate.pages };
+			const handle = Object.freeze( {} ); check();
+			importPlans.set( handle, { owner: this, record, mode, check, members, contexts: fresh.contexts, page: record.page, claims, capsule, state: stateValue, preview } );
+			return { handle, preview: clone( record.adapter, preview ) };
+		}
+
+		inspectImportPlan( handle ) { const plan = importPlan( this, handle ); return clone( plan.record.adapter, plan.preview ); }
+
+		prepareImportRestore( handle, options ) {
+			const value = importCheckpoints.get( handle );
+			if ( !value || value.owner !== this ) return Promise.reject( unavailable() );
+			return prepareImportRestore( this, value.capsule, options );
+		}
+
+		/** Detached recovery data is reauthorized; it never stands in for an owned live checkpoint. */
+		prepareImportRecovery( capsule, options ) { return prepareImportRestore( this, capsule, options ); }
+
+		commitImportPlan( handle, beforeCommit ) {
+			const plan = importPlan( this, handle );
+			if ( beforeCommit !== undefined && typeof beforeCommit !== 'function' ) throw unavailable();
+			const output = clone( plan.record.adapter, plan.state );
+			if ( beforeCommit ) { const value = beforeCommit(); if ( value !== undefined ) { Promise.resolve( value ).catch( () => {} ); throw unavailable(); } }
+			plan.check();
+			// Private data only: no awaits, notifications, setters or external callbacks in this commit.
+			plan.record.members = plan.members; plan.record.pages = plan.contexts; plan.record.page = plan.page;
+			plan.mode.claims = plan.claims; plan.mode.generation++; plan.record.epoch++; importPlans.delete( handle );
+			return output;
+		}
+
+		releaseImportPlan( handle ) {
+			const plan = importPlans.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable(); importPlans.delete( handle );
+		}
+
 		getEditorState() { return state( data( this ) ); }
-		getDraft() { const record = data( this ); return clone( record.adapter, envelope( record ) ); }
+		getDraft() { if ( importModes.has( this ) ) throw unavailable(); const record = data( this ); return clone( record.adapter, envelope( record ) ); }
 		getPublicationAttempt() { const record = data( this ); return clone( record.adapter, record.attempt ); }
 		getStatus() {
 			const record = data( this );
@@ -205,6 +423,8 @@
 			const blank = record.pages.get( record.page ).surface;
 			const member = record.members.get( record.page ) || blank;
 			const next = record.adapter.withEditorState( { schemaVersion: 1, surfaces: [ member ] }, member.id, input ).surfaces[ 0 ];
+			const imports = importModes.get( this );
+			if ( imports && imports.claims.length ) { record.members.set( record.page, next ); record.epoch++; return; }
 			if ( record.page !== record.fixed.context.initialPage && equal( next, blank ) ) record.members.delete( record.page );
 			else record.members.set( record.page, next );
 			record.epoch++;
@@ -239,6 +459,7 @@
 
 		/** Same-base recovery only. The host still owns explicit confirmation and per-page Undo validation. */
 		async prepareDraft( input, options ) {
+			if ( importModes.has( this ) ) throw unavailable();
 			const record = data( this, true ), epoch = ++record.epoch, draft = clone( record.adapter, input );
 			const host = operationOptions( record, options, true ); host.check(); current( this, record, epoch );
 			if ( !draft || !equal( Object.keys( draft ).sort(), [ 'activePage', 'creation', 'pageCount', 'snapshot', 'version' ] ) ||
@@ -280,6 +501,7 @@
 		}
 
 		async save( summary = '', beforePublish, options ) {
+			if ( importModes.has( this ) ) throw unavailable();
 			const record = data( this, true );
 			const host = operationOptions( record, options ); host.check(); current( this, record, record.epoch );
 			if ( typeof summary !== 'string' || ( beforePublish !== undefined && typeof beforePublish !== 'function' ) ) throw unavailable();
@@ -372,7 +594,7 @@
 			const plan = reconciliations.get( handle ); if ( plan && plan.owner === this ) reconciliations.delete( handle );
 		}
 
-		dispose() { const record = records.get( this ); if ( record ) { record.phase = 'disposed'; record.epoch++; } }
+		dispose() { const mode = importModes.get( this ); if ( mode ) { mode.active = false; mode.generation++; mode.dispose.call( mode.reader ); } const record = records.get( this ); if ( record ) { record.phase = 'disposed'; record.epoch++; } }
 	}
 	const inspectPublication = PageOwnedPdfCreationTransaction.prototype.inspectPublication;
 	window.Layers = window.Layers || {};

@@ -184,3 +184,38 @@ Complete-group application, Undo, drafts, recovery and source-aware first Save
 must repeat their own live-work and native authorization checks. The approved
 version-difference notice must also be qualified for empty-target Import
 before the editor route is activated.
+
+## Explicit creation-model Import transactions
+
+The existing PDF creation transaction has a separate `enableImports(api)`
+opt-in for model-only complete-group Import. Existing callers do not enable it.
+Ordinary creation methods and their defaults remain in place.
+
+`prepareImport` reads the native missing-target preparation twice around private
+whole-PDF planning. Both complete results must agree. The original saved main
+text and nullable layers slot are retained separately from the admitted pages.
+The candidate contains every target PDF page, including blank ones, as required
+by the native missing-target publication boundary. Append retains existing
+layers and source references; Replace resets the complete group's active source
+references. Destination pins, geometry, unrelated sets and unknown values stay
+intact; imported groups and reading-order references receive consistent new IDs.
+
+Only an owned, single-use `commitImportPlan` can change the model. A final
+synchronous guard runs before private member, page and source-reference changes,
+with no await or notification inside that commit. Edits, page changes, disposal,
+changed source evidence and stale handles refuse without overwriting newer work.
+
+Owned before/after checkpoints retain the entire group together with its source
+references. A separate version-1 recovery capsule contains the ordinary creation
+draft and `sources`, each binding the provisional target anchor to an exact source
+descriptor including its owner. Serialized data is never authorization. Explicit
+Import recovery rereads the native target and each historical source, validates
+the complete candidate and repeats source evidence before issuing a commit plan.
+Append deduplicates each source owner/revision/file/name group; at most 32 groups
+can be retained. Missing or changed associations refuse rather than being repaired.
+
+The ordinary draft export, draft-recovery and Save methods refuse in this explicit mode.
+They cannot erase the source references or publish through the ordinary writer.
+Actual editor/Undo routing, draft-controller integration, source-aware first Save,
+unknown-outcome citation proof and saved-session handoff remain required before
+activating this route. A matching saved payload alone cannot prove provenance.
