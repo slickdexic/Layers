@@ -149,3 +149,38 @@ revalidation use that same fresh read. No new Import control is activated here.
 
 This advances page ownership and data preservation. Complete missing-target PDF
 Import, final HTTP/session delivery and browser/owner acceptance remain open.
+<!-- Existing contract remains above; this section is an additive client boundary. -->
+
+## Native read connection for a completely missing PDF layer set
+
+`PageOwnedMissingPdfImportReadClient` is a separate, explicitly constructed
+client for the registered missing-target read action. It is not installed in
+the editor and does not change the existing stored-target Import path.
+
+Its request contains exact target and source owner/revision/member descriptors
+and the target's saved embedding bytes and UTF-8 byte offset. Every read uses
+a fresh native POST. The response must be the version-1 ASCII JSON envelope;
+malformed data, decoded duplicate object keys, identity changes, mismatched
+group inventories and missing or inconsistent target pages refuse with the
+fixed Import-unavailable error. It does not cache, retry, apply work or publish.
+Disposal, a newer read and replacement of the captured transport invalidate
+pending replies.
+
+The result retains the genuine saved base separately from the complete empty
+target-page admissions. The client validates each admitted page through the
+creation transaction's existing model; it never inserts a saved target anchor.
+The existing whole-PDF read client exposes a source-only validator that checks
+a real stored source bundle and its complete group inventory independently of
+any stored target. All original stored-target read behavior remains in place.
+
+The source must belong to another owner and match the destination's canonical
+file and normalized layer-set name. Different readable versions are allowed;
+source pages must fit the admitted target page count. Canvas geometry and
+native rendition dimensions remain separate, including one-pixel thumbnail
+rounding. Literal main text, base text, unknown values and nulls are preserved.
+
+This is a read connection, not an editor application or publication token.
+Complete-group application, Undo, drafts, recovery and source-aware first Save
+must repeat their own live-work and native authorization checks. The approved
+version-difference notice must also be qualified for empty-target Import
+before the editor route is activated.

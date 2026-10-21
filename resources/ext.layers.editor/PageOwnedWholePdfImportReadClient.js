@@ -331,6 +331,19 @@
 	}
 
 	class PageOwnedWholePdfImportReadClient {
+		/** Validate a genuine stored source without inventing a stored target anchor. */
+		static validateSourcePreparation( source, bundle, group ) {
+			const value = detach( { source, bundle, group } ), descriptor = value.source;
+			if ( !object( descriptor ) || !integer( descriptor.pageId ) || !integer( descriptor.revisionId ) ||
+				!memberId( descriptor.surfaceId ) || !validDescriptor( descriptor, descriptor.pageId,
+					descriptor.revisionId, descriptor.surfaceId ) ) {
+				throw unavailable();
+			}
+			const inspected = validateSnapshot( value.bundle, descriptor.revisionId, descriptor.surfaceId, new Set() );
+			validateGroup( value.group, inspected, pinOf( inspected.anchor ) );
+			return value;
+		}
+
 		constructor( api ) {
 			if ( !api || typeof api.post !== 'function' ) {
 				throw unavailable();
