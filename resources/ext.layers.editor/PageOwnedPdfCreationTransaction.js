@@ -4,6 +4,7 @@
 	const records = new WeakMap(), preparations = new WeakMap(), reconciliations = new WeakMap();
 	const importModes = new WeakMap(), importPlans = new WeakMap(), importCheckpoints = new WeakMap();
 	const importPublications = new WeakMap();
+	const importPublicationRecoveries = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -286,6 +287,53 @@
 			publication.client.publish !== publication.publish || publication.Client.isConfirmationFor !== publication.confirm ) throw unavailable();
 		return { record, mode, publication };
 	}
+	async function validateImportPublicationAttempt( transaction, live, attempt ) {
+		if ( attempt === null ) return;
+		const { record, mode, check } = live;
+		if ( !attempt || !equal( Object.keys( attempt ).sort(), [ 'capsule', 'code', 'dispatchState', 'request', 'revisionId', 'sequence', 'version' ] ) ||
+			attempt.version !== 1 || !positive( attempt.sequence ) ||
+			![ 'prepared', 'dispatched', 'refused', 'unknown', 'confirmed' ].includes( attempt.dispatchState ) ) throw unavailable();
+		const confirmed = attempt.dispatchState === 'confirmed', unknown = attempt.dispatchState === 'unknown';
+		if ( confirmed ? !positive( attempt.revisionId ) || attempt.revisionId <= record.fixed.target.revisionId : attempt.revisionId !== null ) throw unavailable();
+		if ( unknown ? attempt.code !== 'layers-publication-outcome-unknown' : attempt.dispatchState === 'refused' ?
+			!publicationCodes.has( attempt.code ) && ![ 'layers-revision-save-failed', 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) :
+			attempt.code !== null ) throw unavailable();
+		const capsule = attempt.capsule, draft = capsule && capsule.draft;
+		if ( !capsule || !equal( Object.keys( capsule ).sort(), [ 'draft', 'sources', 'version' ] ) || capsule.version !== 1 ||
+			!Array.isArray( capsule.sources ) || capsule.sources.length < 1 || capsule.sources.length > 32 ||
+			!draft || !equal( Object.keys( draft ).sort(), [ 'activePage', 'creation', 'pageCount', 'snapshot', 'version' ] ) ||
+			draft.version !== 1 || !equal( draft.creation, identity( record.fixed ) ) || draft.pageCount !== record.fixed.context.pageCount ||
+			!positive( draft.activePage ) || draft.activePage > draft.pageCount ) throw unavailable();
+		const sources = [], seen = new Set(), reads = []; let contexts, targetWitness;
+		for ( const citation of capsule.sources ) {
+			if ( !citation || !equal( Object.keys( citation ).sort(), [ 'source', 'targetSurfaceId' ] ) ||
+				citation.targetSurfaceId !== record.fixed.target.surfaceId ) throw unavailable();
+			const source = importSource( record, citation.source );
+			sources.push( { sourcePageId: source.pageId, sourceRevisionId: source.revisionId, sourceSurfaceId: source.surfaceId } );
+			const native = await readImport( transaction, record, mode, source, check ), key = importKey( native.result );
+			if ( seen.has( key ) || ( targetWitness && !equal( targetWitness, native.result.targetAdmission ) ) ) throw unavailable();
+			seen.add( key ); targetWitness = native.result.targetAdmission; reads.push( { source, result: native.result } ); contexts = native.contexts;
+		}
+		const members = importMembers( record, draft.snapshot, contexts, draft.activePage );
+		if ( members.size !== draft.pageCount ) throw unavailable();
+		const request = attempt.request;
+		if ( !request || typeof request.summary !== 'string' || Array.from( request.summary ).length > 500 ||
+			!equal( request, { pageId: record.fixed.target.pageId, baseRevisionId: record.fixed.target.revisionId,
+				selection: record.fixed.selection, snapshotJson: JSON.stringify( draft.snapshot ), sources, summary: request.summary } ) ) throw unavailable();
+		for ( const read of reads ) {
+			const fresh = await readImport( transaction, record, mode, read.source, check );
+			if ( !equal( read.result, fresh.result ) ) throw unavailable();
+		}
+		check();
+	}
+	function importPublicationRecovery( transaction, handle ) {
+		const plan = importPublicationRecoveries.get( handle );
+		if ( !plan || plan.owner !== transaction ) throw unavailable();
+		plan.live.check();
+		const currentMode = importPublicationRecord( transaction );
+		if ( currentMode.publication !== plan.publication || currentMode.publication.attempt !== null || currentMode.publication.sequence !== 0 ) throw unavailable();
+		return plan;
+	}
 	class PageOwnedPdfCreationTransaction {
 		/** Native preparation and injected native-read/publication transports; never a publication token. */
 		constructor( input, dependencies ) {
@@ -497,6 +545,48 @@
 				publication.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused';
 				publication.attempt.code = code; throw Object.assign( new Error( code ), { code } );
 			}
+		}
+
+		/** Prepare an untrusted complete backup against the unchanged native base, without altering work. */
+		async prepareImportPublicationRecovery( input, options ) {
+			const { record, publication } = importPublicationRecord( this ); importMode( this );
+			if ( publication.attempt !== null || publication.sequence !== 0 ) throw unavailable();
+			const value = clone( record.adapter, input );
+			if ( !value || !equal( Object.keys( value ).sort(), [ 'attempt', 'capsule', 'version' ] ) || value.version !== 1 ) throw unavailable();
+			let handle;
+			try {
+				const prepared = await prepareImportRestore( this, value.capsule, options ); handle = prepared.handle;
+				const live = importPlan( this, handle );
+				await validateImportPublicationAttempt( this, live, value.attempt ); live.check();
+				const token = Object.freeze( {} ), phase = value.attempt === null ? 'ready' : 'uncertain';
+				const preview = clone( record.adapter, { publicationState: value, phase, state: live.state,
+					contexts: Array.from( live.contexts.values() ), confirmation: null, holdCleared: false } );
+				importPublicationRecoveries.set( token, { owner: this, liveHandle: handle, live, publication, value, phase, preview } );
+				importPublicationRecovery( this, token ); return { handle: token, preview: clone( record.adapter, preview ) };
+			} catch ( error ) { if ( handle ) importPlans.delete( handle ); throw error; }
+		}
+
+		inspectImportPublicationRecovery( handle ) {
+			const plan = importPublicationRecovery( this, handle ); return clone( plan.live.record.adapter, plan.preview );
+		}
+
+		/** Confirmation by the host precedes one synchronous model/attempt/hold transition. No write occurs. */
+		commitImportPublicationRecovery( handle, beforeCommit ) {
+			const plan = importPublicationRecovery( this, handle ), { live, publication } = plan, { record, mode } = live;
+			if ( beforeCommit !== undefined && typeof beforeCommit !== 'function' ) throw unavailable();
+			const output = clone( record.adapter, plan.preview ), attempt = clone( record.adapter, plan.value.attempt );
+			if ( beforeCommit ) { const result = beforeCommit(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); } }
+			importPublicationRecovery( this, handle );
+			// Private assignments only: no awaits, notifications, setters or callbacks in the transition.
+			record.members = live.members; record.pages = live.contexts; record.page = live.page; mode.claims = live.claims;
+			publication.attempt = attempt; publication.sequence = attempt ? attempt.sequence : 0;
+			record.confirmed = null; record.phase = plan.phase; mode.generation++; record.epoch++;
+			importPlans.delete( plan.liveHandle ); importPublicationRecoveries.delete( handle ); return output;
+		}
+
+		releaseImportPublicationRecovery( handle ) {
+			const plan = importPublicationRecoveries.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable();
+			importPlans.delete( plan.liveHandle ); importPublicationRecoveries.delete( handle );
 		}
 
 		getEditorState() { return state( data( this ) ); }

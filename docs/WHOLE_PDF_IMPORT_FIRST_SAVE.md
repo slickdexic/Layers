@@ -242,3 +242,27 @@ There is no automatic retry or snapshot-only acknowledgement of attribution.
 Publication-state deserialization and recovery, native citation reconciliation,
 saved-session handoff, actual editor/Undo/draft routing and complete native/browser
 acceptance remain required before activating this path.
+
+## Same-base recovery of a complete Import publication backup
+
+The explicit creation transaction can privately prepare and atomically commit
+the complete publication-state envelope against the unchanged native base.
+The live capsule and attempted capsule are independently reauthorized, including
+their complete page snapshots, source associations and original embedding/base.
+The attempted request must match its snapshot bytes and source descriptors exactly.
+
+Newer live work remains separate from the sent snapshot. Every non-null serialized
+attempt restores with an uncertain hold, including data that claims confirmed or
+refused status. The complete original attempt remains available as evidence, but
+serialized fields never grant confirmation, a saved marker or permission to retry.
+A null attempt can restore ready work only before any live attempt exists.
+
+Preparation and cancellation change no work. Only a transaction-owned, single-use
+plan can apply all pages, source references and attempt/hold state together after
+the final live-work guard. Refusal preserves both current work and backup data.
+The methods do not write to the wiki or local storage and have no active UI callers.
+
+Changed-base admission remains a refusal. After the attempted Save advanced the
+owning page, a source-aware saved/outcome route is required; a matching stored PDF
+alone cannot prove attribution. Advanced-base recovery, citation reconciliation,
+saved-session handoff and editor/history/draft-controller acceptance remain open.
