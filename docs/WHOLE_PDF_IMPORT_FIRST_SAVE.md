@@ -219,3 +219,26 @@ They cannot erase the source references or publish through the ordinary writer.
 Actual editor/Undo routing, draft-controller integration, source-aware first Save,
 unknown-outcome citation proof and saved-session handoff remain required before
 activating this route. A matching saved payload alone cannot prove provenance.
+
+## Explicit first Save for a missing PDF Import target
+
+A separate publication client and creation-transaction `saveImport` method
+connect complete imported groups to the registered native first-Save boundary.
+They remain explicitly enabled components with no active editor callers.
+The existing ordinary Save, recovery and creation defaults remain unchanged.
+
+The request preserves the original embedding byte offset and exact text,
+complete snapshot and bounded source revision/member identities. Backup
+persistence precedes two fresh native source/target reads. Only an owned
+confirmation from the actual client, bound to its complete captured request,
+acknowledges a successful Save. Returned JSON alone is not confirmation authority.
+
+The complete attempted capsule and request remain inspectable separately from
+newer live work. Source references are retained even after success until the
+saved-session handoff can acknowledge and remap them. Native stale-base refusal
+holds the conflict; interrupted or malformed responses hold an uncertain outcome.
+There is no automatic retry or snapshot-only acknowledgement of attribution.
+
+Publication-state deserialization and recovery, native citation reconciliation,
+saved-session handoff, actual editor/Undo/draft routing and complete native/browser
+acceptance remain required before activating this path.

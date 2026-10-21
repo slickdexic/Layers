@@ -3,6 +3,7 @@
 	'use strict';
 	const records = new WeakMap(), preparations = new WeakMap(), reconciliations = new WeakMap();
 	const importModes = new WeakMap(), importPlans = new WeakMap(), importCheckpoints = new WeakMap();
+	const importPublications = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -273,6 +274,18 @@
 			claims, capsule, state: stateValue, preview: { capsule, contexts: Array.from( contexts.values() ), state: stateValue } } );
 		return { handle, preview: clone( record.adapter, { capsule, contexts: Array.from( contexts.values() ), state: stateValue } ) };
 	}
+	function importPublisherTypes() {
+		return typeof module !== 'undefined' && module && typeof module.require === 'function' ?
+			require( './PageOwnedMissingPdfImportPublishClient.js' ) : window.Layers.Editor.PageOwnedMissingPdfImportPublishClient;
+	}
+	function importPublicationRecord( transaction ) {
+		const record = data( transaction ), mode = importModes.get( transaction ), publication = importPublications.get( transaction );
+		if ( !mode || !mode.active || !publication || mode.reader.read !== mode.read || mode.reader.dispose !== mode.dispose ||
+			record.adapter.toEditorState !== mode.toState || record.adapter.withEditorState !== mode.withState ||
+			window.Layers.Editor.PageOwnedSnapshotAdapter !== mode.adapterClass ||
+			publication.client.publish !== publication.publish || publication.Client.isConfirmationFor !== publication.confirm ) throw unavailable();
+		return { record, mode, publication };
+	}
 	class PageOwnedPdfCreationTransaction {
 		/** Native preparation and injected native-read/publication transports; never a publication token. */
 		constructor( input, dependencies ) {
@@ -403,6 +416,87 @@
 
 		releaseImportPlan( handle ) {
 			const plan = importPlans.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable(); importPlans.delete( handle );
+		}
+
+		/** Explicit first-Save opt-in. No existing publisher, host or draft caller is changed. */
+		enableImportPublication( api ) {
+			const { record } = importMode( this );
+			if ( importPublications.has( this ) || record.attempt !== null ) throw unavailable();
+			const Client = importPublisherTypes(), client = new Client( api );
+			importPublications.set( this, { Client, client, publish: client.publish, confirm: Client.isConfirmationFor, sequence: 0, attempt: null } );
+		}
+
+		/** Detached complete state for future storage wiring; serialized attempts never grant confirmation. */
+		getImportPublicationState() {
+			const { record, mode, publication } = importPublicationRecord( this );
+			return clone( record.adapter, { version: 1, capsule: importCapsule( record, mode ), attempt: publication.attempt } );
+		}
+
+		async saveImport( summary = '', beforePublish, options ) {
+			const { record, mode, publication } = importPublicationRecord( this );
+			importMode( this );
+			if ( typeof summary !== 'string' || Array.from( summary ).length > 500 ||
+				( beforePublish !== undefined && typeof beforePublish !== 'function' ) ||
+				mode.claims.length < 1 || mode.claims.length > 32 || !positive( publication.sequence + 1 ) ) throw unavailable();
+			const host = operationOptions( record, options ); host.check(); importMode( this );
+			const capsule = importCapsule( record, mode ), sent = capsule.draft.snapshot;
+			const sources = capsule.sources.map( citation => {
+				if ( citation.targetSurfaceId !== record.fixed.target.surfaceId ) throw unavailable();
+				const source = importSource( record, citation.source );
+				return { sourcePageId: source.pageId, sourceRevisionId: source.revisionId, sourceSurfaceId: source.surfaceId };
+			} );
+			const request = { pageId: record.fixed.target.pageId, baseRevisionId: record.fixed.target.revisionId,
+				selection: clone( record.adapter, record.fixed.selection ), snapshotJson: JSON.stringify( sent ), sources, summary };
+			publication.attempt = { version: 1, sequence: ++publication.sequence, capsule, request: clone( record.adapter, request ),
+				dispatchState: 'prepared', revisionId: null, code: null };
+			record.phase = 'saving'; record.epoch++; mode.generation++;
+			const generation = mode.generation, claims = clone( record.adapter, mode.claims );
+			const check = () => {
+				const currentMode = importPublicationRecord( this );
+				if ( currentMode.record !== record || currentMode.mode !== mode || currentMode.publication !== publication ||
+					record.phase !== 'saving' || mode.generation !== generation || !equal( mode.claims, claims ) ) throw unavailable();
+				host.check();
+				importPublicationRecord( this );
+				if ( record.phase !== 'saving' || mode.generation !== generation || !equal( mode.claims, claims ) ) throw unavailable();
+			};
+			let dispatched = false;
+			try {
+				if ( beforePublish ) {
+					try { await beforePublish(); }
+					catch ( ignored ) { throw Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } ); }
+				}
+				check(); const reads = [];
+				for ( const claim of claims ) {
+					const native = await readImport( this, record, mode, claim.citation.source, check );
+					if ( importKey( native.result ) !== claim.key ) throw unavailable();
+					const members = importMembers( record, sent, native.contexts, capsule.draft.activePage );
+					if ( members.size !== record.fixed.context.pageCount ) throw unavailable();
+					reads.push( native.result );
+				}
+				for ( let index = 0; index < claims.length; index++ ) {
+					const fresh = await readImport( this, record, mode, claims[ index ].citation.source, check );
+					if ( !equal( reads[ index ], fresh.result ) ) throw unavailable();
+				}
+				check(); dispatched = true; publication.attempt.dispatchState = 'dispatched';
+				const proof = await publication.publish.call( publication.client, request );
+				check();
+				if ( !publication.confirm.call( publication.Client, proof, publication.client, request ) ) {
+					throw Object.assign( new Error( 'layers-publication-outcome-unknown' ), { code: 'layers-publication-outcome-unknown' } );
+				}
+				const output = clone( record.adapter, { revisionId: proof.revisionId, snapshot: sent, currentSnapshot: snapshot( record ),
+					activePage: record.page, originalCreation: identity( record.fixed ), sourceReferences: capsule.sources } );
+				check(); record.confirmed = { revisionId: proof.revisionId, snapshot: sent };
+				publication.attempt.dispatchState = 'confirmed'; publication.attempt.revisionId = proof.revisionId;
+				record.phase = 'confirmed'; record.epoch++; return output;
+			} catch ( error ) {
+				const code = dispatched ? ( error && ( publicationCodes.has( error.code ) || error.code === 'layers-revision-save-failed' ) ?
+					error.code : 'layers-publication-outcome-unknown' ) :
+					error && error.code === 'layers-draft-storage-failed' ? error.code : 'layers-editor-session-unavailable';
+				if ( record.phase !== 'disposed' ) record.phase = code === 'layers-edit-conflict' ? 'conflict' :
+					code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
+				publication.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused';
+				publication.attempt.code = code; throw Object.assign( new Error( code ), { code } );
+			}
 		}
 
 		getEditorState() { return state( data( this ) ); }
