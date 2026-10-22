@@ -27,6 +27,11 @@ Do not run unchanged full suites repeatedly or grow evidence machinery as a
 substitute for integration. Retain meaningful regression and data-preservation
 checks, existing work, private data and reviewable extension-only commits.
 
+The first-Save native trace has isolated an Import-history reading-order
+comparison defect. Its correction passes both new native-shaped regressions
+and all 100 directly affected client cases. Native consecutive Save and stale
+Save still require replay before the Save/recovery package can close.
+
 Ordinary page embeds display their content and approved overlays. They do not
 add owner/revision information above slides, images or PDF pages. The owner
 explicitly requested removal of the slide caption on October 21. Dedicated

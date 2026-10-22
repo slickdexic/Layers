@@ -36,6 +36,18 @@ and refused locally before publication. Local work and the committed revision
 were preserved. The native stale-Save test therefore remains unqualified; the
 handoff must be corrected before claiming the complete Save/recovery journey.
 
+The subsequent native trace identified the handoff refusal in Import-history
+conversion. Native PDF surfaces carry `readingOrder`; comparing the blank
+before-Import order with the saved imported order as immutable surface metadata
+rejected a valid history checkpoint. The correction treats reading order as
+working content alongside layers, preserving its value or absence in each
+checkpoint. Source identity, ownership, geometry and fresh authorization checks
+remain enforced. Both native-shaped regressions fail with the previous helper;
+all 100 directly affected client tests pass with the correction, including
+first-Save handoff and whole-group Undo/Redo. The consecutive-Save native replay
+and genuine stale-Save acceptance remain open; these client results do not
+replace them.
+
 The test environment initially lacked Ghostscript and Poppler utilities required
 by its native PDF handler. Restoring those standard development-environment
 dependencies and refreshing only the fresh test PDF's metadata allowed native

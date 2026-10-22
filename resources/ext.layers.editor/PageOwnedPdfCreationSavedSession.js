@@ -16,7 +16,13 @@
 		return JSON.stringify( value );
 	}
 	const equal = ( left, right ) => canonical( left ) === canonical( right );
-	const fixed = surface => { const result = { ...surface }; delete result.canvas; delete result.layers; return result; };
+	const fixed = surface => { const result = { ...surface }; delete result.canvas; delete result.layers; delete result.readingOrder; return result; };
+	function working( surface, local ) {
+		const result = { ...surface, canvas: local.canvas, layers: local.layers };
+		if ( Object.hasOwn( local, 'readingOrder' ) ) result.readingOrder = local.readingOrder;
+		else delete result.readingOrder;
+		return result;
+	}
 	class PageOwnedPdfCreationSavedSession {
 		/** Convert inert creation history into the existing saved-PDF recovery contract. */
 		static importHistory( input, current, timelines, remapping, creationPages ) {
@@ -44,8 +50,10 @@
 						local.canvas.width !== reference.canvas.width || local.canvas.height !== reference.canvas.height ) ) throw unavailable();
 					if ( local ) next.surfaces.push( { ...copy( local ), id: row.surfaceId } );
 					else if ( stored ) {
-						const blank = creationPages.find( context => context.page === row.page ); if ( !blank ) throw unavailable();
-						next.surfaces.push( { ...copy( reference ), canvas: copy( blank.surface.canvas ), layers: [] } );
+						const blank = creationPages.find( context => context.page === row.page );
+						if ( !blank || !equal( blank.surface.layers, [] ) ||
+							( Object.hasOwn( blank.surface, 'readingOrder' ) && !equal( blank.surface.readingOrder, [] ) ) ) throw unavailable();
+						next.surfaces.push( working( copy( reference ), copy( blank.surface ) ) );
 					}
 				}
 				const values = new Map( next.surfaces.map( member => [ member.id, member ] ) );
@@ -171,7 +179,7 @@
 						( context.stored ? surface.id !== member.surfaceId :
 							surface.id !== Ids.surfaceId( target.pageId, revisionId, anchor.source.fileTitle, anchor.label, page ) ) ) throw unavailable();
 					if ( local ) {
-						const value = { ...Store.copyWorkingCopyValue( surface ), canvas: local.canvas, layers: local.layers };
+						const value = working( Store.copyWorkingCopyValue( surface ), local );
 						const index = next.snapshot.surfaces.findIndex( value => value.id === surface.id );
 						if ( index < 0 ) next.snapshot.surfaces.push( value ); else next.snapshot.surfaces[ index ] = value;
 					}
@@ -189,9 +197,11 @@
 					if ( !local ) {
 						const blank = blanks.find( value => value.surface && value.surface.source.page === surface.source.page );
 						if ( !blank || !equal( blank.surface.layers, [] ) ||
+							( Object.hasOwn( blank.surface, 'readingOrder' ) && !equal( blank.surface.readingOrder, [] ) ) ||
 							!equal( fixed( blank.surface ), fixed( surface ) ) || blank.surface.canvas.width !== surface.canvas.width ||
 							blank.surface.canvas.height !== surface.canvas.height ) throw unavailable();
-						surface.layers = []; surface.canvas = Store.copyWorkingCopyValue( blank.surface.canvas );
+						Object.assign( surface, working( surface, Store.copyWorkingCopyValue( blank.surface ) ) );
+						if ( !Object.hasOwn( blank.surface, 'readingOrder' ) ) delete surface.readingOrder;
 					}
 				}
 				next.pdf.activePage = draft.activePage;

@@ -84,6 +84,10 @@ function savedImportData( work, snapshot, revisionId ) {
 async function build( options = {} ) {
 	const work = creationFixture.setup();
 	try {
+		if ( options.beforeLoad ) {
+			if ( typeof options.beforeLoad !== 'function' ) { throw new Error( 'layers-creation-unavailable' ); }
+			await options.beforeLoad( work );
+		}
 		if ( await work.host.load() !== true ) { throw new Error( 'layers-creation-unavailable' ); }
 		const importApi = { post: work.nativeImport.api.post,
 			postWithToken: work.publicationApi.postWithToken };
