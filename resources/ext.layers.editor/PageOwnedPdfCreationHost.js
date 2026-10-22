@@ -391,6 +391,8 @@
 			} finally { record.committing = false; }
 			// A listener may have edited the newly visible page. Preserve that work as well.
 			capture( record );
+			// History availability must observe the completed turn, not its busy refusal guard.
+			record.operation = null;
 			// Presentation reads the completed state through the same strict host guard.
 			history.updateUndoRedoButtons();
 			editor.syncPageInUrl( page );
@@ -727,6 +729,8 @@
 					canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch ); if ( selection ) selection.refresh();
 				} finally { record.committing = false; }
 				capture( record );
+				// The restored model and timelines are committed before querying history availability.
+				record.operation = null; record.recovering = false;
 				history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
 				return true;
 			} catch ( error ) { if ( committed ) record.needsRefresh = true; throw unavailable(); }
