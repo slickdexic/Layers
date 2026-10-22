@@ -42,6 +42,7 @@ class MissingPdfImportApiTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private bool $posted = true;
 	private ?ApiMain $readMain = null;
 	private ?ApiMain $publishMain = null;
+	private ?ApiMain $outcomeMain = null;
 	private ?ApiLayersMissingPdfImportRead $readModule = null;
 	private ?ApiLayersMissingPdfImportPublish $publishModule = null;
 
@@ -82,6 +83,11 @@ class MissingPdfImportApiTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$factory = PageOwnedPilotRegistration::apiModules()['layersmissingpdfimportpublish']['factory'];
 			$this->publishModule = $factory( $main, $name );
 			return $this->publishModule;
+		};
+		$definitions['layersmissingpdfimportoutcome']['factory'] = function ( $main, $name ) {
+			$this->outcomeMain = $main;
+			$factory = PageOwnedPilotRegistration::apiModules()['layersmissingpdfimportoutcome']['factory'];
+			return $factory( $main, $name );
 		};
 		$this->overrideConfigValue( 'APIModules', array_replace(
 			$services->getMainConfig()->get( 'APIModules' ), $definitions ) );
@@ -521,6 +527,81 @@ class MissingPdfImportApiTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertGreaterThan( $this->target['revision'], $latest->getId() );
 		$this->assertSame( $document, $latest->getContent( PageRevisionWriter::SLOT )->getCanonicalText() );
 		$this->assertCount( $count + 1, $this->state()['revision'] );
+	}
+
+	private function outcomeParams( array $sent ): array {
+		return array_replace( $sent, [ 'action' => 'layersmissingpdfimportoutcome',
+			'owner' => $this->target['page']->getTitle()->getPrefixedDBkey(), 'maxage' => 3600, 'smaxage' => 3600 ] );
+	}
+
+	/** @dataProvider provideTargetSlots */
+	public function testOutcomeConfirmsExactParsedRequestWithoutNativeWrites( bool $slot ): void {
+		$this->prepareFixtures( $slot );
+		$this->uploadUpdatedPdf( $this->target['file'] );
+		$params = $this->publishParams();
+		$params['data'] = json_encode( json_decode( $params['data'] ), JSON_PRETTY_PRINT |
+			JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
+		$params['summary'] = " Owner cafe\u{0301} π 日本 😀 ";
+		$saved = $this->doApiRequestWithToken( $params, null, $this->actor )[0];
+		$before = $this->state();
+		$checked = $this->doApiRequestWithToken( $this->outcomeParams( $params ), null, $this->actor )[0];
+		$this->assertSame( [ 'version' => 1, 'result' => 'Confirmed',
+			'revid' => $saved['layersmissingpdfimportpublish']['revid'] ], $checked['layersmissingpdfimportoutcome'] );
+		$this->privatePolicy( $this->outcomeMain );
+		$this->assertSame( $before, $this->state(), 'Confirmation creates no native rows' );
+	}
+
+	public function testOutcomeMethodTokenAndDuplicateMemberRefusalsPreserveNativeRows(): void {
+		$this->prepareFixtures();
+		$params = $this->publishParams();
+		$this->doApiRequestWithToken( $params, null, $this->actor );
+		$base = $this->outcomeParams( $params );
+		$descriptor = json_decode( $params['importsources'], true )[0];
+		$duplicate = '[{"sourcePageId":' . $descriptor['sourcePageId'] . ',"sourcePageId":' .
+			$descriptor['sourcePageId'] . ',"sourceRevisionId":' . $descriptor['sourceRevisionId'] .
+			',"sourceSurfaceId":' . json_encode( $descriptor['sourceSurfaceId'] ) . '}]';
+		$cases = [
+			[ [ 'summary' => 'Different note' ], 'layers-working-copy-import-unavailable', 'csrf', true ],
+			[ [ 'importsources' => $duplicate ], 'layers-working-copy-import-unavailable', 'csrf', true ],
+			[ [ 'maintext' => '' ], 'layers-working-copy-import-unavailable', 'csrf', true ],
+			[ [], 'missingparam', null, true ],
+			[ [], 'mustbeposted', 'csrf', false ]
+		];
+		foreach ( $cases as [ $overrides, $code, $token, $posted ] ) {
+			$before = $this->state();
+			$this->posted = $posted;
+			try {
+				$this->doApiRequest( array_replace( $base, $overrides ), null, false, $this->actor, $token );
+				$this->fail( 'Outcome refusal must preserve the uncertain editor' );
+			} catch ( \MediaWiki\Api\ApiUsageException $error ) {
+				$this->assertTrue( self::apiExceptionHasCode( $error, $code ), $error->getMessage() );
+			} finally {
+				$this->posted = true;
+			}
+			$this->privatePolicy( $this->outcomeMain );
+			$this->assertSame( $before, $this->state() );
+		}
+	}
+
+	public function testOutcomeFindsCommittedSaveAfterItsSuccessEnvelopeWasLost(): void {
+		$this->prepareFixtures();
+		$params = $this->publishParams();
+		$maximum = $this->getServiceContainer()->getMainConfig()->get( 'APIMaxResultSize' );
+		$this->overrideConfigValue( 'APIMaxResultSize', 1 );
+		try {
+			$this->doApiRequestWithToken( $params, null, $this->actor );
+			$this->fail( 'Response capacity must reproduce the lost confirmation' );
+		} catch ( \MediaWiki\Api\ApiUsageException $error ) {
+			$this->assertTrue( self::apiExceptionHasCode( $error, 'layers-publication-outcome-unknown' ) );
+		}
+		$this->overrideConfigValue( 'APIMaxResultSize', $maximum );
+		$current = $this->getServiceContainer()->getRevisionLookup()->getRevisionByTitle(
+			$this->target['page']->getTitle(), 0, RdbmsAccessObject::READ_LATEST );
+		$before = $this->state();
+		$checked = $this->doApiRequestWithToken( $this->outcomeParams( $params ), null, $this->actor )[0];
+		$this->assertSame( $current->getId(), $checked['layersmissingpdfimportoutcome']['revid'] );
+		$this->assertSame( $before, $this->state(), 'A lost envelope never requires a second Save' );
+		$this->privatePolicy( $this->outcomeMain );
 	}
 
 	public function testRegistrationIsLazyPrivateAndCollisionSafe(): void {

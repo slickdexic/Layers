@@ -469,6 +469,9 @@
 			if ( record.imports || record.operation || record.recovering || record.publicationBlocked ||
 				!api || typeof api.post !== 'function' || typeof api.postWithToken !== 'function' ) throw unavailable();
 			record.transaction.enableImports( api ); record.transaction.enableImportPublication( api );
+			for ( const key of [ 'prepareImportPublicationReconciliation', 'commitImportPublicationReconciliation', 'releaseImportPublicationReconciliation' ] ) {
+				record.methods.push( record.Store.captureWorkingCopyMethod( record.transaction, key ) );
+			}
 			record.imports = true; record.version++;
 		}
 
@@ -758,7 +761,14 @@
 		/** Explicit opt-in only. verifyBackup must synchronously prove durable, independent pre-check bytes. */
 		async reconcilePublication( dependencies, verifyBackup ) {
 			const record = data( this );
-			if ( record.imports ) throw unavailable();
+			if ( record.imports ) {
+				if ( !dependencies || ![ Object.prototype, null ].includes( Object.getPrototypeOf( dependencies ) ) ) throw unavailable();
+				for ( const key of [ 'reader', 'pdfReader' ] ) {
+					const descriptor = Object.getOwnPropertyDescriptor( dependencies, key );
+					if ( !descriptor || !Object.hasOwn( descriptor, 'value' ) ) throw unavailable();
+					record.Store.captureWorkingCopyMethod( descriptor.value, 'read' );
+				}
+			}
 			const admit = value => {
 				alive( value ); const phase = value.transaction.getStatus().phase;
 				if ( value.needsRefresh || value.saving || value.reviewBlocked ||
@@ -775,11 +785,11 @@
 					const result = verifyBackup(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); } participants();
 					if ( canonical( [ record.publicationBlocked, record.blockedPhase, record.reviewBlocked, record.confirmation ] ) !== hold ) throw unavailable();
 				};
-				check(); prepared = await record.transaction.preparePublicationReconciliation( dependencies,
+				check(); prepared = await record.transaction[ record.imports ? 'prepareImportPublicationReconciliation' : 'preparePublicationReconciliation' ]( dependencies,
 					{ guard: check, pages: history.members.map( member => member.page ) } ); check();
 				if ( prepared.outcome.outcome === 'changed' ) return { ...prepared.outcome, applied: false, needsRefresh: false };
 				const timelines = new Map(), active = record.transaction.getStatus().page;
-				const anchor = record.transaction.getDraft().creation.anchorSurface, confirmation = prepared.confirmation;
+				const anchor = modelDraft( record ).creation.anchorSurface, confirmation = prepared.confirmation;
 				for ( const member of history.members ) {
 					const timeline = record.history.copyTimeline( member.timeline );
 					if ( confirmation ) {
@@ -792,14 +802,14 @@
 					}
 					timelines.set( member.page, record.history.preflightTimeline( timeline ) );
 				}
-				const dirty = !confirmation || canonical( record.transaction.getDraft().snapshot ) !== canonical( confirmation.snapshot );
+				const dirty = !confirmation || canonical( modelDraft( record ).snapshot ) !== canonical( confirmation.snapshot );
 				patch = record.store.prepareWorkingCopyPatch( { values: { isDirty: dirty }, clear: [] } );
 				const stateCommit = record.store.prepareWorkingCopyPatchCommit( patch );
 				if ( !record.Store.isWorkingCopyPatchCommit( stateCommit ) ) throw unavailable();
 				const writes = confirmation ? assignments( record.history, timelines.get( active ) ) : [];
 				stateCommit.preflight(); check();
 				// Final model/backup guard precedes all changes. No await, setters or notifications intervene.
-				const result = record.transaction.commitPublicationReconciliation( prepared.handle );
+				const result = record.transaction[ record.imports ? 'commitImportPublicationReconciliation' : 'commitPublicationReconciliation' ]( prepared.handle );
 				stateCommit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
 				if ( confirmation ) record.timelines = timelines;
 				record.confirmation = confirmation; record.publicationBlocked = false; record.blockedPhase = null;
@@ -809,7 +819,7 @@
 				finally { record.committing = false; }
 				return { ...result, needsRefresh: record.needsRefresh };
 			} finally {
-				if ( prepared ) record.transaction.releasePublicationReconciliation( prepared.handle );
+				if ( prepared ) record.transaction[ record.imports ? 'releaseImportPublicationReconciliation' : 'releasePublicationReconciliation' ]( prepared.handle );
 				if ( patch ) record.store.releaseWorkingCopyPatch( patch ); record.recovering = false;
 			}
 		}

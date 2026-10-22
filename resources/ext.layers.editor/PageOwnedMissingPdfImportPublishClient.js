@@ -1,7 +1,7 @@
 /** Explicit native first-Save transport for an imported, previously absent PDF layer set. */
 ( function () {
 	'use strict';
-	const clients = new WeakMap(), confirmations = new WeakMap();
+	const clients = new WeakMap(), confirmations = new WeakMap(), outcomes = new WeakMap();
 	const MAX_ID = 2147483647, MAX_BYTES = 2097152;
 	const refused = new Set( [ 'missingparam', 'badtoken', 'outofrange', 'maxbytes', 'permissiondenied', 'ratelimited',
 		'mustbeposted', 'layers-owner-edit-denied', 'layers-invalid-publication-request', 'layers-invalid-snapshot',
@@ -105,6 +105,41 @@
 				const proof = Object.freeze( { revisionId: output.revid } );
 				confirmations.set( proof, { client: this, request: JSON.stringify( value ) } ); return proof;
 			} ).catch( error => { throw mapped( error ); } );
+		}
+
+		/** Explicit read-only Check: the server independently verifies the request's native successor. */
+		check( request, owner ) {
+			let value;
+			try { value = capture( request ); text( owner, 1024 ); if ( !owner ) throw invalid(); }
+			catch ( ignored ) { return Promise.reject( invalid() ); }
+			const state = clients.get( this ); if ( !state ) return Promise.reject( invalid() );
+			const dto = { action: 'layersmissingpdfimportoutcome', targetpageid: value.pageId, baserevid: value.baseRevisionId,
+				owner, embedstart: value.selection.start, embedtext: value.selection.expected, data: value.snapshotJson,
+				importsources: JSON.stringify( value.sources ), summary: value.summary };
+			return new Promise( ( resolve, reject ) => {
+				try {
+					const pending = state.post.call( state.api, 'csrf', dto );
+					if ( pending && typeof pending.then === 'function' ) pending.then( resolve, ( code, result ) => reject( mapped( code, result ) ) );
+					else resolve( pending );
+				} catch ( error ) { reject( mapped( error ) ); }
+			} ).then( response => {
+				if ( response && [ Object.prototype, null ].includes( Object.getPrototypeOf( response ) ) ) {
+					const error = Object.getOwnPropertyDescriptor( response, 'error' );
+					if ( error && Object.hasOwn( error, 'value' ) ) throw mapped( { error: error.value } );
+				}
+				const values = fields( response, [ 'layersmissingpdfimportoutcome' ] );
+				const output = fields( values.layersmissingpdfimportoutcome, [ 'version', 'result', 'revid' ] );
+				if ( output.version !== 1 || output.result !== 'Confirmed' || !id( output.revid ) || output.revid <= value.baseRevisionId ) throw invalid();
+				const proof = Object.freeze( { revisionId: output.revid } );
+				outcomes.set( proof, { client: this, request: JSON.stringify( value ), owner } ); return proof;
+			} ).catch( error => { throw mapped( error ); } );
+		}
+
+		static isOutcomeConfirmationFor( proof, client, request, owner ) {
+			try {
+				const stored = outcomes.get( proof );
+				return !!stored && stored.client === client && stored.owner === owner && stored.request === JSON.stringify( capture( request ) );
+			} catch ( ignored ) { return false; }
 		}
 
 		/** Only this actual client's completed request can acknowledge the exact captured publication. */

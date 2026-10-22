@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Revision;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Api\ApiLayersDrawings;
+use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportOutcome;
 use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportPublish;
 use MediaWiki\Extension\Layers\Api\ApiLayersMissingPdfImportRead;
 use MediaWiki\Extension\Layers\Api\ApiLayersPdfCreationRead;
@@ -150,6 +151,18 @@ class PageOwnedPilot {
 			new PageMissingPdfImportPublicationService( $this->newMissingPdfImportPreparation(), $this->publisher,
 				$this->newIdentityResolver(), $services->getTitleFactory(), $this->scope,
 				$services->getRevisionLookup(), $access, $sources, $services->getConnectionProvider() ) );
+	}
+
+	/** @param ApiMain $main @param string $name @return ApiLayersMissingPdfImportOutcome */
+	public function newMissingPdfImportOutcomeApi( ApiMain $main, string $name ): ApiLayersMissingPdfImportOutcome {
+		$s = $this->services;
+		$access = new PageHistoryAccess( $s->getRevisionLookup() );
+		$sources = new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() );
+		$reader = new PageWorkingCopyPdfImportReadService( $this->newIdentityResolver(), $s->getTitleFactory(),
+			$this->scope, $access, $sources, new SourceRenditions( $s->getUrlUtils() ), $this->newDrawings );
+		return new ApiLayersMissingPdfImportOutcome( $main, $name, new PageMissingPdfImportOutcomeReadService(
+			$this, $this->newIdentityResolver(), $s->getTitleFactory(), $s->getRevisionLookup(), $access,
+			$reader, $sources ), $s->getService( 'LayersRateLimiter' ) );
 	}
 
 	private function newMissingPdfImportPreparation(): PageMissingPdfImportPreparation {

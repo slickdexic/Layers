@@ -5,6 +5,7 @@
 	const importModes = new WeakMap(), importPlans = new WeakMap(), importCheckpoints = new WeakMap();
 	const importPublications = new WeakMap();
 	const importPublicationRecoveries = new WeakMap();
+	const importReconciliations = new WeakMap();
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -284,7 +285,8 @@
 		if ( !mode || !mode.active || !publication || mode.reader.read !== mode.read || mode.reader.dispose !== mode.dispose ||
 			record.adapter.toEditorState !== mode.toState || record.adapter.withEditorState !== mode.withState ||
 			window.Layers.Editor.PageOwnedSnapshotAdapter !== mode.adapterClass ||
-			publication.client.publish !== publication.publish || publication.Client.isConfirmationFor !== publication.confirm ) throw unavailable();
+			publication.client.publish !== publication.publish || publication.Client.isConfirmationFor !== publication.confirm ||
+			publication.client.check !== publication.check || publication.Client.isOutcomeConfirmationFor !== publication.outcomeConfirm ) throw unavailable();
 		return { record, mode, publication };
 	}
 	async function validateImportPublicationAttempt( transaction, live, attempt ) {
@@ -505,7 +507,8 @@
 			const { record } = importMode( this );
 			if ( importPublications.has( this ) || record.attempt !== null ) throw unavailable();
 			const Client = importPublisherTypes(), client = new Client( api );
-			importPublications.set( this, { Client, client, publish: client.publish, confirm: Client.isConfirmationFor, sequence: 0, attempt: null } );
+			importPublications.set( this, { Client, client, publish: client.publish, confirm: Client.isConfirmationFor,
+				check: client.check, outcomeConfirm: Client.isOutcomeConfirmationFor, sequence: 0, attempt: null } );
 		}
 
 		/** Detached complete state for future storage wiring; serialized attempts never grant confirmation. */
@@ -599,6 +602,63 @@
 				publication.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused';
 				publication.attempt.code = code; throw Object.assign( new Error( code ), { code } );
 			}
+		}
+
+		/** Check the retained request privately; no saved marker or publication hold changes during awaits. */
+		async prepareImportPublicationReconciliation( dependencies, options ) {
+			const { record, mode, publication } = importPublicationRecord( this ), attempt = publication.attempt;
+			if ( !attempt || ![ 1, 2 ].includes( attempt.version ) || ![ 'ready', 'conflict', 'uncertain' ].includes( record.phase ) ) throw unavailable();
+			const epoch = record.epoch, generation = mode.generation, phase = record.phase;
+			const saved = clone( record.adapter, attempt ), live = canonical( importCapsule( record, mode ) );
+			const host = operationOptions( record, options, true );
+			const local = () => {
+				const currentValue = importPublicationRecord( this );
+				if ( currentValue.record !== record || currentValue.mode !== mode || currentValue.publication !== publication ||
+					record.epoch !== epoch || record.phase !== phase || mode.generation !== generation || publication.attempt !== attempt ||
+					!equal( publication.attempt, saved ) || canonical( importCapsule( record, mode ) ) !== live ) throw unavailable();
+			};
+			const check = () => { local(); host.check(); local(); };
+			check(); let outcome;
+			if ( attempt.version === 1 ) {
+				const proof = await publication.check.call( publication.client, saved.request, record.fixed.target.owner );
+				check();
+				if ( !publication.outcomeConfirm.call( publication.Client, proof, publication.client, saved.request, record.fixed.target.owner ) ) throw unavailable();
+				outcome = { version: 1, outcome: 'payload-current', revisionId: proof.revisionId,
+					baseRevisionId: record.fixed.target.revisionId, attemptSequence: attempt.sequence, publicationRetried: false, holdCleared: false };
+			} else {
+				if ( !dependencies || !equal( Reflect.ownKeys( dependencies ).sort(), [ 'api', 'pdfReader', 'reader' ] ) ||
+					Object.values( Object.getOwnPropertyDescriptors( dependencies ) ).some( descriptor => !Object.hasOwn( descriptor, 'value' ) ) ) throw unavailable();
+				const Outcome = typeof module !== 'undefined' && module && typeof module.require === 'function' ?
+					require( './PageOwnedPdfCreationOutcomeReader.js' ) : window.Layers.Editor.PageOwnedPdfCreationOutcomeReader;
+				outcome = await Outcome.inspect( { draft: saved.capsule.draft, attempt: { version: 1,
+					sequence: saved.sequence, baseRevisionId: saved.request.baseRevisionId, snapshot: JSON.parse( saved.request.snapshotJson ) } },
+				{ ...dependencies, creationReader: record.reader }, check, host.pages );
+				check();
+				// A delayed POST can still arrive after a base-current read. Keep this hold intact.
+				if ( outcome.outcome === 'base-current' ) throw unavailable();
+			}
+			const confirmation = outcome.outcome === 'payload-current' ?
+				{ revisionId: outcome.revisionId, snapshot: clone( record.adapter, saved.capsule.draft.snapshot ) } : null;
+			const handle = Object.freeze( {} ); check();
+			importReconciliations.set( handle, { owner: this, record, mode, publication, saved, check, outcome, confirmation } );
+			return { handle, outcome: clone( record.adapter, outcome ), confirmation: clone( record.adapter, confirmation ) };
+		}
+
+		commitImportPublicationReconciliation( handle ) {
+			const plan = importReconciliations.get( handle );
+			if ( !plan || plan.owner !== this ) throw unavailable();
+			const output = clone( plan.record.adapter, { ...plan.outcome, applied: !!plan.confirmation, holdCleared: !!plan.confirmation } );
+			const attempt = { ...plan.saved, dispatchState: 'confirmed', revisionId: plan.outcome.revisionId, code: null };
+			plan.check(); importReconciliations.delete( handle );
+			if ( !plan.confirmation ) return output;
+			// Private assignments only. Host state/history commits follow synchronously, without callbacks.
+			plan.record.confirmed = plan.confirmation; plan.publication.attempt = attempt;
+			plan.record.phase = 'confirmed'; plan.record.epoch++; plan.mode.generation++;
+			return output;
+		}
+
+		releaseImportPublicationReconciliation( handle ) {
+			const plan = importReconciliations.get( handle ); if ( plan && plan.owner === this ) importReconciliations.delete( handle );
 		}
 
 		/** Prepare an untrusted complete backup against the unchanged native base, without altering work. */

@@ -287,3 +287,41 @@ Any outcome reader must independently verify owner/parent, visible revision text
 and comment, saved content, original embedding/base and fresh source/file checks.
 No confirmation reader, saved-session handoff or editor caller is activated by
 this internal persistence mechanism. Recovery after an advancing Save remains open.
+
+## Checking a lost Import Save response
+
+The existing Import publication client has a separate read-only Check request.
+It preserves the attempted snapshot, native request and complete current draft.
+No publication request is retried. The registered private POST boundary requires
+CSRF, the Layers editing right, current owner/edit access and bounded inputs.
+
+Confirmation requires the current owning-page revision to be the original base's
+direct successor. Both revisions' visible page text and exact saved embedding
+must agree. The base must have no member of the new PDF group; existing sibling
+surfaces and document fields must survive unchanged. Native current embedding
+admission, all original-base-derived page IDs, the complete PDF inventory, exact
+saved snapshot, visible native comment and full request receipt must agree.
+Fresh source-owner, historical revision and pinned-file checks are repeated after
+media callbacks. A matching payload or reproducible receipt alone proves nothing.
+The transport uses the same raw strings, descriptor capture/deduplication and
+native parsed note processing as Save, including its Unicode normalization.
+
+The client returns an opaque confirmation bound to its actual request, owner and
+client instance. Serialized fields, cloned objects and ordinary publication
+responses cannot supply this confirmation. A private reconciliation plan repeats
+complete live-work, participant, method and independent-backup checks before one
+synchronous model/state/history transition. Only the sent snapshot receives saved
+markers; newer work, source references, per-page timelines and whole-group history
+stay intact. The existing saved-session handoff independently reauthorizes the
+current saved revision before taking over the editor.
+
+A source-free Save after Import Undo uses the ordinary outcome reader and keeps
+the group Redo branch. A base-current read leaves the Import hold intact because
+the delayed request may still arrive. A later successor, refusal, changed live
+work or invalid backup preserves work and every hold without another Save.
+Existing non-Import behavior and UI callers remain unchanged.
+
+This connects retained-session checking and saved handoff. Restoring a creation
+backup into a newly opened, advanced saved session still requires its explicit
+recovery integration; unchanged-base restoration is not relaxed here. Complete
+reload/reopen, HTTP/browser, supported-version and owner acceptance remain required.
