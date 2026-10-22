@@ -711,7 +711,9 @@
 				}
 			}
 			const layers = this.editor.stateManager.get( 'layers' );
-			state.layers = Array.isArray( layers ) ? layers.map( withoutClearedValues ) : layers;
+			// Whole-PDF Import history retains complete finite data, including unknown null fields.
+			state.layers = wholePdfImportPublications.has( this ) ? this.session._pdfCopy( layers ) :
+				Array.isArray( layers ) ? layers.map( withoutClearedValues ) : layers;
 			return state;
 		}
 

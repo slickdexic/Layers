@@ -325,3 +325,38 @@ This connects retained-session checking and saved handoff. Restoring a creation
 backup into a newly opened, advanced saved session still requires its explicit
 recovery integration; unchanged-base restoration is not relaxed here. Complete
 reload/reopen, HTTP/browser, supported-version and owner acceptance remain required.
+
+## Reopening with an earlier creation backup
+
+The saved-PDF draft lifecycle can explicitly enable recovery of complete creation
+backups through the existing earlier-draft Review/Restore dialog. Discovery is
+restricted to the same wiki, user and owning page at an earlier revision. It
+retains the original raw record and writer namespace without selecting or
+overwriting that writer. Discovery alone grants no native authority.
+
+Before offering Review, the original attempted request must match the newly
+loaded saved snapshot. Source-bearing attempts require the actual client's
+request-bound native Check; source-free attempts use the ordinary direct-successor
+outcome reader. A claimed serialized confirmation, matching layers alone, a later
+successor or an uncertain unchanged base cannot authorize this conversion.
+
+The existing saved-session admission converts all pages and group history against
+the real saved revision. Empty pre-Import pages retain the creation anchor's
+canvas defaults and use exact pinned native dimensions for their own PDF page.
+Fresh saved-PDF recovery independently authorizes sources, associations and both
+sides of group Undo/Redo. Complete finite layer fields, including unknown null
+values, survive through the opted-in saved Import bridge and later draft storage.
+Legacy bridge normalization remains unchanged outside that route.
+
+Review changes no session or backup. Restore repeats the private saved session's
+native page checks and the original outcome Check, then commits through the saved
+application's guarded recovery transaction. Changed work, participants, source
+access or raw backup bytes cause refusal. Keep/cancellation preserves current
+work and every original backup. Successful recovery retains newer work separately
+from the saved snapshot, group Undo/Redo, page turns and subsequent attributed
+Save against the current owner revision; it never retries the earlier Save.
+
+This connects the actual controller/lifecycle and existing dialog in client
+integration tests. Enabling the final approved Import controls in native editor
+entry points and HTTP/browser, supported-version and owner acceptance remain
+separate release requirements.

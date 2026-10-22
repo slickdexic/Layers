@@ -23,7 +23,7 @@
 
 	class PageOwnedDraftStore {
 		/** Inactive discovery: same wiki/user/owner only; keys and payloads grant no native authority. */
-		listEarlierCreationCandidates( scope ) {
+		listEarlierCreationCandidates( scope, pdf = false ) {
 			const permitted = JSON.parse( this._validateAndBuildKey( scope ).slice( STORAGE_KEY_PREFIX.length ) );
 			try {
 				const found = [], records = earlierCreationRecords.get( this ) || new WeakMap();
@@ -48,8 +48,12 @@
 					try {
 						const envelope = typeof raw === 'string' ? JSON.parse( raw ) : null;
 						if ( !envelope || envelope.version !== 1 || !envelope.scope || Object.keys( envelope.scope ).length !== 5 ||
-							Object.keys( candidateScope ).some( name => envelope.scope[ name ] !== candidateScope[ name ] ) ||
-							!envelope.creationOrigin || envelope.creationOrigin.version !== 1 || !envelope.creationOrigin.origin ||
+							Object.keys( candidateScope ).some( name => envelope.scope[ name ] !== candidateScope[ name ] ) ) { continue; }
+						if ( pdf ) {
+							const creation = envelope.pdfCreation, target = creation && creation.draft && creation.draft.creation && creation.draft.creation.target;
+							if ( !creation || creation.version !== 4 || !creation.importPublication || !creation.importHistory || !target ||
+								target.owner !== permitted[ 2 ] || target.revisionId !== values[ 3 ] || target.surfaceId !== values[ 4 ] ) { continue; }
+						} else if ( !envelope.creationOrigin || envelope.creationOrigin.version !== 1 || !envelope.creationOrigin.origin ||
 							envelope.creationOrigin.origin.owner !== permitted[ 2 ] || envelope.creationOrigin.origin.revisionId !== values[ 3 ] ||
 							envelope.creationOrigin.origin.surfaceId !== values[ 4 ] || !envelope.workingCopyDraft ) { continue; }
 						const handle = Object.freeze( Object.create( null ) );
@@ -60,6 +64,9 @@
 				return found;
 			} catch ( error ) { throw failure( 'layers-draft-storage-failed' ); }
 		}
+
+		/** Same scoped discovery for complete PDF creation backups; native checks still decide eligibility. */
+		listEarlierPdfCreationCandidates( scope ) { return this.listEarlierCreationCandidates( scope, true ); }
 
 		/** Read an owned discovery handle without selecting its writer or altering any destination. */
 		inspectEarlierCreationCandidate( handle ) {

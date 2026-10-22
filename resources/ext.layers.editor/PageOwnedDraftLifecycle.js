@@ -5,6 +5,7 @@
 		'backgroundVisible', 'backgroundOpacity' ];
 	const earlierCreationClients = new WeakMap();
 	const wholePdfControllers = new WeakMap();
+	const earlierPdfCreationClients = new WeakMap();
 
 	// Stored revisions have sorted keys while editor objects keep creation order; order is not content.
 	function canonical( value ) {
@@ -99,28 +100,38 @@
 			earlierCreationClients.set( this, client );
 		}
 
+		/** Connect earlier complete creation backups to the same approved Review/Restore flow. */
+		enableEarlierPdfCreationRecovery( dependencies ) {
+			if ( this.ready || this.disposed || this.finalized || !wholePdfControllers.has( this ) || earlierCreationClients.has( this ) ||
+				earlierPdfCreationClients.has( this ) ) throw new Error( 'layers-editor-session-unavailable' );
+			this.controller.enableEarlierPdfCreationRecovery( dependencies ); earlierPdfCreationClients.set( this, dependencies );
+		}
+
 		/** Review private plans before listing them; cancellation never selects an earlier writer. */
-		async _chooseEarlierCreationRecovery( client ) {
+		async _chooseEarlierCreationRecovery( client, pdf = false ) {
 			const bridge = this.bridge, controller = this.controller, ui = this.ui, plans = [];
+			const clients = pdf ? earlierPdfCreationClients : earlierCreationClients;
+			const release = handle => pdf ? controller.releaseEarlierPdfCreationRecovery( handle ) : bridge.releaseEarlierCreationDraftRecovery( handle );
 			let earlierSelected = false;
 			const guard = () => {
 				if ( this.disposed || this.finalized || this.saving || this.checking ||
 					this.bridge !== bridge || this.controller !== controller || this.ui !== ui ||
-					earlierCreationClients.get( this ) !== client ) { throw new Error( 'layers-editor-session-unavailable' ); }
+					clients.get( this ) !== client ) { throw new Error( 'layers-editor-session-unavailable' ); }
 			};
 			const failed = () => { if ( !this.disposed && !this.finalized ) { ui.notifyEarlierFailure(); } };
 			try {
-				guard(); const handles = controller.listEarlierCreationCandidates();
+				guard(); const handles = pdf ? controller.listEarlierPdfCreationCandidates() : controller.listEarlierCreationCandidates();
 				if ( !handles.length ) { return null; }
 				const current = controller.listCandidates(), descriptors = controller.describeCandidates( current );
 				for ( const candidate of handles ) {
 					let handle;
 					try {
-						guard(); handle = await controller.prepareEarlierCreationRecovery( candidate, client ); guard();
-						const preview = await bridge.reviewEarlierCreationDraftRecovery( handle, guard ); guard();
+						guard(); handle = pdf ? await controller.prepareEarlierPdfCreationRecovery( candidate, guard ) :
+							await controller.prepareEarlierCreationRecovery( candidate, client ); guard();
+						const preview = pdf ? controller.reviewEarlierPdfCreationRecovery( handle ) : await bridge.reviewEarlierCreationDraftRecovery( handle, guard ); guard();
 						plans.push( { handle, preview: { ...preview, earlierCreation: true, earlierNumber: plans.length + 1 } } );
 					} catch ( error ) {
-						if ( handle ) { try { bridge.releaseEarlierCreationDraftRecovery( handle ); } catch ( cleanupError ) {} }
+						if ( handle ) { try { release( handle ); } catch ( cleanupError ) {} }
 						// An unprovable backup stays intact and is not offered as an eligible draft.
 						guard();
 					}
@@ -140,7 +151,8 @@
 				const plan = plans[ choice.selected - current.length ];
 				const restore = await ui.confirmRecovery( plan.preview ); guard();
 				if ( restore ) {
-					await bridge.commitEarlierCreationDraftRecovery( plan.handle, guard ); guard();
+					if ( pdf ) await controller.commitEarlierPdfCreationRecovery( plan.handle );
+					else await bridge.commitEarlierCreationDraftRecovery( plan.handle, guard ); guard();
 					if ( plan.preview.publicationBlocked ) { ui.notifyBlocked(); }
 				}
 				return { completed: true, current: [] };
@@ -148,15 +160,15 @@
 				failed(); return earlierSelected ? { completed: true, current: [] } : null;
 			} finally {
 				for ( const plan of plans ) {
-					try { bridge.releaseEarlierCreationDraftRecovery( plan.handle ); } catch ( error ) {}
+					try { release( plan.handle ); } catch ( error ) {}
 				}
 			}
 		}
 
 		/** @return {Promise<void>} Authorization/exact revision loading must already have succeeded */
 		async initialize() {
-			const client = earlierCreationClients.get( this );
-			const choice = client ? await this._chooseEarlierCreationRecovery( client ) : null;
+			const pdf = earlierPdfCreationClients.has( this ), client = pdf ? earlierPdfCreationClients.get( this ) : earlierCreationClients.get( this );
+			const choice = client ? await this._chooseEarlierCreationRecovery( client, pdf ) : null;
 			if ( this.disposed || this.finalized || ( choice && choice.blocked ) ) { return; }
 			const candidates = choice ? choice.current : this.controller.listCandidates();
 			if ( candidates.length ) {

@@ -5,6 +5,7 @@
 	const earlierCreationInspections = new WeakSet();
 	const wholePdfDraftControllers = new WeakMap(), wholePdfCandidates = new WeakMap(), wholePdfRecoveries = new WeakMap();
 	const wholePdfDraftActions = new WeakMap();
+	const earlierPdfModes = new WeakMap(), earlierPdfRecoveries = new WeakMap();
 	function wholePdfMode( controller ) {
 		const mode = wholePdfDraftControllers.get( controller );
 		if ( !mode ) { throw controller._error(); }
@@ -24,6 +25,78 @@
 	}
 
 	class PageOwnedDraftController {
+		/** Enable earlier creation backups only for this actual, editable saved-PDF application. */
+		enableEarlierPdfCreationRecovery( dependencies ) {
+			const mode = wholePdfMode( this );
+			if ( earlierPdfModes.has( this ) || !dependencies ) throw this._error();
+			const Recovery = typeof module !== 'undefined' && module.require ? module.require( './PageOwnedPdfCreationReloadRecovery.js' ) :
+				window.Layers.Editor.PageOwnedPdfCreationReloadRecovery;
+			const methods = [ [ Recovery, 'prepare' ], [ this, 'listEarlierPdfCreationCandidates' ],
+				[ this, 'prepareEarlierPdfCreationRecovery' ], [ this, 'reviewEarlierPdfCreationRecovery' ],
+				[ this, 'commitEarlierPdfCreationRecovery' ], [ this, 'releaseEarlierPdfCreationRecovery' ],
+				[ this.store, 'listEarlierPdfCreationCandidates' ], [ this.store, 'inspectEarlierCreationCandidate' ] ]
+				.map( ( [ object, key ] ) => mode.Store.captureWorkingCopyMethod( object, key ) );
+			earlierPdfModes.set( this, { mode, dependencies, Recovery, methods } );
+		}
+
+		listEarlierPdfCreationCandidates() {
+			const configured = earlierPdfModes.get( this ), mode = wholePdfMode( this );
+			if ( !configured || configured.mode !== mode ) throw this._error();
+			mode.Store.checkWorkingCopyMethods( configured.methods );
+			return mode.store.listEarlierPdfCreationCandidates( this._scope() );
+		}
+
+		/** Inspect and prepare privately before the existing dialog offers Review and explicit Restore. */
+		async prepareEarlierPdfCreationRecovery( candidate, assertCurrent ) {
+			const configured = earlierPdfModes.get( this ), mode = wholePdfMode( this ); let converted, native;
+			if ( !configured || configured.mode !== mode || typeof assertCurrent !== 'function' ) throw this._error();
+			const source = mode.store.inspectEarlierCreationCandidate( candidate ), envelope = JSON.parse( source.raw );
+			const currentScope = this._scope(), target = envelope.pdfCreation && envelope.pdfCreation.draft.creation.target;
+			if ( !target || source.scope.wiki !== currentScope.wiki || source.scope.user !== currentScope.user ||
+				source.scope.owner !== currentScope.owner || target.owner !== source.scope.owner ||
+				target.revisionId !== source.scope.baseRevisionId || target.surfaceId !== source.scope.surfaceId ||
+				source.scope.baseRevisionId >= currentScope.baseRevisionId ) throw this._error();
+			const current = mode.application.captureDraftForStorage();
+			const coordinator = mode.bridge.pdfCoordinator, version = coordinator.version, witness = coordinator.witness( true );
+			const check = () => {
+				if ( wholePdfMode( this ) !== mode || earlierPdfModes.get( this ) !== configured ||
+					JSON.stringify( this._scope() ) !== JSON.stringify( currentScope ) ||
+					mode.store.inspectEarlierCreationCandidate( candidate ).raw !== source.raw ||
+					mode.bridge.pdfCoordinator !== coordinator || coordinator.version !== version || coordinator.witness( true ) !== witness ) throw this._error();
+				mode.Store.checkWorkingCopyMethods( configured.methods );
+				const result = assertCurrent(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw this._error(); }
+			};
+			try {
+				check(); converted = await configured.Recovery.prepare( envelope.pdfCreation, current.session, configured.dependencies, check ); check();
+				native = await mode.application.prepareDraftRecovery( converted.draft, check ); check();
+				const handle = Object.freeze( Object.create( null ) );
+				earlierPdfRecoveries.set( handle, { controller: this, mode, converted, native, check,
+					preview: { editorState: mode.Store.copyWorkingCopyValue( converted.editorState ), label: envelope.pdfCreation.draft.creation.anchorSurface.label,
+						publicationBlocked: false } } ); return handle;
+			} catch ( error ) {
+				if ( native ) { try { mode.application.releaseDraftRecovery( native ); } catch ( ignored ) {} }
+				if ( converted ) converted.release(); throw this._error();
+			}
+		}
+
+		reviewEarlierPdfCreationRecovery( handle ) {
+			const record = earlierPdfRecoveries.get( handle ); if ( !record || record.controller !== this ) throw this._error();
+			record.check(); record.mode.application.inspectDraftRecovery( record.native );
+			return record.mode.Store.copyWorkingCopyValue( record.preview );
+		}
+
+		async commitEarlierPdfCreationRecovery( handle ) {
+			const record = earlierPdfRecoveries.get( handle ); if ( !record || record.controller !== this ) throw this._error();
+			record.check(); await record.converted.revalidate(); record.check();
+			return record.mode.application.commitDraftRecovery( record.native );
+		}
+
+		releaseEarlierPdfCreationRecovery( handle ) {
+			const record = earlierPdfRecoveries.get( handle ); if ( !record || record.controller !== this ) throw this._error();
+			earlierPdfRecoveries.delete( handle );
+			try { record.mode.application.releaseDraftRecovery( record.native ); } finally { record.converted.release(); }
+		}
+
 		/** Explicit complete-PDF storage integration; legacy drafts retain their existing route. */
 		enableWholePdfDrafts( application ) {
 			const Application = window.Layers.Editor.PageOwnedWholePdfImportApplication, Store = window.Layers.Core.StateManager;

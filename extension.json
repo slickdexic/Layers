@@ -353,6 +353,7 @@
 				"PageOwnedPdfCreationReadClient.js",
 				"PageOwnedPdfCreationHost.js",
 				"PageOwnedPdfCreationSavedSession.js",
+				"PageOwnedPdfCreationReloadRecovery.js",
 				"PageOwnedPdfCreationOutcomeReader.js",
 				"PageOwnedPdfCreationDraftController.js",
 				"PageOwnedPdfCreationLifecycle.js",
