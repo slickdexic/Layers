@@ -55,6 +55,8 @@ class PageMissingPdfImportPublicationService {
 			}
 			json_decode( $json, false, 64, JSON_THROW_ON_ERROR );
 			JsonSnapshotCodec::rejectDuplicateKeys( $json );
+			$receipt = MissingPdfImportReceipt::newCommentData( $pageId, $baseRevisionId,
+				$start, $expected, $json, $sources, $note );
 			$content = new LayersDocumentContent( $json );
 			$canonical = $content->getCanonicalText();
 			$content = new LayersDocumentContent( $canonical );
@@ -154,10 +156,10 @@ class PageMissingPdfImportPublicationService {
 		};
 		$dbw = $this->db->getPrimaryDatabase();
 		return $dbw->doAtomicSection( __METHOD__, function () use ( $owner, $authority, $pageId,
-			$baseRevisionId, $canonical, $summary, $verify
+			$baseRevisionId, $canonical, $summary, $verify, $receipt
 		): int {
 			$revision = $this->publisher->publish( $owner, $authority, $baseRevisionId, $canonical,
-				$summary, null, $pageId, null, static fn () => $verify( $baseRevisionId, false ) );
+				$summary, null, $pageId, null, static fn () => $verify( $baseRevisionId, false ), $receipt );
 			$verify( $revision, true );
 			return $revision;
 		}, $dbw::ATOMIC_CANCELABLE );

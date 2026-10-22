@@ -82,12 +82,13 @@ class PagePublicationService {
 	 * @param string|null $botTag Makes this a bot edit of the migration script, with this tag as well
 	 * @param callable():void|null $verifySources Internal source-snapshot guard, run after core preparation
 	 *  and immediately before admission. The caller retains any required source transaction boundary.
+	 * @param array|null $commentData Internal structured native comment data; never request-controlled
 	 * @return int Committed revision ID, or unchanged ID for a successful no-op
 	 * @throws PublicationException With a stable internal error code
 	 */
 	public function publish( Title $owner, Authority $authority, int $baseRevisionId,
 		string $json, string $summary, ?WikitextContent $main = null, ?int $expectedPageId = null,
-		?string $botTag = null, ?callable $verifySources = null
+		?string $botTag = null, ?callable $verifySources = null, ?array $commentData = null
 	): int {
 		try {
 			$this->access->assertCanPrepareEdit( $owner, $authority );
@@ -168,7 +169,7 @@ class PagePublicationService {
 		}
 		try {
 			$revision = $this->writer->save( $updater, $baseRevisionId,
-				$content, CommentStoreComment::newUnsavedComment( $summary ), $main,
+				$content, CommentStoreComment::newUnsavedComment( $summary, $commentData ), $main,
 				function ( PreparedUpdate $prepared, callable $commit ) use (
 					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId, $verifySources
 				) {

@@ -266,3 +266,24 @@ Changed-base admission remains a refusal. After the attempted Save advanced the
 owning page, a source-aware saved/outcome route is required; a matching stored PDF
 alone cannot prove attribution. Advanced-base recovery, citation reconciliation,
 saved-session handoff and editor/history/draft-controller acceptance remain open.
+
+## Native revision-comment evidence
+
+The guarded missing-target PDF Import publisher stores a small versioned request
+digest in MediaWiki's native structured revision-comment data, in the same
+cancelable save as the page revision. Readable attribution and owner words stay
+unchanged. Normal publication callers omit structured data by default.
+
+The digest binds the native target page, original revision, embedding byte offset
+and text, original submitted snapshot string, ordered source descriptors including
+duplicates, and native parsed note before trimming. Descriptor object key order
+does not change native values. Snapshot and embedding string bytes remain exact.
+The existing API string processing may normalize the note before publication;
+the digest describes the parsed request, not the original HTTP note bytes.
+Only the digest is stored here; source descriptors and content are not duplicated.
+
+This metadata is reproducible evidence, never authorization or a client proof.
+Any outcome reader must independently verify owner/parent, visible revision text
+and comment, saved content, original embedding/base and fresh source/file checks.
+No confirmation reader, saved-session handoff or editor caller is activated by
+this internal persistence mechanism. Recovery after an advancing Save remains open.
