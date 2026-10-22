@@ -2,16 +2,17 @@
 
 This component advances Milestone 1: page ownership and native page revision
 history, including HIST-4, DATA-1, UI-10 and SEC-2. It assembles the qualified
-whole-PDF components with the existing approved Import dialog. It is separately
-invoked and has no production editor callers or ResourceLoader registration.
-Client composition tests do not establish native or browser acceptance.
+whole-PDF components with the existing approved Import dialog. The page-owned
+ResourceLoader module registers them, and APIManager selects this composition
+for writable saved PDF editors. The missing-target creation integration mounts
+the same control. Client startup tests do not establish native browser acceptance.
 
 ## Composition contract
 
 `PageOwnedWholePdfImportIntegration` accepts a loaded, writable, stored PDF
 bridge, a MediaWiki API client and the editor class registry. Images, slides,
-historical views and creation of a completely absent target set retain their
-existing paths. One PDF layer set still belongs to an owner, canonical file and
+historical views retain their existing paths. Completely absent PDF targets use
+the creation host described below. One PDF layer set still belongs to an owner, canonical file and
 normalized name; its internal pages never become separate named choices.
 
 Construction connects the grouped catalog, exact-source reader, actual session
@@ -20,7 +21,10 @@ installing the qualified publication route. `enableDrafts(controller)` must run
 before constructing the draft lifecycle. `mount(...)` accepts that same
 controller's lifecycle and mounts the existing `PageOwnedImportControl`.
 The existing dialog, translations, Append/Replace/Cancel actions and confirmation
-steps remain unchanged. No new UI is activated by loading this file alone.
+steps remain unchanged. Empty Import still applies immediately. When the native
+preview identifies a different file version, successful empty Import shows the
+existing translated warning in a standard informational notification, retained
+until dismissed. Nonempty Import keeps its existing version line in the dialog.
 
 The adapter converts the dialog's `prepare(source, options)` call into the
 application's exact request. Catalog display metadata is kept out of that
@@ -52,23 +56,15 @@ and usable group Undo/Redo after the existing explicit confirmation. Earlier
 backups remain intact. Uncertain publication remains held for explicit revision
 checking; it is never automatically retried.
 
-## Activation prerequisites
+## Startup and remaining acceptance
 
-Production callers must remain inactive until complete-group reconciliation
-updates private source claims, checkpoints and routed history together with
-the saved session base. Ordinary per-page base confirmation is insufficient.
-Applying only a post-reconciliation history fix could leave partially changed
-state if its later preflight fails; the complete operation must prepare before
-committing any participant.
+Startup enables the qualified complete-group reconciliation and pending-name
+routes. A durable first-Save handoff adopts the actual delivered application and
+binding; it does not install a competing history owner. Fresh saved-editor startup
+also enables earlier creation-backup recovery before the existing draft review.
+Ordinary per-page base confirmation cannot replace complete-group reconciliation.
 
-Pending group renames currently fail exact Import preparation without losing
-the rename or layers. Qualify their complete identity/name handling before
-activation; do not silently rewrite names or relax exact native admissions.
-Creating a completely absent target PDF layer set is also a separate open
-boundary from admitting missing internal pages of an existing set.
-
-After those boundaries are qualified, register the required modules and connect
-the existing editor composition point. Complete actual native/browser
+Complete actual native/browser
 selection, Append/Replace/Cancel, Save/reopen, recovery/conflict and export
 journeys, supported-version/mobile and upgrade checks, final HTTP privacy
 checks, and owner screen/flow acceptance. Preserve the existing image/slide
@@ -81,8 +77,8 @@ whole-PDF revision-check route. Its staged session/checkpoint/source/history
 contract is documented in [whole-PDF reconciliation](WHOLE_PDF_IMPORT_RECONCILIATION.md).
 The existing non-opted reconciliation bodies remain intact. Client checks cover
 success, complete refusal, late work, uncertain outcomes, group Undo/Redo and
-draft recovery. Production APIManager callers and ResourceLoader activation
-remain off pending the other activation and native/browser prerequisites above.
+draft recovery. APIManager now selects that qualified route for saved PDF editing;
+complete native/browser release acceptance remains required.
 
 ## Pending target names
 
@@ -90,8 +86,8 @@ The composition also exposes a separate `enablePendingRenames()` opt-in. It
 preserves exact saved-name discovery and native evidence while importing into a
 coherently renamed live target. Construction keeps the original refusal path.
 See [pending-name preparation and recovery](WHOLE_PDF_IMPORT_PENDING_NAME.md)
-for identity, Undo, draft and authorization boundaries. This does not activate
-production editor callers or change existing controls or wording.
+for identity, Undo, draft and authorization boundaries. APIManager enables it on
+the selected PDF composition without changing controls or wording.
 
 ## Missing-target creation host connection
 
@@ -118,11 +114,17 @@ After known success, fresh saved-session admission preserves newer edits and
 both-page history. The returned creation backup keeps all original source
 references and the sent attempt through that handoff.
 
-This connects the real host, editor state/history classes, local draft controller
-and transport in client tests. It does not activate an Import control, establish
-a native browser journey, or complete Milestone 1. Advanced-base outcome
-confirmation, the approved version notice and final UI connection remain open.
-Existing ordinary creation and stored-target editor paths retain their defaults.
+Native creation startup now mounts the approved Import control. The host enables
+Import lazily on the first selection, preserving ordinary creation and its older
+draft/Save paths when Import is unused. Before initial review, a same-scope
+version-3 or version-4 Import backup enables the required host mode so that its
+fresh native admission and explicit Restore can run. Catalog choices remain
+privately associated with this control and grant no source authority.
+
+Client startup checks cover actual catalog selection, whole-PDF application,
+first Save, native outcome Check, durable saved-session adoption and fresh
+earlier-backup recovery. They do not establish a native browser journey or
+complete Milestone 1. Images, slides and historical views retain their routes.
 
 ## Creation Import group history and source-free Save
 
@@ -155,9 +157,9 @@ its existing version-1 request-bound confirmation. Any non-null serialized attem
 restores uncertain and cannot authorize an automatic retry or mark work saved.
 
 This qualification covers client creation history, drafts and Save. Complete
-group transfer into the saved editor session is described below. Production
-Import callers remain inactive pending outcome confirmation and the remaining
-approved UI/native/browser journeys.
+group transfer into the saved editor session is described below. The creation
+integration connects these methods to the approved control; complete native
+browser journeys remain required.
 
 ## Complete group history through first Save
 
@@ -188,6 +190,6 @@ backup and dispose the returned group resources with the saved editor.
 Client qualification covers those integrated paths and native-admission refusal
 through real transport classes with controlled responses. It does not establish
 HTTP/browser acceptance. Existing handoff without the history opt-in retains its
-default path. No production Import control is activated by this connection;
-advanced-base outcome confirmation, the approved version notice, final control
-connection and complete release acceptance remain open.
+default path. Native startup now connects the Import control, outcome Check,
+version notice and saved handoff. Complete HTTP/browser, supported-version,
+mobile, upgrade and owner acceptance remain open.

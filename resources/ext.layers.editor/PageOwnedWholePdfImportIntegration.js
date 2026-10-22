@@ -16,15 +16,20 @@
 				editor.canvasManager && editor.canvasManager.selectionManager );
 		}
 
-		constructor( bridge, api, classes ) {
+		constructor( bridge, api, classes, delivered ) {
 			if ( !PageOwnedWholePdfImportIntegration.supports( bridge ) || !classes ||
 				[ 'PageOwnedWholePdfImportCatalogClient', 'PageOwnedWholePdfImportSource', 'PageOwnedPdfEditorReadClient',
 					'PageOwnedWholePdfImportSession', 'PageOwnedWholePdfImportApplication', 'PageOwnedWholePdfImportPublishClient',
 					'PageOwnedImportControl' ].some( key => typeof classes[ key ] !== 'function' ) ) { throw unavailable(); }
-			if ( bridge.editor.historyManager.hasPdfImportHistory() ) { throw unavailable(); }
+			if ( delivered ? delivered.bridge !== bridge || !( delivered.importApplication instanceof classes.PageOwnedWholePdfImportApplication ) ||
+				!( delivered.importBinding instanceof classes.PageOwnedWholePdfImportSession ) ||
+				!delivered.importApplication.ownsBridge( bridge ) || !delivered.importBinding.ownsSession( bridge.session ) ||
+				!bridge.editor.historyManager.hasPdfImportHistory( delivered.importApplication ) :
+				bridge.editor.historyManager.hasPdfImportHistory() ) { throw unavailable(); }
 			// Validate the transport before any route can be installed in the editor.
 			const publisher = new classes.PageOwnedWholePdfImportPublishClient( api );
-			this.bridge = bridge; this.classes = classes; this.disposed = false; this.control = null; this.drafts = null; this.controller = null;
+			this.bridge = bridge; this.classes = classes; this.api = api; this.disposed = false; this.control = null; this.drafts = null; this.controller = null;
+			this.publisher = publisher; this.pageReader = new classes.PageOwnedPdfEditorReadClient( api );
 			try {
 				const catalog = new classes.PageOwnedWholePdfImportCatalogClient( api );
 				this.catalog = Object.freeze( { search: async request => {
@@ -33,11 +38,11 @@
 					return result;
 				}, dispose: () => catalog.dispose() } );
 				this.source = new classes.PageOwnedWholePdfImportSource( api );
-				this.binding = new classes.PageOwnedWholePdfImportSession( bridge.session, this.source, new classes.PageOwnedPdfEditorReadClient( api ) );
-				this.application = new classes.PageOwnedWholePdfImportApplication( bridge, this.binding );
-				this.application.enableHistory();
-				this.application.enablePublication( publisher );
-				this.application.enableReconciliation();
+				this.binding = delivered ? delivered.importBinding : new classes.PageOwnedWholePdfImportSession( bridge.session, this.source, this.pageReader );
+				this.application = delivered ? delivered.importApplication : new classes.PageOwnedWholePdfImportApplication( bridge, this.binding );
+				if ( !delivered ) {
+					this.application.enableHistory(); this.application.enablePublication( publisher ); this.application.enableReconciliation();
+				}
 				// The existing dialog's two-argument preparation contract stays unchanged.
 				this.coordinator = Object.freeze( {
 					prepare: ( source, options ) => this._prepare( source, options ),
@@ -51,7 +56,7 @@
 				} );
 			} catch ( error ) {
 				this.disposed = true;
-				for ( const resource of [ this.application, this.binding, this.source, this.catalog ].filter( Boolean ) ) {
+				for ( const resource of [ ...( delivered ? [] : [ this.application, this.binding ] ), this.source, this.catalog ].filter( Boolean ) ) {
 					try { resource.dispose(); } catch ( ignored ) {}
 				}
 				throw unavailable();
@@ -69,6 +74,16 @@
 			if ( this.disposed || this.controller || !controller || controller.bridge !== this.bridge ) { throw unavailable(); }
 			controller.enableWholePdfDrafts( this.application );
 			this.controller = controller;
+		}
+
+		/** Fresh saved-editor startup can review earlier complete creation backups; handoff already carries them. */
+		enableEarlierCreationRecovery( drafts ) {
+			if ( this.disposed || !this.controller || drafts.controller !== this.controller || drafts.bridge !== this.bridge ) throw unavailable();
+			const classes = this.classes;
+			drafts.enableEarlierPdfCreationRecovery( { reader: this.bridge.session._reader, pdfReader: this.pageReader,
+				publisher: this.bridge.session._publisher, importSource: this.source, importPublisher: this.publisher,
+				outcomeClient: new classes.PageOwnedMissingPdfImportPublishClient( this.api ),
+				creationReader: new classes.PageOwnedPdfCreationReadClient( this.api ), api: this.api } );
 		}
 
 		_target() {
@@ -119,7 +134,7 @@
 		dispose() {
 			if ( this.disposed ) { return; } this.disposed = true;
 			if ( this.control ) { this.control.dispose(); }
-			this.catalog.dispose(); this.application.dispose(); this.source.dispose();
+			this.catalog.dispose(); this.application.dispose(); this.binding.dispose(); this.source.dispose();
 		}
 	}
 	window.Layers = window.Layers || {}; window.Layers.Editor = window.Layers.Editor || {};

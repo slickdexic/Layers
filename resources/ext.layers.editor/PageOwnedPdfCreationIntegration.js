@@ -18,6 +18,7 @@
 			this.preparation = preparation; this.identity = window.Layers.Core.StateManager.copyWorkingCopyValue( config.draftScope );
 			this.loaded = false; this.disposed = false; this.closed = false; this.transferred = false; this.operation = null;
 			this.host = null; this.lifecycle = null; this.controller = null;
+			this.importsEnabled = false; this.importControl = null; this.importCatalog = null; this.importChoices = new WeakMap();
 			this.savedBridge = null; this.savedDrafts = null;
 			this.onPageHide = () => { if ( this.transferred && !this.disposed ) this.preserveSavedExit(); };
 			this.reader = new classes.PageOwnedPdfCreationReadClient( this.api );
@@ -51,6 +52,11 @@
 				this.host = new this.classes.PageOwnedPdfCreationHost( this.editor, this.preparation, { reader: this.reader, publisher: this.publisher } );
 				if ( !await this.host.load() ) throw unavailable(); this.alive();
 				this.controller = new this.classes.PageOwnedPdfCreationDraftController( this.host, this.store(), this.identity, { retainPublicationAttempt: true } );
+				// Preserve ordinary creation recovery. Only complete Import backups require the Import host before review.
+				for ( const candidate of this.controller.listCandidates() ) {
+					try { if ( [ 3, 4 ].includes( this.controller.inspectCandidate( candidate ).version ) ) { this.enableImports(); break; } }
+					catch ( error ) { /* The existing recovery review reports corrupt or unavailable backups. */ }
+				}
 				this.dialog = new this.classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
 				this.lifecycle = new this.classes.PageOwnedPdfCreationLifecycle( this.editor, this.host, this.controller, this.store(), {
 					choose: previews => this.dialog.choose( previews ), confirm: preview => this.dialog.confirm( preview ),
@@ -67,8 +73,72 @@
 					this.manager.pageOwnedSummaryField = new this.classes.PageOwnedSummaryField( key => mw.msg( key ) );
 					this.manager.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
 				}
+				if ( header && this.classes.PageOwnedWholePdfImportCatalogClient ) this.mountImport( header );
 				return this.host.getLiveState();
 			} finally { this.operation = null; if ( !this.editor.isDestroyed ) this.editor.stateManager.set( 'isLoading', false ); }
+		}
+
+		enableImports() {
+			if ( this.importsEnabled ) return;
+			this.alive();
+			this.savedDependencies.importSource = new this.classes.PageOwnedWholePdfImportSource( this.api );
+			this.savedDependencies.importPublisher = new this.classes.PageOwnedWholePdfImportPublishClient( this.api );
+			this.host.enableImports( this.api ); this.host.enableImportHistory(); this.importsEnabled = true;
+		}
+
+		canImport() {
+			try {
+				this.alive(); const status = this.host.getStatus(), lifecycle = this.lifecycle.getStatus();
+				return this.loaded && !this.transferred && !this.operation && lifecycle.ready && !lifecycle.operation &&
+					status.phase === 'ready' && !status.needsRefresh && !status.publicationBlocked && !status.saving && !status.recovering;
+			} catch ( error ) { return false; }
+		}
+
+		mountImport( header ) {
+			const catalog = new this.classes.PageOwnedWholePdfImportCatalogClient( this.api ); this.importCatalog = catalog;
+			const match = { pageId: this.preparation.target.pageId, kind: 'pdf', label: this.preparation.context.label,
+				fileTitle: this.preparation.anchorSurface.source.fileTitle };
+			this.importControl = new this.classes.PageOwnedImportControl( {
+				getTarget: () => {
+					this.alive(); const draft = this.host.getDraft(), live = this.host.getLiveState();
+					const baseCount = draft.creation.baseBundle ? draft.creation.baseBundle.snapshot.surfaces.length : 0;
+					return { match, kind: 'pdf', name: match.label, owner: this.preparation.target.owner, canvas: live.canvas,
+						layerCount: draft.snapshot.surfaces.slice( baseCount ).reduce( ( count, surface ) => count + surface.layers.length, 0 ) };
+				},
+				canImport: () => this.canImport(), message: ( ...args ) => mw.msg( ...args ),
+				allocateId: () => this.manager.generateLayerId(), maxLayers: mw.config.get( 'wgLayersMaxLayerCount' ) || 100,
+				catalog: { search: async request => {
+					const result = await catalog.search( request ); this.alive();
+					for ( const choice of result ) this.importChoices.set( choice.source, choice.label ); return result;
+				} },
+				coordinator: {
+					prepare: async ( source, options ) => {
+						if ( !this.canImport() || !this.importChoices.has( source ) || !this.importControl.dialog ) throw unavailable();
+						const control = this.importControl, dialog = control.dialog, generation = control.generation;
+						this.enableImports();
+						const result = await this.host.prepareImport( { owner: source.owner, pageId: source.pageId,
+							revisionId: source.revisionId, surfaceId: source.surfaceId }, options );
+						if ( !this.canImport() || this.importControl !== control || control.dialog !== dialog || control.generation !== generation ) {
+							this.host.releaseImport( result.handle ); throw unavailable();
+						}
+						return result.handle;
+					},
+					inspect: handle => {
+						const preview = this.host.inspectImport( handle );
+						return { ...preview, source: { ...preview.source, label: preview.sourceLabel } };
+					},
+					apply: handle => { if ( !this.canImport() || !this.host.commitImport( handle ).applied ) throw unavailable(); },
+					release: handle => this.host.releaseImport( handle )
+				},
+				onApplied: () => this.lifecycle.flush()
+			} );
+			this.importControl.mount( header, header.querySelector( '.layers-header-right' ) );
+		}
+
+		disposeImportControl() {
+			if ( this.importControl ) this.importControl.dispose();
+			if ( this.importCatalog ) this.importCatalog.dispose();
+			this.importControl = null; this.importCatalog = null;
 		}
 
 		turn( page ) {
@@ -116,7 +186,9 @@
 			if ( manager.pageOwnedRevisionControl ) manager.pageOwnedRevisionControl.dispose();
 			if ( manager.pageOwnedSummaryField ) manager.pageOwnedSummaryField.dispose();
 			if ( this.dialog ) this.dialog.dispose();
-			await manager.initializePageOwnedDrafts( delivered.bridge.getLiveState(), true );
+			this.disposeImportControl();
+			await manager.initializePageOwnedDrafts( delivered.bridge.getLiveState(), true,
+				delivered.importApplication ? delivered : undefined );
 			this.alive();
 			const persisted = manager.pageOwnedDrafts.ready && manager.pageOwnedDrafts.flush();
 			if ( delivered.needsRefresh || !persisted ) delivered.bridge.session.blockPublication();
@@ -129,7 +201,7 @@
 			try {
 				if ( this.host.getStatus().phase === 'confirmed' ) return await this.handoff();
 				const envelope = this.host.captureExitEnvelope();
-				if ( envelope.publicationAttempt ) {
+				if ( envelope.publicationAttempt || ( envelope.importPublication && envelope.importPublication.attempt ) ) {
 					const result = await this.lifecycle.reconcile( { reader: this.savedDependencies.reader,
 						pdfReader: this.savedDependencies.pdfReader, api: this.api }, this.store() );
 					if ( !result.applied ) throw unavailable();
@@ -176,6 +248,8 @@
 			if ( this.transferred && !this.preserveSavedExit() && !terminal ) return false;
 			if ( !this.transferred && this.lifecycle && !this.lifecycle.dispose( terminal ) && !terminal ) return false;
 			window.removeEventListener( 'pagehide', this.onPageHide, true );
+			this.disposeImportControl();
+			if ( this.savedDependencies.importSource ) this.savedDependencies.importSource.dispose();
 			if ( this.host ) this.host.dispose(); if ( this.dialog ) this.dialog.dispose(); this.disposed = true; return true;
 		}
 	}

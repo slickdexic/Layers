@@ -1,3 +1,9 @@
+/* MediaWiki's notification area otherwise sits behind the full-screen editor. */
+body.layers-editor-open .mw-notification-area-overlay:has( .layers-page-import-version-notice ),
+body.layers-editor-open .mw-notification-area:has( .layers-page-import-version-notice ) {
+	z-index: 1000002;
+}
+
 .layers-page-import-overlay {
 	--layers-import-surface: var( --background-color-base, #fff );
 	--layers-import-muted-surface: var( --background-color-neutral-subtle, #f8f9fa );

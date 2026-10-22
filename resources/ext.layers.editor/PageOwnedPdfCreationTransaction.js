@@ -469,6 +469,7 @@
 			const value = members.get( record.page ), stateValue = record.adapter.toEditorState( { schemaVersion: 1, surfaces: [ value ] }, value.id );
 			const preview = { capsule, contexts: Array.from( fresh.contexts.values() ), state: stateValue,
 				mode: fields.mode.value, source: fresh.result.source, sourceLabel: fresh.result.sourceGroup.label,
+				differentFileVersion: !equal( fresh.result.targetAdmission.source, fresh.result.sourceGroup.source ),
 				importedLayerIds: candidate.importedLayerIds, pages: candidate.pages };
 			const handle = Object.freeze( {} ); check();
 			importPlans.set( handle, { owner: this, record, mode, check, members, contexts: fresh.contexts, page: record.page, claims, capsule, state: stateValue, preview } );

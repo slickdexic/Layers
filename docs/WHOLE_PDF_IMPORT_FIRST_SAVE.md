@@ -1,7 +1,8 @@
 # Whole-PDF Import: first Save into an absent layer set
 
-This inactive native service advances page ownership and revision history,
-data preservation and authorization. It adds no caller, endpoint or interface.
+This native service advances page ownership and revision history,
+data preservation and authorization. Registered APIs and the native editor
+connection described below use it for the first Save of a PDF Import.
 
 PageMissingPdfImportPublicationService publishes a complete proposed document
 through the existing MediaWiki page publisher. Its target is an existing owner
@@ -34,13 +35,13 @@ back the entire Save. The normal publisher retains its secure write and rate
 checks; the service does not retry against a newer revision.
 
 Preparation results are detached evidence, not authorization tokens. Complete
-editor application, Undo/drafts, HTTP delivery and browser acceptance remain
-required before activation.
+editor application and Undo/drafts are connected in client startup checks.
+HTTP delivery and native browser acceptance remain required for release.
 
 ## Registered native request boundary
 
 Separate native API callers extend the service-only scope above. They are
-registered; production editor and Import controls remain unconnected to them.
+registered and connected through the native creation editor's Import route.
 Existing stored-target APIs and interfaces keep their existing behavior.
 
 The POST-only layersmissingpdfimportread action requires targetpageid, baserevid,
@@ -188,7 +189,8 @@ before the editor route is activated.
 ## Explicit creation-model Import transactions
 
 The existing PDF creation transaction has a separate `enableImports(api)`
-opt-in for model-only complete-group Import. Existing callers do not enable it.
+opt-in for model-only complete-group Import. The creation integration enables it
+only when Import is used or an eligible complete Import backup needs review.
 Ordinary creation methods and their defaults remain in place.
 
 `prepareImport` reads the native missing-target preparation twice around private
@@ -224,7 +226,7 @@ activating this route. A matching saved payload alone cannot prove provenance.
 
 A separate publication client and creation-transaction `saveImport` method
 connect complete imported groups to the registered native first-Save boundary.
-They remain explicitly enabled components with no active editor callers.
+The creation host explicitly enables them for the actual Import control.
 The existing ordinary Save, recovery and creation defaults remain unchanged.
 
 The request preserves the original embedding byte offset and exact text,
@@ -260,12 +262,13 @@ A null attempt can restore ready work only before any live attempt exists.
 Preparation and cancellation change no work. Only a transaction-owned, single-use
 plan can apply all pages, source references and attempt/hold state together after
 the final live-work guard. Refusal preserves both current work and backup data.
-The methods do not write to the wiki or local storage and have no active UI callers.
+The methods themselves do not write to the wiki or local storage. The actual
+creation controller/lifecycle persists the complete backup around their use.
 
 Changed-base admission remains a refusal. After the attempted Save advanced the
 owning page, a source-aware saved/outcome route is required; a matching stored PDF
-alone cannot prove attribution. Advanced-base recovery, citation reconciliation,
-saved-session handoff and editor/history/draft-controller acceptance remain open.
+alone cannot prove attribution. The outcome and recovery connections below
+provide the separate advanced-base admission and complete saved handoff.
 
 ## Native revision-comment evidence
 
@@ -285,8 +288,8 @@ Only the digest is stored here; source descriptors and content are not duplicate
 This metadata is reproducible evidence, never authorization or a client proof.
 Any outcome reader must independently verify owner/parent, visible revision text
 and comment, saved content, original embedding/base and fresh source/file checks.
-No confirmation reader, saved-session handoff or editor caller is activated by
-this internal persistence mechanism. Recovery after an advancing Save remains open.
+The internal persistence mechanism alone grants no confirmation or recovery
+authority. The separate native outcome boundary below verifies an advancing Save.
 
 ## Checking a lost Import Save response
 
@@ -357,6 +360,29 @@ from the saved snapshot, group Undo/Redo, page turns and subsequent attributed
 Save against the current owner revision; it never retries the earlier Save.
 
 This connects the actual controller/lifecycle and existing dialog in client
-integration tests. Enabling the final approved Import controls in native editor
-entry points and HTTP/browser, supported-version and owner acceptance remain
-separate release requirements.
+integration tests. APIManager now connects it at fresh saved-PDF startup before
+the existing draft review. HTTP/browser, supported-version and owner acceptance
+remain separate release requirements.
+
+## Native editor entry points
+
+The page-owned editor module registers the qualified whole-PDF classes.
+Writable saved PDFs use the complete-group Import, draft and revision-check
+composition. A missing PDF layer set uses the existing creation editor and the
+same approved Import control. Merely opening creation preserves ordinary Save
+and older ordinary draft recovery; Import is enabled lazily when needed.
+
+After confirmed first Save, the actual application, binding and whole-group
+history transfer into saved-editor ownership. Native Check handles a lost reply
+without repeating publication. A freshly reopened saved editor offers eligible
+earlier creation backups through the existing explicit Review/Restore flow.
+
+Empty Import applies immediately. If native preparation identifies a different
+file version, successful Import shows the existing translated warning in a
+standard informational notification until dismissed. Nonempty Import retains
+the version line and Append/Replace/Cancel decision in the dialog. Nothing is
+added to the wiki page. Images, slides and historical views keep their routes.
+
+Client startup qualification covers these transitions, cancellation, refused
+Save, complete history and backup preservation. It does not claim combined
+native HTTP/browser/mobile/upgrade acceptance or completion of Milestone 1.

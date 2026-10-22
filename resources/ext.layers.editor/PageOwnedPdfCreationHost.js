@@ -542,8 +542,9 @@
 					timelines.set( page, record.history.preflightTimeline( timeline ) );
 				}
 				const state = preview.state, { store, canvas, history, Store } = record;
-				const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
-				const values = { layers: state.layers, isSlide: false, isDirty: true, selectedLayerIds: [],
+				const ids = preview.importedLayerIds.filter( id => state.layers.some( layer => layer.id === id ) );
+				const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, ids );
+				const values = { layers: state.layers, isSlide: false, isDirty: true, selectedLayerIds: ids,
 					baseWidth: state.canvas.width, baseHeight: state.canvas.height }, clear = [];
 				for ( const key of [ 'backgroundVisible', 'backgroundOpacity' ] ) {
 					if ( Object.hasOwn( state.canvas, key ) ) values[ key ] = state.canvas[ key ]; else clear.push( key );
@@ -551,7 +552,7 @@
 				const patch = store.prepareWorkingCopyPatch( { values, clear } ); operation.patch = patch;
 				const commit = store.prepareWorkingCopyPatchCommit( patch ); if ( !Store.isWorkingCopyPatchCommit( commit ) ) throw unavailable();
 				const writes = [ ...assignments( history, timelines.get( after.activePage ) ),
-					...assignments( canvas, { selectedLayerIds: [], selectedLayerId: null } ) ];
+					...assignments( canvas, { selectedLayerIds: ids, selectedLayerId: ids.length === 1 ? ids[ 0 ] : null } ) ];
 				const preflight = () => {
 					check(); if ( record.operation !== operation ) throw unavailable();
 					record.transaction.inspectImportPlan( operation.handle ); commit.preflight(); if ( selection ) selection.preflight(); check();

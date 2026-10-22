@@ -413,9 +413,12 @@
 	}
 
 	/** Install the existing saved lifecycle without reloading or replacing current editor work. */
-	initializePageOwnedDrafts( state, durable = false ) {
+	initializePageOwnedDrafts( state, durable = false, delivered ) {
 		const classes = window.Layers.Editor;
-		if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
+		if ( classes.PageOwnedWholePdfImportIntegration && classes.PageOwnedWholePdfImportIntegration.supports( this.pageOwnedBridge ) ) {
+			this.pageOwnedImport = new classes.PageOwnedWholePdfImportIntegration( this.pageOwnedBridge, this.api, classes, delivered );
+			this.pageOwnedImport.enablePendingRenames();
+		} else if ( classes.PageOwnedImportIntegration && classes.PageOwnedImportIntegration.supports( this.pageOwnedBridge ) ) {
 			this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
 		} else if ( classes.PageOwnedCreationImportClient && classes.PageOwnedImportIntegration &&
 			classes.PageOwnedImportIntegration.supportsCreation( this.pageOwnedBridge ) ) {
@@ -445,7 +448,7 @@
 			notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
 		} );
 		if ( durable ) this.pageOwnedCreation.savedDrafts = this.pageOwnedDrafts;
-		if ( this.pageOwnedImport ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
+		if ( this.pageOwnedImport && !durable ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
 		return this.pageOwnedDrafts.initialize().then( () => {
 			if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
 				this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {

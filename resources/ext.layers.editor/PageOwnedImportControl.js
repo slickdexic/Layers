@@ -10,7 +10,7 @@
 				throw new Error( 'layers-working-copy-import-unavailable' );
 			}
 			this.options = options; this.disposed = false; this.dialog = null; this.button = null;
-			this.generation = 0; this.timer = null; this.handle = null; this.busy = null;
+			this.generation = 0; this.timer = null; this.handle = null; this.handleMode = null; this.busy = null;
 			this.opener = () => this.open(); this.keydown = event => this._keydown( event );
 		}
 
@@ -88,7 +88,7 @@
 				const target = this.options.getTarget(), mode = target.layerCount === 0 ? 'empty' : 'append';
 				handle = await this.options.coordinator.prepare( choice.source, { mode, maxLayers: this.options.maxLayers, allocateId: this.options.allocateId } );
 				if ( !this._current( dialog, generation ) ) { this._release( handle ); return; }
-				this.handle = handle; const preview = this.options.coordinator.inspect( handle ); this.busy = null;
+				this.handle = handle; this.handleMode = mode; const preview = this.options.coordinator.inspect( handle ); this.busy = null;
 				if ( mode === 'empty' ) { await this._apply( dialog, generation ); return; }
 				this._decision( choice, target, preview );
 			} catch ( error ) {
@@ -127,7 +127,7 @@
 			try {
 				const handle = await this.options.coordinator.prepare( choice.source, { mode: 'replace', maxLayers: this.options.maxLayers, allocateId: this.options.allocateId } );
 				if ( !this._current( dialog, generation ) ) { this._release( handle ); return; }
-				this.handle = handle; this.busy = null; await this._apply( dialog, generation );
+				this.handle = handle; this.handleMode = 'replace'; this.busy = null; await this._apply( dialog, generation );
 			} catch ( error ) { if ( this._current( dialog, generation ) ) { this.busy = null; this._release(); this._failure(); } }
 		}
 
@@ -135,16 +135,24 @@
 			if ( this.busy || !this._current( dialog, generation ) || !this.handle || !this.options.canImport() ) { return; }
 			this.busy = 'applying'; this._lock( this.busy ); dialog.status.textContent = this.options.message( 'layers-page-import-preparing' );
 			try {
+				const preview = this.options.coordinator.inspect( this.handle );
+				const versionNotice = this.handleMode === 'empty' && preview.differentFileVersion;
 				await this.options.coordinator.apply( this.handle );
 				if ( !this._current( dialog, generation ) ) { return; }
 				this._release(); this.busy = null;
 				this.options.onApplied(); this.close();
+				if ( versionNotice ) {
+					try { mw.notify( this.options.message( 'layers-page-import-file-version' ), {
+						type: 'info', autoHide: false, classes: 'layers-page-import-version-notice'
+					} ); }
+					catch ( error ) { /* A notification failure cannot undo an applied Import. */ }
+				}
 			} catch ( error ) { if ( this._current( dialog, generation ) ) { this.busy = null; this._release(); this._failure(); } }
 		}
 
 		_release( handle = this.handle ) {
 			if ( handle ) { try { this.options.coordinator.release( handle ); } catch ( error ) {} }
-			if ( handle === this.handle ) { this.handle = null; }
+			if ( handle === this.handle ) { this.handle = null; this.handleMode = null; }
 		}
 
 		_failure() {

@@ -242,10 +242,10 @@ describe( 'Stored whole-PDF Import composition through the approved control', ()
 		for ( const [ key, raw ] of backups ) { expect( next.storage.rows.get( key ) ).toBe( raw ); }
 	} );
 
-	it( 'leaves the production composition and ResourceLoader callers inactive', () => {
+	it( 'registers the whole-PDF composition for native saved-editor startup', () => {
 		const module = require( '../../extension.json' ).ResourceModules[ 'ext.layers.editor.pageOwned' ];
-		expect( module.scripts ).not.toContain( 'PageOwnedWholePdfImportIntegration.js' );
+		expect( module.scripts ).toContain( 'PageOwnedWholePdfImportIntegration.js' );
 		const fs = require( 'fs' ), path = require( 'path' );
-		expect( fs.readFileSync( path.resolve( __dirname, '../../resources/ext.layers.editor/APIManager.js' ), 'utf8' ) ).not.toContain( 'PageOwnedWholePdfImportIntegration' );
+		expect( fs.readFileSync( path.resolve( __dirname, '../../resources/ext.layers.editor/APIManager.js' ), 'utf8' ) ).toContain( 'PageOwnedWholePdfImportIntegration' );
 	} );
 } );
