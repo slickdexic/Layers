@@ -154,9 +154,40 @@ newer work and group Redo associations remain separate. Source-bearing Save keep
 its existing version-1 request-bound confirmation. Any non-null serialized attempt
 restores uncertain and cannot authorize an automatic retry or mark work saved.
 
-This qualification covers client creation history, drafts and Save. A host with
-retained group history currently refuses saved-session handoff rather than
-silently converting group Undo into per-page Undo. Complete group transfer into
-the saved editor session is the next integration step. Production Import callers
-remain inactive until that transfer, outcome confirmation and the remaining
-approved UI/native/browser journeys are qualified.
+This qualification covers client creation history, drafts and Save. Complete
+group transfer into the saved editor session is described below. Production
+Import callers remain inactive pending outcome confirmation and the remaining
+approved UI/native/browser journeys.
+
+## Complete group history through first Save
+
+For the creation history opt-in, confirmed first-Save handoff now uses the
+existing saved-PDF Import recovery contract. Fresh native reads admit the saved
+revision, every checkpoint side and each source reference. Prospective members
+use their newly admitted native page identities; the saved document's source,
+geometry, unrelated layer sets and metadata remain intact. Before/after group
+capsules become private saved-session checkpoints rather than serialized
+authority. Surviving markers from trimmed histories remain refusal barriers.
+
+The new saved session, checkpoint bank, remapped timelines and certified history
+route are prepared before replacing the creation editor. Complete participant,
+timeline and publication-method checks repeat across asynchronous reads. The
+final ownership transfer is synchronous. Refusal preserves the confirmed Save,
+current layers, history, original route and complete creation backup. After
+transfer, later edits remain ahead of group Undo, and both-page navigation keeps
+the complete group association.
+
+The returned `importApplication` and `importBinding` belong to the saved editor's
+lifecycle. The application uses the existing saved draft controller, publication
+and reconciliation routes. Group Undo/Redo remains complete after Save and local
+draft recovery. Subsequent Save uses ordinary publication when no source claims
+remain and source-aware publication when Redo restores them. Saved bases and
+history markers advance only after success. Callers retain the complete creation
+backup and dispose the returned group resources with the saved editor.
+
+Client qualification covers those integrated paths and native-admission refusal
+through real transport classes with controlled responses. It does not establish
+HTTP/browser acceptance. Existing handoff without the history opt-in retains its
+default path. No production Import control is activated by this connection;
+advanced-base outcome confirmation, the approved version notice, final control
+connection and complete release acceptance remain open.

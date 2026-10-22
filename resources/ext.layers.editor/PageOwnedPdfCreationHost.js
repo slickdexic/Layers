@@ -418,6 +418,12 @@
 			const record = records.get( host ); return !!record && !record.disposed && record.history === history &&
 				record.importHistory && historyCertificates.get( route ) === record;
 		}
+		static isPdfImportHistoryTransfer( host, history, application ) {
+			const record = records.get( host ), Application = window.Layers.Editor.PageOwnedWholePdfImportApplication;
+			return !!record && !record.disposed && record.history === history && record.recovering && !!record.handoffBridge &&
+				record.transaction.getStatus().phase === 'confirmed' && !!Application &&
+				Application.prototype.ownsBridge.call( application, record.handoffBridge );
+		}
 
 		constructor( editor, nativePreparation, dependencies ) {
 			const { Transaction, Store } = classes(), transaction = new Transaction( nativePreparation, dependencies );
@@ -738,8 +744,6 @@
 			const admit = value => { alive( value ); if ( value.needsRefresh || value.saving ||
 				![ 'ready', 'conflict', 'uncertain', 'confirmed' ].includes( value.transaction.getStatus().phase ) ) throw unavailable(); };
 			admit( record ); if ( record.recovering || ( ownerGuard !== undefined && typeof ownerGuard !== 'function' ) ) throw unavailable();
-			// Group history must be transferred as a group, never downgraded to per-page Undo.
-			if ( record.importHistory && record.importHistory.size ) throw unavailable();
 			invalidate( record ); capture( record ); record.recovering = true;
 			try {
 				const participants = guard( record, record.generation, admit ), history = this.captureDraftHistory();
@@ -872,19 +876,20 @@
 			const Saved = common ? require( './PageOwnedPdfCreationSavedSession.js' ) : window.Layers.Editor.PageOwnedPdfCreationSavedSession;
 			const Bridge = common ? require( './PageOwnedEditorBridge.js' ) : window.Layers.Editor.PageOwnedEditorBridge;
 			const Coordinator = common ? require( './PageOwnedPdfEditorCoordinator.js' ) : window.Layers.Editor.PageOwnedPdfEditorCoordinator;
-			let prepared, patch, stage, committed = false;
+			let prepared, patch, stage, transfer, application, binding, publicationMethod, committed = false;
 			try {
 				const participants = guard( record, record.generation, admit );
 				check = () => { participants(); if ( ownerGuard ) {
 					const result = ownerGuard(); if ( result !== undefined ) { Promise.resolve( result ).catch( () => {} ); throw unavailable(); }
-				} participants(); };
+					} participants(); if ( publicationMethod ) record.Store.checkWorkingCopyMethods( [ publicationMethod ] ); };
 				const completeBackup = this.captureDraftEnvelope();
 				const savedEnvelope = record.imports ? { version: 1, phase: completeBackup.phase, draft: completeBackup.draft,
 					history: completeBackup.history, confirmation: completeBackup.confirmation, publicationBlocked: completeBackup.publicationBlocked } : completeBackup;
 				prepared = await Saved.prepare( savedEnvelope, dependencies, check, Array.from( record.contexts.values() ) );
 				if ( record.imports ) prepared.creationBackup = completeBackup;
 				check();
-				const { session, state, context, timelines } = prepared, { editor, canvas, store, history, Store } = record;
+				const { session, state, context } = prepared, { editor, canvas, store, history, Store } = record;
+				let timelines = prepared.timelines;
 				for ( const [ page, value ] of timelines ) timelines.set( page, history.preflightTimeline( value ) );
 				// Creation preserves finite layer values, including unknown null fields. Do not apply legacy clearing here.
 				const bridge = new ( class extends Bridge {
@@ -898,10 +903,25 @@
 					}
 				} )( editor, session ), coordinator = new Coordinator( bridge, dependencies.pdfReader );
 				bridge.isSlide = false; bridge.loaded = true; bridge.pdfCoordinator = coordinator; coordinator.timelines = timelines;
+				if ( record.importHistory ) {
+					const Binding = common ? require( './PageOwnedWholePdfImportSession.js' ) : window.Layers.Editor.PageOwnedWholePdfImportSession;
+					const Application = common ? require( './PageOwnedWholePdfImportApplication.js' ) : window.Layers.Editor.PageOwnedWholePdfImportApplication;
+					const Publisher = common ? require( './PageOwnedWholePdfImportPublishClient.js' ) : window.Layers.Editor.PageOwnedWholePdfImportPublishClient;
+					if ( !dependencies.importSource || !dependencies.importPublisher ) throw unavailable();
+					if ( !( dependencies.importPublisher instanceof Publisher ) ) throw unavailable();
+					publicationMethod = Store.captureWorkingCopyMethod( dependencies.importPublisher, 'publish' );
+					if ( publicationMethod.owner !== Publisher.prototype || publicationMethod.method !== Publisher.prototype.publish ) throw unavailable();
+					binding = new Binding( session, dependencies.importSource, dependencies.pdfReader );
+					const imported = Saved.importHistory( completeBackup, binding.captureImportDraft(), timelines, prepared.remapping, Array.from( record.contexts.values() ) );
+					application = new Application( bridge, binding ); record.handoffBridge = bridge;
+					transfer = await application.prepareCreationHistoryTransfer( this, imported, check );
+					timelines = transfer.timelines; check();
+				}
 				stage = canvas.stageExactBackground( context.rendition.url );
 				await stage.promise; check(); canvas.preflightStagedBackground( stage );
 				if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width || stage.info.height !== context.rendition.height ) throw unavailable();
 				await prepared.revalidate(); check();
+				if ( transfer ) { await transfer.revalidate(); check(); }
 				patch = store.prepareWorkingCopyPatch( { values: { layers: state.layers, isSlide: false, isDirty: session.getStatus().dirty,
 					baseWidth: state.canvas.width, baseHeight: state.canvas.height, backgroundVisible: state.canvas.backgroundVisible,
 					backgroundOpacity: state.canvas.backgroundOpacity }, clear: [] } );
@@ -911,10 +931,13 @@
 					...assignments( editor, { page: context.page, pageCount: context.pageCount } ),
 					...assignments( editor.config, { imageUrl: context.rendition.url } ) ];
 				stateCommit.preflight(); canvas.preflightStagedBackground( stage ); check();
+				if ( transfer ) transfer.preflight();
 				// Both models are private until this synchronous ownership transfer. No callbacks run between assignments.
+				if ( transfer ) transfer.commit();
 				prepared.activate(); stateCommit.commit(); for ( const write of writes ) Object.defineProperty( write.object, write.key, write.descriptor );
 				record.disposed = true; committed = true;
-				const result = { bridge, coordinator, creationBackup: prepared.creationBackup, remapping: prepared.remapping, needsRefresh: false };
+				const result = { bridge, coordinator, creationBackup: prepared.creationBackup, remapping: prepared.remapping,
+					...( application ? { importApplication: application, importBinding: binding } : {} ), needsRefresh: false };
 				try {
 					record.unsubscribers.forEach( unsubscribe => unsubscribe() ); record.transaction.dispose();
 					// Native callers install the saved owner before presentation reads it.
@@ -922,13 +945,19 @@
 						const installed = installSavedOwner( bridge );
 						if ( installed !== undefined ) { Promise.resolve( installed ).catch( () => {} ); throw unavailable(); }
 					}
-					coordinator.initialize(); canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch );
+					coordinator.initialize();
+					if ( application ) { application.enablePublication( dependencies.importPublisher ); application.enableReconciliation(); }
+					canvas.commitStagedBackground( stage ); store.notifyWorkingCopyPatch( patch );
 					history.updateUndoRedoButtons(); editor.syncPageInUrl( context.page ); editor.refreshPageControls();
 					bridge.capture(); store.set( 'isDirty', session.getStatus().dirty );
 				} catch ( error ) { result.needsRefresh = true; session.blockPublication(); }
 				return result;
-			} catch ( error ) { if ( prepared && !committed ) prepared.session.dispose(); throw unavailable(); }
-			finally { if ( patch ) record.store.releaseWorkingCopyPatch( patch ); if ( stage ) stage.dispose(); record.recovering = false; }
+			} catch ( error ) {
+				if ( transfer && !committed ) { try { transfer.release(); } catch ( ignored ) {} transfer = null; }
+				if ( prepared && !committed ) { if ( application ) application.dispose(); if ( binding ) binding.dispose(); prepared.session.dispose(); }
+				throw unavailable();
+			} finally { if ( transfer ) transfer.release(); if ( patch ) record.store.releaseWorkingCopyPatch( patch );
+				if ( stage ) stage.dispose(); record.handoffBridge = null; record.recovering = false; }
 		}
 
 		invalidate() { invalidate( data( this, false ) ); }

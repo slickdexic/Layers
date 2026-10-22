@@ -578,6 +578,42 @@
 		return { timelines, bank, commandSet, commandRows };
 	}
 	class PageOwnedWholePdfImportApplication {
+		/** Prepare existing native recovery and a route transfer while the creation editor stays untouched. */
+		async prepareCreationHistoryTransfer( previous, input, assertCurrent ) {
+			const mode = active( this ); let native, route;
+			if ( historyRoutes.has( mode ) || mode.busy || typeof assertCurrent !== 'function' ) throw unavailable();
+			const guard = capture( this, assertCurrent );
+			const methods = [ ...[ 'prepareDraftRecovery', 'inspectDraftRecovery', 'revalidateDraftRecovery', 'commitDraftRecovery', 'releaseDraftRecovery' ]
+				.map( key => mode.Store.captureWorkingCopyMethod( mode.binding, key ) ),
+			mode.Store.captureWorkingCopyMethod( mode.history, 'preparePdfImportHistoryTransfer' ) ];
+			const check = () => { guard.check(); mode.Store.checkWorkingCopyMethods( methods ); };
+			try {
+				native = await mode.binding.prepareDraftRecovery( input, check ); check();
+				const preview = mode.binding.inspectDraftRecovery( native ), history = recoveryTimelines( mode, preview );
+				const timelineWitness = mode.Store.copyWorkingCopyValue( Array.from( history.timelines ) );
+				const created = createHistoryRoute( this, mode ); route = created.route; historyRoutes.set( mode, route );
+				const transfer = mode.history.preparePdfImportHistoryTransfer( previous, this, created.certificate );
+				let released = false, committed = false;
+				const preflight = () => { if ( released || committed || !equal( Array.from( history.timelines ), timelineWitness ) ) throw unavailable();
+					check(); transfer.preflight(); mode.binding.inspectDraftRecovery( native ); };
+				return Object.freeze( { timelines: history.timelines, preflight,
+					revalidate: async () => { preflight(); await mode.binding.revalidateDraftRecovery( native ); preflight(); },
+					commit: () => {
+						mode.binding.commitDraftRecovery( native, preflight );
+						for ( const [ token, command ] of history.commandRows ) weakSet( commands, token, command );
+						route.bank = history.bank; mode.commands = history.commandSet; mode.generation++;
+						mode.coordinator.timelines = history.timelines;
+						transfer.commit(); committed = true;
+					},
+					release: () => { if ( released ) return; released = true;
+						try { mode.binding.releaseDraftRecovery( native ); } finally { if ( !committed ) historyRoutes.delete( mode ); } }
+				} );
+			} catch ( error ) {
+				if ( native ) { try { mode.binding.releaseDraftRecovery( native ); } catch ( ignored ) {} }
+				if ( route ) historyRoutes.delete( mode ); throw unavailable();
+			}
+		}
+
 		/** Separately invoked recovery; existing draft storage and controls do not call this. */
 		async prepareDraftRecovery( input, assertCurrent = () => {} ) {
 			let native, mode;

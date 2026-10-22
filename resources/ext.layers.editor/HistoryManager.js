@@ -160,6 +160,20 @@
 			return !!value && ( application === undefined || value.application === application );
 		}
 
+		/** Stage a privately certified creation-to-saved route replacement without changing history. */
+		preparePdfImportHistoryTransfer( previous, application, route ) {
+			const old = pdfImportHistoryRoutes.get( this ), editor = window.Layers && window.Layers.Editor;
+			const Creation = editor && editor.PageOwnedPdfCreationHost, Application = editor && editor.PageOwnedWholePdfImportApplication;
+			const check = () => {
+				if ( !old || pdfImportHistoryRoutes.get( this ) !== old || old.application !== previous || this.isDestroyed || this.batchMode ||
+					!Creation || !Creation.isPdfImportHistoryTransfer( previous, this, application ) ||
+					!Application || !Application.isPdfImportHistoryRoute( route, this, application ) ) throw workingHistoryError();
+			};
+			check(); let committed = false;
+			return Object.freeze( { preflight: () => { if ( committed ) throw workingHistoryError(); check(); },
+				commit: () => { pdfImportHistoryRoutes.set( this, { application, route } ); committed = true; } } );
+		}
+
 		/** Qualify a target page timeline before the coordinator changes any live page state. */
 		preflightPdfImportTimeline( input, page ) {
 			const timeline = this.preflightTimeline( input ), value = pdfImportHistoryRoutes.get( this );
