@@ -85,8 +85,34 @@ by its native PDF handler. Restoring those standard development-environment
 dependencies and refreshing only the fresh test PDF's metadata allowed native
 admission. This introduces no Layers runtime service or configuration change.
 
-This checkpoint does not qualify the entire release. Lost-response browser
-acceptance, mobile, MediaWiki 1.44, upgrade, combined security/performance
+A subsequent desktop browser journey qualifies a lost or unreadable successful
+Save reply. A fresh test-only HTTP route let the real native publisher commit,
+then suppressed only that request's success body. The exact target, base revision
+and embed were selected in advance; request data and source references were
+claimed and hash-bound before native dispatch. The complete committed response
+was retained privately before the browser received an empty HTTP 200 body.
+Validation refusals, other requests and Check responses were unaffected. This
+tests lost-success-reply handling; it does not simulate a physical connection
+failure or change the extension's transport.
+
+The server created exactly one owner revision with both imported PDF pages,
+their reading order and source attribution. The editor retained its uncertain
+working state. A newer local edit was then made through the existing Text field.
+One explicit Check confirmed the same revision using the exact retained request,
+without another publication. Saved ownership and the page inventory appeared;
+the newer edit remained local and dirty. Actual Undo returned to the confirmed
+saved content, whole-group Undo removed both imported members, and Redo restored
+the Import and the later edit across page turns. The source owner, main text and
+unrelated slide remained exact. No runtime or maintained test change was needed.
+
+The private fault recipe passed ten selection, success/refusal and durable-write
+checks. Actual native logging witnesses were verified for the relevant API
+traffic. Ordinary wiki table bytes, installed media, prior fixture rows/files,
+protected source and private Git state remained exact. The source commit's
+existing green CI is retained; unchanged full suites were not repeated locally.
+
+This checkpoint does not qualify the entire release. Mobile, MediaWiki 1.44,
+upgrade, combined security/performance
 checks and owner acceptance remain part of the existing release checklist.
 Private fixtures, screenshots, wiki data and environment credentials are excluded
 from publication.
