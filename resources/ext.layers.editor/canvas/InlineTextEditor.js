@@ -319,11 +319,6 @@
 				}
 
 				if ( textChanged || richTextChanged ) {
-					// Save state for undo before making changes
-					if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
-						this.canvasManager.saveState( 'Edit text' );
-					}
-
 					// Update the layer
 					this.editingLayer.text = newText;
 
@@ -400,6 +395,11 @@
 				this.editingLayer.visible = this._originalVisible;
 			}
 			this._originalVisible = undefined;
+
+			// History stores the completed edit, including restored canvas visibility.
+			if ( changesApplied && this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+				this.canvasManager.saveState( 'Edit text' );
+			}
 
 			// Clear state
 			this.isEditing = false;

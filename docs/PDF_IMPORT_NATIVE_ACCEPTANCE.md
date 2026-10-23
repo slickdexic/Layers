@@ -116,3 +116,26 @@ upgrade, combined security/performance
 checks and owner acceptance remain part of the existing release checklist.
 Private fixtures, screenshots, wiki data and environment credentials are excluded
 from publication.
+
+A 390 × 844 viewport check now passes whole-PDF Import, group Undo/Redo, both
+page turns, first Save, owning-page return and overlay reopen. A distinct saved
+text edit also creates one additional owner revision and survives reopen. Both
+PDF members, exact source pins, main text and unrelated layer sets are retained.
+This is a narrow browser-layout check, not physical touch-device acceptance.
+
+Immediate property Save exposed a pending Undo checkpoint: live text could be
+newer than its debounced history entry, so strict publication refused locally.
+Save now settles that existing checkpoint before publication. A related inline
+text regression showed the checkpoint was recorded before the completed edit;
+it now records the final text and restored visibility. Both regressions fail
+before their respective corrections. All 907 affected cases pass, including
+server-refusal preservation, complete sibling data and inline Undo behavior.
+The property correction also passes actual native immediate Save and reopen.
+Combined inline text and formatting create one completed Undo checkpoint. No
+publication guard, user control or wording was removed or relaxed.
+
+Narrow-layout acceptance remains open: the saved header overlaps at 390 pixels,
+and the existing layer-panel layout leaves a 20-pixel-wide canvas. A bounded
+header/workspace arrangement proposal awaits the owner's approval under the
+charter. The runtime layout is unchanged. MediaWiki 1.44, upgrade, combined
+security/privacy/performance qualification and owner acceptance remain open.

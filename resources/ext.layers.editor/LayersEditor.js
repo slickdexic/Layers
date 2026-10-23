@@ -2026,12 +2026,8 @@ class LayersEditor {
 	/**
 	 * Save every page that has unsaved work, not only the one on screen.
 	 *
-	 * Pages the reader edited and turned away from are written first, one at a
-	 * time - the API rejects concurrent saves, and sequential writes mean a
-	 * failure halfway through leaves the pages that did succeed saved and the
-	 * rest still buffered. The page on screen is saved last, through the normal
-	 * path, so the spinner, notification and revision reload all describe the
-	 * page the reader is looking at.
+	 * Buffered pages are written sequentially before the current page. A failed
+	 * write retains that page's work; the current page uses its normal Save path.
 	 */
 	save () {
 		const buffered = this.pageBuffer ? this.pageBuffer.dirtyPages() : [];
@@ -2127,6 +2123,7 @@ class LayersEditor {
 		}
 		// Debug logging (controlled by extension config)
 		const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+		let inlineChanged = false;
 
 		// If inline text editing is active, finish it first to capture the current content
 		// Otherwise the layer would be saved with empty text (editing state)
@@ -2136,7 +2133,16 @@ class LayersEditor {
 			if ( debug && mw.log ) {
 				mw.log( '[LayersEditor] Finishing inline editing before save' );
 			}
-			this.canvasManager.inlineTextEditor.finishEditing( true );
+			inlineChanged = this.canvasManager.inlineTextEditor.finishEditing( true );
+		}
+
+		// Settle property edits before publication checks the live Undo checkpoint.
+		if ( this._updateLayerSaveTimer ) {
+			clearTimeout( this._updateLayerSaveTimer );
+			this._updateLayerSaveTimer = null;
+			if ( !inlineChanged ) {
+				this.saveState( 'Update layer' );
+			}
 		}
 
 		const layers = this.stateManager.get( 'layers' ) || [];
