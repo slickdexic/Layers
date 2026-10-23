@@ -34,6 +34,13 @@ The lost-success-reply browser case also passes without a runtime correction.
 Remaining acceptance is limited to the existing release-candidate matrix above
 and owner acceptance. Reuse valid evidence and close only unproved combinations.
 
+The owner-approved [narrow editor repair](EDITOR_NARROW_LAYOUT.md) restores a
+full-width canvas below the existing layer panel and wraps the existing header
+controls at widths up to 768 pixels. Native image, slide and PDF Save/return/
+overlay-reopen checks qualify the recorded browser viewport scope. This closes
+the demonstrated 20-pixel canvas/header-overlap gap; it does not claim physical
+touch-device or complete supported-version release acceptance.
+
 Ordinary page embeds display their content and approved overlays. They do not
 add owner/revision information above slides, images or PDF pages. The owner
 explicitly requested removal of the slide caption on October 21. Dedicated

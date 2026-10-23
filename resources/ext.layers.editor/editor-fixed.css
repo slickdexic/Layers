@@ -282,11 +282,6 @@
 	background: rgba( 198, 40, 40, 0.4 );
 }
 
-/**
- * Layers Editor CSS Styles
- * Essential styling for the layers editing interface
- */
-
 /* Main Editor Container */
 
 .layers-editor {
@@ -577,7 +572,7 @@ body.layers-editor-open .mw-body-content {
 	justify-content: center;
 }
 
-@media ( pointer: coarse ), ( max-device-width: 1024px ) {
+@media ( pointer: coarse ), ( max-device-width: 1024px ), ( max-width: 768px ) {
 	.layers-header,
 	.layers-toolbar {
 		flex-wrap: wrap;
@@ -592,7 +587,7 @@ body.layers-editor-open .mw-body-content {
 	}
 }
 
-/* Touch device optimizations */
+/* Touch input */
 @media ( pointer: coarse ) {
 	.toolbar-button {
 		min-width: 44px;
@@ -610,7 +605,7 @@ body.layers-editor-open .mw-body-content {
 		min-height: 44px;
 	}
 
-	/* Larger selection handles for touch */
+	/* Canvas touch input */
 	.layers-canvas-container {
 		touch-action: none;
 	}
@@ -2591,7 +2586,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 @media ( max-width: 768px ) {
-	/* Mobile toolbar improvements */
+	/* Narrow toolbar */
 	.layers-toolbar {
 		padding: 6px 8px;
 		gap: 4px;
@@ -2618,24 +2613,26 @@ body.layers-editor-open .mw-body-content {
 		touch-action: manipulation;
 	}
 
-	/* Increase touch targets for mobile */
 	.toolbar-button svg {
 		width: 22px;
 		height: 22px;
 	}
 
-	/* Hide less critical style controls on very small screens */
+	/* Compact style labels */
 	.style-control-item label {
 		font-size: 0.65em;
 	}
 
-	/* Stack the editor layout vertically */
-	.layers-inspector-inner {
+	/* Narrow workspace */
+	.layers-main {
 		flex-direction: column;
 	}
 
 	.layers-panel {
 		width: 100%;
+		max-width: 100%;
+		min-width: 0;
+		flex: none;
 		height: 200px;
 		border-right: 0;
 		border-bottom: 1px solid #ddd;
@@ -2643,16 +2640,23 @@ body.layers-editor-open .mw-body-content {
 
 	.layers-canvas-container {
 		flex: 1;
+		min-height: 0;
 		padding: 10px;
 	}
 
-	/* Improve header on mobile */
+	/* Narrow header */
 	.layers-header {
 		padding: 8px 12px;
+		gap: 8px;
 	}
 
 	.layers-header-title {
 		font-size: 0.8em;
+		flex: 1 1 100%;
+	}
+
+	.layers-header-right {
+		margin-left: auto;
 	}
 
 	.layers-header-close {
@@ -2660,7 +2664,7 @@ body.layers-editor-open .mw-body-content {
 		height: 44px;
 	}
 
-	/* Mobile panel collapse button - only visible on mobile */
+	/* Narrow panel collapse */
 	.layers-panel-collapse-btn {
 		display: flex;
 		align-items: center;

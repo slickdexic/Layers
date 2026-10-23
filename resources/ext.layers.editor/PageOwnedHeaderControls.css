@@ -59,6 +59,23 @@
 	font: inherit;
 }
 
+@media ( max-width: 768px ) {
+	.layers-page-drawing-name {
+		flex: none;
+		max-width: 100%;
+	}
+
+	.layers-page-summary {
+		flex: 1 1 240px;
+	}
+
+	.layers-page-summary input {
+		flex: 1;
+		width: auto;
+		min-width: 0;
+	}
+}
+
 .layers-page-copy-overlay {
 	position: fixed;
 	inset: 0;

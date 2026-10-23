@@ -3,6 +3,9 @@
 **Adopted:** September 27, 2026. The project owner settled decisions D1–D5 the same day.
 **Applies to:** all lead and junior work on `main`.
 **Finish line:** Layers 2.0 (the current version is 1.5.95 plus later fixes on `main`).
+**Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
+set the current work order and commit/push targets. They supersede earlier work
+orders and estimates; dated evidence remains a record of what was proved then.
 
 ## Read this first: the rules for everyone
 
@@ -37,12 +40,13 @@ This is a minimum, not a full list (see Rule 1). Updating it is part of every ch
 
 | Area | What users have |
 | --- | --- |
-| **Tools** | All 17: Pointer, Text, Text Box, Callout, Marker, Dimension, Pen (freehand), Rectangle, Circle, Ellipse, Polygon, Star, Custom Shape (Shape Library, 1,385 shapes), Emoji picker (2,817), Image, Arrow, Line, with their keyboard shortcuts. |
+| **Tools** | All 17: Pointer, Text, Text Box, Callout, Marker, Dimension, Pen (freehand), Rectangle, Circle, Ellipse, Polygon, Star, Custom Shape (Shape Library, 1,385 shapes), Emoji picker (2,817), Image, Arrow, Line, with their keyboard shortcuts. The existing toolbar groups reflow when needed to keep controls reachable, preserving every control, its wording and order (owner-approved October 17; acceptance recorded separately). |
 | **Editing** | Selecting, multi-select, move, resize, rotate, align and distribute, smart guides and snapping, grouping and folders, lock and hide, layer order, zoom and pan, style presets, undo and redo, copy, cut, paste, duplicate, importing images, rich text, gradient and blur fills, shadows, glow, blend modes, 32 self-hosted fonts. |
 | **Layer sets** | Several named layer sets per image, slide or PDF; revision history; the editor's set selector; saving, renaming and deleting a layer set. |
-| **On the page** | Layers shown over images, PDF pages and slides in the page; `layerset=name`, `layerset=none` and `off`, `layerset=on`, the older `layers=` spelling; galleries (`<gallery>` lines, Cargo `format=gallery`, `{{#layers_hint:}}`); `{{#Slide:}}` with its size options and `noedit`. |
-| **Hover overlay** | One **Edit layers** button (shown only to those who may edit) and one **View full size** button, on hover, focus or tap, on every image, slide and PDF with layers. (Gap since September 27 on page-owned layer sets; to be restored, charter UI-10.) |
-| **Full-size viewer** | Zoom, pan, fit, page navigation for PDFs, **Print** and **Download** (the marked-up document as a PDF), Escape to close. (Gap since September 27 on page-owned layer sets; UI-10.) |
+| **Local draft recovery** | Review, explicit Restore and Keep drafts unchanged; cancellation preserves local backups and current work according to the existing current/earlier-revision safeguards. The owner-approved October 13 presentation keeps the heading/actions visible around scrollable content and explains local recovery versus Save. Native/browser acceptance remains open (HIST-4, DATA-1, UI-10). |
+| **On the page** | Layers shown over images, PDF pages and slides in the page; `layerset=name`, `layerset=none` and `off`, `layerset=on`, the older `layers=` spelling; galleries (`<gallery>` lines, Cargo `format=gallery`, `{{#layers_hint:}}`); `{{#Slide:}}` with its size options and `noedit`. Ordinary embeds add no owner/revision captions above their content (owner clarification October 21). |
+| **Hover overlay** | One **Edit layers** button (shown only to those who may edit) and one **View full size** button, on hover, focus or tap, on every image, slide and PDF with layers. (J114L2 mobile first-tap correction accepted in bounded native scope October 6; approved temporary box removal qualified in bounded native scope October 13 (J117H); full mobile/owner acceptance remains open, UI-10.) |
+| **Full-size viewer** | Zoom, pan, fit, page navigation for PDFs, **Print** and **Download** (the marked-up document as a PDF), Escape to close. (Page-owned viewer integration accepted for bounded client scope October 6; live/owner acceptance remains open, UI-10.) |
 | **Types** | Images, PDFs (each page separately) and standalone slides with their own size and background. |
 | **Operating** | The `editlayers` and `layers-admin` rights, rate limits, interface translations, light and dark themes, keyboard use, the `{{#layers_fields:}}` and Cargo functions, search of layer text. |
 
@@ -53,6 +57,10 @@ Changes the owner has approved (the only removals allowed):
 | September 30, 2026 | The box of links above a page ("Drawings on this page") goes; hover overlays replace it. | UI-10 |
 | September 30, 2026 | The **Edit Layers** tab on `File:` pages goes. Layers are edited on the page that owns them. | UI-10, behaviour brief |
 | September 29–30, 2026 | After the migration, old shared layer sets are read-only; "Adopt" is retired. | D3, behaviour brief |
+| October 13, 2026 | Recovery dialog presentation and exact wording refreshed; existing controls, recovery steps and safeguards stay intact. | [Approved design brief](J117E_RECOVERY_DIALOG_DESIGN.md), approval recorded in [J117F](J117F_RECOVERY_DIALOG_PRESENTATION.md) |
+| October 17, 2026 | Existing editor toolbar groups may continue onto another row when they do not fit, keeping Save reachable and preserving controls, wording, shortcuts and order. Fitting layouts keep one row; existing narrow-screen handling remains. | [Approved toolbar reflow](EDITOR_TOOLBAR_REFLOW.md); project owner: “Approve the proposed reflow”. |
+| October 21, 2026 | Remove generated owner/revision captions above embedded slides. Ordinary page content remains free of added technical headings; dedicated history/diff context stays. | Project owner identified the unwanted line and explicitly requested its removal. |
+| October 23, 2026 | At widths up to 768 pixels, existing header controls wrap in their current order and the existing layer panel sits above the full-width canvas. All controls, wording, actions and wider layouts remain. | [Approved narrow layout repair](EDITOR_NARROW_LAYOUT.md); project owner: “Approve the bounded layout repair”. |
 
 Not yet decided (owner questions, do not act on them): whether to delete the old shared-set editor and its APIs in 2.0.
 
@@ -66,16 +74,30 @@ Layers has grown quickly, and each piece of work has been reasonable on its own.
 
 ## 2. Vision
 
-Layers makes images, PDFs and slides first-class wiki content. Anyone who may edit a page can draw on it in a fast, modern editor. Every change is an ordinary page revision, with history, diffs and restore. Search finds the words in layers, and Cargo can query them and feed them. Nothing Layers adds weakens the wiki's security or speed.
+The primary goal is page ownership of layer sets: saving a layer-set change
+creates a native revision of its owning wiki page, with history, diffs and restore.
+Images, PDFs and slides keep their existing editing and viewing capabilities.
+
+Next, MediaWiki's built-in search makes text fields in layer sets discoverable.
+Then the page-owned data contract makes Cargo integration possible, followed by
+the optional Cargo integration itself. Finally, an optional `link` parameter on
+layer objects provides clickable links on images, slides and PDF pages embedded
+in wiki pages, not in the lightbox. Section 3.1 defines the qualification and
+commit/push checkpoint for each milestone, in this order.
+
+Nothing Layers adds weakens the wiki's security, data integrity or speed.
 
 ## 3. The finish line
 
 Layers 2.0 ships when all of the following are true on a standard MediaWiki install, each backed by evidence:
 
+This is the complete release checklist. The delivery order is section 3.1;
+later product milestones do not hold up an earlier milestone's code checkpoint.
+
 1. **History:** every Layers edit, whether on an image, a PDF page or a slide, is a native revision of a wiki page. It shows in history, diffs, watchlists and recent changes, and it can be restored. This is on by default. (HIST)
 2. **Search:** MediaWiki search finds pages and files by the words in their layers. (SRCH)
-3. **Cargo:** Cargo can query layer text, and page data can fill layer text. (CARGO)
-4. **Features:** the editor has the feature set in 5.5, including links from layers. (FEAT)
+3. **Cargo:** page-owned data first supports optional Cargo integration; then Cargo can query layer text, and page data can fill layer text. (CARGO)
+4. **Features:** the editor has the feature set in 5.5, including links from layer objects that readers can follow on wiki pages, outside the lightbox. (FEAT)
 5. **Content types:** images, PDFs and slides each pass the whole journey in 5.6. (TYPES)
 6. **Security:** a full security review of the release candidate leaves no open high or critical finding. (SEC)
 7. **Speed:** the performance budgets in 5.3 are met on the reference install. (PERF)
@@ -85,6 +107,38 @@ Layers 2.0 ships when all of the following are true on a standard MediaWiki inst
 11. **Sign-off:** all automated gates are green, and the project owner has completed the acceptance scenarios in section 7 on their own wiki.
 
 **Victory is declared by the project owner after item 11, not by passing tests alone.**
+
+### 3.1 Owner-prioritized delivery milestones — October 11, 2026
+
+Work proceeds in this order. The lead completes and qualifies the earliest open
+milestone before starting new functionality in the next. Existing later-stage
+code and features are preserved; their presence or old test counts do not mean
+the milestone has passed. Junior assignments name both the milestone and the
+charter criterion they advance.
+
+| Milestone | Goal and required outcome | Commit/push target |
+| --- | --- | --- |
+| **1. Page ownership and version history** | Each layer set belongs to its owning wiki page and file or slide. Saving its changes creates that page's native revision; history, diff, old-version viewing and restoration work. Images, slides and whole-PDF layer sets keep their approved identities, source versions and existing editor/viewer entry points. Migration, scoped rename/copy/Import, first-Save provenance and refusal/recovery must preserve content. Advances HIST-1 to HIST-9, relevant TYPES/UI-10, DATA and OPS-1. | Reviewed page-ownership/history commit and push after the milestone's native/browser and upgrade acceptance; verify CI for that exact commit. |
+| **2. Built-in text search** | Text fields in page-owned layer sets are discoverable through MediaWiki's built-in database search on the owning page. Indexes follow saves, deletes, restores and visibility changes; rebuilding works and hidden content stays hidden. No Cargo or external search backend is required. Advances SRCH-1/SRCH-2 and SEC-2. | Reviewed search commit and push after real save/search/restore and visibility/rebuild checks; verify exact-commit CI. |
+| **3. Cargo integration readiness** | Document and qualify the page-owned data/read contract needed by Cargo: owner and revision, file/slide and layer-set identity, internal PDF page where applicable, and text fields. Extraction respects visibility and revision identity. History, search, editing and rendering remain independent of Cargo. This is readiness for integration, separate from implementing it. Advances CARGO-0/CARGO-4 and SEC-2. | Reviewed Cargo-readiness contract/code/tests commit and push after the optional-dependency boundary is verified; verify exact-commit CI. |
+| **4. Cargo integration** | Implement and qualify optional Cargo querying/storage of layer text and filling layer text from page/Cargo values, with compatibility, rebuilds, visibility and exact historical behavior. Preserve existing Cargo functionality. New link authoring is not a prerequisite; existing optional link fields remain compatible. Advances CARGO-1 to CARGO-4 and SEC-2. | Reviewed Cargo-integration commit and push after native/browser acceptance with Cargo and regression checks without it; verify exact-commit CI. |
+| **5. Links from layer objects on the page** | Add the optional `link` parameter to layer objects and authoring support. Readers can follow safe links on images, slides and displayed PDF pages in the wiki page, by pointer or keyboard. Layer links are not interactive in the lightbox/full-size viewer. Changes stay in the owning page's history; native link tracking, search and Cargo reflect them. Advances FEAT-8, SEC-3/SEC-5, SRCH-3 and the relevant CARGO-1 fields. | Reviewed page-link commit and push after on-page image/slide/PDF, keyboard, history and security acceptance, including a check that lightbox layer links stay inactive; verify exact-commit CI. |
+
+Each milestone is a reviewable product checkpoint, with code, generic tests,
+public documentation, validation results and a clear account of remaining work.
+Publish only extension material: private wiki data, configuration, diagnostic
+evidence and private Git ancestry stay local. The lead audits the outgoing files
+and commits before pushing. Qualified code can also be committed and pushed
+between milestones to preserve progress; an inactive candidate or such a backup
+checkpoint does not establish a completed product milestone.
+
+Security, data integrity, supported-version compatibility, performance and
+preservation of existing tools/overlays/viewers apply throughout. Qualify the
+behavior touched by each milestone and obtain the owner's required screen/flow
+acceptance. Do not require new Cargo or link functionality to accept page history
+or text search. Remaining agreed 2.0 criteria and the final security/owner review
+still govern the final release; this amendment changes priority, not the
+protected-feature register or the evidence needed to declare victory.
 
 ## 4. Constraints
 
@@ -119,7 +173,7 @@ Every criterion is required for 2.0. Status values: **Met** (done and verified),
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| DATA-1 | A save either succeeds completely or changes nothing, and no layer or property is lost silently. | Met for page history; ordinary saves validate first |
+| DATA-1 | A save either succeeds completely or changes nothing, and no layer or property is lost silently. | Partial (updated October 8, J114V): bounded native desktop complete PDF Save/recovery/history preservation, genuine stale refusal and safe/unsafe explicit Check paths pass on 1.45.3. Full client 15,737/224 passes; broader content-type, 1.44 and owner acceptance remain open. |
 | DATA-2 | When two people edit at once, the second is told, keeps their work, and can compare before choosing. | Partial: conflicts are detected and work is kept; there is no comparison view |
 | DATA-3 | Unsaved work survives a crash, a closed tab or an expired session, and a lost response never creates a duplicate. | Met for page history |
 | DATA-4 | Deleting, undeleting, moving, protecting and revision-deleting pages and files work as they do for text, and nothing reappears or is lost. | Partial: moves, undelete and rollback done; revision deletion untested end to end |
@@ -149,10 +203,10 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | UI-3 | Layers' own UI meets WCAG 2.2 AA: keyboard operable, visible focus, 4.5:1 text contrast, and names for screen readers. Checked by automated accessibility checks in browser tests and one manual screen-reader pass. | Partial: axe checks run on seven screens in light and dark (J84); four violation kinds fixed; layer rows still nest buttons in listbox options |
 | UI-4 | Readers who cannot see a layer set can get its text in reading order. | Open |
 | UI-5 | Right-to-left interface languages lay out correctly. | Open |
-| UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial: the colour picker is the known gap; in the page-owned editor Escape with the pointer tool closes the editor instead of deselecting, and its return target is the file page, not the page that owns the layer set (J97 findings, September 30) |
+| UI-6 | The editor follows common drawing-app conventions (tool placement, shortcuts, properties that fit the selection), checked against the [UX audit](UX_STANDARDS_AUDIT.md). | Partial (updated October 7): J114L2 mobile Save/tap/own-draft fixes and J114M2 zero-angle/pending-gradient corrections are accepted in bounded native image/slide scope. General touch editing, broader colour-picker and pointer-tool Escape findings remain open. |
 | UI-7 | Every error says what failed and what to do next. | Partial: J79 found a raw key and unfilled limits, now fixed; no systematic review yet |
 | UI-8 | Tablets can edit by touch (select, move, resize, draw, type), and phones can view. | Partial: basic touch works |
-| UI-10 | **The hover buttons and the full-size viewer are back, as they were.** Hovering an image, slide or PDF shows one **Edit** button (only to those who may edit) and one **View full size** button. Full size opens the viewer with zoom, pan, save, download and print. There is no list or box of links on the page, and no "Edit Layers" tab on `File:` pages; a layer set named by an embed that does not exist yet, or one that clashes with another, is handled inside the editor. | Open (updated October 4): the behaviour brief is approved (September 30). Protected overlays/full-size viewer remain missing on page-owned embeds; the link list remains a recorded stop-gap. J111's remaining exact-version/render/export implementation contract and owner screen review are outstanding. |
+| UI-10 | **The hover buttons and the full-size viewer are back, as they were.** Hovering an image, slide or PDF shows one **Edit** button (only to those who may edit) and one **View full size** button. Full size opens the viewer with zoom, pan, save, download and print. There is no list or box of links on the page, and no "Edit Layers" tab on `File:` pages; a layer set named by an embed that does not exist yet, or one that clashes with another, is handled inside the editor. | Open (updated October 8, J114V): native desktop overlays/editor/viewer/recovery/Download, current and historical Print preparation and exact old-source viewing after reupload pass in bounded 1.45.3 scope. Creation/working-copy Import, approved box/File-tab removal, Page N grouping/copy/move, responsive/mobile, 1.44, physical Print and owner acceptance remain open.  Added October 10 (J115D5): bounded native desktop missing-set image/slide/Default first Saves, owning-page return and saved viewer/Download/Print pass; mobile remains unqualified and replacement removal/Import stay open. Added October 13 (J117H): approved page-box removal, saved image/slide/PDF overlay entry, missing image/slide empty entry, noedit and historical View pass in bounded 1.45.3 scope. File-tab removal, missing PDF creation, full mobile/1.44 and owner acceptance remain open. Added October 13 (J117I): approved post-migration File-page tab removal passes image/PDF owner, debug, pre-migration and preserved overlay/editor/Close checks in bounded 1.45.3 scope. Direct compatibility routes and file-page lists stay unchanged; full UI-10/milestone and owner acceptance remain open. Added October 13 (J117J): inactive missing-PDF preparation qualifies empty internal pages, exact source/geometry and no-write refusal; no UI/caller activation. Interactive performance, creation/Save, browser/mobile/1.44 and owner acceptance remain open. |
 | UI-9 | The owner signs off a screenshot set of every screen, in light and dark. | Open |
 
 ### 5.5 Feature-complete editor (FEAT)
@@ -160,7 +214,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | ID | Criterion | Baseline |
 | --- | --- | --- |
 | FEAT-1 | Drawing tools: the 17 current tools, the Shape Library (1,385 shapes) and emoji (2,817). | Met |
-| FEAT-2 | Styling: solid, gradient and blur fills, strokes, opacity, shadows, blend modes and rich text. | Met |
+| FEAT-2 | Styling: solid, gradient and blur fills, strokes, opacity, shadows, blend modes and rich text. | Partial (updated October 7): J114M2 corrects zero-angle display, deferred edit loss and transparent/none arrow gradient fill, with lead probes and native image/slide Save/reopen/view/Download evidence. Existing controls/defaults stay. Native PDF, broader styling and owner acceptance remain open. |
 | FEAT-3a | Layers move between layer sets: export and import a whole layer set or a selection as JSON. | Partial: whole layer sets only |
 | FEAT-3b | Images can be added from a file, by drag and drop, and by pasting. | Partial: file picker only |
 | FEAT-3c | A file already on the wiki can be inserted as an image layer by reference. It is tracked in the file's usage and is not copied into every revision. | Open |
@@ -169,23 +223,23 @@ Measured on a **reference install**: production settings (object cache on, Resou
 | FEAT-5 | Copy, cut, paste and duplicate within a layer set, between layer sets and pages, and paste text and images from other applications. On a multi-page PDF, a layer or selection can be copied or moved to another page from its right-click menu. | Partial: within one editor session only |
 | FEAT-6 | Selecting and arranging: multi-select, folders, align and distribute, smart guides, snapping, lock and hide, and layer order. | Met |
 | FEAT-7 | Several named layer sets per page, including several for one file. | Met |
-| FEAT-8 | **Links from layers.** Any shape, text or image layer can link to a wiki page (optionally a section) or an external URL. Readers follow it by click or keyboard, and hovering shows the target. Internal links count in "What links here", and links to missing pages show as missing. External links appear in `Special:LinkSearch`. Link changes show in diffs, and exported PDFs keep the links clickable. | Partial (October 1, 2026, J108): page-owned link targets reach native link tables, `Special:LinkSearch` and search. Clickable/focusable viewer and editor behavior, hover target display, link diffs and clickable PDF export remain open. See [current status](CURRENT_STATUS.md#page-owned-layer-links-reach-mediawiki-link-tables-and-search). |
+| FEAT-8 | **Links from layer objects, on the wiki page only** (owner amendment, October 11). An optional `link` parameter lets a shape, text or image layer link to a wiki page (optionally a section) or external URL. Readers follow it by click or keyboard on an image, slide or displayed PDF page; hovering shows the target. The lightbox/full-size viewer does not activate layer links. Internal links count in "What links here", missing targets show as missing, and external links appear in `Special:LinkSearch`. Link changes show in page history and diffs. Creating clickable layer-link annotations in PDF exports is outside this milestone and the current 2.0 scope. | Partial: October 1 J108 proves native link tracking and searchable targets. October 11 scopes remaining authoring and clickable/focusable behavior to wiki-page embeds; lightbox/export clickability is not an acceptance requirement. Hover target display, link diffs and on-page browser/security acceptance remain open. See [current status](CURRENT_STATUS.md#page-owned-layer-links-reach-mediawiki-link-tables-and-search). |
 | FEAT-9 | Page values fill `{{name}}` tokens in layer sets (`{{#layers_fields:}}`). | Met |
 
 ### 5.6 Images, PDFs and slides (TYPES)
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Partial: JPEG and PNG tested; GIF, WebP and SVG untested; TIFF partial |
-| TYPES-2 | PDFs: a PDF can have several layer sets like any file; each covers the whole document and keeps each page's layers separately, shown under "Page N"; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial: a PDF page can get its own layer set, which paints over that page and is absent from earlier revisions (browser acceptance J98); new PDF versions and export are unverified |
-| TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, with a full-size view, and copyable to other pages. | Partial: a page can copy another page's slide from an embed (September 29) or from the editor's list (September 30, native tests; browser acceptance J100 queued) |
-| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey specs cover create, save, history, diff, restore, search (J98) and copy to another page; Cargo and export are not covered |
+| TYPES-1 | Images: JPEG, PNG, GIF, WebP and SVG (TIFF as far as the wiki can render it). Annotations stay aligned at every size and stay tied to the file version they were drawn on after a re-upload. | Partial: JPEG and PNG tested; GIF, WebP and SVG untested; TIFF partial  Added October 10 (J115D5): native PNG missing-set creation, Save/reopen, source/payload preservation, viewer and decoded Download/Print pass in bounded desktop scope; other formats and mobile remain open. |
+| TYPES-2 | PDFs: a PDF can have several layer sets like any file; each covers the whole document and keeps each page's layers separately, shown under "Page N"; old revisions show the PDF version the page was drawn on; the whole annotated document can be printed or exported. | Partial (updated October 8, J114V): supported whole-PDF editing/recovery/Undo/Save/reopen and exact historical viewing/export after real reupload pass in bounded native 1.45.3 desktop scope. Current/historical Print preparation passes; physical Print, 1.44/mobile, whole-PDF creation, Page N grouping/copy/move, Import and owner acceptance remain open. |
+| TYPES-3 | Slides: standalone canvases with configurable size and background, several per page, with a full-size view, and copyable to other pages. | Partial: a page can copy another page's slide from an embed (September 29) or from the editor's list (September 30, native tests; browser acceptance J100 queued)  Added October 10 (J115D5): native slide missing-set creation, Save/reopen, owner return and decoded viewer/Download/Print pass; broader slide copy, mobile and owner acceptance remain open. |
+| TYPES-4 | Each type passes the whole journey in browser acceptance tests: create, save, history, diff, restore, search, Cargo, export, and copy to another page. | Partial: the journey specs cover create, save, history, diff, restore, search (J98) and copy to another page; Cargo and export are not covered  Added October 10 (J115D5): bounded native image/slide/Default first Save, owner history/read-only diff, reopen and exports pass; no new complete restore/search/Cargo/copy or mobile acceptance is claimed. |
 
 ### 5.7 Page history (HIST)
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| HIST-1 | Every save of any layer set creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Met once the migration is recorded (September 30): shared sets and slides are then read-only (`layers-shared-sets-migrated`), so every Layers write is a page revision with the editor's summary or an automatic one (J89). Before the migration shared sets still save outside history; the [upgrade guide](UPGRADING.md) ends that window |
+| HIST-1 | Every save of any layer set creates exactly one native revision of the page that owns it, with user, summary and the `layers-page-drawing` tag. No Layers write bypasses page revisions. | Met once the migration is recorded (September 30): shared sets and slides are then read-only (`layers-shared-sets-migrated`), so every Layers write is a page revision with the editor's summary or an automatic one (J89). Before the migration shared sets still save outside history; the [upgrade guide](UPGRADING.md) ends that window  Added October 10 (J115D5): each of four native overlay first Saves creates exactly one owning-page revision with complete main/layers preservation. |
 | HIST-2 | History, old revisions, visual diffs, restoring one layer set, rollback and undo all work. Watchlists, recent changes, notifications and contributions show layer set edits. | Partial (September 30): history, old revisions, visual diffs, restore and rollback are built; recent changes, contributions, the watchlist and history list every layer set edit with its summary and the `layers-page-drawing` tag (API probe on the test wiki). Core's undo restores only the page text and did nothing for a layer set edit, so on an edit that changed layer sets the history now offers "undo layer set: <name>", which opens the earlier version for an editor to restore. Browser acceptance passed (J101); notifications are not covered because Echo is not installed |
 | HIST-3 | On by default: no pilot setting or owner list is needed (D2). | Met (September 29): `$wgLayersPageDrawingNamespaces` defaults to the content namespaces and `File:`; the pilot settings are retired (browser acceptance J92) |
 | HIST-4 | Every layer set belongs to one wiki page and to one file or slide. Its identity is the owning wiki page, file (or slide), and name. A PDF page number identifies an internal part of that one layer set, never a separately named layer set; all PDF pages share its name (owner clarification, October 1). The name need only be unique for that file on that wiki page. A page shows only its own layer sets. A bare `layerset=name` means this page's layer set, so it starts empty on a page that has none. | Partial: J90 covered missing-set creation (September 29). October 3: J112A/B/C implement scoped lookup, exact PDF-page routing, publication/creation/copy/adoption and draft identities. One PDF name spans its pages. C2's bounded browser minimum is lead-accepted after corrections (2 tests/19 screens); owner screen approval and J113 migration/Default transition remain. See the integration review. |
@@ -199,7 +253,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
-| SRCH-1 | Database search finds a page by the text of its layer sets, and a `File:` page by the text of its own layer sets. Results show the layer text as the snippet. | Met (J80); after the migration a word in a page's own layer set is found about 2 seconds after the save and gone about 2 seconds after the restore (browser acceptance J98). `File:` results have no snippet, a core limit |
+| SRCH-1 | MediaWiki's built-in database search finds an owning page by the text fields in its layer sets, including `File:` pages that own layer sets. Results show the layer text as the snippet. | Met (J80); after the migration a word in a page's own layer set is found about 2 seconds after the save and gone about 2 seconds after the restore (browser acceptance J98). `File:` results have no snippet, a core limit |
 | SRCH-2 | The index follows every change (save, delete, rename, restore, revision deletion, page deletion) without manual steps, and a maintenance script rebuilds everything. | Partial: revision deletion and suppression untested |
 | SRCH-3 | Link text and link targets from layers are searchable. | Partial (October 1, 2026, J108): page-owned link targets are indexed and a link-only match is verified; visible layer text remains in the existing search projection. Interactive link authoring is not yet available in the editor, and legacy shared sets cannot store links. See [current status](CURRENT_STATUS.md#page-owned-layer-links-reach-mediawiki-link-tables-and-search). |
 
@@ -207,6 +261,7 @@ Measured on a **reference install**: production settings (object cache on, Resou
 
 | ID | Criterion | Baseline |
 | --- | --- | --- |
+| CARGO-0 | **Integration readiness, before Cargo implementation.** A documented and tested read/extraction contract carries owning-page and revision identity, file/slide and layer-set identity, internal PDF-page selectors and text fields without losing retained data. It respects visibility and exact historical revisions. Cargo can consume it without becoming a dependency of history, search, editing or rendering. | Open for milestone qualification (owner amendment, October 11): existing page-owned storage/projections provide foundations; contract review and optional-dependency acceptance remain. |
 | CARGO-1 | `{{#layers_cargo_store:}}` stores one row per text layer for every layer set the page owns: page, revision, layer set, kind, layer, type, text and link target. | Partial (October 1, 2026): accepted J109 adds opt-in `_rows=layers` with all eight fields, visible text and link-only rows; native and browser acceptance passed on MediaWiki 1.45.3. The default per-stored-surface mode stays; other supported-version acceptance remains unverified |
 | CARGO-2 | Page values, including Cargo query results, fill layer text in every viewer. | Met |
 | CARGO-3 | Cargo's own tools rebuild the rows, and an old revision is never filled with today's query results. | Partial |
@@ -261,7 +316,17 @@ Afterwards the copies change independently: an image annotated once and shown on
 
 Codex is MediaWiki's current design system: the buttons, dialogs, colours and icons of today's Wikipedia. Layers mostly uses the older toolkit (OOUI) with styles of its own, so parts of it look like older MediaWiki. Layers moves to Codex's colours, spacing, type and icons screen by screen, starting with dialogs and panels. There is no rewrite, and the layer set canvas is not affected. Dark mode and every skin follow automatically.
 
-### D5 — Order of work (lead decision)
+### D5 — Order of work (owner amendment, October 11, 2026)
+
+The binding order is **page ownership/history, built-in text search, Cargo
+readiness, Cargo integration, then page-only layer links**, as specified in
+section 3.1. Each milestone targets a reviewed commit/push and exact-commit CI.
+The lead coordinates implementation; juniors qualify the same milestone's
+behavior, regressions and relevant accessibility/performance checks. New
+later-stage feature work waits for the earlier milestone to qualify. The final
+release candidate still receives the full security review and owner's acceptance.
+
+**Earlier lead order, September 27 (superseded; retained as history):**
 
 - **Lead:** D1, D2 and D3 (history for everything), then links from layers, then images by reference and clipboard, then the design pass and performance fixes, then documentation and the security review.
 - **Juniors, alongside:** browser acceptance of each lead step, the performance benchmark (PERF-0) early so that later fixes have a baseline, and automated accessibility checks in browser tests (UI-3).
@@ -270,11 +335,20 @@ Codex is MediaWiki's current design system: the buttons, dialogs, colours and ic
 ### Standing decisions
 
 - **D6:** the supported backends are MediaWiki's database search and Cargo 3.x. CirrusSearch is best-effort.
-- **D7:** page history came first, then search, then Cargo. Done.
+- **D7 (owner amendment, October 11):** page ownership/history comes first, then built-in text search, Cargo readiness, Cargo integration and page-only layer links. A milestone is complete only after its required qualification and commit/push checkpoint; dated baseline claims do not close it. The former wording, "page history came first, then search, then Cargo. Done.", is historical and is not the current delivery status.
 
 ## 7. Acceptance scenarios for the project owner
 
 The owner runs these on their own wiki with a normal login, after all automated gates pass.
+
+Run the relevant parts at each milestone: history/ownership, isolation,
+recovery/permissions and upgrade at milestone 1; text search at milestone 2;
+Cargo independence/read-contract checks at milestone 3; Cargo queries and value
+filling at milestone 4; on-page links at milestone 5. A scenario spanning several
+milestones is completed in stages, not used to require later features early.
+Final 2.0 sign-off still requires the complete applicable scenarios. Milestone 5
+also checks clickable image, slide and PDF-page layers on the wiki page and
+inactive layer links in the lightbox/full-size viewer.
 
 | ID | Scenario |
 | --- | --- |
@@ -296,6 +370,7 @@ Worth doing later, but none of these holds up the finish line:
 - Templates, stamps and calibrated measurement tools beyond today's tools.
 - Editing on phones (phones can view).
 - SVG export and portable packages that include assets.
+- Clickable layer-link annotations in exported PDFs; interactive layer links are scoped to wiki pages, outside the lightbox/full-size viewer.
 - CirrusSearch verification, unless the owner's wiki adopts it.
 - XML import of pages with layer sets (2.0 refuses it clearly).
 - Feature parity on `REL1_43`.
@@ -311,7 +386,36 @@ Worth doing later, but none of these holds up the finish line:
 - Counting lines, tests or large files instead of meeting criteria.
 - Rewriting dated records to make them look current.
 
-## 10. Remaining work, in order (September 27, 2026)
+## 10. Remaining work, in the owner's milestone order (October 11, 2026)
+
+1. **Close page ownership and history.** Review returned J116J, then integrate
+   and qualify the remaining approved Import/editor behavior, first-Save
+   provenance, whole-PDF behavior and history/migration/upgrade acceptance.
+   Preserve overlays and existing viewers; close their required owning-page
+   journeys and obtain the owner's acceptance. Commit/push milestone 1.
+2. **Qualify built-in text search against the accepted ownership model.** Audit
+   existing indexing rather than assume dated "Met" rows cover the current
+   model. Prove text discovery, updates, visibility and rebuilds. Commit/push
+   milestone 2; new layer-link authoring waits for milestone 5.
+3. **Qualify Cargo readiness.** Review/document the stable native read/extraction
+   contract and prove optional-dependency boundaries. Reuse accepted mechanisms;
+   do not add a second storage model or speculative backend. Commit/push
+   milestone 3 before new Cargo integration work.
+4. **Complete optional Cargo integration.** Qualify queries/storage, value
+   filling, rebuilding, historical behavior and compatibility with/without
+   Cargo. Commit/push milestone 4.
+5. **Complete on-page layer links.** Author/store the `link` parameter and qualify
+   clickable/focusable layers on page-embedded images, slides and PDF pages,
+   with validation, history, native link tables, search and Cargo. The lightbox
+   does not activate layer links. Commit/push milestone 5.
+
+Support work belongs to the earliest milestone it is needed to deliver. Broader
+agreed 2.0 improvements that are not needed for that milestone wait behind these
+five priorities; final release checks remain as defined in section 3. Re-estimate
+from the remaining accepted work at each milestone. No new calendar deadline is
+established here; the September estimate below is historical.
+
+### Historical September 27 plan and estimate — superseded
 
 **Estimate.** About 48 lead deliverables remain, each the size of one reviewed commit such as those of September 26, plus 12–15 junior packets alongside. The count per item is in brackets. Over September 25–27 the lead landed about ten such deliverables per full working day; the remaining items are larger (migration, links, the design pass) and the browser suite is slow, so plan on five to ten a day. That is roughly one to two weeks of full-time work before the owner's acceptance, most likely nearer two. Re-estimate at each milestone.
 

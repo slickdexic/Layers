@@ -134,8 +134,10 @@ The property correction also passes actual native immediate Save and reopen.
 Combined inline text and formatting create one completed Undo checkpoint. No
 publication guard, user control or wording was removed or relaxed.
 
-Narrow-layout acceptance remains open: the saved header overlaps at 390 pixels,
-and the existing layer-panel layout leaves a 20-pixel-wide canvas. A bounded
-header/workspace arrangement proposal awaits the owner's approval under the
-charter. The runtime layout is unchanged. MediaWiki 1.44, upgrade, combined
-security/privacy/performance qualification and owner acceptance remain open.
+The owner approved the bounded [narrow editor repair](EDITOR_NARROW_LAYOUT.md)
+on October 23. Native image, slide and PDF checks now qualify wrapping header
+controls and a full-width canvas at 390 pixels, with the 768/769-pixel boundary
+checked separately. Each type completes one Save, owner return and overlay
+reopen. This closes the demonstrated 20-pixel canvas/header-overlap gap. Physical
+touch-device, MediaWiki 1.44, upgrade, combined security/privacy/performance and
+owner acceptance remain open.
