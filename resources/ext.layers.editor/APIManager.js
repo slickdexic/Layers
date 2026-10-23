@@ -336,16 +336,8 @@
 		}
 		if ( this.pageOwnedBridge ) {
 			return this.pageOwnedBridge.load().then( ( state ) => {
-				const draft = this.pageOwnedBridge.session.getDraft();
-				if ( draft.pdf ) {
-					const surfaces = draft.pdf.baseSnapshot.surfaces;
-					const anchor = surfaces.find( surface => surface.id === draft.surfaceId );
-					if ( anchor ) {
-						this.applyPageContext( { pagesWithLayers: surfaces.filter( surface => surface.kind === 'pdf' &&
-							surface.label === anchor.label && surface.source.fileTitle === anchor.source.fileTitle && surface.layers.length )
-							.map( surface => surface.source.page ).sort( ( left, right ) => left - right ) } );
-					}
-				}
+				const pdf = this.pageOwnedBridge.pdfCoordinator;
+				if ( pdf ) { this.applyPageContext( pdf.getPageContext() ); }
 				if ( this.pageOwnedBridge.session.getStatus().readOnly ) {
 					return state;
 				}

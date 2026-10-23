@@ -38,6 +38,15 @@
 			}
 		}
 
+		/** Return the existing navigator's inventory from this admitted saved PDF group. */
+		getPageContext() {
+			const draft = this.bridge.session.getDraft(), surfaces = draft.pdf.baseSnapshot.surfaces;
+			const anchor = surfaces.find( surface => surface.id === draft.surfaceId );
+			return { pagesWithLayers: anchor ? surfaces.filter( surface => surface.kind === 'pdf' &&
+				surface.label === anchor.label && surface.source.fileTitle === anchor.source.fileTitle && surface.layers.length )
+				.map( surface => surface.source.page ).sort( ( left, right ) => left - right ) : [] };
+		}
+
 		syncDirty() {
 			this.bridge.capture();
 			const dirty = this.bridge.session.getStatus().dirty;
