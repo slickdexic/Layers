@@ -141,3 +141,10 @@ checked separately. Each type completes one Save, owner return and overlay
 reopen. This closes the demonstrated 20-pixel canvas/header-overlap gap. Physical
 touch-device, MediaWiki 1.44, upgrade, combined security/privacy/performance and
 owner acceptance remain open.
+
+The separate [MediaWiki 1.44.6 checkpoint](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md)
+also passes missing-target whole-PDF Import, group Undo/Redo across page turns,
+one attributed first Save, owning-page return, overlay reopen and native
+history/diff. Native readback proves both members, target geometry, source pins
+and the unchanged source owner. Download byte/render inspection, further 1.44
+recovery/conflict/restore and the broader release matrix remain open.
