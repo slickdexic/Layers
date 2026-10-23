@@ -192,6 +192,13 @@
 			this.alive();
 			const persisted = manager.pageOwnedDrafts.ready && manager.pageOwnedDrafts.flush();
 			if ( delivered.needsRefresh || !persisted ) delivered.bridge.session.blockPublication();
+			else {
+				const anchor = this.preparation.anchorSurface;
+				const pages = draft.pdf.baseSnapshot.surfaces.filter( surface => surface.kind === 'pdf' &&
+					surface.label === anchor.label && surface.source.fileTitle === anchor.source.fileTitle && surface.layers.length )
+					.map( surface => surface.source.page ).sort( ( left, right ) => left - right );
+				manager.applyPageContext( { pagesWithLayers: pages } );
+			}
 			return { phase: 'ready', revisionId: draft.baseRevisionId, dirty: delivered.bridge.session.getStatus().dirty,
 				editorStateValid: !delivered.needsRefresh && persisted, draftPersisted: Boolean( persisted ) };
 		}

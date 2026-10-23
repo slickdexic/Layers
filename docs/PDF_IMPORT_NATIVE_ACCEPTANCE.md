@@ -44,17 +44,49 @@ working content alongside layers, preserving its value or absence in each
 checkpoint. Source identity, ownership, geometry and fresh authorization checks
 remain enforced. Both native-shaped regressions fail with the previous helper;
 all 100 directly affected client tests pass with the correction, including
-first-Save handoff and whole-group Undo/Redo. The consecutive-Save native replay
-and genuine stale-Save acceptance remain open; these client results do not
-replace them.
+first-Save handoff and whole-group Undo/Redo. The following native continuation
+now qualifies those two boundaries.
+
+The actual missing-target editor completed first Save and its in-place saved
+handoff, then completed a second Save without reopening. Each Save created
+exactly one owner-page revision with both PDF members and their reading order.
+Whole-group Undo/Redo and page turns remained available. A genuine concurrent
+owner edit then made Save refuse; the visible local text, active page and Undo/
+Redo availability remained exact, and no duplicate revision was created.
+
+A second native journey exercised a disjoint concurrent change to the unrelated
+slide. Check saved page reconciled that change while retaining local PDF work.
+A fresh editor explicitly restored the persisted whole-PDF draft at the group
+Undo boundary. Redo restored both imported pages and the later local edit;
+explicit Save created one revision while retaining the concurrent slide, main
+text and source owner. Close returned to the owning page; its overlay reopened
+both saved members. The final viewer Download contained both backgrounds and
+saved layer text, independently rendered and inspected at landscape and portrait
+aspect ratios.
+
+These journeys found two existing refresh gaps. The handoff and fresh saved
+startup now populate the existing PDF page inventory from the exact saved
+file/layer-set group. Completed saved Import, group history and draft recovery
+release their busy state before refreshing the existing Undo/Redo buttons. The
+commits and synchronous re-entry guards remain intact. The inventory and button
+regressions fail before these corrections; all 712 affected client tests across
+12 suites pass afterward. Native recovery exposes usable Redo immediately, and
+fresh reopen reports both pages with layers. No controls or wording changed.
+
+Check saved page also refused an overlapping history case and preserved local
+work. This is refusal evidence, not a claim that every conflict can be merged.
+The native run used the owner's bounded shared-log exception: the acquired
+prefix stayed exact, and separately retained appended records identified only
+the ordinary wiki. Unexpected/test-wiki records still stop testing. Ordinary
+wiki tables and installed media remained exact.
 
 The test environment initially lacked Ghostscript and Poppler utilities required
 by its native PDF handler. Restoring those standard development-environment
 dependencies and refreshing only the fresh test PDF's metadata allowed native
 admission. This introduces no Layers runtime service or configuration change.
 
-This checkpoint does not qualify the entire release. Complete native draft and
-conflict journeys, mobile, MediaWiki 1.44, upgrade, combined security/performance
+This checkpoint does not qualify the entire release. Lost-response browser
+acceptance, mobile, MediaWiki 1.44, upgrade, combined security/performance
 checks and owner acceptance remain part of the existing release checklist.
 Private fixtures, screenshots, wiki data and environment credentials are excluded
 from publication.

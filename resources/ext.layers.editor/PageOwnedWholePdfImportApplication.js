@@ -321,6 +321,7 @@
 			const preview = mode.binding.inspectImportRestore( prepared ); staged = participants( guard, preview, timelines, [] );
 			result = mode.binding.commitImportRestore( prepared, staged.preflight ); prepared = null;
 			staged.commit(); committed = true; record.command.phase = target; mode.generation++;
+			mode.busy = false;
 			result.diagnostics = staged.refresh(); return result;
 		} catch ( error ) { if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable(); }
 		finally {
@@ -660,6 +661,7 @@
 				route.bank = history.bank; mode.commands = history.commandSet; mode.generation++;
 				record.consumed = true; committed = true;
 				if ( hold ) { define( hold.object, hold.key, hold.descriptor ); }
+				mode.busy = false;
 				result.diagnostics = staged.refresh(); return result;
 			} catch ( error ) {
 				if ( committed ) { result.diagnostics = [ 'working-copy-import-refresh-failed' ]; return result; } throw unavailable();
@@ -957,6 +959,7 @@
 				command.before = result.beforeCheckpoint; command.after = result.checkpoint;
 				commands.set( token, command ); mode.commands.add( token ); mode.generation++;
 				if ( historyPlan ) { historyRoutes.get( mode ).bank.set( historyPlan.id, { ...historyPlan, token, command, savedJson: mode.session._savedJson } ); }
+				mode.busy = false;
 				result.command = token; result.diagnostics = staged.refresh();
 				try { mode.binding.release( record.sourceHandle ); } catch ( error ) { result.diagnostics.push( 'working-copy-import-release-failed' ); }
 				return result;

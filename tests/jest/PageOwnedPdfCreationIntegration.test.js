@@ -99,6 +99,38 @@ it.each( [ true, false ] )( 'first Save installs real saved ownership, complete 
 		expect( work.editor.layers[ 0 ].text ).toBe( 'One saved' );
 	} finally { work.close(); }
 } );
+it.each( [
+	{ pages: [ 1, 2 ], expected: [ 1, 2 ], label: 'both edited pages' },
+	{ pages: [ 2 ], expected: [ 2 ], label: 'only the saved page when the other PDF page is empty' }
+] )( 'refreshes the page inventory after first Save for $label', async ( { pages, expected } ) => {
+	const work = make();
+	try {
+		await work.manager.loadLayers();
+		for ( const page of pages ) {
+			if ( work.editor.page !== page ) await Editor.prototype.navigateToPage.call( work.editor, page );
+			work.edit( 'Saved page ' + page );
+		}
+		const result = await work.manager.saveLayers();
+		expect( result ).toMatchObject( { revisionId: 13, editorStateValid: true } );
+		const committed = JSON.parse( work.api.postWithToken.mock.calls[ 0 ][ 1 ].data ).surfaces
+			.filter( surface => surface.kind === 'pdf' && surface.layers.length )
+			.map( surface => surface.source.page ).sort( ( left, right ) => left - right );
+		expect( committed ).toEqual( expected );
+		expect( work.editor.stateManager.get( 'pagesWithLayers' ) ).toEqual( expected );
+	} finally { work.close(); }
+} );
+it( 'preserves the existing page inventory when first-Save handoff admission fails', async () => {
+	const work = make();
+	try {
+		await work.manager.loadLayers();
+		work.editor.stateManager.set( 'pagesWithLayers', [ 1 ] );
+		work.edit( 'Saved page two' );
+		work.api.get.mockRejectedValueOnce( new Error( 'saved-session admission unavailable' ) );
+		const result = await work.manager.saveLayers();
+		expect( result ).toMatchObject( { revisionId: 13, editorStateValid: false } );
+		expect( work.editor.stateManager.get( 'pagesWithLayers' ) ).toEqual( [ 1 ] );
+	} finally { work.close(); }
+} );
 it( 'preserves edits made during first Save and never marks them saved during handoff', async () => {
 	const work = make(), pending = wait();
 	try {

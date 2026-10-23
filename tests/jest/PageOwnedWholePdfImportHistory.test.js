@@ -172,6 +172,17 @@ describe( 'PageOwnedWholePdfImportHistory', () => {
 		} finally { work.close(); }
 	} );
 
+	it( 'refreshes existing Undo and Redo buttons immediately after applying a saved-editor Import', async () => {
+		const { work, application, request } = await setup();
+		try {
+			const updateUndoRedoState = jest.fn();
+			work.editor.toolbar = { updateUndoRedoState };
+			enableHistory( work, application );
+			await applyImport( work, application, request );
+			expect( updateUndoRedoState ).toHaveBeenLastCalledWith( true, false );
+		} finally { work.close(); }
+	} );
+
 	it( 'routes one Undo at the Import boundary to the complete group', async () => {
 		const { work, application, request } = await setup();
 		try {

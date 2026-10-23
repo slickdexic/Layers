@@ -202,4 +202,15 @@ describe( 'Native missing-PDF editor Import startup', () => {
 			for ( const [ key, raw ] of entries ) expect( work.storage.records.get( key ) ).toBe( raw );
 		} finally { earlier.mockRestore(); confirm.mockRestore(); }
 	} );
+	it( 'rebuilds the PDF page inventory from the saved revision on fresh editor startup', async () => {
+		work = make(); await work.manager.loadLayers(); await choose( work );
+		expect( await work.manager.saveLayers() ).toMatchObject( { revisionId: 13, editorStateValid: true } );
+		const saved = copy( work.remote );
+		expect( members( work ) ).toHaveLength( 2 );
+		expect( members( work ).every( surface => surface.layers.length > 0 ) ).toBe( true );
+		work.close(); work = null;
+		work = make( true, memory(), saved ); await work.manager.loadLayers();
+		expect( work.editor.page ).toBe( 2 ); expect( work.editor.pageCount ).toBe( 2 );
+		expect( work.editor.stateManager.get( 'pagesWithLayers' ) ).toEqual( [ 1, 2 ] );
+	} );
 } );
