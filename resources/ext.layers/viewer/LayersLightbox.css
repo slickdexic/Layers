@@ -153,6 +153,7 @@
 }
 
 .layers-lightbox-toolbar button.layers-lightbox-print,
+.layers-lightbox-toolbar button.layers-lightbox-download-png,
 .layers-lightbox-toolbar button.layers-lightbox-download {
 	background: rgba( 51, 102, 204, 0.55 );
 	border-color: rgba( 120, 160, 240, 0.7 );
@@ -160,6 +161,7 @@
 }
 
 .layers-lightbox-toolbar button.layers-lightbox-print:hover,
+.layers-lightbox-toolbar button.layers-lightbox-download-png:hover,
 .layers-lightbox-toolbar button.layers-lightbox-download:hover {
 	background: rgba( 51, 102, 204, 0.8 );
 }

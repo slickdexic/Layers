@@ -377,11 +377,23 @@
 				this.printDocument();
 			} );
 
+			this.downloadPngBtn = document.createElement( 'button' );
+			this.downloadPngBtn.type = 'button';
+			this.downloadPngBtn.className = 'layers-lightbox-download-png';
+			this.downloadPngBtn.textContent = this.getMessage( 'layers-lightbox-download-png', 'Download PNG' );
+			this.downloadPngBtn.title = this.getMessage(
+				'layers-lightbox-download-png-tooltip', 'Download the image or slide with its layers as a PNG'
+			);
+			this.downloadPngBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.downloadPng();
+			} );
+
 			this.downloadBtn = document.createElement( 'button' );
 			this.downloadBtn.type = 'button';
 			this.downloadBtn.className = 'layers-lightbox-download';
 			this.downloadBtn.textContent = this.getMessage(
-				'layers-lightbox-download', 'Download'
+				'layers-lightbox-download-pdf', 'Download PDF'
 			);
 			this.downloadBtn.title = this.getMessage(
 				'layers-lightbox-download-tooltip',
@@ -401,6 +413,7 @@
 			this.toolbar.appendChild( this.pageIndicator );
 			this.toolbar.appendChild( this.nextBtn );
 			this.toolbar.appendChild( this.printBtn );
+			this.toolbar.appendChild( this.downloadPngBtn );
 			this.toolbar.appendChild( this.downloadBtn );
 
 			// The toolbar and close button are viewport chrome, not part of the
@@ -712,6 +725,7 @@
 				return;
 			}
 			const multiPage = this.pageCount > 1;
+			this.downloadPngBtn.hidden = this.isPdf === true;
 			this.prevBtn.style.display = multiPage ? '' : 'none';
 			this.nextBtn.style.display = multiPage ? '' : 'none';
 			this.pageIndicator.style.display = multiPage ? '' : 'none';
@@ -1020,6 +1034,81 @@
 			return operation;
 		}
 
+		/** Download an image or slide losslessly; PDF documents keep their complete PDF route. */
+		downloadPng() {
+			if ( this.isPdf ) {
+				return this.downloadPdf();
+			}
+			if ( this.pageOwned ) {
+				return this.exportPageOwned( 'png' );
+			}
+			if ( this._exporting ) {
+				return this._exporting;
+			}
+			const session = this._sessionToken;
+			const current = () => this.isOpen && this._sessionToken === session;
+			const controls = [ this.printBtn, this.downloadBtn, this.downloadPngBtn ].filter( Boolean );
+			const active = document.activeElement;
+			controls.forEach( ( button ) => { button.disabled = true; } );
+			const operation = Promise.resolve().then( () => this.composePage( 1, 'image/png' ) )
+				.then( ( image ) => this.buildPngBlob( image ) ).then( ( blob ) => {
+					if ( current() ) {
+						this.saveBlob( blob, this.exportFileName( 'png' ) );
+					}
+				} ).catch( () => {
+					if ( current() ) {
+						this.showPngExportError();
+					}
+				} ).finally( () => {
+					if ( current() ) {
+						this._exporting = null;
+						controls.forEach( ( button ) => { button.disabled = false; } );
+						if ( active && active.isConnected && this.overlay.contains( active ) ) {
+							active.focus();
+						}
+					}
+				} );
+			this._exporting = operation;
+			return operation;
+		}
+
+		/** Validate PNG output and retain its original lossless bytes and alpha channel. */
+		async buildPngBlob( entry ) {
+			if ( !entry || !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test( entry.src ) ||
+				!Number.isInteger( entry.width ) || entry.width < 1 ||
+				!Number.isInteger( entry.height ) || entry.height < 1 ) {
+				throw new Error( 'layers-export-failed' );
+			}
+			const bytes = Uint8Array.from( atob( entry.src.split( ',' )[ 1 ] ), ( c ) => c.charCodeAt( 0 ) );
+			if ( ![ 137, 80, 78, 71, 13, 10, 26, 10 ].every( ( byte, index ) => bytes[ index ] === byte ) ) {
+				throw new Error( 'layers-export-failed' );
+			}
+			const image = new Image();
+			let timer;
+			try {
+				image.src = entry.src;
+				await Promise.race( [ image.decode(), new Promise( ( resolve, reject ) => {
+					timer = setTimeout( () => reject( new Error( 'layers-export-failed' ) ), IMAGE_DECODE_TIMEOUT_MS );
+				} ) ] );
+				if ( image.naturalWidth !== entry.width || image.naturalHeight !== entry.height ) {
+					throw new Error( 'layers-export-failed' );
+				}
+			} finally {
+				clearTimeout( timer );
+				image.src = '';
+			}
+			return new Blob( [ bytes ], { type: 'image/png' } );
+		}
+
+		showPngExportError() {
+			const message = this.getMessage( 'layers-export-failed', 'Failed to export image' );
+			if ( typeof mw !== 'undefined' && mw.notify ) {
+				mw.notify( message, { type: 'error' } );
+			} else {
+				this.showError( message );
+			}
+		}
+
 		/**
 		 * Download the full marked-up document as a PDF.
 		 *
@@ -1119,7 +1208,7 @@
 			const session = this._sessionToken;
 			const active = document.activeElement;
 			const current = () => this.isOpen && this.pageOwned === context && this._sessionToken === session;
-			const controls = [ this.printBtn, this.downloadBtn ].filter( Boolean );
+			const controls = [ this.printBtn, this.downloadBtn, this.downloadPngBtn ].filter( Boolean );
 			const labels = controls.map( ( button ) => button.textContent );
 			controls.forEach( ( button ) => {
 				button.disabled = true;
@@ -1130,10 +1219,14 @@
 			const work = async () => {
 				await this._loadPromise;
 				const viewer = await context.read();
+				const png = mode === 'png';
 				if ( !current() || !this._pageOwnedViewerData ||
 					JSON.stringify( viewer.pages ) !== JSON.stringify( this._pageOwnedViewerData.pages ) ||
 					JSON.stringify( viewer.source ) !== JSON.stringify( this._pageOwnedViewerData.source ) ||
 					viewer.pageCount !== this._pageOwnedViewerData.pageCount ) {
+					throw new Error( 'layers-revision-unavailable' );
+				}
+				if ( png && ( viewer.kind === 'pdf' || viewer.pageCount !== 1 ) ) {
 					throw new Error( 'layers-revision-unavailable' );
 				}
 				const pages = [];
@@ -1145,17 +1238,26 @@
 					if ( !current() ) {
 						throw new Error( 'layers-revision-unavailable' );
 					}
-					const entry = await this.flattenPage( supplied.imageUrl, supplied.layerData, 'image/jpeg', 0.92 );
+					const entry = await this.flattenPage( supplied.imageUrl, supplied.layerData,
+						png ? 'image/png' : 'image/jpeg', png ? undefined : 0.92 );
 					if ( !entry ) {
 						throw new Error( 'layers-revision-unavailable' );
 					}
-					await this.validatePageOwnedEncoding( entry );
+					if ( !png ) {
+						await this.validatePageOwnedEncoding( entry );
+					}
 					pages.push( entry );
 				}
 				if ( !current() ) {
 					throw new Error( 'layers-revision-unavailable' );
 				}
-				if ( mode === 'print' ) {
+				if ( png ) {
+					const blob = await this.buildPngBlob( pages[ 0 ] );
+					if ( !current() ) {
+						throw new Error( 'layers-revision-unavailable' );
+					}
+					this.saveBlob( blob, this.exportFileName( 'png' ) );
+				} else if ( mode === 'print' ) {
 					await this.printImages( pages.map( ( entry ) => entry.src ), current );
 				} else {
 					const blob = this.buildPdfBlob( pages, true );
@@ -1167,7 +1269,11 @@
 			};
 			this._exporting = work().catch( () => {
 				if ( current() ) {
-					this.showExportError();
+					if ( mode === 'png' ) {
+						this.showPngExportError();
+					} else {
+						this.showExportError();
+					}
 				}
 			} ).finally( () => {
 				if ( current() ) {
@@ -1231,14 +1337,15 @@
 		/**
 		 * Suggested name for the downloaded PDF, derived from the source file.
 		 *
-		 * @return {string} File name ending in .pdf
+		 * @param {string} [format='pdf'] Requested download format
+		 * @return {string} File name ending in .pdf or .png
 		 * @private
 		 */
-		exportFileName() {
+		exportFileName( format = 'pdf' ) {
 			const base = String( this.filename || 'export' )
 				.replace( /\.[^.]+$/, '' )
 				.replace( /[\\/:*?"<>|]/g, '_' );
-			return ( base || 'export' ) + '.pdf';
+			return ( base || 'export' ) + ( format === 'png' ? '.png' : '.pdf' );
 		}
 
 		/**
