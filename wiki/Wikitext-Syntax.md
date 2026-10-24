@@ -1,6 +1,6 @@
 # Wikitext Syntax
 
-> **Candidate guidance — October 24, 2026:** After [migration completion](../docs/UPGRADING.md), bare names select this page's own layer sets. Save captures changes in native owner-page history. `layerset=on` selects `Default`; it does not select the most recently saved shared set. Tagged 1.5.95 uses the older shared model. `noedit` and hidden controls are not authorization. Milestone 1 acceptance remains open.
+> **Candidate guidance — October 24, 2026:** After [migration completion](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), bare names select this page's own layer sets. Save captures changes in native owner-page history. `layerset=on` selects `Default`; it does not select the most recently saved shared set. Tagged 1.5.95 uses the older shared model. `noedit` and hidden controls are not authorization. Milestone 1 acceptance remains open.
 
 Use **Edit layers** and **View full size** on the embed (hover, focus or tap). Author-facing wikitext contains names only, never owner page IDs or internal binding tokens. The same name on another owner or another file identifies an independent set. A PDF keeps one visible set name across all its pages.
 
@@ -332,7 +332,7 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 {{#Slide: MySlideName}}
 ```
 
-After completion the first argument selects this page's saved slide name. Migrated variants may have names such as `MyDiagram (english)`; use the actual saved name, without an owner ID. See [Slide Mode](Slide-Mode.md) for the current workflow and the separately labelled legacy options.
+After completion the first argument selects this page's saved slide name. Migrated variants may have names such as `MyDiagram (english)`; use the actual saved name, without an owner ID. See [[Slide Mode|Slide-Mode]] for the current workflow and the separately labelled legacy options.
 
 The following option table/examples describe the older shared-slide model.
 They do not override the saved native slide name or geometry after completion.

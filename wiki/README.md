@@ -18,4 +18,10 @@ GitHub's wiki is a separate repository: pushing main does not by itself prove wi
 
 Use `[[Page Name]]` for wiki navigation and standard Markdown for external links. When linking from a wiki page to repository files, use full GitHub URLs rather than `../docs/...`, which resolves inside the separate wiki repository.
 
+Candidate pages use full repository URLs for cross-repository links; the current
+review branch is `codex/l01-publication-admission`. Check those targets against
+the intended reviewed release before publishing or tagging. A push to this
+candidate branch does not trigger the main-only wiki synchronization workflow,
+and no external wiki publication is claimed by a repository documentation pass.
+
 Run `npm run check:docs` from the extension root before publishing. Historical audits live in the main repository, not copied into the wiki navigation. See [the repository maintenance guide](https://github.com/slickdexic/Layers/blob/main/docs/DOCUMENTATION_UPDATE_GUIDE.md).

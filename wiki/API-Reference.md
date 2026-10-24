@@ -1,6 +1,6 @@
 # Action API reference
 
-Reviewed October 24, 2026. The [page-owned API guide](../docs/PAGE_OWNED_API_GUIDE.md)
+Reviewed October 24, 2026. The [page-owned API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md)
 is the current entry point for native reads, publication, Import and privacy.
 Native modules are installed by the extension registration callback as well as
 extension.json. They are not all disabled or unregistered, and normal
@@ -10,15 +10,15 @@ The tables/examples below describe **legacy shared storage**, followed by
 separately scoped native endpoint notes. After migration completion,
 `layerssave`, `layersrename` and `layersdelete` refuse shared writes; they
 cannot mutate owner-page snapshots. Tagged 1.5.95 uses the older shared model.
-See [UPGRADING](../docs/UPGRADING.md) for the completion prerequisite and the
-[release checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md) for acceptance.
+See [UPGRADING](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) for the completion prerequisite and the
+[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for acceptance.
 
 Use MediaWiki's `api.php` with `format=json`. Load `mediawiki.api` before
 using `new mw.Api()`. Check API errors and the module-specific result, not
 HTTP 200 alone. Layer row IDs are not native page revision IDs. Legacy
 `layersinfo` may return `layerset: null`; it does not supply an exact
 owner-page snapshot. Legacy creator/delete rules differ from the native
-[owner-page permissions](Permissions.md).
+[[owner-page permissions|Permissions]].
 
 ## Action parameters
 
@@ -182,18 +182,18 @@ Use the returned delivery URL; do not construct a path into the export cache. `S
 
 ## Integration boundaries
 
-The legacy modules above do not bind shared sets to native owner revisions. Page-owned publication is implemented through separate registered modules; use the [current guide](../docs/PAGE_OWNED_API_GUIDE.md). Search/Cargo acceptance remains in later milestones. On the exact installed candidate, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
+The legacy modules above do not bind shared sets to native owner revisions. Page-owned publication is implemented through separate registered modules; use the [current guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md). Search/Cargo acceptance remains in later milestones. On the exact installed candidate, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
 
 ## Explicit save-name validation
 
-For retained legacy compatibility, `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. The same canonical validation applies to info, rename (old and new names) and delete. Required mutation identifiers cannot be omitted. After migration completion, shared writes are refused regardless of a valid name. This is not the native page-owned name contract; see [Named Layer Sets](Named-Layer-Sets.md).
+For retained legacy compatibility, `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. The same canonical validation applies to info, rename (old and new names) and delete. Required mutation identifiers cannot be omitted. After migration completion, shared writes are refused regardless of a valid name. This is not the native page-owned name contract; see [[Named Layer Sets|Named-Layer-Sets]].
 
 ## Native working-copy Import read API
 
 The following endpoint reads existing image/slide members. The integrated
 candidate now uses native Import callers; the earlier registration-only
 checkpoint is not the current activation state. Whole-PDF and empty-target
-workflows use separate actions listed in the [current guide](../docs/PAGE_OWNED_API_GUIDE.md).
+workflows use separate actions listed in the [current guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
 
 ### layersworkingcopyimportread - GET
 
@@ -270,5 +270,5 @@ The response contains native PDF count/page geometry, an empty ephemeral anchor
 and an exact-source delivery descriptor. Opening/exporting revalidates it. The
 separate GET/HEAD delivery URL resolves the saved occurrence and compares its
 source digest; it does not accept a caller-selected file/version. See the
-[PDF creation viewer contract](../docs/PDF_CREATION_VIEWER.md) for response
+[PDF creation viewer contract](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PDF_CREATION_VIEWER.md) for response
 privacy, source capture, refusal rules and bounded acceptance limits.

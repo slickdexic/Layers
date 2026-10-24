@@ -1,7 +1,7 @@
 # Permissions
 
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-legacy shared storage. [Migration completion](../docs/UPGRADING.md) changes the
+legacy shared storage. [Migration completion](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) changes the
 storage and editing path; it does not grant additional rights.
 
 ## Rights and defaults
@@ -55,7 +55,7 @@ Test third-party access-control extensions against the intended deployment,
 including cached output, historical views, source listings and exports. Current
 binding reads can use the configured anonymous cache policy; control, historical
 and full-source responses have stricter policies. See the
-[API guide](../docs/PAGE_OWNED_API_GUIDE.md).
+[API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
 
 ## History and exports
 

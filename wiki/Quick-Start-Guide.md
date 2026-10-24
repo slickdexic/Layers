@@ -1,7 +1,7 @@
 # Quick start
 
 This guide describes the page-history candidate after migration completion.
-First follow [[Installation]] and the [upgrade guide](../docs/UPGRADING.md), and
+First follow [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), and
 confirm your account has page-edit and layer-edit permission. Legacy 1.5.x shared
 editing uses a different workflow.
 
@@ -60,5 +60,5 @@ names do not merge different owners' layer sets.
 
 Confirm migration completion, a native owner revision for each successful Save,
 historical viewing, recovery and permissions on your wiki. Then complete the
-[candidate acceptance checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md).
+[candidate acceptance checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md).
 Text search and Cargo acceptance follow page ownership as separate milestones.

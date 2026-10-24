@@ -1,44 +1,64 @@
 # Layers
 
-**Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
+Layers is a MediaWiki extension for editable layers on images, PDF pages and
+standalone slides. It preserves uploaded originals. Docker is only a
+possible development/test environment, not a runtime requirement.
 
-Layers adds editable annotations to **images and PDF pages** and creates **standalone slides**. Use it for diagrams, visual instructions, labels and markup without changing uploaded originals.
+**Reviewed October 24, 2026.** The page-history candidate still reports 1.5.95 in
+its manifest. Tagged 1.5.95 uses older shared storage. Choose a reviewed commit
+with passing CI and follow [[Installation]] and the
+[upgrade procedure](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), including migration completion.
+This candidate has not been accepted as Layers 2.0.
 
-**Documentation updated: September 6, 2026.** This guide describes `main`, including fixes made after the 1.5.95 release.
+## What the candidate does
 
-| Reference | Value |
-| --- | --- |
-| **Current main branch** | Includes unreleased ownership, save-safety, export-access and lightbox fixes; see [[Changelog]] |
-| **Manifest version** | 1.5.95 |
-| **Release date for this version** | September 2, 2026 |
+A layer set belongs to one page and one file/slide. Save captures the complete
+owner snapshot in one native page revision. Equal names on different owners or
+files remain independent. A PDF keeps one visible set name across all its pages;
+the PDF page number selects an internal member.
 
-The recent fixes and documentation refresh have been pushed to GitHub, but no new numbered release was created. The manifest still reports 1.5.95. See [[Current Status]] for the tested checkpoint and limitations.
+Use **Edit layers** and **View full size** on hover, focus or tap. Edit returns
+to the owning page. Native history belongs to that owner. Ordinary embeds add
+no owner/revision caption or automatic layer-set list above the content.
+Images/slides offer PNG first and a separate PDF Download; PDFs offer PDF only.
 
-## Choose a starting point
+## Start here
 
-- [[Installation]] — install, upgrade and choose a compatible branch.
-- [[Quick Start Guide]] — annotate an image, create a slide, or mark up a PDF.
-- [[Slide Mode]] — standalone content, including visual SOPs.
-- [[Drawing Tools]] and [[Keyboard Shortcuts]] — editor reference.
-- [[Wikitext Syntax]] and [[Named Layer Sets]] — choose the content shown on a page.
-- [[Configuration Reference]] and [[Permissions]] — administration.
-- [[Troubleshooting]] and [[FAQ]] — common problems.
-- [[API Reference]], [[Architecture Overview]], [[Frontend Architecture]], [[Contributing Guide]] and [[Testing Guide]] — development.
+- [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md): exact versions,
+  backup, rehearsal, updater, discovery, dry run, completion and recovery.
+- [[Quick Start Guide]], [[Slide Mode]], [[Drawing Tools]] and
+  [[Keyboard Shortcuts]]: edit and use the existing tools.
+- [[Wikitext Syntax]] and [[Named Layer Sets]]: choose this page's content.
+- [[Configuration Reference]] and [[Permissions]]: administer the candidate.
+- [[Troubleshooting]] and [[FAQ]]: diagnose failures while preserving work.
+- [Current release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md),
+  [[Current Status]] and [known limits](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md): qualified scopes
+  and remaining acceptance. Old dated reports retain their historical scope.
+- [[API Reference]] and the [native API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md):
+  current developer contracts and clearly labelled legacy APIs.
 
-## Understand the current boundaries
+## Embed examples
 
-Layers revisions are kept in its own database, normally up to 50 per set/document page. They do **not** provide reliable revisions of the article displaying the content. Text inside canvas annotations is not explicitly indexed by MediaWiki search. Cargo integration currently selects sets in galleries; annotation tables and field bindings are planned.
-
-The next priorities are **revision history → MediaWiki search → Cargo queries/filtering**, with slide-based SOPs as a primary use case. Read [[Current Status]] before relying on Layers for controlled documents.
-
-## Quick examples
+Save these on the page that will own the layers, then use its overlay:
 
 ```wikitext
-[[File:Diagram.png|600px|layerset=on]]
-{{#Slide: SafetyProcedure | canvas=1200x800 | size=800x600}}
-[[File:Manual.pdf|page=2|600px|layerset=on]]
+[[File:Diagram.png|thumb|400px|layerset=ABC]]
+{{#Slide: Safety overview}}
+[[File:Manual.pdf|page=2|400px|layerset=001]]
 ```
 
-Create/save the content before embedding it. `layerset=on` selects the current set, while a name selects that exact set. `noedit` hides a slide edit button; authorization is controlled by permissions.
+After completion, `layerset=on` selects `Default`. `off`/`none` hide layers.
+Use the name only; never add native owner IDs or internal binding tokens to
+author wikitext. Slide `noedit` hides the edit overlay without changing rights.
 
-[Repository](https://github.com/slickdexic/Layers) · [Current findings](https://github.com/slickdexic/Layers/blob/main/codebase_review.md) · [Technical documentation](https://github.com/slickdexic/Layers/blob/main/docs/README.md)
+## Delivery order
+
+Milestone 1 is page ownership/native history with existing capabilities intact.
+It remains open for the release matrix and owner acceptance. Built-in text
+search follows, then Cargo readiness, Cargo integration and on-page object
+links. Those later milestones do not hold up page ownership, and object links
+will not be active in the lightbox.
+
+[Repository](https://github.com/slickdexic/Layers) ·
+[Technical documentation](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/README.md) ·
+[Release preparation](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_PREPARATION.md)

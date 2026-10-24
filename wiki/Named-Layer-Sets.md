@@ -1,7 +1,7 @@
 # Named layer sets
 
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-older shared storage. Follow [the upgrade instructions](../docs/UPGRADING.md)
+older shared storage. Follow [the upgrade instructions](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md)
 before relying on post-migration behavior. Milestone 1 acceptance remains open.
 
 ## Ownership and names
@@ -46,7 +46,8 @@ named `on`. Prefer descriptive names that avoid that ambiguity.
 ## Naming rules
 
 Page-owned names allow up to 255 Unicode characters after trimming and
-collapsing whitespace. Spaces, dots, parentheses, hyphens and underscores are
+collapsing whitespace, subject also to the snapshot label limit of 512 UTF-8
+bytes. Spaces, dots, parentheses, hyphens and underscores are
 allowed. Control characters and `| [ ] { } < > :` are not.
 
 Names compare without case differences; runs of spaces and underscores compare
@@ -87,13 +88,13 @@ stale Saves must preserve unsaved work.
 
 Editing requires read/edit authority on the **owning page**, `editlayers`,
 readable sources and fresh revision/source checks. File-page edit permission
-alone does not authorize another page's sets. See [Permissions](Permissions.md).
+alone does not authorize another page's sets. See [[Permissions|Permissions]].
 
 Native document limits are 2 MiB serialized content, 100 members, 100 layers per
 member and 1,000 total layers. PDF members count toward these limits while
 sharing one visible name. Legacy `LayersMaxNamedSets` and
 `LayersMaxRevisionsPerSet` settings do not raise native schema limits or prune
-native history. See [Configuration Reference](Configuration-Reference.md).
+native history. See [[Configuration Reference|Configuration-Reference]].
 
 ## Older shared sets and APIs
 
@@ -104,11 +105,11 @@ uses recency, and legacy deletion can remove retained revisions.
 
 After completion, those shared sets remain read-only. Do not use `layerssave`,
 `layersrename` or `layersdelete` to update page-owned sets. Use the owner-page
-editor; integrations must follow the [API guide](../docs/PAGE_OWNED_API_GUIDE.md).
+editor; integrations must follow the [API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
 
 ## See also
 
-- [Wikitext Syntax](Wikitext-Syntax.md)
-- [Slide Mode](Slide-Mode.md)
-- [Quick Start](Quick-Start-Guide.md)
-- [Upgrade and recovery](../docs/UPGRADING.md)
+- [[Wikitext Syntax|Wikitext-Syntax]]
+- [[Slide Mode|Slide-Mode]]
+- [[Quick Start|Quick-Start-Guide]]
+- [Upgrade and recovery](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md)

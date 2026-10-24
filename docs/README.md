@@ -12,11 +12,11 @@ Entry guides updated October 24, 2026. The candidate covers images, PDFs and sta
 
 | Audience/task | Start here |
 | --- | --- |
-| Understand current behavior and limitations | [Current status](CURRENT_STATUS.md) · [Known issues](KNOWN_ISSUES.md) |
+| Understand current behavior and limitations | [Release checklist](MILESTONE_1_RELEASE_CHECKLIST.md) · [Current status](CURRENT_STATUS.md) · [Known limits](KNOWN_ISSUES.md) |
 | Install, configure and upgrade | [Installation](../wiki/Installation.md) · [Upgrade and recovery](UPGRADING.md) · [Configuration](../wiki/Configuration-Reference.md) · [Permissions](../wiki/Permissions.md) |
 | Create diagrams, presentations and annotations | [Quick start](../wiki/Quick-Start-Guide.md) · [Slides](../wiki/Slide-Mode.md) · [Tools](../wiki/Drawing-Tools.md) |
 | Embed content and choose sets | [Wikitext](../wiki/Wikitext-Syntax.md) · [Named sets](../wiki/Named-Layer-Sets.md) |
-| Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) · [Save payload contract](SAVE_PAYLOAD_CONTRACT.md) |
+| Integrate with the current API | [API entry point](API.md) · [Native API guide](PAGE_OWNED_API_GUIDE.md) · [Legacy API reference](../wiki/API-Reference.md) |
 | Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
 | Assign implementation work | [Ordered junior/lead task packets](IMPLEMENTATION_HANDOFF_PLAN.md) · [Junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md) · [Product roadmap](../improvement_plan.md) |
 | Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |

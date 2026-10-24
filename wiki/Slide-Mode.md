@@ -1,7 +1,7 @@
 # Slide mode
 
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-shared slides. Follow [UPGRADING.md](../docs/UPGRADING.md) to complete the native
+shared slides. Follow [UPGRADING.md](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) to complete the native
 migration. Milestone 1 acceptance remains open.
 
 ## Page-owned slides after completion
@@ -30,8 +30,8 @@ of the protected interface; qualify its result on the intended candidate page.
 `noedit` suppresses the edit overlay and does not change server authorization.
 
 Creating/editing requires owner-page read/edit authority and `editlayers`,
-with fresh source/base checks. See [Permissions](Permissions.md) and
-[Named Layer Sets](Named-Layer-Sets.md). A shared `Special:EditSlide` URL is not
+with fresh source/base checks. See [[Permissions|Permissions]] and
+[[Named Layer Sets|Named-Layer-Sets]]. A shared `Special:EditSlide` URL is not
 an alternate route to another page's native slide. After completion the old
 shared storage is read-only.
 

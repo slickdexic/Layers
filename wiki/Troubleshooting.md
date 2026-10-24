@@ -1,371 +1,166 @@
 # Troubleshooting
 
-> **Current guidance — September 6, 2026:** For a failed multi-page save, keep the editor open and retry. For lightbox scaling issues, refresh assets and verify your checkout includes the post-1.5.95 fix. Legacy export caches must be regenerated. See [[Current Status]] for remaining draft, export and history issues.
-
-Solutions for common issues with the Layers extension.
-
----
-
-## Installation Issues
-
-### "Edit layers" Tab Not Visible
-
-**Symptoms:** No "Edit layers" tab appears on File: pages.
-
-**Solutions:**
-
-1. **Check extension is loaded:**
-   - Visit `Special:Version`
-   - Look for "Layers" under "Installed extensions"
-   - If missing, verify `wfLoadExtension( 'Layers' );` in LocalSettings.php
-
-2. **Check extension is enabled:**
-   ```php
-   $wgLayersEnable = true;  // Must be true (default)
-   ```
-
-3. **Check user permissions:**
-   ```php
-   $wgGroupPermissions['user']['editlayers'] = true;
-   ```
-
-4. **Clear caches:**
-   ```bash
-   php maintenance/run.php rebuildLocalisationCache
-   ```
-
-### Database Errors on Save
-
-**Symptoms:** Error message about missing tables or schema.
-
-**Solutions:**
-
-1. **Run database update:**
-   ```bash
-   # Run from the MediaWiki root on the supported main/1.43 installations
-   php maintenance/run.php update
-   ```
-
-2. **Verify tables exist:**
-   ```sql
-   SHOW TABLES LIKE 'layer_sets';
-   -- Include your configured MediaWiki table prefix, if any.
-   ```
-
-3. **Check database permissions:**
-   - MediaWiki user needs CREATE TABLE permission for initial setup
-   - Needs INSERT/UPDATE/DELETE for normal operation
-
-### Composer Conflicts (Windows)
-
-**Symptoms:** `composer install` runs a Python package instead of PHP Composer.
-
-**Solutions:**
-
-1. **Use PHP Composer directly:**
-   ```bash
-   php composer.phar install
-   ```
-
-2. **Install before testing:**
-   `npm run test:php` runs installed PHP quality tools; it does not install Composer or dependencies.
-
-3. **Check PATH order:**
-   - Ensure PHP Composer comes before Python in PATH
-
----
-
-## Editor Issues
-
-### Blank Editor / Canvas Not Loading
-
-**Symptoms:** Editor opens but canvas is empty or white.
-
-**Solutions:**
-
-1. **Check browser console (F12):**
-   - Look for JavaScript errors
-   - Look for failed resource loads
-
-2. **Check ResourceLoader:**
-   - Inspect failed `load.php` requests and their responses in the browser Network tab
-   - Check for 404 errors in Network tab
-
-3. **Clear browser cache:**
-   - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
-
-4. **Check CSP headers:**
-   - Layers requires `blob:` in img-src and connect-src
-   - See [CSP Guide](https://github.com/slickdexic/Layers/blob/main/docs/CSP_GUIDE.md)
-
-### Tools Not Responding
-
-**Symptoms:** Clicking tools doesn't work or drawing doesn't appear.
-
-**Solutions:**
-
-1. **Refresh the page:**
-   - Save or preserve unsaved work first; refreshing may discard it
-
-2. **Check for JavaScript errors:**
-   - Open DevTools (F12) → Console
-   - Look for red error messages
-
-3. **Try a different browser:**
-   - Ensures it's not browser-specific
-
-4. **Check if canvas is focused:**
-   - Click on the canvas area to focus it
-
-### Keyboard Shortcuts Not Working
-
-**Symptoms:** Pressing `T`, `R`, etc. doesn't switch tools.
-
-**Solutions:**
-
-1. **Click inside the editor first:**
-   - Shortcuts only work when editor is focused
-
-2. **Check you're not in a text field:**
-   - Shortcuts are disabled in input fields
-
-3. **Check for browser conflicts:**
-   - Some browser extensions capture shortcuts
-   - Try in incognito/private mode
-
-### Layers Not Saving
-
-**Symptoms:** Save button doesn't work or returns error.
-
-**Solutions:**
-
-1. **Check network tab:**
-   - Is the API request being made?
-   - What's the response?
-
-2. **Check permissions:**
-   - User must have `editlayers`; file-backed changes also need File-page edit permission
-   - User must not be blocked
-
-3. **Check rate limiting:**
-   ```php
-   // Increase limits temporarily
-   $wgRateLimits['editlayers-save']['user'] = [ 100, 3600 ];
-   ```
-
-4. **Check payload size:**
-   - Very complex layers may exceed `$wgLayersMaxBytes`
-   - Increase limit if needed:
-   ```php
-   $wgLayersMaxBytes = 4194304;  // 4 MB
-   ```
-
----
-
-## Display Issues
-
-### Layers Not Showing in Articles
-
-**Symptoms:** `[[File:X.png|layerset=on]]` shows image without layers.
-
-**Solutions:**
-
-1. **Verify layers exist:**
-   - Open File: page
-   - Click "Edit Layers"
-   - Confirm there are saved layers
-
-2. **Check set name:**
-   - Names are case-sensitive
-   - `layerset=anatomy` ≠ `layerset=Anatomy`
-
-3. **Purge the page:**
-   - Add `?action=purge` to the URL
-   - Or use the purge link in sidebar
-
-4. **Check JavaScript loads:**
-   - Viewer JS must load on article pages
-   - Check for JS errors in console
-
-### Wrong Layers Showing
-
-**Symptoms:** Different layers appear than expected.
-
-**Solutions:**
-
-1. **Verify set name spelling:**
-   - Check exact name in editor dropdown
-
-2. **Check for multiple sets:**
-   - You may be viewing a different named set
-
-3. **Clear caches:**
-   - Browser cache + MediaWiki page cache
-
-### Layers Look Different Than in Editor
-
-**Symptoms:** Colors, positions, or sizes are off.
-
-**Solutions:**
-
-1. **Check image scaling:**
-   - Viewer scales to display size
-   - Editor works at full resolution
-
-2. **Check for CSS conflicts:**
-   - Wiki theme CSS may affect colors
-
-3. **Check for transparency:**
-   - Some viewers handle transparency differently
-
----
-
-## Performance Issues
-
-### Editor is Slow
-
-**Symptoms:** Lag when drawing or selecting.
-
-**Solutions:**
-
-1. **Reduce layer count:**
-   - Remove unnecessary layers after saving a backup
-   - Aim for < 50 layers
-
-2. **Reduce image size:**
-   - Very large images (8K+) can be slow
-   - Use appropriate `$wgLayersMaxImageSize`
-
-3. **Close other tabs:**
-   - Free up browser resources
-
-4. **Check for memory leaks:**
-   - Save successfully before reloading; reloading can discard unsaved work
-
-### Saving Takes Too Long
-
-**Symptoms:** Save operation is slow.
-
-**Solutions:**
-
-1. **Reduce data size:**
-   - Remove unnecessary layers
-   - Simplify complex paths
-
-2. **Check server load:**
-   - Database may be overloaded
-
-3. **Check network:**
-   - Slow connection affects upload time
-
----
-
-## API Errors
-
-### "layers-file-not-found"
-
-**Cause:** File doesn't exist or filename is wrong.
-
-**Solution:**
-- Verify exact filename including extension
-- Check File: page exists
-
-### "layers-json-parse-error"
-
-**Cause:** Invalid JSON data sent to server.
-
-**Solution:**
-- This is usually a client bug
-- Refresh and try again
-- Report if persistent
-
-### "layers-rate-limited"
-
-**Cause:** Too many saves in short period.
-
-**Solution:**
-- Wait before trying again
-- Admin can increase limits:
-```php
-$wgRateLimits['editlayers-save']['user'] = [ 60, 3600 ];
-```
-
-### "layers-data-too-large"
-
-**Cause:** Layer data exceeds size limit.
-
-**Solution:**
-- Remove some layers
-- Reduce image layer sizes
-- Increase limit:
-```php
-$wgLayersMaxBytes = 4194304;  // 4 MB
-```
-
-### "dbschema-missing"
-
-**Cause:** Database tables don't exist.
-
-**Solution:**
-```bash
+Reviewed October 24, 2026 for the page-owned candidate. Tagged 1.5.95 uses the
+older shared model. Start with [[Installation]] and the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md); Milestone 1 acceptance remains open.
+
+## Preserve current work first
+
+Keep the editor open after a failed or uncertain Save. Record the visible error
+and request result. Preserve local drafts; do not clear browser storage, switch
+accounts, reload or close the editor while unsaved work is at risk.
+
+If a Save may have reached the server but its response was lost, use the
+existing **Check** flow to establish the outcome. Do not repeat publication
+blindly or treat an empty HTTP 200 body as success. Draft Restore is local until
+an explicit Save succeeds. A conflict must preserve current work.
+
+## Missing edit or viewer overlay
+
+The old File-page **Edit Layers** tab is retired after completion. Use the
+**Edit layers** or **View full size** overlay on the saved image, slide or PDF
+embed, shown on hover, keyboard focus or tap.
+
+1. Confirm the exact wiki and page. Different hosts or ports can be different
+   installations with different data and extension code. Check `Special:Version`
+   and the installed reviewed commit; the 1.5.95 manifest alone is insufficient.
+2. Confirm Layers is loaded and the embed is saved. Check migration completion,
+   including on a fresh empty wiki. Running the updater alone is not completion.
+3. Check this page's embed name. After completion, `layerset=on` means
+   `Default`, not another recently saved set. Equal names on another owner or
+   another file are independent. `off`/`none` deliberately hide layers.
+4. Check ordinary read/edit access to the **owning page**, `editlayers`, blocks,
+   page protection and source visibility. File-page permission alone is not
+   authority over an article's sets. Slide `noedit` suppresses the edit button.
+5. Inspect failed `load.php` and API requests and their response bodies. A
+   ResourceLoader error can stop initialization even when the page itself loads.
+   Check that PHP and shipped assets come from one reviewed source tree.
+
+An eligible missing named set can open empty for an authorized editor. It must
+not display another stored set as a substitute. Missing/unreadable sources or
+revisions can instead make the view unavailable. See [[Wikitext Syntax]],
+[[Named Layer Sets]] and [[Permissions]].
+
+## Installation or schema errors
+
+Verify `wfLoadExtension( 'Layers' );`, the compatible MediaWiki/PHP/database
+versions and the installed branch/commit. Use the native updater from the
+MediaWiki root after taking the backup described in the upgrade guide:
+
+```sh
 php maintenance/run.php update
 ```
 
----
+Do not create a sample `layer_sets` table or insert a completion record by hand.
+Use the documented discovery, dry run and migration process. Existing table
+prefixes and database permissions must match the wiki configuration. Layers is
+a MediaWiki extension; Docker is only one development/test environment.
 
-## Browser-Specific Issues
+If a Windows `composer` command resolves to an unrelated program, check PATH
+and invoke the intended PHP Composer installation directly. Development quality
+commands require installed dependencies; a normal extension deployment uses the
+shipped runtime assets described in [[Installation]].
 
-### Safari
+## Save refused, slow or unconfirmed
 
-- Some older Safari versions have canvas issues
-- Use a current Safari release; the old minimum-version claim was not verified
+Inspect the module-specific API result as well as HTTP status. Page-owned Saves
+use native complete-snapshot publication, not `layerssave`. Legacy shared write
+errors after completion are expected; use the owner-page overlay.
 
-### Firefox
+| Observation | Next check |
+| --- | --- |
+| Permission/visibility refusal | Current owner read/edit rights, `editlayers`, protection/blocks, exact revision and source visibility. A prior successful preview does not grant lasting access. |
+| Stale revision or conflict | Preserve current work and drafts. Use the existing Check/reconciliation flow; do not replace the base with latest content without review. |
+| Missing/expired token or session | Preserve work before refreshing authentication. A valid token does not bypass owner/source checks. |
+| `ratelimited` or a legacy rate-limit error | Stop repeated requests and allow the configured quota to recover. Identify a request loop before changing limits. Metadata and PDF-render quotas are separate. |
+| Payload/schema refusal | Check the full error and current native bounds. Unsupported fields or malformed JSON must be corrected without dropping unrelated members. |
+| Lost response or empty success body | Use Check to verify what committed before any further publication. |
 
-- Enable hardware acceleration for best performance
-- Check `about:config` for canvas settings
+Native bounds are 2 MiB for the complete owner snapshot, 100 members, 100 layers
+per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded
+image validation has a separate 1 MiB bound. Raising `$wgLayersMaxBytes` or a
+legacy count setting does not expand the native schema. Do not split a whole-PDF
+Save into independent page writes. See [[Configuration Reference]] and the
+[native API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
 
-### Chrome
+For a slow Save, distinguish upload, API/server time, rendering and return/reopen
+work. The [bounded server benchmark](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_HISTORY_PERFORMANCE.md) records
+100-layer Saves at 98–122 ms on its local fixture; it is not a promise of total
+browser/device latency on every wiki. Preserve representative content when
+reporting a slowdown rather than deleting layers to make the measurement pass.
 
-- Generally best compatibility
-- Enable hardware acceleration in settings
+## Wrong layers, PDF page or historical file
 
-### Edge
+Check the owning page, set name, native revision and requested source PDF page.
+Native names compare without case differences; spaces and underscores normalize
+alike. A PDF uses the same visible set name on all pages, with separate internal
+members. Use `page=2` to select its second page, not a renamed set.
 
-- Use a current Chromium-based Edge release
-- Legacy Edge not supported
+Historical content uses its saved source version. A reupload must not silently
+replace that source. A suppressed revision, deleted file/version or changed
+access can make it unavailable. Do not substitute the current upload or another
+stored page to hide the refusal.
 
----
+A one-pixel difference in a raster thumbnail is not authority to rewrite saved
+geometry. Report the supplied native dimensions, displayed rendition size and
+exact occurrence. Existing layers must stay in their saved coordinate system.
 
-## Getting More Help
+If assets are stale, preserve current work before reloading. Administrators can
+investigate ResourceLoader/page-cache invalidation on a safe reproduction. A
+hard refresh is different from deleting local draft storage.
 
-### Enable Debug Logging
+## PDF thumbnail, viewer and Download failures
 
-```php
-$wgLayersDebug = true;
-$wgDebugLogFile = '/var/log/mediawiki/debug.log';
-```
+Verify that MediaWiki itself can render the PDF's requested page. Check the
+installed media handler and its rasterizer requirements, source access and
+server transform errors. A failure before thumbnail creation is not evidence
+that the overlay selected the wrong layer set.
 
-Then check logs:
-```bash
-tail -f /var/log/mediawiki/debug.log | grep Layers
-```
+Images/slides offer **Download PNG** first and a separate **Download PDF**.
+PDFs offer **Download PDF** only. Print and Download use the admitted saved
+layers. If an output page fails, complete PDF assembly must refuse rather than
+produce a shorter document or a different source. Retain the failed action and
+error when reporting it. A successful Print preparation does not prove the OS
+print dialog or a physical print completed.
 
-### Report a Bug
+The legacy cached server PDF export endpoint is a different path. Its cache
+must remain outside the document root and be served through its checked delivery
+URL. Do not expose the directory or use a legacy export as an exact native
+history export. See [[API Reference]].
 
-1. Check [existing issues](https://github.com/slickdexic/Layers/issues)
-2. Gather information:
-   - MediaWiki version
-   - PHP version
-   - Browser and version
-   - Error messages
-   - Steps to reproduce
-3. [Open new issue](https://github.com/slickdexic/Layers/issues/new)
+## Canvas, tools, shortcuts and layout
 
----
+Inspect console and failed resource responses first. Check CSP restrictions
+against [the CSP guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CSP_GUIDE.md) instead of disabling protections.
+Check editor focus and whether a text field owns keyboard input. Preserve work
+before changing browser context or trying a fresh reproduction.
 
-## See Also
+Use one matched source/assets tree. The approved narrow layout wraps the
+existing header controls and places the layer panel above a full-width canvas;
+Save should remain reachable. Report viewport, zoom and skin if it is clipped.
+Keyboard, touch and assistive-technology coverage remains scoped to the
+[release matrix](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md); do not assume a
+complete browser/device qualification from one passing desktop journey.
 
-- [[FAQ]] — Frequently asked questions
-- [[Configuration Reference]] — All settings
-- [[Installation]] — Setup guide
+For rendering or interaction lag, record layer count/types, effects, source
+sizes, viewport and timings on the actual deployment. Separate network, server
+and browser work. Do not alter experimental browser settings or reduce an
+editor's content as a substitute for investigating the cause.
+
+## Diagnostics and a useful bug report
+
+An administrator can temporarily enable `$wgLayersDebug` and inspect the
+configured Layers log channel. Keep collection bounded and private, then restore
+the intended logging level. Broad MediaWiki request logs can contain sensitive
+data; share only the diagnostic details needed for the issue.
+
+Include the exact reviewed Layers commit, MediaWiki/PHP version, browser/OS,
+skin and viewport; the content type and embed syntax; steps, expected/actual
+behavior and the relevant API/ResourceLoader error. Remove cookies, tokens,
+credentials and private payloads before sharing. State whether the Save outcome
+was confirmed and whether unsaved work/drafts remain in the editor.
+
+Use [existing issues](https://github.com/slickdexic/Layers/issues) or the
+[issue form](https://github.com/slickdexic/Layers/issues/new). See [[FAQ]],
+[[Configuration Reference]] and the
+[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current limits.

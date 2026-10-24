@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Updated October 24, 2026 for the page-history candidate. The manifest still says **1.5.95**; this does not make the candidate a tagged Layers 2.0 release. Select a reviewed commit with passing CI and check the [release checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md).
+Updated October 24, 2026 for the page-history candidate. The manifest still says **1.5.95**; this does not make the candidate a tagged Layers 2.0 release. Select a reviewed commit with passing CI and check the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md).
 
 ## Requirements and branches
 
@@ -48,7 +48,7 @@ This creates/migrates **`layer_sets`**. Use the updater rather than executing an
 ## Complete page-history setup
 
 The updater creates database structures; it does not complete the legacy-to-page
-migration. Follow the [upgrade guide](../docs/UPGRADING.md) to refresh discovery,
+migration. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) to refresh discovery,
 review the dry run and apply the unscoped migration. A fresh wiki with no legacy
 sets also needs the empty migration to record completion. Verify
 `layerspagehistorymigrated: true` through siteinfo before testing page-owned embeds.
@@ -56,7 +56,7 @@ sets also needs the empty migration to record completion. Verify
 ## Verify
 
 1. Confirm Layers appears in `Special:Version`.
-2. Follow the [quick start](Quick-Start-Guide.md): place a named image embed on an owning page, use its Edit layers overlay, Save, return and reopen. Confirm that page's history contains the change.
+2. Follow the [[quick start|Quick-Start-Guide]]: place a named image embed on an owning page, use its Edit layers overlay, Save, return and reopen. Confirm that page's history contains the change.
 3. Add `{{#Slide: InstallationTest}}` to an owning page and create its layers through the overlay. Check history and reopen.
 4. If using PDFs, verify multiple pages under the same layer-set name, Save/reopen, historical viewing and complete Download.
 5. Test an unauthorized account and any local protection rules.
@@ -73,7 +73,7 @@ git fetch --tags origin
 git checkout --detach REVIEWED_COMMIT_OR_TAG
 ```
 
-Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](../docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
+Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
 
 The post-1.5.95 fixes bind server export cache files to their source title and preserve creator identity. Regenerate old cached exports. Legacy sets with missing historical creator evidence require `layers-admin` for delete/rename. No schema migration was introduced by those particular fixes.
 

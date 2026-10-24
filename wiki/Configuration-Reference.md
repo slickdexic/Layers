@@ -1,88 +1,137 @@
 # Configuration reference
 
-## Layer sets in page history — October 24, 2026
+Reviewed October 24, 2026 against the candidate's `extension.json` and callers.
+These are extension defaults, not MediaWiki defaults. Set overrides after
+`wfLoadExtension( 'Layers' );` in `LocalSettings.php`.
 
-Page-history storage is on by default (charter decision D2): no pilot switch or owner allowlist is needed. The content model, `layers` slot role and save/import/merge/restore guards are installed. Page-owned embed selection also requires the [documented migration completion](../docs/UPGRADING.md), including on a new wiki with no legacy sets.
+The candidate still reports 1.5.95 in its manifest; use an exact reviewed commit
+with passing CI. Tagged 1.5.95 uses the older shared model. Follow the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), including migration completion on an empty
+new wiki. Changing a setting does not record completion or migrate content.
 
-`$wgLayersPageDrawingNamespaces` defaults to `null`, which means the content namespaces (`$wgContentNamespaces`) and `File:`. Set it to an array of namespace IDs, for example `[ NS_MAIN, NS_FILE ]`, to limit which pages may start layer sets; `[]` lets no page start new ones. A page that already has layer sets keeps them editable and viewable in any namespace. The historical setting name remains unchanged.
+## Native page ownership and caching
 
-The pilot settings `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are retired and ignored; remove them from `LocalSettings.php`.
-
-`$wgLayersBindingReadMaxAge` defaults to `300` (seconds). An anonymous reader's `layersread` binding read of a page's current revision can be publicly cached for this long. Logged-in readers, older revisions, snapshot reads, viewer/editor metadata, errors and private wikis are not cached publicly. After deletion or visibility changes, an already cached binding response can remain for up to this age; `0` turns binding caching off. Exact PDF delivery separately uses no-store responses.
-
-Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
-
-## Registered settings
-
-| Setting | Default | Purpose |
+| Setting | Default | Scope |
 | --- | --- | --- |
-| `$wgLayersEnable` | `true` | Master switch for Layers extension functionality |
-| `$wgLayersDebug` | `false` | Enable verbose debug logging to the 'Layers' log channel. Set to true in LocalSettings.php for development. |
-| `$wgLayersMaxBytes` | `2097152` | Maximum JSON size per layer set in bytes |
-| `$wgLayersMaxLayerCount` | `100` | Maximum number of layers per layer set |
-| `$wgLayersMaxComplexity` | `100` | Maximum complexity score for a layer set. Each layer type has a cost (text: 2, image: 3, shapes: 1, etc). Total must not exceed this value. |
-| `$wgLayersMaxImageBytes` | `1048576` | Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity. |
-| `$wgLayersMaxImportSide` | `2048` | Maximum width/height in pixels for client-side downscaling of imported image layers before upload. Images larger than this on their longest side are resized to fit. Default 2048. |
-| `$wgLayersImportJpegQuality` | `0.8` | JPEG quality (0.1-1.0) used when re-encoding downscaled imported images to reduce payload size. Only applied when the re-encoded result is smaller than the original. Default 0.8. |
-| `$wgLayersMaxNamedSets` | `15` | Maximum number of named layer sets per image |
-| `$wgLayersMaxRevisionsPerSet` | `50` | Maximum revisions to keep per named layer set (older ones are pruned) |
-| `$wgLayersDefaultSetName` | `"default"` | Seed name for a new set, not an alias for the current set. Some paths remain inconsistent; use explicit descriptive set names. |
-| `$wgLayersDefaultFonts` | `36 font names; see font list below` | Available fonts in the layer editor. 32 fonts self-hosted as WOFF2 files (OFL) plus 4 system fonts. |
-| `$wgLayersMaxImageSize` | `4096` | Maximum image size for layer editing in pixels |
-| `$wgLayersImageMagickTimeout` | `30` | Timeout in seconds for ImageMagick operations |
-| `$wgLayersMaxImageDimensions` | `8192` | Maximum width/height for layer processing |
-| `$wgLayersPdfExportWidth` | `1600` | Render width in pixels for each page when exporting a marked-up file to PDF |
-| `$wgLayersPdfExportMaxPages` | `100` | Maximum number of pages allowed when exporting a marked-up file to PDF (0 = unlimited) |
-| `$wgLayersExportDirectory` | `""` | Directory for cached PDF exports. Must be outside the document root; exports are served through Special:LayersExport after a permission check. Empty uses $wgTmpDirectory/layers-export. |
-| `$wgLayersSlidesEnable` | `true` | Enable Slide Mode for creating canvas-based layers without a parent image |
-| `$wgLayersSlideDefaultWidth` | `800` | Default width for slides when not specified |
-| `$wgLayersSlideDefaultHeight` | `600` | Default height for slides when not specified |
-| `$wgLayersSlideMaxWidth` | `4096` | Maximum allowed slide width |
-| `$wgLayersSlideMaxHeight` | `4096` | Maximum allowed slide height |
-| `$wgLayersSlideDefaultBackground` | `"#ffffff"` | Default background color for slides |
-| `$wgLayersTrackChangesInRecentChanges` | `false` | Experimental legacy null-edit attempt, disabled by default. Does not provide reliable Recent Changes, watchlist or page-history records. See Current Status. |
+| `$wgLayersPageDrawingNamespaces` | `null` | Namespaces where new ownership may start. `null` means content namespaces and File; `[]` admits no new owners. Existing owners retain their content in any namespace, subject to permissions. |
+| `$wgLayersBindingReadMaxAge` | `300` | Maximum seconds of anonymous public caching for a current-revision binding read. `0` disables this caching. Logged-in, historical, snapshot, control, viewer/editor, error and private-wiki responses are not publicly cached. |
 
-## Examples
+Native history, the `layers` slot and save/import/merge/restore guards are
+registered through supported MediaWiki mechanisms. No pilot switch or owner
+allowlist is needed. The retired `$wgLayersPageOwnedPilotEnabled`,
+`$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are ignored.
 
-`LayersMaxRevisionsPerSet` governs legacy shared-table retention. It does not
-prune native owner-page revisions. Page-history limits also enforce the native
-document contract; do not assume that increasing a legacy setting expands every
-page-owned payload or PDF limit.
+A cached anonymous current-binding response can remain for the configured age
+after a deletion or visibility change. Exact PDF delivery has separate no-store
+responses and fresh authorization. Choose the binding cache age for the wiki's
+visibility requirements; it is not an authorization override.
 
-```php
-wfLoadExtension( 'Layers' );
-$wgLayersMaxLayerCount = 200;
-$wgLayersMaxComplexity = 200;
-$wgLayersMaxNamedSets = 25;
-$wgLayersDebug = false;
-```
+## Native document bounds
 
-Increasing layer count alone may not admit a complex layer set: size, complexity and imported-image limits also apply. Increasing limits raises storage/rendering costs. The client may impose additional limits.
+These are fixed schema bounds, independent of the legacy settings below:
+
+| Bound | Candidate limit |
+| --- | --- |
+| Complete serialized owner snapshot | 2097152 bytes (2 MiB) |
+| Members in one owner snapshot | 100 |
+| Layers in one member | 100 |
+| Layers across the complete snapshot | 1000 |
+| Canvas width or height | 4096 |
+| Serialized image data URL accepted by the strict layer validator | 1048576 bytes (1 MiB) |
+
+The image-data limit measures the complete data URL, including base64 text,
+not just decoded image bytes. PDF pages are internal members sharing one visible
+set name. Raising a legacy
+count, payload or export setting does not expand these native bounds. Client
+import controls and format-specific MediaWiki handlers can impose additional
+constraints. Preserve unsaved work when investigating a refused payload; do not
+remove unrelated members or bypass validation to make a Save fit.
+
+## General controls and client import
+
+| Setting | Default | Scope |
+| --- | --- | --- |
+| `$wgLayersEnable` | `true` | Enables the hooks/UI paths that consult it. It does not unregister stored native content or replace API permissions. |
+| `$wgLayersDebug` | `false` | Additional Layers logging. Keep diagnostic logs private and bound their collection. |
+| `$wgLayersDefaultFonts` | `36 font names; listed below` | Editor font choices: 32 self-hosted fonts plus four system fonts. Adding a name does not install the font. |
+| `$wgLayersMaxImageBytes` | `1048576` | Imported-image validation/client paths using this setting. Native strict validation still has its own 1 MiB bound. |
+| `$wgLayersMaxImportSide` | `2048` | Client image-import downscaling on the longest side. It does not change saved native canvas bounds. |
+| `$wgLayersImportJpegQuality` | `0.8` | JPEG quality used by client import re-encoding, when that result is smaller. This is not the full-size viewer's PNG Download setting. |
+
+## Legacy shared storage
+
+After migration completion, shared sets remain read-only. These settings do
+not provide a way to write them again or alter native page history.
+
+| Setting | Default | Scope |
+| --- | --- | --- |
+| `$wgLayersMaxBytes` | `2097152` | Legacy stored payload limit; also exposed to client paths. Increasing it does not raise the native 2 MiB schema bound. |
+| `$wgLayersMaxLayerCount` | `100` | Legacy validation/client callers. Native per-member count remains capped at 100. |
+| `$wgLayersMaxComplexity` | `100` | Legacy request complexity budget: simple shapes cost 1, text/arrow types 2, image/path/custom shapes 3. |
+| `$wgLayersMaxNamedSets` | `15` | Shared-file set allocation and client controls that read it; not the native member limit. |
+| `$wgLayersMaxRevisionsPerSet` | `50` | Pruning of retained legacy set revisions. Never prunes native owner-page history. |
+| `$wgLayersDefaultSetName` | `"default"` | Seed for a new unnamed shared set. Does not redefine the post-completion `layerset=on` shortcut, which selects `Default`. |
+| `$wgLayersTrackChangesInRecentChanges` | `false` | Old experimental File-page null-edit audit attempt. Native history does not depend on it; leave it out of a native-history setup. |
+
+## Server rendering and legacy PDF export
+
+These settings apply to the Layers renderer/export callers that use them.
+Native PdfHandler/source rendering also follows MediaWiki's own handler limits.
+The page-owned viewer's Download/Print is a separate path from the cached legacy
+`layerspdfexport` endpoint.
+
+| Setting | Default | Scope |
+| --- | --- | --- |
+| `$wgLayersMaxImageSize` | `4096` | Image-admission fallback edge limit when the dimensions helper has no positive scalar limit. |
+| `$wgLayersMaxImageDimensions` | `8192` | Dimensions helper's default edge limit. The helper also accepts width/height arrays; native schema bounds remain separate. |
+| `$wgLayersImageMagickTimeout` | `30` | Seconds for Layers ImageMagick operations that use this setting. |
+| `$wgLayersPdfExportWidth` | `1600` | Raster width for cached legacy server PDF export. |
+| `$wgLayersPdfExportMaxPages` | `100` | Legacy server export page cap; `0` disables that cap. It does not remove native document bounds. |
+| `$wgLayersExportDirectory` | `""` | Legacy export cache. Empty uses `$wgTmpDirectory/layers-export`; a configured directory must be writable and outside the document root. |
+
+Serve legacy cached exports through `Special:LayersExport`, which checks source
+access; do not expose the cache directory directly. Old filenames from before
+the source-title binding fix need regeneration. Inspect critical legacy output
+rather than treating it as a native historical export.
+
+## Slides
+
+| Setting | Default | Scope |
+| --- | --- | --- |
+| `$wgLayersSlidesEnable` | `true` | Slide parser/management entry points. Does not delete stored native history. |
+| `$wgLayersSlideDefaultWidth` | `800` | Default width for eligible new slide canvases; saved geometry remains authoritative. |
+| `$wgLayersSlideDefaultHeight` | `600` | Default height for eligible new slide canvases. |
+| `$wgLayersSlideDefaultBackground` | `"#ffffff"` | Default background for new slides. |
+| `$wgLayersSlideMaxWidth` | `4096` | Legacy slide dimension parser/management bound; native schema also caps dimensions at 4096. |
+| `$wgLayersSlideMaxHeight` | `4096` | Legacy slide dimension parser/management bound. |
 
 ## Fonts
 
-Arial, Verdana, Times New Roman, Courier New, Roboto, Open Sans, Lato, Montserrat, Noto Sans, Source Sans 3, PT Sans, Ubuntu, Inter, Poppins, Work Sans, Nunito, Raleway, DM Sans, Merriweather, Playfair Display, Lora, Libre Baskerville, EB Garamond, Crimson Text, Bebas Neue, Oswald, Archivo Black, Fredoka, Caveat, Dancing Script, Pacifico, Indie Flower, Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono.
+Arial, Verdana, Times New Roman, Courier New, Roboto, Open Sans, Lato, Montserrat,
+Noto Sans, Source Sans 3, PT Sans, Ubuntu, Inter, Poppins, Work Sans, Nunito,
+Raleway, DM Sans, Merriweather, Playfair Display, Lora, Libre Baskerville,
+EB Garamond, Crimson Text, Bebas Neue, Oswald, Archivo Black, Fredoka, Caveat,
+Dancing Script, Pacifico, Indie Flower, Source Code Pro, Fira Code, JetBrains Mono,
+IBM Plex Mono.
 
-Use fonts available to the browser and relevant export renderer. Browser and server font availability may differ; verify exports before distributing them.
+Check that custom fonts are available to the browser and the renderer used for
+an export. A configured name alone does not supply the font bytes.
 
-## Export storage
+## Permissions, quotas and framing
 
-`LayersExportDirectory` must be writable by the wiki and outside the web document root. An empty value uses the extension's directory under MediaWiki's temporary directory. Deliver exports through `Special:LayersExport`, which checks access; do not publish the cache directory directly. `LayersPdfExportMaxPages=0` removes the configured page cap, so use a finite limit for untrusted uploads.
+The registered rate buckets are `editlayers-save`, `editlayers-render`,
+`editlayers-list`, `editlayers-info`, `editlayers-delete`, `editlayers-rename`
+and `editlayers-create`. Defaults are in `extension.json` under `RateLimits`;
+MediaWiki's `$wgRateLimits` supplies overrides. Page-owned metadata uses the
+information budget; exact PDF delivery and missing-PDF editor preparation use
+the separate render budget. Do not raise quotas as the first response to a
+retry loop. See [native HTTP acceptance](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md).
 
-Old export filenames from before the source-title binding fix are no longer served. Regenerate exports. See [[Current Status]] for remaining fidelity and failed-page issues.
+See [[Permissions]] for owner-page rights. No setting above bypasses owner,
+revision, source or CSRF checks. `LayersRejectAbortedRequests` is not a
+registered server setting.
 
-## Same-origin editor modal
-
-`layerslink=editor-modal` uses an iframe. Where MediaWiki's framing policy blocks it, configure the core setting:
-
-```php
-$wgEditPageFrameOptions = 'SAMEORIGIN';
-```
-
-Also check your reverse proxy and CSP `frame-ancestors` policy. Do not disable framing protection globally. Core settings and their defaults depend on your MediaWiki version.
-
-## Rate limits and permissions
-
-The registered rate-limit buckets are `editlayers-save`, `editlayers-render`, `editlayers-list`, `editlayers-info`, `editlayers-delete`, `editlayers-rename` and `editlayers-create`. Defaults are in the manifest's `RateLimits` section and can be overridden through MediaWiki's `$wgRateLimits`. Page-owned metadata uses the information budget; PDF source delivery and missing-PDF editor preparation use the separate render budget. See the [native HTTP acceptance](../docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md) for the tested scope.
-
-See [[Permissions]] for group rights. Do not use an undocumented setting as a security boundary. In particular, `LayersRejectAbortedRequests` is not a registered server configuration setting in the current manifest.
+The legacy `layerslink=editor-modal` uses a same-origin iframe. Review the core
+`$wgEditPageFrameOptions = 'SAMEORIGIN';` setting together with proxy/CSP
+`frame-ancestors` rules if that mode is blocked. Do not disable framing
+protection globally. The owner-page overlay remains the normal native entry.

@@ -1,284 +1,159 @@
-# Frequently Asked Questions
+# Frequently asked questions
 
-> **Current guidance — September 6, 2026:** Layers supports images, PDFs and standalone slides. Annotation text is not yet explicitly indexed by MediaWiki search; slide-name filters do not search textbox contents. Cargo annotation queries and page-owned history are planned, not available today.
+Reviewed October 24, 2026 for the page-owned candidate. Tagged 1.5.95 uses the
+older shared model. The manifest still reports 1.5.95; choose the reviewed commit
+with passing CI. Milestone 1 acceptance remains open.
 
-Common questions about the Layers extension.
+## What is Layers, and does it change uploaded originals?
 
----
+Layers adds editable text, shapes and other layers over images/PDF pages and
+provides standalone slides. The uploaded original is unchanged. After migration
+completion, the owning page's native revisions store its complete layer snapshot
+and exact source references.
 
-## General Questions
+## Which versions and browsers should I use?
 
-### What is Layers?
+Check [[Installation]] for the manifest compatibility floor and separate legacy
+branches. The candidate's release work covers MediaWiki 1.44 and 1.45; recorded
+checks do not qualify every browser/device combination. Use the PHP/database
+versions required by the chosen core release and verify the
+[release matrix](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for your deployment.
+Do not mix one branch's PHP with another branch's JavaScript.
 
-Layers adds editable text, shapes and annotations to images and PDF pages, and supports standalone slides without a background file.
+## How do I add layers to an image or PDF?
 
-### What does "non-destructive" mean?
-
-Non-destructive means your original images are never changed. All annotations are stored separately as data and rendered on top of the image when displayed. You can edit, remove, or version annotations at any time without affecting the source file.
-
-### Which MediaWiki versions are supported?
-
-- **MediaWiki 1.44+**: Use the `main` branch
-- **MediaWiki 1.43.x**: Use the `REL1_43` branch (LTS until Dec 2027)
-- **MediaWiki 1.39 - 1.42**: `REL1_39` is unmaintained; upgrade MediaWiki for a maintained branch
-
-### What browsers are supported?
-
-Use a current Chrome, Edge, Firefox or Safari release. No minimum-version browser matrix was verified for this documentation audit; test your organization's supported browsers and devices.
-
----
-
-## Usage Questions
-
-### How do I add layers to an image?
-
-1. Go to the File: page for your image
-2. Click the "Edit Layers" tab
-3. Use the drawing tools to add annotations
-4. Click Save
-
-### How do I show layers in a wiki article?
-
-Add the `layerset` parameter to your file link:
+Save the embed on its owning page, use **Edit layers** on hover, focus or tap,
+then Save and reopen from that page. The retired File-page tab is not the native
+article editing entry point. **View full size** opens the viewer.
 
 ```wikitext
-[[File:Example.jpg|layerset=on]]
+[[File:Diagram.png|thumb|400px|layerset=ABC]]
+[[File:Manual.pdf|page=2|400px|layerset=001]]
 ```
 
-> **Note:** `layers=` is also supported for backwards compatibility.
+Every PDF page in `001` shares that visible name. `page=2` selects its internal
+second-page member. Do not put owner IDs or member IDs in author wikitext.
 
-### Can I have multiple sets of annotations?
+## What does layerset=on select?
 
-Yes! Named layer sets allow multiple independent annotation sets per image:
+After completion, it selects this owner/file's `Default` set. It does not mean
+the most recently saved shared set. `off` and `none` hide layers; the older
+`layers=` spelling remains supported. Names compare without case differences,
+and spaces/underscores normalize alike. See [[Wikitext Syntax]].
 
-```wikitext
-[[File:Diagram.png|layerset=anatomy]]
-[[File:Diagram.png|layerset=measurements]]
-```
+## Can different pages or files use the same set name?
 
-See [[Named Layer Sets]] for details.
+Yes. Identity includes the owning page and file/slide, not just the name. Two
+pages can have independent `ABC` sets for one image. Two files on one page can
+also each have an independent `ABC`. Editing one does not update the others.
+See [[Named Layer Sets]].
 
-### Can I create graphics without a base image?
+## Can I create a slide without an uploaded image?
 
-Yes! Slide Mode (v1.5.22+) lets you create standalone canvas graphics:
+Yes. Save `{{#Slide: Safety overview}}` on the owning page and open its overlay.
+The first argument names that page's slide. Saved native canvas/background
+settings remain authoritative. Migrated shared variants can have names such as
+`Safety overview (english)`; use the actual saved name. See [[Slide Mode]] for
+current behavior and the separately labelled legacy options.
 
-```wikitext
-{{#Slide: MyDiagram}}
-{{#Slide: Infographic | canvas=1200x800 | size=600x400}}
-```
+## How do I copy or Import layers?
 
-See [[Slide Mode]] for details.
+Use the integrated Import workflow for admitted source layer sets. Choices from
+different owners remain distinct; preview/preparation is not permanent access or
+Save authority. Whole-PDF Import preserves its complete group. The result is
+local work in the target, with its source attribution; future source edits do
+not silently update it.
 
-### How do I hide layers?
+The existing editable-layer JSON import/export and image import controls remain
+available for their supported formats. An imported flat image cannot preserve
+separately editable objects from another application. Inspect dimensions,
+positioning and layers before saving.
 
-Use `layerset=off` or `layerset=none`:
+## How do Undo, history and recovery differ?
 
-```wikitext
-[[File:Example.jpg|layerset=off]]
-```
+Undo/Redo changes the current editor session. Native owner-page history records
+successful Saves; use its available viewing/comparison/restoration workflows
+for earlier saved content. Local draft Review/Restore is separate and requires
+explicit confirmation. Restoring a draft is not a saved page revision until
+Save succeeds.
 
-### Can I copy layers between images?
+Keep the editor and drafts intact after a refusal or uncertain response. Use the
+existing Check/reconciliation flow to establish the result before publishing
+again. Do not clear browser storage to resolve a conflict.
 
-Use the editor's JSON export and import controls to transfer editable layer data. Save the source first, export its JSON, then import it in the destination editor and inspect the result before saving. Different canvas dimensions can require repositioning. A PNG transfer flattens the annotations into one image and loses their individual editability.
+## Who can edit, rename or remove sets?
 
-### How do I undo changes?
+Native edits require ordinary read/edit rights on the owner, `editlayers`,
+readable sources and fresh revision/source checks. Blocks and protection apply.
+A File page and an article using its file are different owners. `noedit`, a
+hidden button or a locked layer does not replace server authorization.
 
-- Press `Ctrl+Z` to undo
-- Press `Ctrl+Y` or `Ctrl+Shift+Z` to redo
-- Use revision history to restore previous versions
+Removing a native set changes the current snapshot; earlier readable native
+revisions retain their saved content. The old shared creator/`layers-admin`
+rename/delete rules and destructive retained-revision deletion are legacy rules.
+After completion shared writes are read-only. See [[Permissions]].
 
----
+Anonymous users do not receive `editlayers` by default. Granting that right
+alone does not remove the other native action/account/source checks.
 
-## Permission Questions
+## Where is the data, and what are its limits?
 
-### Who can edit layers?
+Native layer content is in the owning page's `layers` slot, alongside its main
+content in native revisions. Retained shared content remains in legacy storage;
+its `layer_sets` rows are not native page revision IDs.
 
-By default:
-- Registered users receive `editlayers` for creating and editing sets. There is no separate autoconfirmed creation requirement.
-- File-backed changes also require ordinary edit permission on the File page.
-- Administrators receive `layers-admin` for ownership overrides; the other authorization checks still apply.
+The native complete snapshot is capped at 2 MiB, 100 members, 100 layers per
+member and 1000 total layers. Canvas dimensions are capped at 4096; strict
+embedded-image data validation has its own 1 MiB limit. Legacy settings do not
+raise these bounds or prune native history. See [[Configuration Reference]].
 
-See [[Permissions]] for customization.
+## Do thumbnails and custom fonts work?
 
-### Can anonymous users edit layers?
+Layers use saved coordinates and scale with the admitted image/slide rendition.
+A PDF thumbnail's rounded natural dimensions do not redefine native geometry.
+Custom font choices are configurable, but a name alone does not install a font;
+verify availability in the browser and relevant export renderer.
 
-By default, no. You can enable it:
+## What can I Download or Print?
 
-```php
-$wgGroupPermissions['*']['editlayers'] = true;
-```
+The full-size viewer offers **Download PNG** first and a separate **Download
+PDF** for images/slides. PDFs offer **Download PDF** only. Output includes the
+admitted saved layers. A failed PDF page must refuse complete assembly rather
+than silently shorten the document.
 
-However, this is not recommended for public wikis.
+The editor's existing image/JSON controls remain separate. Legacy cached server
+PDF export is also a different path, not a native history export API. Inspect
+critical output; a prepared Print document does not prove physical printing.
 
-### Who can delete layer sets?
+## Is offline editing or live collaboration supported?
 
-Deletion requires `editlayers` plus creator ownership or `layers-admin`; file-backed sets also require File-page edit permission. Legacy sets without recoverable creator metadata require the administrator override. See [[Permissions]].
+Loading and saving require the wiki. Local drafts are recovery aids, not an
+offline synchronization service. Real-time multi-user editing is outside the
+current charter; stale native bases are refused and local work is preserved.
 
-### Why can't I see the "Edit Layers" tab?
-
-Possible reasons:
-- You're not logged in (if required)
-- You don't have the `editlayers` permission
-- The extension isn't properly installed
-- You're not on a File: page
-
----
-
-## Technical Questions
-
-### Where is layer data stored?
-
-Layer data is stored in a database table called `layer_sets`. Each row contains:
-- Image filename
-- Named set name
-- Revision number
-- User who saved
-- Timestamp
-- JSON layer data
-
-### How large can layer data be?
-
-By default, up to 2 MB per layer set. Configurable via:
-
-```php
-$wgLayersMaxBytes = 4194304;  // 4 MB
-```
-
-### How many layers can I have?
-
-By default, up to 100 layers per set. Configurable via:
-
-```php
-$wgLayersMaxLayerCount = 200;
-```
-
-### Do layers work with thumbnails?
-
-Yes! Layers scale automatically to match the displayed image size, whether thumbnail or full resolution.
-
-### Can I use custom fonts?
-
-The default fonts are configurable:
-
-```php
-$wgLayersDefaultFonts = ['Arial', 'Roboto', 'Georgia', 'Custom Font'];
-```
-
-Note: Custom fonts must be available on both server and client systems.
-
-### Does Layers work offline?
-
-No. Layers requires a connection to the MediaWiki server to load and save layer data.
-
----
-
-## Performance Questions
-
-### How many layers is too many?
-
-The server enforces layer-count, payload-size and complexity limits. Defaults include 100 layers and a complexity budget of 100; expensive layer types can exhaust the budget before the count limit. Performance depends on shapes, effects, image sizes and the device.
-
-### Do layers affect page load time?
-
-The viewer adds JavaScript, annotation data and rendering work. Measure representative pages on your own deployment; no general 100–200 ms overhead has been established.
-
-### How can I improve performance?
-
-- Reduce layer count where possible
-- Use appropriately sized images (not 8K for thumbnails)
-
----
-
-## Comparison Questions
-
-### How should I compare annotation extensions?
-
-Compare the current workflows you need: image/PDF annotation, standalone slides, retained revisions, search, permissions and accessibility. The earlier feature comparison was not verified against the other extension and has been removed.
-
-### Can I import annotations from other tools?
-
-Not directly. You would need to:
-1. Export from other tool as image
-2. Import image as a layer in Layers
-
-### Can I export to other formats?
-
-The editor provides image export and editable-layer JSON import/export. File-backed annotations also have a server PDF export API with known fidelity limitations; see [[API Reference]] and [[Current Status]]. A registered SVG export workflow is not available.
-
----
-
-## Accessibility Questions
-
-### Is Layers accessible?
-
-The editor includes accessibility features, but this project does not claim a verified WCAG conformance level:
-- Keyboard commands
-- Screen reader support
-- Focus indicators
-- ARIA landmarks
-- Skip links
-
-### What are the keyboard shortcuts?
-
-Press `Shift+?` in the editor to see all shortcuts. Key ones:
-- `V` - Pointer tool
-- `T` - Text tool
-- `R` - Rectangle
-- `Ctrl+Z` - Undo
-- `Ctrl+S` - Save
-
-### Does Layers work with screen readers?
-
-Yes. The editor uses ARIA roles, labels, and live regions to announce changes to assistive technologies.
-
----
-
-## Troubleshooting Questions
-
-### My layers aren't showing, what's wrong?
-
-See [[Troubleshooting]] for detailed solutions. Quick checks:
-1. Layers are saved (check editor)
-2. Correct set name in wikitext
-3. JavaScript isn't blocked
-4. Page cache is cleared
-
-### I'm getting a "Permission denied" error
-
-Check:
-1. You have the `editlayers` permission
-2. You're logged in
-3. You're not blocked
-4. Rate limits aren't exceeded
-
-### The editor is really slow
-
-Try:
-1. Reduce number of layers
-2. Use a smaller image
-3. Close other browser tabs
-4. Use a faster device/connection
-
----
-
-## Future Questions
-
-### Is mobile editing supported?
-
-Touch-event handling exists in the editor. That does not establish full mobile usability: test drawing, text entry, dialogs and saving on your target devices. A complete mobile acceptance test was not performed for this audit.
-
-### Will there be collaboration features?
-
-Real-time collaboration isn't planned, but named layer sets allow different users to maintain separate annotation sets.
-
-### Can I request a feature?
-
-Yes! Open a feature request on [GitHub Issues](https://github.com/slickdexic/Layers/issues).
-
----
-
-## See Also
-
-- [[Quick Start Guide]] — Getting started
-- [[Troubleshooting]] — Problem solving
-- [[Configuration Reference]] — All settings
+## What performance and accessibility can I expect?
+
+Use the recorded [performance scope](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_HISTORY_PERFORMANCE.md) and
+release matrix. The 100-layer server Save benchmark does not establish total
+browser/device latency. Report a representative slow case without discarding
+layers. Controls, shortcuts, focus handling, ARIA support and narrow-screen
+layout exist, but complete device/assistive-technology conformance is not claimed.
+See [[Keyboard Shortcuts]] and [[Troubleshooting]].
+
+## What about built-in search, Cargo and object links?
+
+The required order is page ownership/history, built-in text search, Cargo
+readiness, Cargo integration, then clickable layer-object links on wiki-page
+images/slides/PDF pages. Lightbox object links are excluded. Later milestones
+must not delay Milestone 1; existing code or name listing is not proof of those
+milestones' acceptance.
+
+## Where do I report a problem or request a feature?
+
+Start with [[Troubleshooting]]. Include the exact commit, core/browser versions,
+steps and relevant errors; redact tokens and private data. Search
+[existing issues](https://github.com/slickdexic/Layers/issues) before opening a
+[new issue](https://github.com/slickdexic/Layers/issues/new).
+
+See [[Quick Start Guide]], [[Configuration Reference]] and the
+[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current guidance.
