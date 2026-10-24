@@ -44,9 +44,11 @@ touch-device or complete supported-version release acceptance.
 A separate [MediaWiki 1.44.6 native checkpoint](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md)
 now passes fresh install/update/migration, image and slide Save/return/reopen,
 whole-PDF Import with group Undo/Redo, first-Save attribution, saved page
-traversal and native history/diff. Download collection was interrupted; its
-byte/render inspection and the remaining 1.44 recovery/conflict/restore and
-release-candidate combinations remain open. No runtime correction was required.
+traversal and native history/diff. Complete PDF draft recovery with both-page
+Undo/Redo and one explicit Save, genuine stale-Save refusal, disjoint Check/
+Save and selective historical restore now pass on 1.44. Download byte/render
+inspection, Print and the remaining release-candidate combinations remain open.
+No runtime correction was required.
 
 Ordinary page embeds display their content and approved overlays. They do not
 add owner/revision information above slides, images or PDF pages. The owner

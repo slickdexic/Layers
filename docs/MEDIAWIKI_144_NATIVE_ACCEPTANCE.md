@@ -22,6 +22,9 @@ wikis and private configuration were excluded from its mounts.
 | PDF preservation | Native readback preserved main text, file-version pins, both complete layer payloads and reading order. Target dimensions matched pre-Import native metadata; imported coordinates were not scaled, as required by the existing Import contract. |
 | PDF history and diff | Native history showed the attributed layer-set edit. The native diff included the layer-set change region and both members' stored changes. |
 | Saved PDF viewing | Reopen and page traversal showed both saved members. The full-size viewer reached the saved second page with its layers. |
+| Complete PDF draft recovery | Explicit Restore in a fresh editor recovered edits on both pages and each page's Undo/Redo history. Recovery and Undo/Redo added no revision. One explicit Save preserved both complete members, pins and main text; Close returned to the owner. |
+| Stale Save and reconciliation | A concurrent revision changed the other PDF page. Stale Save refused with `layers-edit-conflict`, retaining visible work and Undo history and adding no revision. Explicit Check reconciled the disjoint changes; one subsequent Save retained both the concurrent and local work. |
+| Selective historical restore | Native history opened the selected earlier PDF member. Restore created one owner revision containing that member's exact historical payload, while preserving the other PDF member, main text and independent owners. Overlay reopen confirmed the resulting saved content. |
 
 Each successful browser Save was performed once. Fixture setup and readback used
 native APIs; browser actions used the actual editor and overlays. No Layers
@@ -31,10 +34,12 @@ repeated locally for this environment-only qualification.
 
 ## Remaining acceptance
 
-Download file collection was interrupted, so complete downloaded-byte and render
-inspection remains pending on 1.44. Print, recovery/conflict and restore journeys,
-the remaining version/device combinations, a 1.5.x upgrade, combined security,
-privacy/performance checks and owner acceptance remain on the
+Download file collection remains unqualified on 1.44. A second attempt timed out
+in the browser observation tool before a Download click; this establishes no
+export defect and supplies no delivered-file evidence. Further collection must
+avoid that stalled observation path. Print, the remaining version/device
+combinations, a 1.5.x upgrade, combined security, privacy/performance checks and
+owner acceptance remain on the
 [Milestone 1 release checklist](MILESTONE_1_RELEASE_CHECKLIST.md).
 This checkpoint qualifies the recorded journeys and does not complete the
 supported-version matrix or Milestone 1.
