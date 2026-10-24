@@ -1,6 +1,6 @@
 # Maintaining and publishing documentation
 
-Updated September 6, 2026. Update documentation when behavior changes, even if no version tag is created. Keep historical release notes and audits dated; never replace their old numbers merely to pass a version grep.
+Reviewed October 24, 2026. Update documentation when behavior changes, even if no version tag is created. Keep historical release notes and audits dated; never replace their old numbers merely to pass a version grep.
 
 ## Sources of truth
 
@@ -9,7 +9,8 @@ Updated September 6, 2026. Update documentation when behavior changes, even if n
 | Version/compatibility | `extension.json`, destination branch/tag | README, wiki Installation/Home, extension `.mediawiki` page |
 | Configuration and rights | `extension.json` plus enforcement code | wiki Configuration Reference/Permissions, security guide |
 | API parameters | `src/Api`, deployed `action=paraminfo` | wiki API Reference; docs/API entry point |
-| Schema | `sql/tables/layer_sets.sql`, migrations and database code | Mediawiki-layer_sets-table.mediawiki |
+| Native document/history | `DocumentSchema`, `PageRevisionWriter`, registration/admission and exact-source code | Native API/upgrade guides; current status and release matrix |
+| Legacy schema | MySQL/SQLite `layer_sets` schemas, updater patches and database code | Mediawiki-layer_sets-table.mediawiki, explicitly separate from native history |
 | Current capabilities and tests | Actual code and dated successful runs | docs/CURRENT_STATUS.md and its wiki mirror |
 | Proposals | docs/proposals with explicit status | Roadmap links; never advertise as implemented |
 | Release history | CHANGELOG.md | Exact mirror in wiki/Changelog.md |

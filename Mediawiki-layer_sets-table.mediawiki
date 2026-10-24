@@ -1,14 +1,18 @@
 {| class="wikitable" style="float:right; margin-left:1em; width:300px;"
-! colspan="2" | layer_sets table
+! colspan="2" | layer_sets table (legacy shared storage)
 |-
 | '''Extension''' || [[Extension:Layers]]
 |-
-| '''Description''' || Stores layer set revisions. Each row represents a single revision of a named layer set for an image, PDF page or standalone slide.
+| '''Scope''' || Retained shared-set revisions; native page-owned snapshots use core revision/slot storage.
 |}
 
-The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers|Layers]] extension. Multiple revisions can exist per set name, enabling version history.
+Reviewed October 24, 2026 against the candidate's MySQL/SQLite schemas, database code and native revision writer. This is a publication source; no external wiki update is implied.
 
-Documentation checked September 6, 2026 against <code>sql/tables/layer_sets.sql</code> and <code>LayersDatabase</code>. This is Layers-specific revision storage, '''not the MediaWiki page revision table'''. Use MediaWiki's database updater, not this reference, to install or migrate it.
+The '''layer_sets''' table retains the older shared revisions for files, PDF pages and slides. After migration completion, those shared writes are read-only. The implemented page-owned model stores the complete snapshot in the owner's native <code>layers</code> slot alongside its main content. A legacy row ID/revision counter is '''not''' a native owner page ID or MediaWiki revision ID.
+
+Use the native updater and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md migration/recovery procedure], not SQL copied from this reference. Updater/schema installation is separate from completion. Back up the complete wiki database, uploads including old versions, configuration and matching code; this table alone or an XML export is not a complete rollback.
+
+Types below describe the MySQL installation schema; SQLite has its own aligned installation file. The retained successful MySQL upgrade does not qualify every database combination.
 
 == Table Structure ==
 
@@ -65,9 +69,9 @@ Documentation checked September 6, 2026 against <code>sql/tables/layer_sets.sql<
 No database-level foreign keys are declared. Per MediaWiki convention,
 referential integrity is enforced at the application level.
 
-== Data Format ==
+== Legacy stored data format ==
 
-The <code>ls_json_blob</code> column contains a JSON structure:
+The <code>ls_json_blob</code> column contains legacy JSON. This illustrative stored record is not a native publication payload; do not assign the server-generated creator metadata in a client request:
 
 <syntaxhighlight lang="json">
 {
@@ -91,15 +95,15 @@ The <code>ls_json_blob</code> column contains a JSON structure:
 }
 </syntaxhighlight>
 
-== Revision Limits ==
+== Legacy retention limits ==
 
 * Maximum revisions per named set: configurable via <code>$wgLayersMaxRevisionsPerSet</code> (default: 50)
-* Older revisions are automatically pruned when limit is exceeded
+* These limits govern legacy writes before completion; they do not prune native owner-page revisions.
 * Maximum named sets per image: configurable via <code>$wgLayersMaxNamedSets</code> (default: 15)
 
-== Related Tables ==
+== Native history and related storage ==
 
-<code>layer_sets</code> is the only table the extension creates.
+The current updater registers the extension-specific <code>layer_sets</code> table and its patches. Native page-owned history uses MediaWiki core revision/content/slot storage; the <code>layers</code> slot role/content model is registered through supported extension mechanisms, not a second custom revision table. Migration completion is recorded through core <code>updatelog</code>. Do not insert or remove that record manually.
 
 == See Also ==
 
@@ -107,6 +111,10 @@ The <code>ls_json_blob</code> column contains a JSON structure:
 * [[Extension:Layers#Configuration]] — Configuration parameters
 
 == Creator metadata and historical safety ==
-<code>ls_user_id</code> identifies the author of a particular revision. The JSON <code>ownerId</code> is server-generated original-creator metadata added on main after 1.5.95. It survives pruning; clients cannot assign it. Older rows may lack it. Only a retained revision 1 establishes legacy creator ownership; a later editor must not inherit ownership merely because older rows were deleted.
+<code>ls_user_id</code> identifies the author of a particular revision. The legacy JSON <code>ownerId</code> is server-generated original-creator user metadata, not the native owning page ID. It survives pruning; clients cannot assign it. Older rows may lack it. Only a retained revision 1 establishes legacy creator ownership; a later editor must not inherit ownership merely because older rows were deleted.
 
-Layer-set names can change and retained rows can be pruned or deleted. These IDs are not durable article-history references. The planned page-owned content model has not been implemented. Back up the Layers table together with the wiki database and required assets.
+Before completion, legacy names/rows can be renamed, pruned or deleted. After completion, native file deletion preserves retained shared rows; source access and cache invalidation are separate checks. Never use legacy row IDs as durable native-history references or purge retained rows as an upgrade step.
+
+Native set identity includes the owning page and file/slide/name scope. Every page of one PDF set shares the same visible name; <code>ls_page</code> in this legacy table is an internal source page number, not a different visible set name or native page ID. The same visible name on another file or owner is independent.
+
+See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md the native API guide] for complete-snapshot publication and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md the release checklist] for acceptance. Schema documentation does not authorize direct database edits.

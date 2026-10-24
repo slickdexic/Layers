@@ -1,71 +1,88 @@
-'''Layers is a MediaWiki extension. Docker is only our development/test environment; it is not part of Layers' runtime architecture or deployment requirements. No Docker worker or host supervisor is required or planned.'''
+'''Layers is a MediaWiki extension. Docker is only one development/test environment, not a runtime dependency.'''
 
 = Layers user guide =
-Documentation reviewed September 6, 2026 for version 1.5.95 and subsequent fixes on main. Layers supports '''images, PDF pages and standalone slides'''.
+Reviewed October 24, 2026 for the page-owned candidate. The last tagged release and the unchanged manifest number are '''1.5.95'''; this guide does not declare a stable Layers 2.0 release. Use a reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md release checklist]. This repository file is a publication source, not proof of an external wiki update.
 
-== Start with the right content type ==
+== Complete setup first ==
+Follow [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.
+
+Rehearse on a wiki copy, retain consistent database/uploads/configuration backups and matching old code, review discovery/dry-run results, and use the documented edit freeze and verification. Do not insert a completion record or prune old layers/sources manually.
+
+== Start from the owning page ==
+Save the embed on the wiki page that will own the layer set. Use '''Edit layers''' on hover, keyboard focus or tap, then Save and reopen from that same page. '''View full size''' opens the viewer. The old File-page tab is retired after completion; a File description and an article using its image are different owners.
+
 {| class="wikitable"
-! Content !! Editor !! Embed example
+! Content !! Native entry !! Embed example
 |-
-| Image || Open its File page and choose Edit Layers || <code><nowiki>[[File:Diagram.png|600px|layerset=annotations]]</nowiki></code>
+| Image || Saved embed's Edit layers overlay || <code><nowiki>[[File:Diagram.png|thumb|400px|layerset=ABC]]</nowiki></code>
 |-
-| Standalone slide || <code>Special:Slides</code> or <code>Special:EditSlide/SafetyProcedure</code> || <code><nowiki>{{#Slide: SafetyProcedure|size=800x600}}</nowiki></code>
+| Standalone slide || Saved slide's Edit layers overlay || <code><nowiki>{{#Slide: Safety overview}}</nowiki></code>
 |-
-| PDF page || Open its File page, choose Edit Layers and select the document page || <code><nowiki>[[File:Manual.pdf|page=2|600px|layerset=annotations]]</nowiki></code>
+| PDF page || Saved PDF occurrence's Edit layers overlay and editor page navigator || <code><nowiki>[[File:Manual.pdf|page=2|400px|layerset=001]]</nowiki></code>
 |}
-Create and save the content and named sets before using these examples. PDF annotation requires working PDF thumbnails (normally PdfHandler). Slides need no background image or PDF dependency.
 
-== Select a named layer set ==
+PDFs require working native thumbnails and the appropriate MediaWiki media handler/rasterizer. A slide needs no uploaded background image or PDF support. Ordinary embeds add no generated owner/revision captions or automatic set list above the content.
+
+== Choose the intended layer set ==
+A set belongs to one page and one file or slide. Two pages can independently use <code>ABC</code> for one file; two different files on one page can also each use <code>ABC</code>. A name alone does not identify global shared content.
+
 {| class="wikitable"
-! Parameter !! Behavior
+! Parameter !! Behavior after completion
 |-
-| <code>layerset=on</code> || Select the current set; this is not necessarily a set named default
+| <code>layerset=on</code> || Select this owner/file's <code>Default</code> set, not the most recently saved shared set.
 |-
-| <code>layerset=default</code> || Request the set literally named default
+| <code>layerset=ABC</code> || Select the named set within this page/file scope.
 |-
-| <code>layerset=annotations</code> || Request the set named annotations
+| <code>layerset=default</code> || Explicit name; compares alike with <code>Default</code> in native storage.
 |-
-| <code>layerset=none</code> or <code>layerset=off</code> || Disable annotations
+| <code>layerset=name:on</code> || Literal set named <code>on</code>, rather than the display shortcut.
+|-
+| <code>layerset=none</code> or <code>layerset=off</code> || Suppress layers.
 |}
-The older <code>layers=</code> spelling remains supported. Prefer descriptive names; names resembling intent values such as on/off/1 have inconsistent handling on some paths.
+The older <code>layers=</code> spelling remains supported. Native names compare without case differences, and spaces/underscores normalize alike. The stored spelling remains visible. Do not put owner IDs or internal member tokens in author wikitext. Use one unambiguous selector per occurrence; linked-caption content is not another top-level option.
 
+A PDF keeps the '''same visible set name across its pages''':
 <syntaxhighlight lang="wikitext">
-[[File:Diagram.png|thumb|400px|layerset=annotations|Equipment diagram]]
-[[File:Diagram.png|600px|layerset=on|layerslink=lightbox]]
-[[File:Diagram.png|600px|layerset=on|layerslink=editor-modal]]
-{{#Slide: SafetyProcedure|canvas=1200x800|size=800x600|layerset=instructions}}
-{{#Slide: SafetyProcedure|size=800x600|noedit}}
+[[File:Manual.pdf|page=1|400px|layerset=001]]
+[[File:Manual.pdf|page=2|400px|layerset=001]]
 </syntaxhighlight>
+The native <code>page=</code> option selects an internal member, never another stored page as a fallback. An eligible missing set can open empty for an authorized editor; it must not substitute a different saved set.
 
-For slides, <code>canvas=</code> controls creation dimensions; <code>size=</code> controls display dimensions. <code>noedit</code> hides an edit button, not API authorization. Editor-modal viewing requires compatible same-origin framing settings; see the installation/configuration guide.
+For slides, the first argument names the saved page-owned slide. Migrated variants may use names such as <code>Safety overview (english)</code>. Saved native canvas geometry/background remain authoritative. Existing size/noedit syntax remains; legacy shared-slide options and special pages are separately described in [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Slide-Mode.md Slide Mode]. <code>noedit</code> suppresses the edit overlay, not authorization. Legacy <code>layerslink</code> modes are separate host-link compatibility paths, not a way to select another article's native set.
 
-== Basic editing ==
-# Add textboxes, callouts, shapes or other drawing layers.
-# Use the Pointer tool to select, move, resize and rotate them.
-# Choose a descriptive set name, then save.
-# View the saved result in the article and lightbox.
+== Edit, Import and Save ==
+# Add textboxes, callouts, shapes or other layers with the existing drawing tools.
+# Use Pointer to select, move, resize and rotate. Group/folder, style, gradient, alignment, rich-text and image controls remain available.
+# Use the integrated Import workflow for an admitted source. Import creates local target work, not shared future edits. Whole-PDF Import preserves its complete group and source association.
+# Save, return to the owning page and reopen the same embed to verify the confirmed result.
 
-Use Ctrl+Z for undo, Ctrl+Y or Ctrl+Shift+Z for redo, 0 to fit, +/- to zoom, and Space-drag to pan. Keyboard behavior inside text fields differs from canvas commands. The editor's keyboard help is the reference for available commands.
+Use the editor's keyboard help for its commands. Common commands include Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo, 0 to fit, +/- to zoom and Space-drag to pan. Text fields can own keyboard input.
 
-When editing a multi-page PDF, unsaved pages are held in memory. Save writes changed pages individually; this is not an atomic document save. Failed saves leave work unsaved. Keep the editor open and retry before closing the browser. Review recovery drafts before accepting them.
+Native Save publishes the '''complete owner snapshot in one atomic page revision''', including the whole edited PDF group and unrelated sets. It is not independent page-by-page shared storage. Use the owning page's native history to view/compare earlier saved content and the available restoration workflows. Historical content retains its saved source identity; a reupload must not silently replace it.
 
-== Permissions and retention ==
-The <code>editlayers</code> right controls editing. File annotations also require the applicable File-page editing authority. Deletion/renaming requires creator ownership or <code>layers-admin</code>; ordinary <code>delete</code> is not the override. Document-wide changes check every affected PDF page's set.
+== Preserve work on a refusal or uncertain Save ==
+Keep the editor and local drafts intact. A stale/uncertain Save is not permission to repeat publication blindly. Use the existing '''Check'''/reconciliation flow to establish the outcome. An empty HTTP 200 body is not proof of success. Preserve newer local work when the earlier Save succeeded.
 
-New revisions preserve server-generated creator metadata. Legacy sets whose creator evidence was pruned require an administrator for deletion/renaming. Layers normally retains 50 revisions per set/document page; these are '''not MediaWiki article revisions'''. Deleting a set removes its retained data.
+Local draft '''Review'''/'''Restore''' needs explicit confirmation and remains local until Save succeeds. Cancellation/refusal preserves the applicable backups and current work. Do not clear browser storage, substitute another revision/file/PDF page, or split the complete Save into partial member writes.
 
-== SOPs, search and Cargo ==
-Standalone slides can hold visual instructions, but current Layers saves do not reliably create history entries on their embedding article. The legacy history-tracking option does not fix this. Annotation text is not explicitly indexed by ordinary MediaWiki search; slide-name and editor-layer filters are different.
+== Permissions, history and limits ==
+Native editing requires ordinary read/edit authority on the '''owner''', <code>editlayers</code>, readable sources and fresh revision/source checks. Blocks, protection, native CSRF handling and quotas apply. A listing, preview or previous successful read is not lasting authorization.
 
-Cargo galleries can choose a set from a query-result field. Textbox field bindings and Cargo tables containing annotation text are not implemented. The agreed development order is '''page revision history, MediaWiki search, then Cargo query/filter support'''.
+Native history is not pruned by the old shared 50-revision setting. Removing a native set changes the current snapshot; earlier readable native revisions retain their content. Legacy creator/<code>layers-admin</code> rename/delete rules and retained shared-row deletion are different. Shared mutation APIs become read-only after completion.
 
-== Export and troubleshooting ==
-Client-side image export and lightbox print/download are separate from server PDF export. Server rendering and failed-page handling have known limitations; inspect important output against the viewer. Old server export cache entries may need regeneration after updating to the source-title binding fix.
+Native bounds are 2 MiB for the complete snapshot, 100 members, 100 layers per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded-image data URLs have a 1 MiB bound including base64 text. Raising legacy limits does not expand the native schema. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md configuration] and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Permissions.md permissions].
 
-If something fails, record the branch/commit, content type, markup, browser and sanitized API/console errors. Never post confidential SOP text or tokens to public issues.
+== View, Download and Print ==
+The full-size viewer retains zoom, pan, fit, PDF page navigation, Print and Escape to close. Images/slides offer '''Download PNG''' first and a separate '''Download PDF'''; PDFs offer '''Download PDF''' only. The output includes admitted saved layers. A failed PDF page must refuse assembly rather than emit a shortened document.
 
-== Further documentation ==
-* [https://github.com/slickdexic/Layers/wiki GitHub user guide]
-* [https://github.com/slickdexic/Layers/wiki/Current-Status Current status and limitations]
-* [https://github.com/slickdexic/Layers/wiki/API-Reference Action API reference]
-* [https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md Revision, search and Cargo proposal]
+Editor image/JSON controls and legacy cached server PDF export remain separate paths. A prepared Print document does not prove completion of the OS dialog or a physical print. Inspect important output and use the release matrix for qualified version/device combinations.
+
+== Milestone order and further help ==
+The required order is '''page ownership/native history; built-in layer-text search; Cargo readiness; Cargo integration; then clickable layer-object links on wiki-page images, slides and PDF pages'''. Layer-object links are excluded from the lightbox. Existing Cargo gallery/hint/field helpers remain; their presence is not acceptance of later milestones. Those milestones must not delay page ownership.
+
+If something fails, preserve work and record the exact commit, MediaWiki/browser version, content type, markup and sanitized API/console errors. Never post private content, cookies or tokens to public issues.
+
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Troubleshooting.md Troubleshooting]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md Current native API guide]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CURRENT_STATUS.md Current release status]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md Known limits]

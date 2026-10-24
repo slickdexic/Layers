@@ -12,49 +12,63 @@
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
 |version         = 1.5.95
 |update          = 2026-09-02
-|download        = {{GithubDownload|slickdexic|Layers}}
+|download        = [https://github.com/slickdexic/Layers/archive/refs/tags/v1.5.95.zip Tagged 1.5.95]
 
-|readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
-|changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
+|readme          = [https://github.com/slickdexic/Layers/blob/v1.5.95/README.md README]
+|changelog       = [https://github.com/slickdexic/Layers/blob/v1.5.95/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
 |mediawiki       = >= 1.44.0
-|php             = >= 8.1
 |needs-updatephp = yes
 |table1          = layer_sets
 |rights          = {{bulleted list|editlayers|layers-admin}}
-|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxComplexity|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersPdfExportWidth|$wgLayersPdfExportMaxPages|$wgLayersExportDirectory|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground|$wgLayersTrackChangesInRecentChanges}}
-|hook1           = BeforePageDisplay
-|hook2           = BitmapHandlerTransform
-|hook3           = FileDeleteComplete
-|hook4           = ImageBeforeProduceHTML
-|hook5           = ImagePageAfterImageLinks
-|hook6           = LinkerMakeMediaLinkFile
-|hook7           = LoadExtensionSchemaUpdates
-|hook8           = MakeGlobalVariablesScript
-|hook9           = ParserBeforeInternalParse
-|hook10          = ParserFirstCallInit
-|hook11          = ParserMakeImageParams
-|hook12          = SkinTemplateNavigation::Universal
-|hook13          = ThumbnailBeforeProduceHTML
+|parameters      = {{bulleted list|$wgLayersPageDrawingNamespaces|$wgLayersBindingReadMaxAge|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxLayerCount|$wgLayersMaxComplexity|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersPdfExportWidth|$wgLayersPdfExportMaxPages|$wgLayersExportDirectory|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground|$wgLayersTrackChangesInRecentChanges}}
+|hook1 = SetupAfterCache
+|hook2 = MediaWikiServices
+|hook3 = APIQuerySiteInfoGeneralInfo
+|hook4 = BeforePageDisplay
+|hook5 = ChangeTagsAllowedAdd
+|hook6 = ChangeTagsListActive
+|hook7 = ListDefinedTags
+|hook8 = FileDeleteComplete
+|hook9 = ImagePageAfterImageLinks
+|hook10 = LoadExtensionSchemaUpdates
+|hook11 = MakeGlobalVariablesScript
+|hook12 = ParserFirstCallInit
+|hook13 = ParserClearState
+|hook14 = ParserBeforeInternalParse
+|hook15 = ParserOptionsRegister
+|hook16 = InternalParseBeforeLinks
+|hook17 = LinkerMakeMediaLinkFile
+|hook18 = ImageBeforeProduceHTML
+|hook19 = ThumbnailBeforeProduceHTML
+|hook20 = BeforeParserFetchFileAndTitle
+|hook21 = ParserMakeImageParams
+|hook22 = SearchDataForIndex2
+|hook23 = ShowSearchHit
+|hook24 = LinksUpdate
+|hook25 = LinksUpdateComplete
+|hook26 = SkinTemplateNavigation::Universal
+|hook27 = CargoSetFormatClasses
 |description     = A non-destructive annotation system for images, PDFs and standalone slides with 17 drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and keyboard editing controls.
 }}
 
 
-== Current status and scope ==
-Documentation reviewed September 6, 2026. Version 1.5.95 is the manifest/tag baseline; main includes subsequent ownership, save-safety, export-access and lightbox fixes. See [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md#unreleased Unreleased changes].
+== Current candidate and release status ==
+Reviewed October 24, 2026 for the page-owned candidate. The version, release date and stable status above identify the last tagged '''1.5.95''' release; they do not declare the candidate to be a stable Layers 2.0 release. Candidate registration/configuration and behavior are described below. Use an exact reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md existing release checklist]. Editing this source file does not publish it to mediawiki.org.
 
-Layers revision lists are separate from MediaWiki article history. The optional <code>LayersTrackChangesInRecentChanges</code> null-edit attempt does not provide a reliable audit trail. Text in shared layer sets and slides is indexed by ordinary wiki search with the file's <code>File:</code> page and with every page that shows them (galleries excepted). Cargo selects layer sets in galleries, and drawings can show Cargo values through <code><nowiki>{{#layers_fields:}}</nowiki></code>; with the page-history pilot, drawing text can also be stored as Cargo rows. The next priorities are page-owned revisions, search, and Cargo query/filter support across images, PDFs and standalone slides.
+The candidate stores layer sets in the '''owning page's native revision history''' after migration completion. A layer set belongs to one page and one file or slide. Equal names on different owners or files are independent. A PDF has one visible set name across all its pages; the page number selects an internal member, not a different set name.
 
-Server export has known fidelity and failed-page limitations. Read [https://github.com/slickdexic/Layers/wiki/Current-Status Current status] before using Layers for controlled SOPs. Use a supported MediaWiki release and its PHP/database requirements; the compatibility floor in this infobox is not a recommendation to use an end-of-life core release.
-The '''Layers''' extension supports annotations on images and PDF pages, and standalone slides without a background file. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
+Save publishes the complete owner snapshot in one native revision, preserving unrelated sets and complete PDF groups. Historical content retains its saved source identity. The old shared table and creator-based mutation APIs are separate legacy paths; shared writes become read-only after completion. The legacy null-edit history option is not needed for native history.
 
-All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit layers'''}} tab on any image's <code>File:</code> page to access the editor.
+Use '''Edit layers''' and '''View full size''' on the saved embed, available on hover, keyboard focus or tap. Editing returns to the owning page. The old File-page tab is retired after completion. Ordinary embeds add no technical owner/revision headings or temporary set lists. Authors write names only, never owner page IDs or internal binding tokens.
+
+Images and slides offer '''Download PNG''' first and a separate '''Download PDF'''. PDFs offer '''Download PDF''' only. Viewing, page navigation, Print and Download use the admitted saved content. Failed PDF pages must refuse complete assembly rather than silently shorten the result. OS/physical Print and the remaining device/version combinations retain their release-checklist limits.
 
 == Why Layers? ==
-* '''Professional Tools:''' 17 [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics—everything needed to annotate like a pro.
+* '''Professional Tools:''' 17 [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
-* '''Accessible:''' Provides [[#Keyboard Shortcuts|full keyboard navigation]], ARIA labels, and high-contrast indicators. No formal WCAG conformance assessment is claimed.
+* '''Accessible:''' Provides [[#Keyboard Shortcuts|keyboard controls]], ARIA labels, and high-contrast indicators. No formal WCAG conformance assessment is claimed.
 
 == Use Cases ==
 {| class="wikitable"
@@ -73,163 +87,127 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 | '''Scientific Imagery''' || Label specimens, mark measurement points || Text boxes, arrows, style presets for consistency
 |}
 
+
 == Slide Mode (v1.5.22+) ==
-'''Create standalone canvas graphics without requiring a base image.''' Slides are perfect for diagrams, infographics, flowcharts, and presentations. Like images, slides support '''multiple named layer sets''' for different annotation variations.
+A slide is a standalone canvas owned by the page whose snapshot contains it. Save the embed on that page, then use its overlay. The first argument selects the saved slide name. A migrated shared variant can be named <code>Safety overview (english)</code>; use its actual saved name without a page ID.
 
-=== Slide Syntax ===
 <syntaxhighlight lang="wikitext">
-{{#Slide: MySlide}}
-<!-- Render slide "MySlide" (its current layer set) -->
-
-{{#Slide: MySlide | layerset=annotations}}
-<!-- Render specific named layer set -->
-
-{{#Slide: MySlide | size=800x600}}
-<!-- Render at specific display size -->
-
-{{#Slide: MySlide | canvas=1920x1080}}
-<!-- Create with specific canvas size -->
-
-{{#Slide: MySlide | size=800x600 | noedit}}
-<!-- no edit button overlay -->
+[[File:Diagram.png|thumb|400px|layerset=ABC|Labels for this page]]
+{{#Slide: Safety overview}}
+{{#Slide: Safety overview|noedit}}
+[[File:Manual.pdf|page=1|400px|layerset=001]]
+[[File:Manual.pdf|page=2|400px|layerset=001]]
 </syntaxhighlight>
 
-=== Slide Parameters ===
-{| class="wikitable"
-! Parameter !! Description !! Example
-|-
-| <code>layerset</code> || Named layer set to display (omitted/on: current set) || <code>layerset=anatomy</code>
-|-
-| <code>canvas</code> || Canvas size in pixels || <code>canvas=1920x1080</code>
-|-
-| <code>size</code> || Display size on page || <code>size=800x600</code>
-|-
-| <code>noedit</code> || disable edit button || <code>noedit</code>
-|}
+After completion, <code>layerset=on</code> selects this owner/file's <code>Default</code> set, not the most recently saved shared set. <code>off</code> and <code>none</code> suppress layers; the older <code>layers=</code> spelling remains supported. Native names compare without case differences; spaces and underscores normalize alike, while the saved spelling remains visible. Missing sets may open empty for an eligible authorized editor, never by substituting another saved set.
 
-=== Slide Management ===
-{| class="wikitable"
-! Feature !! Description
-|-
-| <code>Special:Slides</code> || Browse, search, create, and delete slides with a modern grid interface
-|-
-| <code>Special:EditSlide/SlideName</code> || Direct editor access for a specific slide
-|-
-| Custom canvas sizes || Configurable dimensions; standard maximum defaults to 4096×4096. Entry-point limits differ, so verify unusual sizes in the editor
-|-
-| Background colors || Any CSS color or transparent
-|-
-| Instant refresh || Changes appear immediately after saving (no page reload needed)
-|}
+Saved native geometry/background remain authoritative. Existing slide <code>size</code>/<code>noedit</code> syntax remains supported; verify the intended candidate result. Legacy shared-slide <code>layerset</code>, <code>canvas</code>, <code>background</code>, <code>size</code>, <code>class</code> and <code>editable</code> options, plus <code>Special:Slides</code>/<code>Special:EditSlide</code>, retain their separately labelled reference at [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Slide-Mode.md Slide Mode]. They do not grant admission to another page's native content. <code>noedit</code> hides an edit button, not server authorization.
 
-== Installation ==
-=== Branch Selection ===
-{{Note|text=MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_43 branch provides full feature parity with main and is recommended for MediaWiki 1.43 users.}}
+== Installation and upgrade ==
+The candidate's manifest requires MediaWiki 1.44 or newer. Use the PHP/database versions required by the chosen supported core release; the extension's compatibility floor is not an endorsement of an obsolete core version. See [https://www.mediawiki.org/wiki/Manual:Installation_requirements core installation requirements]. PDF layers require working native PDF thumbnails and the applicable media handler/rasterizer dependencies. Slides need no uploaded background file or PDF renderer.
 
-{| class="wikitable"
-! MediaWiki Version !! Branch !! Current Version
-|-
-| 1.44+ || <code>main</code> || 1.5.95 manifest; main includes later fixes
-|-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || Check branch manifest and changelog
-|-
-| 1.39 - 1.42 (unmaintained) || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || Check branch manifest and changelog
-|}
-{{ExtensionInstall
-|registration=required
-|db-update=yes
-|custom-steps=
-*Developers considering running tests, linting, etc. should run <code>composer install</code> and <code>npm install</code> within the newly created <code>Layers</code> directory.
-|download-link=Download the suitable source archive for your MediaWiki version (either [https://github.com/slickdexic/Layers/archive/refs/heads/main.zip main], [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_43.zip REL1_43] or [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_39.zip REL1_39])
-}}
+For an older compatible 1.43 wiki, check the separate <code>REL1_43</code> branch and its actual fixes. <code>REL1_39</code> is unmaintained. Do not assume branch feature parity or mix PHP and assets from different branches. Shipped runtime assets are included; npm/Composer tools are for development checks, not a new extension runtime dependency.
+
+From MediaWiki's <code>extensions</code> directory:
+<syntaxhighlight lang="bash">
+git clone https://github.com/slickdexic/Layers.git
+git -C Layers checkout --detach REVIEWED_COMMIT_OR_TAG
+</syntaxhighlight>
+Replace the placeholder with the exact reviewed candidate/release and verify its CI. A default-branch clone or unchanged manifest number does not identify the candidate.
+
+Add to <code>LocalSettings.php</code>:
+<syntaxhighlight lang="php">
+wfLoadExtension( 'Layers' );
+</syntaxhighlight>
+Then, from the MediaWiki root:
+<syntaxhighlight lang="bash">
+php maintenance/run.php update
+</syntaxhighlight>
+
+The updater is not migration completion. Follow the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md full upgrade and recovery procedure]: rehearse on an actual wiki copy; retain consistent database/uploads/configuration backups and matching old code; arrange the edit freeze; refresh discovery; review the dry run; apply the unscoped migration; and verify <code>layerspagehistorymigrated: true</code> through siteinfo. A fresh empty wiki also needs completion recorded by that procedure. A scoped migration does not complete the whole wiki. Never fabricate the completion record or install a sample table manually.
+
+Validate images, slides, complete PDFs, native history and current/old source versions before reopening normal edits. Retain shared rows and archived sources. Distinguish safe reruns, native content restoration and full backup rollback. A fresh successful migration does not automatically reconcile all earlier migrated history.
 
 == Configuration ==
-=== Parameters ===
+Set overrides after loading the extension. The following defaults are checked against the candidate manifest; scopes are checked against the current callers.
+
 {| class="wikitable"
-! Variable !! Type !! Default !! Description
+! Setting !! Type !! Default !! Scope
 |-
-| <code>$wgLayersEnable</code> || boolean || <code>true</code> || Master switch for Layers.
+| <code>$wgLayersPageDrawingNamespaces</code> || array or null || <code>null</code> || Namespaces where new ownership may start. <code>null</code> means content namespaces and File; <code>[]</code> admits no new owners. Existing owners retain their content in any namespace, subject to permissions.
 |-
-| <code>$wgLayersDebug</code> || boolean || <code>false</code> || Enable verbose debug logging.
+| <code>$wgLayersBindingReadMaxAge</code> || integer || <code>300</code> || Maximum seconds of anonymous public caching for a current-revision binding read. <code>0</code> disables this caching. Logged-in, historical, snapshot, control, viewer/editor, error and private-wiki responses are not publicly cached.
 |-
-| <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Max layers per set.
+| <code>$wgLayersEnable</code> || boolean || <code>true</code> || Enables the hooks/UI paths that consult it. It does not unregister stored native content or replace API permissions.
 |-
-| <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Max named sets per image.
+| <code>$wgLayersDebug</code> || boolean || <code>false</code> || Additional Layers logging. Keep diagnostic logs private and bound their collection.
 |-
-| <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Historical revisions to keep.
+| <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Legacy stored payload limit; also exposed to client paths. Increasing it does not raise the native 2 MiB schema bound.
 |-
-| <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
+| <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Legacy validation/client callers. Native per-member count remains capped at 100.
 |-
-| <code>$wgLayersMaxImportSide</code> || integer || <code>2048</code> || Max width/height (px) before client-side downscaling of imported images.
+| <code>$wgLayersMaxComplexity</code> || integer || <code>100</code> || Legacy request complexity budget: simple shapes cost 1, text/arrow types 2, image/path/custom shapes 3.
 |-
-| <code>$wgLayersImportJpegQuality</code> || float || <code>0.8</code> || JPEG quality used when re-encoding downscaled imported images.
+| <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Imported-image validation/client paths using this setting. Native strict validation still has its own 1 MiB bound.
 |-
-| <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
+| <code>$wgLayersMaxImportSide</code> || integer || <code>2048</code> || Client image-import downscaling on the longest side. It does not change saved native canvas bounds.
 |-
-| <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Name given to an image's first layer set when the user did not name one. Set names are user-defined and nothing is reserved; this is only a seed for a brand-new set, never a lookup key.
+| <code>$wgLayersImportJpegQuality</code> || number || <code>0.8</code> || JPEG quality used by client import re-encoding, when that result is smaller. This is not the full-size viewer's PNG Download setting.
 |-
-| <code>$wgLayersDefaultFonts</code> || array || (see extension.json) || Allowed fonts list for the editor.
+| <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Shared-file set allocation and client controls that read it; not the native member limit.
 |-
-| <code>$wgLayersMaxImageSize</code> || integer || <code>4096</code> || Max image size for editing (px).
+| <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Pruning of retained legacy set revisions. Never prunes native owner-page history.
 |-
-| <code>$wgLayersImageMagickTimeout</code> || integer || <code>30</code> || ImageMagick timeout (seconds).
+| <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Seed for a new unnamed shared set. Does not redefine the post-completion <code>layerset=on</code> shortcut, which selects <code>Default</code>.
 |-
-| <code>$wgLayersMaxImageDimensions</code> || integer || <code>8192</code> || Max width/height for processing.
+| <code>$wgLayersDefaultFonts</code> || array || <code>36 font names; see configuration reference</code> || Editor font choices: 32 self-hosted fonts plus four system fonts. Adding a name does not install the font.
 |-
-| <code>$wgLayersPdfExportWidth</code> || integer || <code>1600</code> || Render width in pixels for each page of a PDF export.
+| <code>$wgLayersMaxImageSize</code> || integer || <code>4096</code> || Image-admission fallback edge limit when the dimensions helper has no positive scalar limit.
 |-
-| <code>$wgLayersPdfExportMaxPages</code> || integer || <code>100</code> || Maximum pages allowed in a PDF export (0 = unlimited).
+| <code>$wgLayersImageMagickTimeout</code> || integer || <code>30</code> || Seconds for Layers ImageMagick operations that use this setting.
 |-
-| <code>$wgLayersExportDirectory</code> || string || <code>''</code> || Filesystem directory for cached PDF exports. '''Must be outside the document root''' — exports are delivered through <code>Special:LayersExport</code>, which re-checks read permission on the source file. Empty uses <code>$wgTmpDirectory/layers-export</code>.
+| <code>$wgLayersMaxImageDimensions</code> || integer or array || <code>8192</code> || Dimensions helper's default edge limit. The helper also accepts width/height arrays; native schema bounds remain separate.
 |-
-| <code>$wgLayersSlidesEnable</code> || boolean || <code>true</code> || Enable Slide Mode for standalone graphics.
+| <code>$wgLayersPdfExportWidth</code> || integer || <code>1600</code> || Raster width for cached legacy server PDF export.
 |-
-| <code>$wgLayersSlideDefaultWidth</code> || integer || <code>800</code> || Default slide width (px).
+| <code>$wgLayersPdfExportMaxPages</code> || integer || <code>100</code> || Legacy server export page cap; <code>0</code> disables that cap. It does not remove native document bounds.
 |-
-| <code>$wgLayersSlideDefaultHeight</code> || integer || <code>600</code> || Default slide height (px).
+| <code>$wgLayersExportDirectory</code> || string || <code>""</code> || Legacy export cache. Empty uses <code>$wgTmpDirectory/layers-export</code>; a configured directory must be writable and outside the document root.
 |-
-| <code>$wgLayersSlideMaxWidth</code> || integer || <code>4096</code> || Maximum allowed slide width (px).
+| <code>$wgLayersSlidesEnable</code> || boolean || <code>true</code> || Slide parser/management entry points. Does not delete stored native history.
 |-
-| <code>$wgLayersSlideMaxHeight</code> || integer || <code>4096</code> || Maximum allowed slide height (px).
+| <code>$wgLayersSlideDefaultWidth</code> || integer || <code>800</code> || Default width for eligible new slide canvases; saved geometry remains authoritative.
 |-
-| <code>$wgLayersSlideDefaultBackground</code> || string || <code>"#ffffff"</code> || Default background color for slides.
+| <code>$wgLayersSlideDefaultHeight</code> || integer || <code>600</code> || Default height for eligible new slide canvases.
+|-
+| <code>$wgLayersSlideMaxWidth</code> || integer || <code>4096</code> || Legacy slide dimension parser/management bound; native schema also caps dimensions at 4096.
+|-
+| <code>$wgLayersSlideMaxHeight</code> || integer || <code>4096</code> || Legacy slide dimension parser/management bound.
+|-
+| <code>$wgLayersSlideDefaultBackground</code> || string || <code>"#ffffff"</code> || Default background for new slides.
+|-
+| <code>$wgLayersTrackChangesInRecentChanges</code> || boolean || <code>false</code> || Old experimental File-page null-edit audit attempt. Native history does not depend on it; leave it out of a native-history setup.
 |}
+
+Native document bounds are separate from legacy settings: 2097152 serialized bytes, 100 members, 100 layers per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded-image validation permits at most 1048576 bytes for the complete image data URL, including base64 text. Raising a legacy setting does not expand these bounds or prune native page history.
+
+New ownership defaults to content namespaces and File; an empty namespace array admits no new owners, while existing owners retain their content in any namespace, subject to permissions. The retired pilot-enabled/owner/namespace settings are ignored. Anonymous current-binding reads can remain cached for the configured age; historical, control, viewer/editor and private-wiki responses have stricter policies. Exact PDF delivery uses a separate no-store boundary.
+
+See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md the configuration reference] for fonts, quotas, framing and per-path limits. The native registration/snapshot APIs are implemented; historical class names containing <code>Pilot</code> do not mean normal Saves still use shared storage.
 
 === Permissions ===
-{| class="wikitable"
-! Right !! Description !! Default Groups
-|-
-| <code>editlayers</code> || Create and edit layer sets || <code>user</code>
-|-
-| <code>layers-admin</code> || Delete or rename any layer set or slide, regardless of who created it || <code>sysop</code>
-|}
+Native editing requires ordinary read/edit authority on the '''owning page''', <code>editlayers</code>, source visibility and fresh revision/source checks. Blocks and page protection apply. A File page and an article embedding its file are different owners. Save uses POST and native CSRF validation. A source listing, preview or old delivery descriptor is not lasting access or publication authority.
 
-Saving, renaming or deleting a layer set requires the <code>editlayers</code>
-right '''and''' ordinary <code>edit</code> permission on the file's page. Layer
-data changes what a File page renders, so page protection, namespace
-protection, cascading protection and blocks all apply.
+Registered users and sysops receive <code>editlayers</code> by default; anonymous users do not. Sysops receive <code>layers-admin</code> for legacy creator-check overrides. That right does not bypass native owner protection or source/revision visibility. Old shared rename/delete rules differ from native snapshot changes; earlier readable native revisions retain saved content. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Permissions.md permissions].
 
-{{Note|1='''Behaviour change in 1.5.80.''' Earlier versions checked only the
-<code>editlayers</code> right. On wikis that restrict editing in the File
-namespace—for example via <code>$wgNamespaceProtection[NS_FILE]</code> or
-cascading protection—layer saves that previously succeeded will now be
-rejected. Grant the affected group <code>edit</code> on the File namespace if
-you want it to keep annotating those files.}}
+=== Maintenance and failure recovery ===
+Keep unsaved work and drafts intact after an uncertain/refused Save. Use the existing '''Check'''/reconciliation flow to establish the outcome before republishing. Do not clear local storage, substitute another file/revision/PDF page or split native PDF Save into independent page writes.
 
-=== Maintenance ===
-Composited thumbnails are written to <code>&lt;upload&gt;/thumb/layers/</code>.
-Exported PDFs are stored outside the document root, in a temporary-directory cache by default,
-or in <code>$wgLayersExportDirectory</code> when configured. Keep that directory private;
-<code>Special:LayersExport</code> checks source-file read permission when serving downloads. Renders
-belonging to a deleted file are purged automatically. Because export filenames
-include the layer set revision, each save orphans the previous export; run the
-reaper periodically to reclaim that space:
-
+The retained legacy renderer/export cache is separate from native history. Keep cached exports outside the document root and serve them through <code>Special:LayersExport</code>. To review derivative cleanup from the MediaWiki root:
 <syntaxhighlight lang="bash">
-php extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30
+php extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30 --dry-run
 </syntaxhighlight>
-
-Add <code>--dry-run</code> to preview. Purged files are regenerated on demand.
+Review the reported cache paths before an intended cleanup. This is not a way to prune native revisions, legacy migration evidence, uploads or local acceptance archives. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Troubleshooting.md troubleshooting] and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md current limits].
 
 == Key Features ==
 
@@ -248,8 +226,8 @@ Add <code>--dry-run</code> to preview. Purged files are regenerated on demand.
 
 === Layer Management ===
 * '''Layer Folders''': Group layers into collapsible folders for organization. Visibility and lock states cascade to children.
-* '''Named Layer Sets''': Create multiple annotation sets per image (e.g., "default", "anatomy-labels", "step-by-step").
-* '''Layer Revision List''': Retains 50 revisions per set and document page by default (configurable), with restore support. These are separate from article page history.
+* '''Named Layer Sets''': Keep several named layer sets for a file or slide within its owning page (e.g., "Default", "anatomy-labels", "step-by-step").
+* '''Native Page History''': Successful page-owned changes are native owner-page revisions. Legacy shared retention settings do not prune native history; draft recovery remains local until Save succeeds.
 * '''Lock & Visibility''': Lock layers to prevent accidental edits; toggle visibility for complex compositions.
 
 === Professional Workflow ===
@@ -258,20 +236,20 @@ Add <code>--dry-run</code> to preview. Purged files are regenerated on demand.
 * '''Key Object Alignment''': Industry-standard alignment matching Adobe Illustrator—last selected object becomes the alignment anchor.
 * '''Distribute Tools''': Evenly space selected layers horizontally or vertically.
 
-=== Real-Time Editing ===
+=== Interactive editing ===
 * '''Live Color Preview''': Canvas updates in real-time as colors are selected in the color picker.
-* '''Live Article Preview''': Layer changes appear immediately on article pages after saving—no page reload needed.
+* '''Saved Page Content''': Return to the owning page and reopen to verify a confirmed Save. Other already-open views may require a reload after unsaved work is preserved.
 * '''Instant Feedback''': All property changes (stroke width, font size, opacity) update the canvas immediately.
-* '''Hover Overlay Actions''': Edit/View icons appear on hover over layered images—respects <code>editlayers</code> permission for edit button visibility.
+* '''Overlay Actions''': Edit layers and View full size appear on hover, focus or tap; edit availability also follows owner/source authorization.
 
 === Integration ===
-* '''PDF Markup (v1.5.77+)''': Annotate PDF files exactly like images—the PDF page is the canvas. Multi-page PDFs are supported, with independent named layer sets and revision history per page. Use the standard <code>page=</code> parameter (e.g. <code><nowiki>[[File:Manual.pdf|page=2|layerset=on]]</nowiki></code>) and the editor's page navigator to switch pages. Clicking a layered PDF opens an '''in-wiki PDF viewer (v1.5.78+)''' that renders the page client-side with a bundled copy of Mozilla's [https://mozilla.github.io/pdf.js/ pdf.js] (Apache-2.0, loaded on demand) and displays the layer overlay with paging, zoom, print and export—instead of navigating to the browser's native PDF view where the overlay would be lost. Requires the {{ll|Extension:PdfHandler|PdfHandler}} extension.
+* '''PDF Markup''': Each PDF page is an internal member of one visible layer-set name and native owner snapshot. Use the standard <code>page=</code> option and editor page navigation. The '''View full size''' overlay opens the in-wiki viewer with bundled [https://mozilla.github.io/pdf.js/ pdf.js] (Apache-2.0, loaded on demand), admitted source and saved layers, plus paging, zoom, Print and Download. A plain browser PDF tab does not add Layers data. Working native PDF thumbnails/media-handler support is required, normally through {{ll|Extension:PdfHandler|PdfHandler}}.
 * '''Import Images''': Add external images as layers (PNG, JPG, GIF, WebP).
 * '''Export as PNG''': Download the annotated image as a single PNG file.
-* '''InstantCommons Support''': Works seamlessly with files from [[w:Wikimedia Commons|Wikimedia Commons]] and other foreign repositories.
-* '''Vector 2022 Dark Mode''': Full support for MediaWiki's {{ll|Skin:Vector/2022|2=Vector 2022 skin}} night mode.
+* '''Source Repositories''': Retained legacy foreign-file paths are separate from the native version-one snapshot contract, which captures local upload versions. Do not assume an unqualified foreign source is an admitted historical native source.
+* '''Vector 2022 Dark Mode''': Supports MediaWiki's {{ll|Skin:Vector/2022|2=Vector 2022 skin}} night mode; qualify the intended skin/device and contrast behavior with the release matrix.
 
-=== Gallery Support (v1.5.73+) ===
+=== Galleries and existing Cargo helpers ===
 Named layer sets work in galleries as well as inline file links.
 
 '''Native <code><nowiki><gallery></nowiki></code> blocks (v1.5.75):'''
@@ -282,7 +260,7 @@ File:Physiology.jpg|layerset=physiology
 </gallery>
 </syntaxhighlight>
 
-'''Cargo <code>format=gallery</code> (v1.5.74):''' Include a <code>layerset</code> field in your Cargo query and the correct named set is shown per image automatically — no template changes required:
+'''Existing Cargo <code>format=gallery</code> helper:''' The formatter accepts a <code>layerset</code> query-result field. The example preserves the existing interface; native row/occurrence behavior, including repeated files with different names, requires its applicable qualification and is not complete Cargo milestone acceptance:
 <syntaxhighlight lang="wikitext">
 {{#cargo_query:tables=MyImages|fields=Image,layerset|format=gallery|mode=packed|image width=200}}
 </syntaxhighlight>
@@ -290,8 +268,8 @@ If your column has a different name, add <code>layerset field=yourfield</code> t
 
 '''Manual hint registration (v1.5.73):''' For other gallery sources, call <code><nowiki>{{#layers_hint:Filename.jpg|setname}}</nowiki></code> before the gallery renders. Returns empty string (no visible output).
 
-=== Deep Linking (v1.2.0+) ===
-Control how users interact with layered images using the <code>layerslink</code> parameter:
+=== Legacy host-link compatibility ===
+The following retained modes describe legacy host-link behavior. They are separate from the native owner-page overlays and do not authorize another page's layer set:
 
 {| class="wikitable"
 ! Parameter !! Behavior !! Use Case
@@ -355,7 +333,7 @@ Control how users interact with layered images using the <code>layerslink</code>
 |}
 
 == Keyboard Shortcuts ==
-Full keyboard accessibility with over 20 shortcuts:
+Common editor shortcuts are listed below. Text fields can own keyboard input; complete device/assistive-technology acceptance is not claimed.
 
 {| class="wikitable"
 ! Action !! Shortcut !! Action !! Shortcut
@@ -381,12 +359,15 @@ Full keyboard accessibility with over 20 shortcuts:
 | Marker Tool || {{key press|M}} || Dimension Tool || {{key press|D}}
 |}
 
-== Technical Details ==
-* '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~114k lines including generated shape/emoji data).
-* '''Stability:''' September 6, 2026 checkpoint: 14,310 Jest tests (180 suites); 686 PHPUnit tests with one skipped. Coverage was not remeasured. Passing tests do not establish every workflow or compliance guarantee.
-* '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
-* '''Accessibility:''' Provides <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links. No formal WCAG conformance assessment is claimed.
+== Verification and milestone order ==
+Use exact-commit CI and the current release matrix, not old test counts or code-size totals, to assess this candidate. Scoped native desktop, upgrade, HTTP and server-performance evidence exists; remaining security/data, device/version, reference-performance and owner acceptance stays open. No formal WCAG or physical Print conformance is claimed.
+
+The binding order is '''page ownership/native history; built-in layer-text search; Cargo readiness; Cargo integration; then layer-object links on wiki-page images, slides and PDF pages'''. Object links are excluded from the lightbox. Existing Cargo gallery/field helpers remain; their presence does not qualify the later milestones or authorize new architecture.
 
 == See also ==
-* [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md Full Changelog]
-* [https://github.com/slickdexic/Layers/wiki Project Wiki]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md Upgrade and recovery]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md Release checklist]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md Native API guide]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md Configuration]
+* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CURRENT_STATUS.md Current status]
+* [https://github.com/slickdexic/Layers/wiki Separate GitHub wiki]
