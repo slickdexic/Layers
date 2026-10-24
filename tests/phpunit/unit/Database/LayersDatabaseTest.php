@@ -1208,6 +1208,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @covers ::deleteLayerSetsForImage
 	 */
 	public function testDeleteLayerSetsForImageSuccess(): void {
+		$this->dbw->method( 'selectField' )->willReturn( false );
 		$this->dbw->method( 'delete' )->willReturn( true );
 		$this->logger->expects( $this->once() )
 			->method( 'info' )
@@ -1228,6 +1229,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @covers ::deleteLayerSetsForImage
 	 */
 	public function testDeleteLayerSetsForImageFailure(): void {
+		$this->dbw->method( 'selectField' )->willReturn( false );
 		$this->dbw->method( 'delete' )->willThrowException( new \RuntimeException( 'DB error' ) );
 		$this->logger->expects( $this->once() )
 			->method( 'warning' )
@@ -1240,6 +1242,24 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$result = $db->deleteLayerSetsForImage( 'Error.jpg', 'sha1' );
 
 		$this->assertFalse( $result );
+	}
+
+	/** @covers ::deleteLayerSetsForImage */
+	public function testFileCleanupKeepsRetainedRowsAfterMigrationUsingPrimaryState(): void {
+		$this->dbw->expects( $this->once() )->method( 'selectField' )
+			->with( 'updatelog', 'ul_key', [ 'ul_key' => 'layers-page-history-migration' ], $this->anything() )
+			->willReturn( 'layers-page-history-migration' );
+		$this->dbr->expects( $this->never() )->method( 'selectField' );
+		$this->dbw->expects( $this->never() )->method( 'delete' );
+		$this->assertFalse( $this->createLayersDatabase()->deleteLayerSetsForImage( 'Retained.pdf', 'sha1' ) );
+	}
+
+	/** @covers ::deleteLayerSetsForImage */
+	public function testFileCleanupRefusesWhenMigrationStateCannotBeRead(): void {
+		$this->dbw->method( 'selectField' )->willThrowException( new \RuntimeException( 'State unavailable' ) );
+		$this->dbw->expects( $this->never() )->method( 'delete' );
+		$this->logger->expects( $this->once() )->method( 'warning' );
+		$this->assertFalse( $this->createLayersDatabase()->deleteLayerSetsForImage( 'Retained.pdf', 'sha1' ) );
 	}
 
 	// =========================================================================

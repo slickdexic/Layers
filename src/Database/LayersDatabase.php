@@ -937,6 +937,13 @@ class LayersDatabase {
 			if ( !$dbw ) {
 				return false;
 			}
+			// Retained migration sources are read-only, including deletion-hook cleanup.
+			// Read the primary so replica lag cannot reopen deletion after cutover.
+			if ( $dbw->selectField( 'updatelog', 'ul_key',
+				[ 'ul_key' => MigrationState::KEY ], __METHOD__ ) !== false
+			) {
+				return false;
+			}
 			$dbw->delete(
 				'layer_sets',
 				[

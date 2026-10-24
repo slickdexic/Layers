@@ -38,8 +38,15 @@ The published candidate now also passes the
 [native HTTP privacy checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md):
 52 verified cases cover API privacy, CSRF refusals, exact PDF source delivery,
 cache forcing, conditional requests and owner/revision identity refusals.
-All seven owners and 17 captured tables remain exact. This requires no runtime
-or test change and does not constitute a complete security review.
+All seven owners and 17 captured tables remain exact in that read-only baseline.
+Separate native transition checks now pass twenty role/protection/block/read-
+revocation cases and twenty-four visibility/deletion cases. A file-deletion
+exercise exposed loss of retained legacy rows after migration. The bounded
+correction preserves those rows without bypassing cache purging or deleted-file
+read refusal. Thirteen fresh corrected-runtime HTTP cases, five native tests
+and the full standalone PHP suite pass. These are bounded results, not a
+complete security review; the linked checkpoint distinguishes the unchanged
+baseline from intentionally mutated disposable fixtures.
 
 The actual 1.5.95/MySQL upgrade, post-upgrade PDF Save/reopen and reruns preserving
 newer edits also pass in their recorded scope; see the [upgrade guide](UPGRADING.md).
@@ -52,8 +59,8 @@ The actual Print button reached Preparing pages, but further script inspection
 was blocked and no prepared document was retained. Print is unqualified; no
 production defect is established by this incomplete observation.
 
-Remaining permission/visibility transitions, version/device combinations,
-security/performance checks and owner acceptance stay on the
+Remaining version/device combinations, broader security/performance checks
+and owner acceptance stay on the
 [Milestone 1 release checklist](MILESTONE_1_RELEASE_CHECKLIST.md).
 This checkpoint qualifies the recorded journeys and does not complete the
 supported-version matrix or Milestone 1.
