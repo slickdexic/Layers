@@ -44,6 +44,8 @@ coverage/
 *.lcov
 
 # Test output artifacts
+test-results/
+playwright-report/
 jest_result.txt
 phpunit_out.txt
 coverage_output.txt

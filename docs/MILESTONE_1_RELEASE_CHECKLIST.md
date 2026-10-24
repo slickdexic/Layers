@@ -27,6 +27,14 @@ Ready **for owner testing** means the integrated candidate and technical checks
 above are complete. **Milestone 1 accepted** additionally requires the owner's
 acceptance. Neither waits for milestone 2–5 functionality.
 
+[Server performance](PAGE_HISTORY_PERFORMANCE.md) now records five 100-layer
+Saves at 98–122 ms and exact historical-page responses at 97–447 ms on local
+disk, within the one-second server budget. Browser paint and the other performance
+combinations remain separate. [Release preparation](RELEASE_PREPARATION.md)
+tracks generated-output cleanup, the remaining documentation audit and the
+explicit upgrade/recovery instructions; these are delivery work within this
+milestone, not additional product scope.
+
 Work proceeds through these packages to completion. New internal helpers must
 close a named gap in one of these journeys; they do not create additional scope.
 Do not run unchanged full suites repeatedly or grow evidence machinery as a

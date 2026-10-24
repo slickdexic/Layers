@@ -5,20 +5,21 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
-Create annotations on **images and PDF pages**, or build **standalone slides** without a background file. Layers stores drawing data separately from uploaded files and displays it with a canvas viewer.
+Add layers to **images and PDF pages**, or build **standalone slides** without a background file. In the page-history candidate, a layer set belongs to its wiki page and file or slide. Saving creates a native revision of the owning page; uploaded originals remain separate.
 
 > **Version:** 1.5.95 (September 2, 2026) — latest tagged release; manifest remains at this version.
 
-**Documentation updated: September 6, 2026.** `main` includes subsequent fixes; see [Unreleased changes](CHANGELOG.md#unreleased). Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release. Use a currently supported core release.
+**Entry guides updated: October 24, 2026.** The page-history candidate is not a tagged Layers 2.0 release. See the [Milestone 1 release checklist](docs/MILESTONE_1_RELEASE_CHECKLIST.md) and choose a reviewed commit with passing CI. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release. Use a currently supported core release.
 
-> **Current limitation:** Layers' own revision list is not the owning article's page history. Annotation full-text search and Cargo annotation tables are also not implemented. For SOPs or controlled documents, read [Current status and limitations](docs/CURRENT_STATUS.md) before deployment.
+> **Upgrade prerequisite:** Page-owned embed selection starts after the documented migration records completion, including on a fresh wiki with no legacy layer sets. Until then, legacy lookup remains active. Follow the [upgrade guide](docs/UPGRADING.md); do not delete retained legacy data or change completion records manually.
 
 ## Start here
 
 | Task | Documentation |
 | --- | --- |
 | Install or upgrade | [Installation](wiki/Installation.md) |
-| Make your first annotation or slide | [Quick start](wiki/Quick-Start-Guide.md) |
+| Make your first layer set or slide | [Quick start](wiki/Quick-Start-Guide.md) |
+| Review candidate readiness | [Release checklist](docs/MILESTONE_1_RELEASE_CHECKLIST.md) · [Release preparation](docs/RELEASE_PREPARATION.md) |
 | Embed content | [Wikitext syntax](wiki/Wikitext-Syntax.md) |
 | Configure limits and permissions | [Configuration](wiki/Configuration-Reference.md) · [Permissions](wiki/Permissions.md) |
 | Resolve a problem | [Troubleshooting](wiki/Troubleshooting.md) · [Known issues](docs/KNOWN_ISSUES.md) |
@@ -29,11 +30,11 @@ Create annotations on **images and PDF pages**, or build **standalone slides** w
 
 | Type | Edit | Embed |
 | --- | --- | --- |
-| Image | Open its File page and choose Edit Layers | `[[File:Diagram.png|600px|layerset=annotations]]` |
-| PDF | Open its File page, choose Edit Layers and select a document page | `[[File:Manual.pdf|page=2|600px|layerset=annotations]]` |
-| Standalone slide | Open `Special:EditSlide/SafetyProcedure` or create through `Special:Slides` | `{{#Slide: SafetyProcedure | size=800x600 | layerset=annotations}}` |
+| Image | Use **Edit layers** on the embed in its owning page | `[[File:Diagram.png|600px|layerset=annotations]]` |
+| PDF | Use the owning page's **Edit layers** overlay; navigate PDF pages inside the editor | `[[File:Manual.pdf|page=2|600px|layerset=annotations]]` |
+| Standalone slide | Save the embed on its owning page, then use **Edit layers** | `{{#Slide: SafetyProcedure | size=800x600}}` |
 
-Create/save the named set used in each example. `layerset=on` selects the current set; `layerset=default` requests the set literally named `default`. `layerset=none` disables annotations. The older `layers=` spelling remains supported. Prefer descriptive set names over values that resemble on/off flags.
+These examples describe the candidate after migration completion. Create or save the named layer set through its overlay. `layerset=on` selects Default; explicit names select that owner's set for the file. `layerset=none` or `off` hides layers. The older `layers=` spelling remains supported. Equal names on different owners or files are independent. Every page of one PDF layer set keeps the same visible name.
 
 For slides, `canvas=1200x800` specifies creation dimensions and `size=800x600` controls display size. `noedit` hides an edit button; it does not revoke editing permission.
 
@@ -44,12 +45,12 @@ PDFs require working MediaWiki PDF thumbnails, normally through PdfHandler and i
 - Text, rich textboxes, callouts, shapes, arrows, freehand drawing, markers and dimensions.
 - Imported images, the built-in shape library and emoji picker.
 - Selection, resizing, rotation, alignment, grouping, style presets and undo/redo.
-- Named sets with separate Layers revisions; default retention is 50 revisions per set/document page.
-- Inline and lightbox viewing, plus client-side export/print workflows. Server PDF export has known fidelity limitations.
+- Named layer sets stored in native owner-page revisions after migration, with history, diffs and restoration. Legacy table retention settings do not prune native page history.
+- Inline overlays and a full-size viewer with Print and Download. Images/slides offer PNG first and an explicit PDF option; PDFs download as PDF only. Exports include saved layers.
 
 See [Drawing tools](wiki/Drawing-Tools.md), [Keyboard shortcuts](wiki/Keyboard-Shortcuts.md) and [Slide mode](wiki/Slide-Mode.md).
 
-When navigating a PDF, edited pages are buffered in memory. Save writes changed pages individually; this is **not an atomic document transaction**. Failed pages remain unsaved. Do not close the browser until saving succeeds. Review recovered drafts before applying them.
+PDF page turns preserve pending work. The page-owned Save publishes the complete owner snapshot in one native page revision, including the PDF's members. A refusal keeps work unsaved; review recovery or conflict choices before continuing. Browser/device qualification and owner acceptance are tracked separately in the release checklist.
 
 ## Installation summary
 
@@ -57,7 +58,12 @@ From the wiki's `extensions` directory:
 
 ```sh
 git clone https://github.com/slickdexic/Layers.git
+git -C Layers checkout --detach REVIEWED_COMMIT_OR_TAG
 ```
+
+Replace `REVIEWED_COMMIT_OR_TAG` with the release or candidate selected for
+deployment. Check CI for that exact commit; the manifest version and a badge for
+another branch do not identify the tested candidate.
 
 In `LocalSettings.php`:
 
@@ -83,13 +89,13 @@ Cargo galleries can select named layer sets from a `layerset` query field:
 {{#cargo_query:tables=Equipment|fields=Image,layerset|format=gallery}}
 ```
 
-This example assumes your Cargo table defines those fields. It does not expose annotation text as Cargo rows or link textbox contents to Cargo values.
+This example assumes your Cargo table defines those fields. It does not expose layer text as Cargo rows or link textbox contents to Cargo values.
 
-The agreed next priorities are **page-owned revision history**, **MediaWiki search for annotation/slide text**, and **Cargo query/filter support**. See the [proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md); these are not released features.
+The delivery order is **page ownership/history**, **MediaWiki text search**, **Cargo readiness**, **Cargo integration**, then **links from layer objects on wiki pages**. Later milestones do not delay the first. Existing Cargo gallery selection is preserved; broader Cargo and search acceptance is separate from the page-history candidate.
 
 ## Validation and security
 
-The September 6 checkpoint passed 180 JavaScript suites / 14,310 tests, PHP QA, and 686 PHPUnit tests (one skipped). Coverage was not remeasured. See [the verification scope](docs/CURRENT_STATUS.md) rather than treating test counts as a guarantee of correctness.
+Use CI for the exact candidate commit and the [release checklist](docs/MILESTONE_1_RELEASE_CHECKLIST.md). The [HTTP checkpoint](docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md) and [server performance measurements](docs/PAGE_HISTORY_PERFORMANCE.md) record their tested scope. Passing tests do not replace the project owner's acceptance.
 
 Read [Security guidance](SECURITY.md) for private reporting, permissions, export storage and dependency checks. [The codebase review](codebase_review.md) tracks both fixes and open findings.
 

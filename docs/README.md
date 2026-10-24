@@ -2,18 +2,18 @@
 
 Destination: the [project charter](PROJECT_CHARTER.md) defines what Layers 2.0 contains and what must be true to declare it finished.
 
-Active next milestone: [explicit page ownership and ordinary edit/history integration](PAGE_OWNED_BINDING_PLAN.md). Junior assignments are in the [handoff plan](IMPLEMENTATION_HANDOFF_PLAN.md).
+Active milestone: [page ownership and native page history](MILESTONE_1_RELEASE_CHECKLIST.md). The [release preparation checklist](RELEASE_PREPARATION.md) tracks cleanup, documentation and upgrade readiness. Work stays in this milestone until its acceptance; search, Cargo readiness, Cargo and on-page links follow in that order.
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Updated September 12, 2026. Current documentation covers images, PDFs and standalone slides. The main branch still reports 1.5.95 with subsequent fixes; a proposal is not a released capability.
+Entry guides updated October 24, 2026. The candidate covers images, PDFs and standalone slides after migration completion. The manifest still reports 1.5.95; this is not a tagged Layers 2.0 release. Dated designs and older wiki guides require the review tracked in release preparation.
 
 ## Find the right guide
 
 | Audience/task | Start here |
 | --- | --- |
 | Understand current behavior and limitations | [Current status](CURRENT_STATUS.md) · [Known issues](KNOWN_ISSUES.md) |
-| Install, configure and upgrade | [Installation](../wiki/Installation.md) · [Configuration](../wiki/Configuration-Reference.md) · [Permissions](../wiki/Permissions.md) |
+| Install, configure and upgrade | [Installation](../wiki/Installation.md) · [Upgrade and recovery](UPGRADING.md) · [Configuration](../wiki/Configuration-Reference.md) · [Permissions](../wiki/Permissions.md) |
 | Create diagrams, presentations and annotations | [Quick start](../wiki/Quick-Start-Guide.md) · [Slides](../wiki/Slide-Mode.md) · [Tools](../wiki/Drawing-Tools.md) |
 | Embed content and choose sets | [Wikitext](../wiki/Wikitext-Syntax.md) · [Named sets](../wiki/Named-Layer-Sets.md) |
 | Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) · [Save payload contract](SAVE_PAYLOAD_CONTRACT.md) |

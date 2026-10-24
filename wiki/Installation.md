@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Documentation for manifest version **1.5.95**, with subsequent fixes on `main` (September 6, 2026). Check [[Current Status]] before selecting a tag or branch.
+Updated October 24, 2026 for the page-history candidate. The manifest still says **1.5.95**; this does not make the candidate a tagged Layers 2.0 release. Select a reviewed commit with passing CI and check the [release checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md).
 
 ## Requirements and branches
 
@@ -22,7 +22,12 @@ From the MediaWiki `extensions` directory:
 
 ```sh
 git clone https://github.com/slickdexic/Layers.git
+git -C Layers checkout --detach REVIEWED_COMMIT_OR_TAG
 ```
+
+Replace `REVIEWED_COMMIT_OR_TAG` with the reviewed release/candidate and verify
+its exact-commit CI result. A default-branch clone or the unchanged manifest
+version does not by itself identify the page-history candidate.
 
 For an existing compatible 1.43 wiki, select the separate `REL1_43` branch. Do not copy main's JavaScript onto a different branch's PHP files.
 
@@ -40,22 +45,32 @@ php maintenance/run.php update
 
 This creates/migrates **`layer_sets`**. Use the updater rather than executing an example SQL table manually. The repository includes runtime assets; Node.js, npm and Composer are needed for development checks, not the normal extension installation.
 
+## Complete page-history setup
+
+The updater creates database structures; it does not complete the legacy-to-page
+migration. Follow the [upgrade guide](../docs/UPGRADING.md) to refresh discovery,
+review the dry run and apply the unscoped migration. A fresh wiki with no legacy
+sets also needs the empty migration to record completion. Verify
+`layerspagehistorymigrated: true` through siteinfo before testing page-owned embeds.
+
 ## Verify
 
 1. Confirm Layers appears in `Special:Version`.
-2. With an authorized account, open a File page and select Edit Layers. Save a small annotation and view it in an article.
-3. Create a standalone slide through `Special:Slides` and embed it with `{{#Slide: InstallationTest}}`.
-4. If using PDFs, verify multiple document pages and their saved annotations.
+2. Follow the [quick start](Quick-Start-Guide.md): place a named image embed on an owning page, use its Edit layers overlay, Save, return and reopen. Confirm that page's history contains the change.
+3. Add `{{#Slide: InstallationTest}}` to an owning page and create its layers through the overlay. Check history and reopen.
+4. If using PDFs, verify multiple pages under the same layer-set name, Save/reopen, historical viewing and complete Download.
 5. Test an unauthorized account and any local protection rules.
 
-A visible editor tab alone does not verify database writes or permissions.
+An editor opening alone does not verify publication, revision history or permissions.
 
 ## Upgrade
 
-Back up the database, uploads and configuration. Record the current branch/commit and review its changelog. With a clean checkout on the selected branch:
+Back up the database, uploads and configuration. Record the current branch/commit
+and review the target's changelog. From a clean Layers checkout:
 
 ```sh
-git pull --ff-only
+git fetch --tags origin
+git checkout --detach REVIEWED_COMMIT_OR_TAG
 ```
 
 Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](../docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
@@ -66,4 +81,6 @@ The post-1.5.95 fixes bind server export cache files to their source title and p
 
 See [[Configuration Reference]] for actual defaults and limits, and [[Permissions]] for group configuration. Keep the export cache outside the document root. Enable same-origin framing only if using the editor modal and your core/proxy policy requires it.
 
-Before using slide-based SOPs, read [[Current Status]]: page drawings have page history and are searchable, while shared layer sets have neither.
+Before production use, complete the release checklist and owner acceptance.
+Page-history, search and Cargo are separate milestones; this guide does not
+claim acceptance of later search/Cargo functionality.

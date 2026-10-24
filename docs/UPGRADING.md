@@ -16,7 +16,31 @@ that already select the same local set retain their bytes. A legacy
 the Default shortcut can remain unchanged. Multiple old sets of one slide use
 the approved names `<slide> (<set>)` when separate slide names are needed.
 
-## Back up and update
+## 1. Prepare and rehearse
+
+Use a copy of the actual wiki first. The retained upgrade rehearsal covers
+Layers 1.5.95 on MySQL and native MediaWiki 1.44.6; it does not establish every
+1.5.x/database combination. The candidate requires MediaWiki 1.44 or newer,
+with that core release's PHP/database requirements. A separate older-core
+branch is not interchangeable with this candidate.
+
+Before cutover:
+
+1. Record the exact old and candidate Layers commits, MediaWiki/PHP/database
+   versions, enabled owner namespaces and media-handler requirements.
+2. Take a consistent database, uploads and configuration backup, and verify that
+   you can restore it with the matching old code. Include retained legacy tables
+   and uploaded file versions; XML export alone is not the complete rollback.
+3. Rehearse the commands below on the copy. Review counts, refusals, native
+   history and complete image/slide/PDF contents before proceeding on the wiki.
+4. Schedule an edit freeze for cutover using normal site procedures. The
+   migration account/process must still be allowed to publish page revisions.
+   Keep editors from continuing with a pre-cutover session.
+
+Do not run cleanup of legacy rows, upload archives, private PDF sources or local
+drafts as part of the upgrade. Migration retains data deliberately.
+
+## 2. Back up and update
 
 Back up the database, uploads and `LocalSettings.php`. Record the old Layers
 commit, MediaWiki version and database type. Retain the backups through acceptance.
@@ -29,6 +53,11 @@ process. Keep `wfLoadExtension( 'Layers' );` in configuration. Review
 [configuration reference](../wiki/Configuration-Reference.md): only enabled
 owner namespaces can receive layer sets. A template need not own layer sets
 for ordinary pages transcluding it to receive their own copies.
+
+Deploy matching PHP, JavaScript and committed assets from that one candidate.
+Follow the site's normal opcode/ResourceLoader cache deployment procedure;
+do not mix an older branch's PHP with newer client files. No new Docker, Node.js
+or host-service runtime is required.
 
 From the MediaWiki root, as the web server user, run:
 
@@ -43,7 +72,7 @@ Images and PDFs retain their existing media-handler prerequisites. Refresh links
 **before** migration completion, while discovery still records shared sets shown
 through templates and galleries.
 
-## Review and apply
+## 3. Review and apply
 
 ```sh
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php
@@ -71,6 +100,18 @@ author-facing output prevents completion. An unscoped successful run records
 `layers-page-history-migration` in `updatelog` and purges discovered owner pages.
 Confirm `meta=siteinfo` reports `layerspagehistorymigrated: true`.
 
+For example, read this API URL on the wiki, authenticating if it is private:
+
+```text
+api.php?action=query&meta=siteinfo&siprop=general&format=json
+```
+
+Check `query.general.layerspagehistorymigrated` is the boolean `true`. The
+updater alone and scoped migration runs do not set this global completion flag.
+A fresh installation with no legacy sets also runs the dry run and unscoped
+`--commit` once; that records completion without adding content revisions.
+Do not insert the completion record manually to skip a refused migration.
+
 An unchanged template's legacy show-intent must still select the same Default
 layer set after completion. If its old latest set has another name, migration
 refuses that group as `template-latest-set` and blocks global completion. Review
@@ -87,10 +128,29 @@ captions. Use the editor's Import or Copy controls to copy from another page.
 Check history, complete payloads, offscreen PDF members, source versions, geometry,
 page text and independent owners. Exercise overlay entry, Save, owner return and
 reopen. A rerun should recognize completed copies and add no duplicate revision.
-A new wiki with no legacy sets can run the same command once to record completion
-without adding content revisions.
+If the process is interrupted, retain its output and run the same reviewed plan
+again. Already completed, unchanged copies are recognized. Investigate edited
+targets or new refusals rather than forcing them through.
 
-## Recovery
+## 4. Validate before reopening editing
+
+| Check | Expected result |
+| --- | --- |
+| Migration output and completion | No unexplained refusal; unscoped completion is true. |
+| Original sources | Retained legacy rows, uploads and older file versions remain available. |
+| Owner identity | Equal names on different pages/files are independent. One PDF's pages share one visible layer-set name. |
+| Main text and stored content | Expected references, complete layers, PDF siblings, source pins and geometry are preserved. No owner ID is introduced into author-facing references. |
+| Editing | An authorized test Save creates one native owner-page revision; return, overlay reopen and draft/conflict behavior work. |
+| History and output | Old-version viewing uses the old saved layers/source. Image/slide PNG and PDF, and complete PDF Download/Print preparation, include their layers. |
+| Permissions | Read/edit denial, protection and visibility rules still apply. |
+| Rerun | Unchanged completed copies add no duplicate content revision. |
+
+Retain the command output, exact candidate commit and before/after checks with
+the backup. Resume editing only after the site's acceptance checks pass.
+Completion of migration is not a declaration that the release candidate has
+passed all device, performance, security or owner acceptance.
+
+## 5. Recovery
 
 The original database/upload/configuration backup is the complete rollback route.
 The native migration also provides a narrower undo:
@@ -107,6 +167,11 @@ Unscoped undo removes the completion record; scoped undo does not. Before
 migrating again after unscoped undo, refresh links and run jobs again to restore
 template/gallery discovery. Undo does not replace a backup or authorize
 overwriting subsequent owner edits.
+
+If a full rollback is needed, preserve any newer work first, stop editing and
+restore the consistent backup with its matching code/configuration/uploads.
+Rolling back only the extension files does not reverse migrated page revisions
+or database changes. Rehearse recovery on the copy before using it on the wiki.
 
 Search, Cargo and layer-object links remain later milestones. If separately
 validating an existing search index, the native `reindexPageDrawings.php`

@@ -1,44 +1,64 @@
 # Quick start
 
-This guide covers images, standalone slides and PDFs. First install Layers and confirm your account can edit layers; see [[Installation]] and [[Permissions]].
+This guide describes the page-history candidate after migration completion.
+First follow [[Installation]] and the [upgrade guide](../docs/UPGRADING.md), and
+confirm your account has page-edit and layer-edit permission. Legacy 1.5.x shared
+editing uses a different workflow.
 
 ## Annotate an image
 
-1. Open an uploaded image's File page and choose **Edit Layers**.
-2. Add a textbox, callout or shape. Use the Pointer tool to select and position it.
-3. Save the set with a descriptive name, such as `annotations`.
-4. Embed it in an article:
+1. Save this embed on the wiki page that will own the layer set:
 
 ```wikitext
 [[File:Diagram.png|600px|layerset=annotations]]
 ```
 
+2. Hover, focus or tap the embed and choose **Edit layers**.
+3. Add a textbox, callout or shape, then Save. The change belongs to this page's
+   native history.
+4. Return to the owning page, reopen the overlay and check the saved layers.
+
 ## Create a standalone slide
 
-1. Visit `Special:Slides` and create a slide, or open `Special:EditSlide/SafetyProcedure`.
-2. Add your instructions using textboxes/callouts and drawing tools, then save.
-3. Embed it:
+1. Save this embed on the owning page:
 
 ```wikitext
 {{#Slide: SafetyProcedure | size=800x600}}
 ```
 
-To specify creation dimensions in markup, add `canvas=1200x800`. Display size and canvas coordinates are different. Add `layerset=annotations` if you saved that named set. Slides need no placeholder image.
+2. Choose **Edit layers** on the slide, add content and Save.
+3. Check the owning page's history and reopen the slide.
+
+Add `canvas=1200x800` to specify creation dimensions. `size=800x600` controls
+display size; it does not change canvas coordinates. Slides need no placeholder
+image. The slide name is scoped to its owning page.
 
 ## Annotate a PDF
 
-The wiki must first display PDF thumbnails correctly. Open the File page, choose Edit Layers and navigate to the required page. Each PDF page has its own sets and dimensions.
+The wiki must first display PDF thumbnails correctly. Save this embed on the
+owning page, choose its **Edit layers** overlay and navigate inside the editor:
 
 ```wikitext
 [[File:Manual.pdf|page=2|600px|layerset=annotations]]
 ```
 
-Page turns keep edited pages in memory. Save writes changed pages one at a time. If a save fails, keep the editor open and retry; the whole document is not saved atomically. A browser refresh can lose unsaved in-memory work.
+All PDF members share the visible name `annotations`; `page=2` selects the
+displayed PDF page. Each member retains its own page geometry internally.
+Page turns preserve pending work. Save publishes the complete owner snapshot in
+one native revision. If Save refuses, keep the editor open and resolve the
+reported condition. Review local drafts before explicitly restoring them.
 
 ## View and share
 
-Use the lightbox action for a larger view. `layerslink=editor-modal` opens the editor in a modal when same-origin framing is configured. See [[Wikitext Syntax]] for click behavior and named sets. Check exported output when layout or complete document coverage matters; current export limitations are listed in [[Current Status]].
+Choose **View full size** on the overlay. Images/slides offer **Download PNG**
+and **Download PDF**; PDFs offer **Download PDF** only. Print and PDF Download
+include the document's saved layers. Verify exported layout when distributing it.
+To copy from another owner, use the editor's Import or Copy controls; equal
+names do not merge different owners' layer sets.
 
 ## Before using slides for controlled SOPs
 
-Saving Layers does not reliably create an article history revision, and slide text is not yet integrated with wiki full-text search. Existing layer revisions and slide-name filtering do not replace those capabilities. See [[Current Status]] for the implementation roadmap.
+Confirm migration completion, a native owner revision for each successful Save,
+historical viewing, recovery and permissions on your wiki. Then complete the
+[candidate acceptance checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md).
+Text search and Cargo acceptance follow page ownership as separate milestones.

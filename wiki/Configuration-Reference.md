@@ -1,14 +1,14 @@
 # Configuration reference
 
-## Drawings in page history — September 29, 2026
+## Layer sets in page history — October 24, 2026
 
-Drawings kept in page history are on by default (charter decision D2): no switch and no list of pages is needed. The content model, the `layers` slot role and the save, import, merge and restore guards are always installed.
+Page-history storage is on by default (charter decision D2): no pilot switch or owner allowlist is needed. The content model, `layers` slot role and save/import/merge/restore guards are installed. Page-owned embed selection also requires the [documented migration completion](../docs/UPGRADING.md), including on a new wiki with no legacy sets.
 
-`$wgLayersPageDrawingNamespaces` defaults to `null`, which means the content namespaces (`$wgContentNamespaces`) and `File:`. Set it to an array of namespace IDs, for example `[ NS_MAIN, NS_FILE ]`, to limit which pages may start drawings; `[]` lets no page start new ones. A page that already has drawings keeps them, and they stay editable and viewable, in any namespace.
+`$wgLayersPageDrawingNamespaces` defaults to `null`, which means the content namespaces (`$wgContentNamespaces`) and `File:`. Set it to an array of namespace IDs, for example `[ NS_MAIN, NS_FILE ]`, to limit which pages may start layer sets; `[]` lets no page start new ones. A page that already has layer sets keeps them editable and viewable in any namespace. The historical setting name remains unchanged.
 
 The pilot settings `$wgLayersPageOwnedPilotEnabled`, `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are retired and ignored; remove them from `LocalSettings.php`.
 
-`$wgLayersBindingReadMaxAge` defaults to `300` (seconds). An anonymous reader's `layersread` binding read of a page's current revision, which is how page views fetch page-owned drawings, is sent as publicly cacheable for this long, so browsers and a CDN can serve it. Logged-in readers, older revisions, snapshot reads, errors and private wikis are never cached publicly. After a page is deleted, or a revision that has just stopped being current is hidden, a cached copy can be served for up to this age; `0` turns caching off.
+`$wgLayersBindingReadMaxAge` defaults to `300` (seconds). An anonymous reader's `layersread` binding read of a page's current revision can be publicly cached for this long. Logged-in readers, older revisions, snapshot reads, viewer/editor metadata, errors and private wikis are not cached publicly. After deletion or visibility changes, an already cached binding response can remain for up to this age; `0` turns binding caching off. Exact PDF delivery separately uses no-store responses.
 
 Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
 
@@ -44,6 +44,11 @@ Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `L
 
 ## Examples
 
+`LayersMaxRevisionsPerSet` governs legacy shared-table retention. It does not
+prune native owner-page revisions. Page-history limits also enforce the native
+document contract; do not assume that increasing a legacy setting expands every
+page-owned payload or PDF limit.
+
 ```php
 wfLoadExtension( 'Layers' );
 $wgLayersMaxLayerCount = 200;
@@ -52,7 +57,7 @@ $wgLayersMaxNamedSets = 25;
 $wgLayersDebug = false;
 ```
 
-Increasing layer count alone may not admit a complex drawing: size, complexity and imported-image limits also apply. Increasing limits raises storage/rendering costs. The client may impose additional limits.
+Increasing layer count alone may not admit a complex layer set: size, complexity and imported-image limits also apply. Increasing limits raises storage/rendering costs. The client may impose additional limits.
 
 ## Fonts
 
@@ -78,6 +83,6 @@ Also check your reverse proxy and CSP `frame-ancestors` policy. Do not disable f
 
 ## Rate limits and permissions
 
-The registered rate-limit buckets are `editlayers-save`, `editlayers-render`, `editlayers-list`, `editlayers-info`, `editlayers-delete`, `editlayers-rename` and `editlayers-create`. Defaults are in the manifest's `RateLimits` section and can be overridden through MediaWiki's `$wgRateLimits`. The slide-creation enforcement gap is tracked in [[Current Status]].
+The registered rate-limit buckets are `editlayers-save`, `editlayers-render`, `editlayers-list`, `editlayers-info`, `editlayers-delete`, `editlayers-rename` and `editlayers-create`. Defaults are in the manifest's `RateLimits` section and can be overridden through MediaWiki's `$wgRateLimits`. Page-owned metadata uses the information budget; PDF source delivery and missing-PDF editor preparation use the separate render budget. See the [native HTTP acceptance](../docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md) for the tested scope.
 
 See [[Permissions]] for group rights. Do not use an undocumented setting as a security boundary. In particular, `LayersRejectAbortedRequests` is not a registered server configuration setting in the current manifest.

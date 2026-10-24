@@ -73,6 +73,7 @@ module.exports = {
 	projects: [
 		{
 			displayName: 'unit',
+			roots: [ '<rootDir>/tests/jest', '<rootDir>/resources' ],
 			testMatch: [
 				'<rootDir>/tests/jest/**/*.test.js',
 				'!<rootDir>/tests/jest/performance/**',
@@ -88,6 +89,7 @@ module.exports = {
 		},
 		{
 			displayName: 'performance',
+			roots: [ '<rootDir>/tests/jest', '<rootDir>/resources' ],
 			testMatch: [ '<rootDir>/tests/jest/performance/**/*.test.js' ],
 			testEnvironment: 'node',
 			// Run performance tests sequentially for reliable measurements
