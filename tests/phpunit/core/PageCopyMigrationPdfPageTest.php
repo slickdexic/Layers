@@ -81,11 +81,15 @@ class PageCopyMigrationPdfPageTest extends \MediaWikiIntegrationTestCase {
 		$this->assertRenderedPage( $title, $text, $page );
 		$plan = $this->pilot->newPageCopyMigration()->plan( $title->getArticleID(), $this->actor );
 		$this->assertNull( $plan['problem'] );
-		$this->assertCount( 1, $plan['copies'] );
-		$copy = json_decode( $plan['document'], true, 64, JSON_THROW_ON_ERROR )['surfaces'][0];
+		$this->assertCount( 2, $plan['copies'] );
+		$surfaces = json_decode( $plan['document'], true, 64, JSON_THROW_ON_ERROR )['surfaces'];
+		$copy = array_values( array_filter( $surfaces,
+			static fn ( $surface ) => $surface['source']['page'] === $page ) )[0];
+		$descriptor = array_values( array_filter( $plan['copies'],
+			static fn ( $entry ) => $entry['legacyId'] === $rowIds[$page] ) )[0];
 		$this->assertSame( $source['layers'], $copy['layers'], 'Copy the payload of the page core rendered' );
-		$this->assertSame( $rowIds[$page], $plan['copies'][0]['legacyId'] );
-		$this->assertSame( $sourceRevision, $plan['copies'][0]['sourceRevision'] );
+		$this->assertSame( $rowIds[$page], $descriptor['legacyId'] );
+		$this->assertSame( $sourceRevision, $descriptor['sourceRevision'] );
 		$this->assertSame( FilePageMigration::surfaceId( $rowIds[$page], $title->getArticleID() ), $copy['id'] );
 		$this->assertSame( [ 'fileTitle' => 'File:' . $file->getName(), 'page' => $page, 'repository' => 'local',
 			'sha1' => $file->getSha1(), 'timestamp' => $file->getTimestamp() ], $copy['source'] );
@@ -269,8 +273,8 @@ class PageCopyMigrationPdfPageTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( 'Image payload only', $picture['layers'][0]['text'] );
 		$this->assertSame( 1, $picture['source']['page'] );
 		$this->assertNotSame( $pdf->getSha1(), $image->getSha1() );
-		$this->assertSame( [ 3, 2, 1 ], array_column( $plan['copies'], 'embeds' ) );
-		$this->assertSame( [ $rowIds[2], $imageId, $rowIds[1] ], array_column( $plan['copies'], 'legacyId' ) );
+		$this->assertSame( [ 1, 3, 2 ], array_column( $plan['copies'], 'embeds' ) );
+		$this->assertSame( [ $rowIds[1], $rowIds[2], $imageId ], array_column( $plan['copies'], 'legacyId' ) );
 		$owner = $title->getArticleID();
 		$rewrittenOne = str_replace( '|layerset=Notes', '|layerset=' . $owner . ':' . $one['label'], $first );
 		$rewrittenTwo = str_replace( '|layerset=Notes', '|layerset=' . $owner . ':' . $two['label'], $second );
@@ -320,9 +324,10 @@ class PageCopyMigrationPdfPageTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( [ $revisionId, $base ], [ $revision->getId(), $revision->getParentId() ] );
 		$this->assertSame( $committed['document'], $revision->getContent( 'layers' )->getText() );
 		$this->assertSame( $committed['main'], $revision->getContent( 'main' )->getText() );
+		$this->runDeferredUpdates();
 		$this->assertContains( PagePublicationService::MIGRATION_TAG,
 			$this->getServiceContainer()->getChangeTagsStore()->getTags( $this->getDb(), null, $revisionId ) );
-		$this->assertStringContainsString( 'Copied 2 shared layer sets into this page:',
+		$this->assertStringContainsString( 'Copied a shared layer set into this page:',
 			$revision->getComment()->text );
 		$again = $migration->plan( $title->getArticleID(), $this->actor );
 		$this->assertSame( [ [], null, null ], [ $again['copies'], $again['document'], $again['main'] ] );
@@ -361,7 +366,7 @@ class PageCopyMigrationPdfPageTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( $newerRevision, $latest->getId() );
 		$this->assertSame( $newerPlan['main'], $latest->getContent( 'main' )->getText() );
 		$this->assertSame( $newerPlan['document'], $latest->getContent( 'layers' )->getText() );
-		$this->assertCount( 1, $this->surfaces( $latest ) );
+		$this->assertCount( 2, $this->surfaces( $latest ) );
 		$this->assertSame( $sourceRevision, $this->latest( $file->getTitle() )->getId() );
 		$this->assertSame( $legacy, $this->legacyRows( $file ) );
 	}

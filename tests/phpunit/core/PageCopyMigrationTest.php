@@ -96,6 +96,8 @@ class PageCopyMigrationTest extends \MediaWikiIntegrationTestCase {
 			"(revision $imageRevision), \"labels\" from [[:File:Copied photo.png]] (revision $imageRevision), " .
 			"\"notes\" from [[:File:Copied notes.pdf]] (revision $pdfRevision)",
 			$revision->getComment()->text );
+		// Core queues the tag/derived updates until the migration's outer transaction ends.
+		$this->runDeferredUpdates();
 		$tags = $this->getServiceContainer()->getChangeTagsStore()->getTags( $this->getDb(), null, $revisionId );
 		$this->assertContains( PagePublicationService::MIGRATION_TAG, $tags );
 

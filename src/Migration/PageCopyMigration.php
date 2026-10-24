@@ -11,6 +11,7 @@ use MediaWiki\Extension\Layers\Hooks\BoundSlideHooks;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Revision\DirectEmbeddingRewriter;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
+use MediaWiki\Extension\Layers\Revision\DrawingName;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\LegacySurfaceConverter;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
@@ -63,6 +64,7 @@ class PageCopyMigration {
 	private $sourcePages;
 	private array $snapshots = [];
 	private array $pendingDocuments = [];
+	private bool $emitBareNames;
 
 	/**
 	 * @param LayersDatabase $legacy
@@ -77,11 +79,13 @@ class PageCopyMigration {
 	 * @param IConnectionProvider $db
 	 * @param PagePublicationService $publisher
 	 * @param callable|null $sourcePages (array $candidate): int Native effective page for a direct file embed
+	 * @param bool $emitBareNames Native migration output uses names without owner IDs
 	 */
 	public function __construct( LayersDatabase $legacy, PageOwnedScope $scope, RepoGroup $repos,
 		TitleFactory $titles, RevisionLookup $revisions, PageHistoryAccess $access,
 		LegacySurfaceConverter $converter, DirectEmbeddingRewriter $rewriter, callable $fileTargets,
-		IConnectionProvider $db, PagePublicationService $publisher, ?callable $sourcePages = null
+		IConnectionProvider $db, PagePublicationService $publisher, ?callable $sourcePages = null,
+		bool $emitBareNames = false
 	) {
 		$this->legacy = $legacy;
 		$this->scope = $scope;
@@ -95,6 +99,7 @@ class PageCopyMigration {
 		$this->db = $db;
 		$this->publisher = $publisher;
 		$this->sourcePages = $sourcePages;
+		$this->emitBareNames = $emitBareNames;
 	}
 
 	/**
@@ -339,9 +344,18 @@ class PageCopyMigration {
 				if ( !isset( $names[$key][$rowId] ) ) {
 					continue;
 				}
+				if ( $this->emitBareNames && $candidate['kind'] === 'file' ) {
+					// Explicit owner references were excluded during scanning. Keep an existing bare
+					// spelling (including Default's "on" shortcut) when its future identity is unchanged.
+					$local = PageOwnedBindingOptions::named(
+						$candidate['options'], 'file', $candidate['target'], $pageId );
+					if ( $local && DrawingName::key( $local['name'] ) === DrawingName::key( $names[$key][$rowId] ) ) {
+						continue;
+					}
+				}
 				$text = $this->rewriter->rewrite( $text, $candidate['start'], $candidate['raw'], $pageId,
 					$names[$key][$rowId],
-					$this->fileTargets );
+					$this->fileTargets, $this->emitBareNames );
 			}
 		} catch ( \InvalidArgumentException $e ) {
 			$plan['problem'] = 'embed-not-rewritable';
@@ -623,10 +637,15 @@ class PageCopyMigration {
 		$options->setCurrentRevisionRecordCallback( static fn () => $revision );
 		$name = $constraint['name'];
 		if ( $source['kind'] !== 'slide' ) {
+			$bareNames = $this->emitBareNames;
 			$parser->setHook( 'layers-migration-probe', static function ( $input, $args, Parser $active ) use (
-				$source, $constraint, &$name
+				$source, $constraint, $bareNames, &$name
 			) {
-				$name = $constraint['latest'] ? BoundSlideHooks::onlyDrawingOf( $active, $source['fileKey'] ) :
+				// Unchanged template show-intent must still select this group after completion.
+				// Its stored hint does not distinguish "on" from other legacy show-intent aliases.
+				$name = $constraint['latest'] ? ( $bareNames ?
+					BoundSlideHooks::drawingOfFileNamed( $active, $source['fileKey'], 'Default' ) :
+					BoundSlideHooks::onlyDrawingOf( $active, $source['fileKey'] ) ) :
 					BoundSlideHooks::drawingOfFileNamed( $active, $source['fileKey'], $name );
 				return '';
 			} );

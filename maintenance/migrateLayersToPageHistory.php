@@ -80,14 +80,14 @@ class MigrateLayersToPageHistory extends Maintenance {
 		}
 		if ( !$scoped || $this->hasOption( 'page' ) ) {
 			$this->output( "Step 2: copies for the pages that show shared sets and slides.\n" );
-			$migration = $pilot->newPageCopyMigration();
+			$migration = $pilot->newPageCopyMigration( true );
 			foreach ( $this->pages( $pilot->getScope() ) as $pageId ) {
 				$this->migratePage( $migration, $pageId, $user, $commit );
 			}
 		}
 		if ( !$scoped || $this->hasOption( 'slide' ) ) {
 			$this->output( "Step 3: pages for shared slides that no page shows.\n" );
-			$this->migrateUnshownSlides( $pilot->newSlidePageMigration(), $pilot->newPageCopyMigration(), $user,
+			$this->migrateUnshownSlides( $pilot->newSlidePageMigration(), $pilot->newPageCopyMigration( true ), $user,
 				$commit );
 		}
 		if ( $this->failures > 0 ) {
@@ -236,6 +236,10 @@ class MigrateLayersToPageHistory extends Maintenance {
 		$page = $plan['title'] ? $plan['title']->getPrefixedText() : "page $pageId";
 		if ( $plan['problem'] !== null ) {
 			$this->output( "$page: not changed ({$plan['problem']})\n" );
+			if ( $commit && $plan['problem'] === 'embed-not-rewritable' ) {
+				// Unsafe bare output must not be followed by a global switch of name interpretation.
+				$this->failures++;
+			}
 			return;
 		}
 		foreach ( $plan['done'] as $name ) {
@@ -243,6 +247,10 @@ class MigrateLayersToPageHistory extends Maintenance {
 		}
 		foreach ( $plan['notMoved'] as $skip ) {
 			$this->output( "$page: {$skip['what']} not copied ({$skip['reason']})\n" );
+			if ( $commit && $skip['reason'] === 'template-latest-set' ) {
+				// Do not switch an unchanged template's legacy latest selector to Default.
+				$this->failures++;
+			}
 		}
 		foreach ( $plan['copies'] as $copy ) {
 			$from = $copy['kind'] === 'slide' ? "slide \"{$copy['source']}\"" : $copy['source'] .

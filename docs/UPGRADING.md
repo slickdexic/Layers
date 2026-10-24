@@ -1,97 +1,113 @@
-# Upgrading to drawings in page history
+# Upgrading layer sets to page revision history
 
-[Charter](PROJECT_CHARTER.md) criterion OPS-1. This guide takes a wiki from Layers 1.5.x, where annotations are shared layer sets stored beside the file, to drawings that belong to pages and live in their revision history (decisions D1 to D3 in the charter). Layers is a MediaWiki extension; everything here uses MediaWiki's own updater and maintenance scripts.
+This guide advances [Milestone 1 and OPS-1](PROJECT_CHARTER.md). Layers uses
+MediaWiki's extension, database and maintenance mechanisms; Docker is not a
+deployment requirement.
 
-## What changes
+Migration copies legacy shared layer sets into their owning pages' native
+`layers` revision slots. It retains the `layer_sets` rows for historical reads
+and recovery. Each owner then has an independent copy. Equal names on different
+files are valid. A whole PDF keeps one name across its internal pages:
+`layerset=ABC` names the layer set and `page=2` selects its second PDF page.
 
-- **Before the migration** a wiki behaves as in 1.5.x. Shared sets and slides can be edited, and `layerset=<name>` and `{{#Slide:<name>}}` show them. Pages in `$wgLayersPageDrawingNamespaces` (by default the content namespaces and `File:`) can also have drawings of their own.
-- **The migration** copies every shared set and slide into page history, as ordinary bot edits: a file's current sets become drawings of its `File:` page, every page that shows a set or slide gets its own copy, and a shared slide that no page shows gets a page `Slide:<name>`. It only reads the `layer_sets` table and never changes it.
-- **After the migration** a bare `layerset=<name>` or `{{#Slide:<name>}}` means the page's own drawing of that name, and `layerset=on` (or a gallery image without a name) means the page's only drawing of that file. Shared sets and slides are read-only; their old revisions stay viewable. The File page lists its own drawings, and the old editor links lead to them. `meta=siteinfo` reports `layerspagehistorymigrated: true`.
+Author-facing references contain names without owner IDs. Existing references
+that already select the same local set retain their bytes. A legacy
+`layerset=on` reference to a set other than Default becomes that set's name;
+the Default shortcut can remain unchanged. Multiple old sets of one slide use
+the approved names `<slide> (<set>)` when separate slide names are needed.
 
-## 1. Back up
+## Back up and update
 
-Back up the database, the upload directory and `LocalSettings.php`, and record the Layers commit you are running. The migration can be undone (step 6), but a backup is the only way back from anything else.
+Back up the database, uploads and `LocalSettings.php`. Record the old Layers
+commit, MediaWiki version and database type. Retain the backups through acceptance.
+The old 1.5.95 fresh table definitions use MySQL syntax; a fresh SQLite install of
+that release does not establish a valid MySQL upgrade test.
 
-## 2. Update the code and the database
+Install the reviewed extension candidate through the site's normal deployment
+process. Keep `wfLoadExtension( 'Layers' );` in configuration. Review
+`LayersPageDrawingNamespaces` in the
+[configuration reference](../wiki/Configuration-Reference.md): only enabled
+owner namespaces can receive layer sets. A template need not own layer sets
+for ordinary pages transcluding it to receive their own copies.
 
-From the MediaWiki `extensions/Layers` directory, update the checkout, then from the MediaWiki root run the updater:
+From the MediaWiki root, as the web server user, run:
 
 ```sh
-git pull --ff-only
 php maintenance/run.php update
-```
-
-Drawings are stored in a revision slot named `layers` with the content model `layers-document`; MediaWiki registers both the first time they are used, so the updater has nothing to add for them.
-
-Check `$wgLayersPageDrawingNamespaces` in the [configuration reference](../wiki/Configuration-Reference.md). A page outside those namespaces that shows shared sets is listed by the migration as `namespace-not-enabled` and keeps showing nothing of them afterwards.
-
-## 3. Refresh links
-
-The migration finds sets shown through templates and galleries in each page's `layers-shown-sets` page property. Pages last parsed by an older Layers have no record of their galleries, and some have none at all, so refresh them and let the job queue finish:
-
-```sh
 php maintenance/run.php refreshLinks
 php maintenance/run.php runJobs
 ```
 
-Run maintenance scripts as the web server user (for example `sudo -u www-data php maintenance/run.php ...`), or ensure permissions on the upload and thumbnail directories (`images/` and `images/thumb/`) remain writable by the web server process. A directory that a root-run script created can stop the web server from writing thumbnails there.
+Keep uploads, thumbnails, cache and temporary directories writable by that user.
+Images and PDFs retain their existing media-handler prerequisites. Refresh links
+**before** migration completion, while discovery still records shared sets shown
+through templates and galleries.
 
-Pages that show sets directly in their text are found from the text itself.
-
-Do this while the migration is not recorded as complete. A page parsed after that has no record of the shared sets it showed, because they are no longer shown, so a links refresh then erases what step 4 needs.
-
-## 4. Dry run
-
-From the MediaWiki root:
+## Review and apply
 
 ```sh
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php
 ```
 
-Nothing is written. The script lists what each step would do, one line per page: `add drawing` and `copy` lines for new drawings, `point embeds at its own drawings` where it rewrites a page's embeds to name its copies, and `not moved` or `not copied` lines with a reason. Read the reasons before committing:
+Without `--commit`, the command publishes nothing. Review all planned file-page
+sets, copies for pages showing shared sets/slides, and pages for unembedded slides.
+Do not apply a plan with unexplained missing copies or refusals. Reasons include
+missing/foreign files, older file versions, unsupported content, limits, pinned
+legacy revisions, unsafe source syntax, disabled namespaces and occupied titles.
+Preserve the old state for review; do not discard fields or rename sets to force
+the migration through.
 
-| Reason | Meaning |
-| --- | --- |
-| `earlier-file-version` | The set was saved on an older version of the file. Legacy embeds did not show it either. |
-| `missing-file`, `foreign-file` | The file no longer exists, or comes from another wiki (for example InstantCommons). |
-| `namespace-not-enabled` | The page is outside `$wgLayersPageDrawingNamespaces`. |
-| `image-too-large`, `document-limits` | The file or the page's drawings exceed the limits of a page drawing. |
-| `would-lose-data`, `unconvertible`, `not-renderable` | The set holds data a page drawing cannot keep exactly. |
-| `pinned-revision` | The embed names a set revision by ID (`layersetid=`). |
-| `no-current-set` | The embed names a set the current file version does not have, so it showed nothing. |
-| `invalid-slide-name` | The legacy parser refused the slide name, so the page showed an error. |
-| `file-not-migrated` | Step 1 did not move the file's set, so there is nothing to copy. |
-| `template-latest-set` | A template or gallery shows the file's latest set, and the page has other drawings of that file, so no name would find it. |
-| `template-name-taken` | A template shows a slide whose name the page already uses for another drawing. |
-| `unscannable-text`, `embed-not-rewritable` | The page's text uses syntax the embed rewriter does not change safely. The page is left as it is. |
-| `title-taken` | A page `Slide:<name>` already exists for a slide that no page shows. |
-
-To try one piece first, add `--file=<name>` (without `File:`), `--page=<title>` or `--slide=<name>`, with or without `--commit`. A scoped run never records the migration as complete.
-
-## 5. Migrate
+Use `--file=<filename>` without `File:`, `--page=<wiki-page-title>` or
+`--slide=<slide-name>` for a bounded inspection. Scoped runs do not record global
+completion. Apply the reviewed full plan with:
 
 ```sh
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php --commit
 ```
 
-The edits are made by the system account "Layers migration", which the script adds to the `bot` group, or by the account named with `--user=`. They are marked as bot edits and tagged `layers-migration`, so they can be filtered in recent changes and page histories.
+The native account `Layers migration` makes bot edits tagged `layers-migration`;
+`--user=<account>` selects another authorized actor. Failed publication or unsafe
+author-facing output prevents completion. An unscoped successful run records
+`layers-page-history-migration` in `updatelog` and purges discovered owner pages.
+Confirm `meta=siteinfo` reports `layerspagehistorymigrated: true`.
 
-If any edit fails, the script says so and does not record completion; run it again. A rerun continues where the last one stopped, because moved drawings are recognised by their IDs, and reports nothing left to do once everything is moved. When an unscoped run finishes without a failed edit it records completion in `updatelog` (`layers-page-history-migration`) and purges every page that showed shared sets, so no cached page shows them afterwards.
+An unchanged template's legacy show-intent must still select the same Default
+layer set after completion. If its old latest set has another name, migration
+refuses that group as `template-latest-set` and blocks global completion. Review
+the template and use an explicit layer-set name before retrying. Stored legacy
+hints combine show-intent aliases, so this check deliberately refuses ambiguous
+non-Default template hints rather than changing their displayed layers.
 
-A new wiki with no shared sets can run the same command once: it moves nothing and records completion, so bare names mean page drawings from the start.
+After completion, `layerset=ABC` selects the owner's ABC for that file;
+`{{#Slide:ABC}}` selects the owner's slide. The deprecated `layerset=on` selects
+Default. Legacy sets become read-only. Ordinary pages use the existing Edit
+layers and View full size overlays, without a list of sets or owner/revision
+captions. Use the editor's Import or Copy controls to copy from another page.
 
-## 6. The way back
+Check history, complete payloads, offscreen PDF members, source versions, geometry,
+page text and independent owners. Exercise overlay entry, Save, owner return and
+reopen. A rerun should recognize completed copies and add no duplicate revision.
+A new wiki with no legacy sets can run the same command once to record completion
+without adding content revisions.
+
+## Recovery
+
+The original database/upload/configuration backup is the complete rollback route.
+The native migration also provides a narrower undo:
 
 ```sh
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php --undo
 php extensions/Layers/maintenance/migrateLayersToPageHistory.php --undo --commit
 ```
 
-The first command lists, the second makes, one bot edit per page that puts the page back as it was before the migration's edits, tagged `layers-migration-undo`. Pages the migration created are deleted. A page someone has edited since is listed as `edited-since-migration` and left alone; restore it from its history if needed. An unscoped undo removes the completion record and purges the same pages, so bare names mean shared sets again and they can be edited. With `--file`, `--page` or `--slide`, undo works on that one page. A page that was put back can be migrated again, but first run the links refresh of step 3 again: pages parsed while the migration was recorded have lost their record of the sets they showed through templates and galleries, and the undo's purge finds only pages that still have one.
+Review the first command's plan before applying it. Undo restores unedited
+migration targets and removes pages created solely by migration. A target edited
+since migration is refused as `edited-since-migration`; newer work remains.
+Unscoped undo removes the completion record; scoped undo does not. Before
+migrating again after unscoped undo, refresh links and run jobs again to restore
+template/gallery discovery. Undo does not replace a backup or authorize
+overwriting subsequent owner edits.
 
-## After the migration
-
-- Search indexes page drawings with their page. `extensions/Layers/maintenance/reindexPageDrawings.php` (or `php maintenance/run.php Layers:reindexPageDrawings`) reindexes existing pages if the search index was built before this version of Layers.
-- Category pages and special pages show gallery images without drawings, because no page owns them there.
-- To show one page's drawing on another page, embed it there as `layerset=<page ID>:<name>` (or `{{#Slide:<page ID>:<name>}}`) and follow the "Copy" link: the copy becomes a drawing of that page. The File page's section gives the page ID.
-- The legacy tables stay. They are only read, for old revisions and for undo.
+Search, Cargo and layer-object links remain later milestones. If separately
+validating an existing search index, the native `reindexPageDrawings.php`
+maintenance script is available; those checks do not gate this ownership upgrade.

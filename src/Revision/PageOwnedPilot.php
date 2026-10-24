@@ -1390,14 +1390,17 @@ class PageOwnedPilot {
 			new LegacyMediaResolver( $sources ), new LegacySurfaceConverter(), $this->publisher );
 	}
 
-	/** @return PageCopyMigration Step 2 of the D3 migration, for the maintenance script */
-	public function newPageCopyMigration(): PageCopyMigration {
+	/**
+	 * @param bool $emitBareNames Native maintenance opts in to the approved author-facing spelling
+	 * @return PageCopyMigration Step 2 of the D3 migration
+	 */
+	public function newPageCopyMigration( bool $emitBareNames = false ): PageCopyMigration {
 		$lookup = $this->services->getRevisionLookup();
 		return new PageCopyMigration( $this->services->getService( 'LayersDatabase' ), $this->scope,
 			$this->services->getRepoGroup(), $this->services->getTitleFactory(), $lookup,
 			new PageHistoryAccess( $lookup ), new LegacySurfaceConverter(), $this->newRewriter(),
 			$this->fileTargets(), $this->services->getConnectionProvider(), $this->publisher,
-			fn ( array $candidate ): int => $this->effectiveSourcePage( $candidate ) );
+			fn ( array $candidate ): int => $this->effectiveSourcePage( $candidate ), $emitBareNames );
 	}
 
 	/** @return SlidePageMigration Step 3 of the D3 migration, for the maintenance script */
