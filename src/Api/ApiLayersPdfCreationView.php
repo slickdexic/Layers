@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\PageMissingPdfViewerReadService;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Fresh read-only viewer admission; edit rights and a stored Layers slot are not prerequisites. */
 class ApiLayersPdfCreationView extends ApiBase {
@@ -23,6 +24,9 @@ class ApiLayersPdfCreationView extends ApiBase {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		try {
 			$viewer = $this->reader->read( $params['pageid'], $params['baserevid'], $params['embedstart'],
 				$params['embedtext'], $this->getAuthority() );

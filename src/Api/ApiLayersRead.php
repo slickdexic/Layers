@@ -9,6 +9,7 @@ use MediaWiki\Api\ApiMain;
 use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PageReadService;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
@@ -65,6 +66,10 @@ class ApiLayersRead extends ApiBase {
 			!$this->scope || !$this->scope->includes( $owner )
 		) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-revision-unavailable' );
+		}
+		// Viewer/editor metadata shares the information budget, not PDF source-render capacity.
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
 		}
 		try {
 			if ( $params['viewpage'] !== null && !$params['viewer'] ) {

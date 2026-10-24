@@ -1,6 +1,6 @@
 # Milestone 1: native HTTP privacy acceptance
 
-This checkpoint advances SEC-1, SEC-2, HIST-4 and DATA-1 for page-owned layer
+This checkpoint advances SEC-1, SEC-2, SEC-4, SEC-6, HIST-4 and DATA-1 for page-owned layer
 sets. It covers the published page-history candidate on native MediaWiki 1.44.6,
 MySQL 8 and Apache. The wiki requires authentication to read. Existing saved
 image, slide and two-page PDF owners supply the test data.
@@ -55,6 +55,44 @@ Content-Length omission is allowed by
 [HTTP semantics, sections 9.3.2 and 8.6](https://www.rfc-editor.org/rfc/rfc9110.html#section-9.3.2);
 when that header is sent on HEAD, it must describe the corresponding GET
 representation.
+
+## Native request limits
+
+Page-owned snapshot, binding, control, viewer and editor-page reads use the
+existing `editlayers-info` limit. Missing-PDF viewer admission uses that same
+information budget. Missing-PDF editor preparation uses `editlayers-render`,
+because it can prepare a native PDF rendition. Metadata does not spend the
+separate PDF source-render budget. Existing configured values, exemptions,
+authorization and private-response policies are unchanged.
+
+Native HTTP controls first demonstrated that the information and render
+counters were active. Six page-owned paths nevertheless succeeded after their
+relevant counter was exhausted. The corrected paths now return the existing
+`ratelimited` error before invoking the reader. Nine corrected HTTP checks pass,
+including a fresh read-only account below its information limit and metadata
+access after render exhaustion. The same exhausted sessions retain their native
+counters after the source correction.
+
+The new native regression suite covers seven read branches, including editing
+controls: refusal before reader work, successful admission spending the correct
+budget, and isolation from the other exhausted budget. Fourteen meaningful
+failures before correction become 22 passing tests / 78 assertions afterward.
+The full standalone suite passes 1,611 tests / 3,994 assertions with one existing
+skip. No client code changed; the prior 18,923-test client result is retained.
+
+All 160 affected cases across seven native classes are qualified with 1,619
+assertions. This combines 149 retained passes with eleven successful replays;
+it is not a single green 160-case run. The first run inherited a private-wiki
+setting and read revocation from the HTTP fixture, causing MediaWiki to refuse
+eleven public-read/authority cases before Layers ran. Only a separate native
+test configuration was corrected. The eleven unchanged cases then passed with
+126 assertions; existing tests and production permissions were unchanged.
+
+All original fixture rows remain exact, including seven retained legacy rows.
+Setup adds three disposable accounts and one main-only missing-PDF owner revision;
+no Layers publication occurs. The accepted original fixture remains exact across
+all 17 captured tables. Ordinary wiki content and configuration are unchanged.
+This closes the demonstrated quota bypass, not the broader security review.
 
 ## Permission and visibility transitions
 

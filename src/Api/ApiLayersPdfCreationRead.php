@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\PageMissingPdfEditorReadService;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Exact native missing-PDF page admission. Read-only; does not authorize publication. */
 class ApiLayersPdfCreationRead extends ApiBase {
@@ -24,6 +25,9 @@ class ApiLayersPdfCreationRead extends ApiBase {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'render' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		try {
 			$preparation = $this->reader->read( $params['pageid'], $params['baserevid'],
 				$params['embedstart'], $params['embedtext'], $params['pdfpage'], $this->getAuthority() );

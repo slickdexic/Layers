@@ -17,6 +17,12 @@ layer-object links remain later milestones and cannot delay this checkpoint.
 | Qualify the release candidate | Upgrade a 1.5.x wiki without losing layer sets; test declared MediaWiki 1.44 and 1.45, desktop/mobile and keyboard access; verify permissions, HTTP privacy, relevant security/data checks and charter performance budgets. | The actual 1.5.95 / MySQL upgrade on MediaWiki 1.44.6 preserves all recorded data and passes post-upgrade PDF Save/reopen and safe reruns; see the [upgrade guide](UPGRADING.md). The [HTTP privacy checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md) retains 52 read-only baseline cases with all seven owners and 17 tables unchanged. Twenty role/protection/revocation and twenty-four visibility/deletion cases also pass. A detected post-migration legacy-row deletion defect is corrected; thirteen fresh HTTP lifecycle cases prove preservation, cache purging and deleted-file refusal. Remaining version/device, broader security/data and reference-performance combinations are open. These are bounded results, not blanket acceptance. |
 | Deliver and accept | Publish a reviewed extension-only release candidate with exact-commit CI, installation/upgrade directions, the test matrix and explicit remaining limitations. The owner then completes the charter acceptance scenarios. | Intermediate code is being preserved publicly. Milestone 1 has not passed. |
 
+The native HTTP checkpoint also closes a demonstrated request-limit bypass in
+six page-owned read paths. Existing information/render quotas now refuse work
+after exhaustion, while metadata remains independent of the render budget.
+Configured limits, permissions and UI are unchanged. This bounded correction
+does not close the broader security-review package.
+
 Ready **for owner testing** means the integrated candidate and technical checks
 above are complete. **Milestone 1 accepted** additionally requires the owner's
 acceptance. Neither waits for milestone 2–5 functionality.
