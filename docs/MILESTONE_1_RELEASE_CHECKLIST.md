@@ -33,9 +33,11 @@ disk, within the one-second server budget. The separate browser checkpoint recor
 97.7 KB gzip of Layers modules, no Layers modules on a plain page, warm image paint
 at 93–100 ms, warm editor opening at 187–202 ms, roughly 60 frames/second with
 100 layers and a 16.4 ms maximum typed-character delay. These pass their respective
-budgets on the recorded desktop. First-visit image paint still exceeds 300 ms in
-some observations; reference-device and the other performance combinations remain
-open. [Release preparation](RELEASE_PREPARATION.md)
+budgets on the recorded desktop. The controlled follow-up with production logging
+passed five fresh-browser visits at 254–273 ms on a warmed server. The reusable
+read-only benchmark passed another five at 274–296 ms. Earlier slower observations
+remain retained; cold-server, reference-device and the other performance
+combinations remain open. [Release preparation](RELEASE_PREPARATION.md)
 tracks generated-output cleanup, the remaining documentation audit and the
 explicit upgrade/recovery instructions; these are delivery work within this
 milestone, not additional product scope.

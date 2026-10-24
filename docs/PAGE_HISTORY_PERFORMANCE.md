@@ -137,3 +137,66 @@ Twenty-layer-set deferral/long tasks (PERF-6), image-data reuse across revisions
 qualified by this checkpoint. Earlier development shared-folder timings are a
 separate environment comparison. No charter target or reference-device requirement
 has been changed.
+
+## Controlled first-visit follow-up
+
+The earlier fixture enabled full MediaWiki developer logging. A separate copy
+compared that setting with `$wgDebugLogFile = false`, retaining dedicated Layers,
+PHP-error and database-error logs. Source, data, permissions, quotas and cache
+settings stayed the same. The server was warmed once, then each observation
+used a fresh browser context. Modes were counterbalanced across ten observations.
+
+| Logging mode | Five fresh-browser paint delays (ms) | Median | Maximum |
+| --- | --- | --- | --- |
+| Full developer logging | 350.2, 274.5, 271.1, 268.9, 255.2 | 271.1 ms | 350.2 ms |
+| Production general logging | 264.3, 272.7, 258.7, 258.9, 254.5 | 258.9 ms | 272.7 ms |
+
+All five production observations were within 300 ms on this desktop. Full logging
+added 380,754 bytes across its five observations; production observations added
+none to that general log. The median difference was only 12.2 ms, so logging alone
+does not explain every earlier slow visit. The first server warm-up, with full
+logging, took 1,997.1 ms and remains recorded separately. No production cold-server
+result or complete PERF-2 acceptance is claimed, and no application loading change
+was justified by this comparison. All seventeen witnessed tables and all 26 source
+revisions remained exact; there were no content edits or browser Saves.
+
+### Reusable read-only reader benchmark
+
+`npm run bench:native-read` runs
+[native-reader.spec.js](../tests/perf/native-reader.spec.js). Without
+`LAYERS_NATIVE_PERF_CONFIG` it skips before launching a browser. The configuration
+must identify a disposable loopback HTTP wiki, its exact wiki ID, owner page ID and
+revision, plus an opaque known-color pixel in a saved image layer set. Ordinary
+development ports 8080/8081 and the default HTTP port are refused before fixture
+requests. Do not reuse the broader write benchmark's ordinary-content fixture.
+
+Keep configuration and authenticated Playwright storage state outside published
+source. Set `LAYERS_NATIVE_PERF_CONFIG` to a private JSON file shaped as follows;
+the owner must contain one image embed with the stated probe pixel:
+
+```json
+{
+  "disposable": true,
+  "base": "http://127.0.0.1:8099",
+  "wikiId": "layers_performance_fixture",
+  "owner": "Performance image",
+  "pageId": 10,
+  "revision": 20,
+  "probe": { "x": 50, "y": 50, "rgba": [216, 25, 171, 255] },
+  "storageState": "/private/native-perf-state.json"
+}
+```
+
+Use production settings and a pre-created fixture; the benchmark never provisions
+content, changes settings or Saves. Browser requests are restricted to GET on the
+fixture origin. The test verifies wiki/owner/revision identity, the actual native
+image load, authorized native layer-read timing and the expected canvas pixel.
+It retains one warm-up and five fresh-browser observations, including failures,
+and applies the unchanged 300 ms budget to all five warm-server samples. Point
+Playwright's `--output` at a private results directory to retain its attachments.
+Authenticated storage state is optional only for an anonymously readable fixture.
+
+The final maintained test passed five observations at 296.0, 273.8, 275.5, 286.0
+and 287.7 ms. Its request guard adds observation overhead; these remain separate
+from the comparison above. No-configuration skipping and ordinary-port refusal
+were also checked. The same host/device and cold-server limitations still apply.
