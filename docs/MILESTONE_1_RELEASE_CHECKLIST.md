@@ -27,10 +27,15 @@ Ready **for owner testing** means the integrated candidate and technical checks
 above are complete. **Milestone 1 accepted** additionally requires the owner's
 acceptance. Neither waits for milestone 2–5 functionality.
 
-[Server performance](PAGE_HISTORY_PERFORMANCE.md) now records five 100-layer
+[Performance](PAGE_HISTORY_PERFORMANCE.md) records five 100-layer
 Saves at 98–122 ms and exact historical-page responses at 97–447 ms on local
-disk, within the one-second server budget. Browser paint and the other performance
-combinations remain separate. [Release preparation](RELEASE_PREPARATION.md)
+disk, within the one-second server budget. The separate browser checkpoint records
+97.7 KB gzip of Layers modules, no Layers modules on a plain page, warm image paint
+at 93–100 ms, warm editor opening at 187–202 ms, roughly 60 frames/second with
+100 layers and a 16.4 ms maximum typed-character delay. These pass their respective
+budgets on the recorded desktop. First-visit image paint still exceeds 300 ms in
+some observations; reference-device and the other performance combinations remain
+open. [Release preparation](RELEASE_PREPARATION.md)
 tracks generated-output cleanup, the remaining documentation audit and the
 explicit upgrade/recovery instructions; these are delivery work within this
 milestone, not additional product scope.
