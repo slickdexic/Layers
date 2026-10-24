@@ -34,12 +34,26 @@ repeated locally for this environment-only qualification.
 
 ## Remaining acceptance
 
-Download file collection remains unqualified on 1.44. A second attempt timed out
-in the browser observation tool before a Download click; this establishes no
-export defect and supplies no delivered-file evidence. Further collection must
-avoid that stalled observation path. Print, the remaining version/device
-combinations, a 1.5.x upgrade, combined security, privacy/performance checks and
-owner acceptance remain on the
+The published candidate now also passes the
+[native HTTP privacy checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md):
+52 verified cases cover API privacy, CSRF refusals, exact PDF source delivery,
+cache forcing, conditional requests and owner/revision identity refusals.
+All seven owners and 17 captured tables remain exact. This requires no runtime
+or test change and does not constitute a complete security review.
+
+The actual 1.5.95/MySQL upgrade, post-upgrade PDF Save/reopen and reruns preserving
+newer edits also pass in their recorded scope; see the [upgrade guide](UPGRADING.md).
+
+Download file collection remains unqualified on 1.44. The browser's download
+observer stalled both before a Layers Download click and when coupled with a
+native MediaWiki Export click. That establishes an observer limitation outside
+Layers and supplies no delivered annotated PDF. Do not repeat that waiting path.
+The actual Print button reached Preparing pages, but further script inspection
+was blocked and no prepared document was retained. Print is unqualified; no
+production defect is established by this incomplete observation.
+
+Remaining permission/visibility transitions, version/device combinations,
+security/performance checks and owner acceptance stay on the
 [Milestone 1 release checklist](MILESTONE_1_RELEASE_CHECKLIST.md).
 This checkpoint qualifies the recorded journeys and does not complete the
 supported-version matrix or Milestone 1.
