@@ -1,18 +1,29 @@
 # Action API reference
 
-## Experimental page-owned revision APIs
+Reviewed October 24, 2026. The [page-owned API guide](../docs/PAGE_OWNED_API_GUIDE.md)
+is the current entry point for native reads, publication, Import and privacy.
+Native modules are installed by the extension registration callback as well as
+extension.json. They are not all disabled or unregistered, and normal
+post-completion editor Saves no longer use shared storage.
 
-`layersread` and `layerspublish` are now registered by the native extension callback, but disabled by default. They use an explicit retained owner scope. Normal editor saves still use legacy storage. The core merge API is replaced by a guarded adapter only with retained pilot owners. See [Current Status](Current-Status.md) for acceptance limits; this is not a production enablement guide.
+The tables/examples below describe **legacy shared storage**, followed by
+separately scoped native endpoint notes. After migration completion,
+`layerssave`, `layersrename` and `layersdelete` refuse shared writes; they
+cannot mutate owner-page snapshots. Tagged 1.5.95 uses the older shared model.
+See [UPGRADING](../docs/UPGRADING.md) for the completion prerequisite and the
+[release checklist](../docs/MILESTONE_1_RELEASE_CHECKLIST.md) for acceptance.
 
-The read contract requires an exact owner/revision and private zero-age caching. Publication requires native POST/CSRF handling and optimistic revision matching. Optional `pageid` asserts the existing owner identity (1–2147483647), is checked through native publication, and rejects mismatches or creation with `baserevid=0`. It does not grant permission or prove a surface binding. Existing pilot clients may omit it; bound-editor wiring remains in progress. Scoped editor/history and read-only inline slide workflows have acceptance evidence on the original test wiki; ordinary adoption and image/PDF binding integration remain unfinished. See the [publishing contract](../docs/PAGE_OWNED_API_CONTRACT.md).
+Use MediaWiki's `api.php` with `format=json`. Load `mediawiki.api` before
+using `new mw.Api()`. Check API errors and the module-specific result, not
+HTTP 200 alone. Layer row IDs are not native page revision IDs. Legacy
+`layersinfo` may return `layerset: null`; it does not supply an exact
+owner-page snapshot. Legacy creator/delete rules differ from the native
+[owner-page permissions](Permissions.md).
 
-Reviewed September 6, 2026 against the six modules in `extension.json`, their PHP implementations and the local wiki's `action=paraminfo` output. This describes current code, not the proposed page-owned API.
+## Action parameters
 
-Use MediaWiki's `api.php` with `format=json`. From ResourceLoader JavaScript, wait for `mediawiki.api` and create `new mw.Api()`. Read endpoints require the applicable read access; writes require `editlayers`, applicable File-page edit authority, a CSRF token and rate-limit checks. Delete/rename additionally require creator ownership or **`layers-admin`**, not the ordinary `delete` right. Slides are not yet bound to SOP-page permissions; see [[Permissions]].
-
-Never use a layer row ID as `oldid`. Responses and historical availability are affected by revision pruning. `layersinfo` may return `layerset: null`; handle that without treating it as a failed request. API errors appear under `error`; do not infer success from HTTP 200 alone.
-
-## Actions and parameters
+The shared-storage actions below are legacy contracts. `layersdrawings` is a
+native source-listing exception and is also covered in the current guide.
 
 ### layersinfo — GET
 
@@ -85,12 +96,12 @@ List standalone slides by name prefix; this is not annotation full-text search.
 
 ### layersdrawings — GET
 
-List other pages' current drawings that the editor may copy into the page being edited (D1). Requires the `editlayers` right and a named account, and shares the `editlayers-list` rate limit. Every page is read with the caller's own rights, so pages, revisions and files the caller cannot see are left out. The answer is private and never cached.
+List other pages' current layer sets that the editor may copy into the page being edited (D1). Requires the `editlayers` right and a named account, and shares the `editlayers-list` rate limit. Every page is read with the caller's own rights, so pages, revisions and files the caller cannot see are left out. The answer is private and never cached.
 
 | Parameter | Type | Default / range | Notes |
 | --- | --- | --- | --- |
 | `search` | string | Empty; up to 255 bytes | Start of a page title, optionally with a namespace. Empty lists the pages edited last. |
-| `exclude` | integer | 0 | ID of the page being edited, whose own drawings are not listed. |
+| `exclude` | integer | 0 | ID of the page being edited, whose own layer sets are not listed. |
 | `limit` | limit | 10; min 1; max 20 | Maximum pages to list. |
 
 Each page in `layersdrawings.pages` has `title`, `pageid`, `revid` and `drawings` (`id`, `label`, `kind`). The copy itself is confirmed on `Special:CopyLayersDrawing` with `pageid`, `sourcepage`, `sourcesurface` and `sourcerev`, which copies with a POST and the user's edit token.
@@ -146,7 +157,7 @@ api.postWithToken( 'csrf', {
 } );
 ```
 
-The data field accepts the supported layer-array or object-with-layers form. Send the object form when supplying background/canvas settings. Do not send JSON scalars: their handling is a known open issue. Only validated properties survive; inspect `ServerSideLayerValidator` for the current schema. `ownerId` is generated by the server and is not an assignable client field.
+The data field accepts the supported layer-array or object-with-layers form. Send the object form when supplying background/canvas settings. Do not send JSON scalars or assume unsupported properties will be retained. Only validated properties survive; inspect `ServerSideLayerValidator` for the current schema. `ownerId` is generated by the server and is not an assignable client field.
 
 ## Delete and rename scope
 
@@ -171,17 +182,18 @@ Use the returned delivery URL; do not construct a path into the export cache. `S
 
 ## Integration boundaries
 
-No current parameter binds a set to a MediaWiki article revision, writes searchable annotation text, or creates Cargo annotation rows. These are proposals in [[Current Status]]. When integrating with a different deployed branch, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
+The legacy modules above do not bind shared sets to native owner revisions. Page-owned publication is implemented through separate registered modules; use the [current guide](../docs/PAGE_OWNED_API_GUIDE.md). Search/Cargo acceptance remains in later milestones. On the exact installed candidate, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
 
 ## Explicit save-name validation
 
-On the local J01–J05 review branch (not yet merged to main), `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. J17 extends the same canonical validation to info, rename (old and new names) and delete. Required mutation identifiers cannot be omitted. This is review-branch behavior, not a tagged release.
+For retained legacy compatibility, `layerssave` treats nonempty `setname` values as literal canonical identifiers, including `on`, `off`, `1` and `0`. Invalid or noncanonical names return `invalidsetname` before persistence; they are not stripped, truncated or redirected to the latest set. Omitted/empty names select the current set, or the validated `LayersDefaultSetName` seed when none exists. The same canonical validation applies to info, rename (old and new names) and delete. Required mutation identifiers cannot be omitted. After migration completion, shared writes are refused regardless of a valid name. This is not the native page-owned name contract; see [Named Layer Sets](Named-Layer-Sets.md).
 
 ## Native working-copy Import read API
 
-Added October 11, 2026 (J116K). This section describes the newly registered
-native read endpoint, not activation of Import UI or editor callers. Earlier
-dated sections above retain their historical scope and deployment statements.
+The following endpoint reads existing image/slide members. The integrated
+candidate now uses native Import callers; the earlier registration-only
+checkpoint is not the current activation state. Whole-PDF and empty-target
+workflows use separate actions listed in the [current guide](../docs/PAGE_OWNED_API_GUIDE.md).
 
 ### layersworkingcopyimportread - GET
 
@@ -220,10 +232,10 @@ uses native API errors. No partially admitted Import bundle is returned.
 
 The endpoint sets ApiMain's policy to private with zero `max-age` and `s-maxage`,
 including refusals after module construction, regardless of requested cache ages.
-This policy is qualified through native CLI tests. Final HTTP/session response
-headers, browser behavior and MediaWiki 1.44/mobile acceptance are not claimed.
-The Import picker/dialog, canonical source listing, empty-base admission,
-drafts/first-Save provenance and whole-PDF integration remain separate work.
+The original registration checkpoint qualified this policy through native CLI
+tests only. Current HTTP/browser qualification and remaining combinations are
+recorded in the release checklist; do not treat that dated checkpoint as a
+claim of complete acceptance or of an inactive Import UI.
 
 ## Working-copy Import source listing
 
@@ -242,8 +254,8 @@ The Import client matches the same image file and normalized layer-set name, or
 the same slide name, and keeps choices from different owner IDs distinct. Native
 IDs select internal data and are never author syntax. A selected choice must
 still pass the exact `layersworkingcopyimportread` admission and guarded editor
-application, with fresh visibility and target-base checks. Listing does not
-authorize Save. Whole-PDF Import and editor UI activation remain separate work.
+application, with fresh visibility and target-base checks. Listing does not authorize Save. Whole-PDF workflows have separate native
+actions and must preserve all members; see the current guide and release matrix.
 
 ### layerspdfcreationview — POST (read-only)
 

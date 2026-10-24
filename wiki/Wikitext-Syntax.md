@@ -1,6 +1,8 @@
 # Wikitext Syntax
 
-> **Current guidance — September 6, 2026:** These parameters select existing shared content; they do not create an owner-page history binding. `layerset=on` means current set; `layerset=default` means the literal name. `noedit` and hidden controls are not authorization.
+> **Candidate guidance — October 24, 2026:** After [migration completion](../docs/UPGRADING.md), bare names select this page's own layer sets. Save captures changes in native owner-page history. `layerset=on` selects `Default`; it does not select the most recently saved shared set. Tagged 1.5.95 uses the older shared model. `noedit` and hidden controls are not authorization. Milestone 1 acceptance remains open.
+
+Use **Edit layers** and **View full size** on the embed (hover, focus or tap). Author-facing wikitext contains names only, never owner page IDs or internal binding tokens. The same name on another owner or another file identifies an independent set. A PDF keeps one visible set name across all its pages.
 
 Complete reference for using Layers in wikitext.
 
@@ -22,8 +24,8 @@ Add the `layerset` parameter to any file link to display annotations:
 
 | Value | Effect |
 |-------|--------|
-| `on` | Display the current (most recently saved) set |
-| `default` | Display the set literally named `default` |
+| `on` | After completion, display this owner/file's `Default` set; eligible editors can create it when absent |
+| `default` | Explicit name; compares alike with `Default` in native storage |
 | `<setname>` | Display a specific named layer set |
 | `off` | Explicitly disable layers |
 | `none` | Explicitly disable layers (alternative) |
@@ -31,7 +33,7 @@ Add the `layerset` parameter to any file link to display annotations:
 ### Examples
 
 ```wikitext
-<!-- Enable the current layers -->
+<!-- Display this page's Default layer set -->
 [[File:Diagram.png|layerset=on]]
 
 <!-- Explicit default set -->
@@ -92,11 +94,30 @@ Human heart with anatomical labels]]
 
 ---
 
-## Link Behavior (layerslink)
+## PDF page selection
+
+Use MediaWiki's native `page=` option with the same visible set name:
+
+```wikitext
+[[File:Manual.pdf|page=1|400px|layerset=001]]
+[[File:Manual.pdf|page=2|400px|layerset=001]]
+```
+
+Page 2 selects its own member of `001`, never page 1's stored layers. Empty
+members are not replacements for other members. Historical views use the saved
+source version; a new upload must not silently replace it.
+
+Use one unambiguous layer selector per occurrence. Conflicting duplicate
+`layerset`/`layers` options are refused in the native Default path. A pipe
+inside a linked caption is not another top-level selector. Templates and
+galleries retain occurrence-specific names and native PDF page options. The
+owning page is the page whose revision is being rendered, not a global file set.
+
+## Legacy host-link options (layerslink)
 
 *New in v1.2.0, improved in v1.2.5*
 
-Control what happens when users click on layered images with the `layerslink` parameter:
+The following options belong to the retained host-link compatibility path. They are separate from the page-owned **Edit layers** and **View full size** overlay buttons. Use the overlay for the exact owning-page entry; do not assume a legacy File action selects another article's set. The table describes the legacy link modes, not new page-owned admission authority.
 
 > **Note:** `layerslink` must be used together with `layerset`. It controls the click behavior for images that have layers enabled. Without `layerset=on` or `layerset=<setname>`, the `layerslink` parameter has no effect.
 
@@ -170,11 +191,11 @@ Click to add your annotations]]
 
 ---
 
-## Deep Linking to Editor
+## Deep linking to the editor
 
-*New in v1.2.0*
+For page-owned content, use the generated **Edit layers** overlay URL. It retains the owner, exact admitted embed and return destination. Do not construct an article editor URL by substituting a File title.
 
-You can link directly to the editor with a specific layer set pre-loaded using URL parameters:
+The following older File action remains a compatibility entry point. After completion it selects only content owned by that File page, or shows its available entries; it does not select another article's set:
 
 ```
 /wiki/File:Example.jpg?action=editlayers&setname=anatomy
@@ -189,7 +210,7 @@ Supported URL parameters:
 
 ## File Pages
 
-On **File:** pages, layers are **NOT automatically displayed**. You must explicitly enable them.
+An explicit layered embed on a **File:** description belongs to that File page after completion. It is independent of the same file embedded on an article. The old File-page edit tab is retired; use the embed overlay. Existing MediaWiki file links and descriptions remain. These optional headings are author-written examples, not headings automatically added by Layers.
 
 ### Display layers on a File page
 
@@ -240,7 +261,7 @@ Usage:
 {{LayeredImage|Heart.png|size=500px|set=anatomy|caption=Human heart}}
 ```
 
-### Gallery with Layers
+### Gallery with layers
 
 ```wikitext
 <gallery mode="packed" heights=200>
@@ -274,20 +295,20 @@ Layers does not provide a user-name parser function or per-reader access rules f
 
 ### Non-existent Sets
 
-If a named set doesn't exist, **no layers are displayed** (silent failure). The image shows without annotations.
+An absent named set must not substitute another saved set. An eligible authorized editor can use its creation overlay to open an empty set. Readers do not gain editing permission. Source, owner or revision failures may instead make the view unavailable.
 
 ```wikitext
-<!-- If "nonexistent" set doesn't exist, shows image only -->
+<!-- Select this name only; do not substitute another saved set -->
 [[File:Diagram.png|layerset=nonexistent]]
 ```
 
-### Case Sensitivity
+### Name comparison
 
-Set names are **case-sensitive**:
+Page-owned names compare without case differences; spaces and underscores normalize alike. Stored spelling remains the visible label. These select the same name within the same owner/file scope:
 
 ```wikitext
-[[File:Diagram.png|layerset=Anatomy]]   <!-- Different from -->
-[[File:Diagram.png|layerset=anatomy]]   <!-- this -->
+[[File:Diagram.png|layerset=Anatomy]]
+[[File:Diagram.png|layerset=anatomy]]
 ```
 
 ### Parameter Order
@@ -303,7 +324,7 @@ The `layerset` parameter can appear anywhere in the parameter list:
 
 ---
 
-## Slide Mode (v1.5.22+)
+## Slide mode
 
 Create standalone graphics without a base image using the `{{#Slide:}}` parser function:
 
@@ -311,9 +332,12 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 {{#Slide: MySlideName}}
 ```
 
-**Like images, slides support multiple named layer sets** for different annotation variations.
+After completion the first argument selects this page's saved slide name. Migrated variants may have names such as `MyDiagram (english)`; use the actual saved name, without an owner ID. See [Slide Mode](Slide-Mode.md) for the current workflow and the separately labelled legacy options.
 
-### Slide Parameters
+The following option table/examples describe the older shared-slide model.
+They do not override the saved native slide name or geometry after completion.
+
+### Legacy shared-slide parameters
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
@@ -368,12 +392,12 @@ The `layers=` parameter is still fully supported for backwards compatibility:
 | Wikitext | Result |
 |----------|--------|
 | `[[File:X.png]]` | Image only, no layers |
-| `[[File:X.png\|layerset=on]]` | Image + current layers |
-| `[[File:X.png\|layerset=default]]` | Image + the set named `default` |
+| `[[File:X.png\|layerset=on]]` | Image + this owner/file's `Default` layers after completion |
+| `[[File:X.png\|layerset=default]]` | Image + the set whose normalized name is `default` |
 | `[[File:X.png\|layerset=anatomy]]` | Image + "anatomy" layers |
 | `[[File:X.png\|layerset=off]]` | Image only, explicitly no layers |
 | `[[File:X.png\|layerset=none]]` | Image only, explicitly no layers |
-| `[[File:X.png\|layers=on]]` | Image + current layers (backwards compatible) |
+| `[[File:X.png\|layers=on]]` | Same Default selection after completion (older spelling) |
 
 ---
 
@@ -381,15 +405,15 @@ The `layers=` parameter is still fully supported for backwards compatibility:
 
 ### Layers not showing
 
-1. **Check the set exists** — Open the File: page and verify annotations are saved
-2. **Check the set name** — Names are case-sensitive
-3. **Check permissions** — User needs read access to the file
+1. **Check completion** — Verify the migration-completion state, including on a fresh wiki.
+2. **Check this owner and name** — Reopen the same page's overlay; a same-named set on another page is independent.
+3. **Check visibility** — The owner, exact revision and source must be readable. Verify the requested PDF page.
 
 ### Wrong layers showing
 
 1. **Verify set name** — Ensure you're using the correct named set
 2. **Check for typos** — `layerset=anotomy` ≠ `layerset=anatomy`
-3. **Clear cache** — Purge the page: add `?action=purge` to URL
+3. **Check saved revision/source** — Reuploads do not change the pinned source of old content. Retain any unsaved work and local drafts when investigating; do not clear browser storage.
 
 ### Layers parameter ignored
 

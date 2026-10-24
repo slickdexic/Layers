@@ -1,287 +1,114 @@
-# Named Layer Sets
+# Named layer sets
 
-> **Current guidance — September 6, 2026:** Sets use Layers-specific retained revisions. They do not lock content to an embedding article revision. Use descriptive names; intent-like names and some default-name paths still have open inconsistencies. Deletion/renaming requires creator ownership or `layers-admin`, with every affected PDF page checked.
+Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
+older shared storage. Follow [the upgrade instructions](../docs/UPGRADING.md)
+before relying on post-migration behavior. Milestone 1 acceptance remains open.
 
-Organize multiple annotation sets per image for different purposes, audiences, or contributors.
+## Ownership and names
 
----
+A layer set belongs to **one wiki page and one file or slide**. Its name alone
+is not its identity. Two pages may each have a set named `ABC` for the same file;
+editing one does not change the other. Two different files on one page may also
+each have an independent set named `ABC`.
 
-## What Are Named Layer Sets?
-
-Named layer sets allow you to maintain **multiple independent annotation sets** for a single image. Each set:
-
-- Has its own collection of layers
-- Maintains its own revision history
-- Can be displayed independently via wikitext
-- Has independent background visibility settings
-
----
-
-## Use Cases
-
-| Use Case | Example Sets |
-|----------|--------------|
-| **Educational** | `anatomy`, `labels`, `quiz-answers` |
-| **Documentation** | `overview`, `detailed`, `troubleshooting` |
-| **Multilingual** | `english`, `spanish`, `french` |
-| **Review Process** | `draft`, `reviewed`, `approved` |
-| **Different Audiences** | `beginner`, `advanced`, `expert` |
-
----
-
-## Creating a Named Set
-
-### From the Editor
-
-1. Open the Layers editor on any File: page
-2. Click the **layer set dropdown** (shows current set name)
-3. Click **"Create New Set..."**
-4. Enter a name (letters, numbers, hyphens, underscores only)
-5. Click **Create**
-
-### Naming Rules
-
-- **Allowed characters:** `a-z`, `A-Z`, `0-9`, `-`, `_`
-- **Length:** 1-255 characters
-- **Case-sensitive:** `Labels` and `labels` are different sets
-- **Nothing is reserved:** any name is allowed, including `001`, `default`, or `Whatever-I-Want`. A few generic wikitext values (`on`, `off`, `true`, `false`, `all`, `none`, `0`, `1`) are read as show/hide intents rather than names, so avoid naming a set after one of those.
-
-### Examples
-
-| Valid | Invalid | Reason |
-|-------|---------|--------|
-| `anatomy-labels` | `anatomy labels` | No spaces |
-| `version_2` | `version 2.0` | No dots or spaces |
-| `Tutorial_EN` | `Tutorial (EN)` | No parentheses |
-| `step1` | `step#1` | No special characters |
-
----
-
-## Switching Between Sets
-
-### In the Editor
-
-1. Click the layer set dropdown
-2. Select the set you want to edit
-3. The canvas updates to show that set's layers
-
-### Revision History Per Set
-
-Each named set maintains its own revision history:
-- Up to 50 revisions per set (configurable)
-- Independent undo/redo within each set
-- Revision list shows who made changes and when
-
----
-
-## Displaying Named Sets in Wikitext
-
-### Basic Syntax
+A PDF has one visible layer-set name across its pages. For example, `001` on
+`Manual.pdf` remains `001` on pages 1 through 99. The PDF page number selects an
+internal member; it does not add a suffix to the name shown to the user.
 
 ```wikitext
-[[File:Diagram.png|layerset=setname]]
+[[File:Diagram.png|thumb|400px|layerset=ABC|Labels for this page]]
+[[File:Other.png|thumb|400px|layerset=ABC|An independent layer set]]
+[[File:Manual.pdf|page=1|400px|layerset=001]]
+[[File:Manual.pdf|page=2|400px|layerset=001]]
 ```
 
-> **Note:** `layers=` is also supported for backwards compatibility.
-
-### Examples
-
-```wikitext
-<!-- The image's current set, whatever it is named -->
-[[File:Heart.png|layerset=on]]
-
-<!-- Named sets -->
-[[File:Heart.png|layerset=anatomy]]
-[[File:Heart.png|layerset=blood-flow]]
-[[File:Heart.png|layerset=quiz]]
-[[File:Heart.png|layerset=001]]
-
-<!-- Disable layers -->
-[[File:Heart.png|layerset=off]]
-[[File:Heart.png|layerset=none]]
-```
-
-### With Other Parameters
-
-Named sets work with all standard image parameters:
-
-```wikitext
-[[File:Diagram.png|thumb|300px|left|layerset=anatomy|Anatomical diagram with labels]]
-```
-
----
-
-## Managing Named Sets
-
-### Viewing All Sets
-
-In the editor, click the layer set dropdown to see:
-- All named sets for this image
-- Revision count per set
-- Last modified date
-
-### Renaming a Set
-
-1. Click the layer set dropdown
-2. Click **"Rename Set..."** next to the set
-3. Enter the new name
-4. Click **Rename**
-
-### Deleting a Set
-
-1. Click the layer set dropdown
-2. Click **"Delete Set..."** next to the set
-3. Confirm deletion
-
-> **Warning:** Deleting a set removes ALL revisions permanently. This cannot be undone.
-
-### Permissions
-
-| Action | Required Right |
-|--------|----------------|
-| Create set | `editlayers` |
-| Edit set | `editlayers` |
-| Delete set | `editlayers` plus (owner OR `layers-admin`); file-backed sets also require File-page edit permission |
-| Rename set | `editlayers` plus (owner OR `layers-admin`); file-backed sets also require File-page edit permission |
-
----
-
-## Sets With No Name Given
-
-The intended current-set behavior is described below. Some default-name paths remain inconsistent (R6.17); integrations should supply an explicit set name:
-
-- When you save without choosing a name, the image's most recently saved set is
-  reused — whatever it is called
-- If the image has no sets at all, a first one is seeded from
-  `$wgLayersDefaultSetName` (`default` out of the box), because a row has to be
-  stored under some name
-- `layerset=on` loads the image's most recently saved set, so an image whose
-  only set is called `001` works exactly like one whose only set is called
-  `default`
-- Any set can be renamed or deleted, including one named `default`
-
----
-
-## Background Settings Per Set
-
-Each named set remembers its own background settings:
-
-- **Background visibility** — Show/hide the original image
-- **Background opacity** — Transparency level (0-100%)
-
-This allows different sets to have different viewing preferences.
-
----
-
-## Limits
-
-Default limits (configurable in `LocalSettings.php`):
-
-| Limit | Default | Config Variable |
-|-------|---------|-----------------|
-| Max sets per image | 15 | `$wgLayersMaxNamedSets` |
-| Max revisions per set | 50 | `$wgLayersMaxRevisionsPerSet` |
-| Max layers per set | 100 | `$wgLayersMaxLayerCount` |
-
-### Adjusting Limits
-
-```php
-// Allow more named sets per image
-$wgLayersMaxNamedSets = 25;
-
-// Keep more revision history
-$wgLayersMaxRevisionsPerSet = 100;
-```
-
----
-
-## API Access
-
-Named sets are accessible via the MediaWiki Action API:
-
-### Get Layer Set
-
-```
-GET /api.php?action=layersinfo&filename=File:Example.jpg&setname=anatomy
-```
-
-### Save to Named Set
-
-```
-POST /api.php?action=layerssave
-  filename=File:Example.jpg
-  setname=anatomy
-  data={"layers":[]}
-  token=CSRF_TOKEN
-```
-
-### Delete Named Set
-
-```
-POST /api.php?action=layersdelete
-  filename=File:Example.jpg
-  setname=anatomy
-  token=CSRF_TOKEN
-```
-
-### Rename Named Set
-
-```
-POST /api.php?action=layersrename
-  filename=File:Example.jpg
-  oldname=anatomy
-  newname=anatomical-labels
-  token=CSRF_TOKEN
-```
-
-See [[API Reference]] for complete documentation.
-
----
-
-## Migration Notes
-
-### Existing Layer Sets
-
-When upgrading from a version without named sets:
-- Existing layers are backfilled under a placeholder name so they stay addressable
-- No data is lost
-- Existing wikitext using `layers=on` continues to work
-
----
-
-## Tips
-
-### Organize by Purpose
-
-Create sets based on what they show:
-- `measurements` — Dimension lines
-- `callouts` — Explanatory text
-- `highlights` — Color overlays
-
-### Use Descriptive Names
-
-Good: `blood-circulation`, `electrical-system`, `anatomical-labels`
-Bad: `set1`, `new`, `test`
-
-### Plan Before Creating
-
-Think about what sets you'll need before creating them. While sets can be deleted, planning ahead saves time.
-
-### Document Your Sets
-
-Consider adding a note on the File: page describing available sets:
-
-```wikitext
-== Available Layer Sets ==
-* '''overview''' — General annotations
-* '''anatomy''' — Anatomical labels
-* '''circulation''' — Blood flow diagram
-```
-
----
-
-## See Also
-
-- [[Wikitext Syntax]] — Complete wikitext reference
-- [[API Reference]] — Programmatic access
-- [[Configuration Reference]] — Limit settings
+Write the name only. Do not put owner page IDs or internal member identifiers in
+wikitext. Importing from another page creates local work; it does not share future
+edits between source and destination.
+
+## Create, edit and select
+
+1. Save the image, PDF or slide embed on its owning page.
+2. Use its **Edit layers** overlay, available on hover, focus or tap when the
+   user may edit. **View full size** opens the viewer.
+3. Edit and **Save**, then reopen the same embed on the owning page to check it.
+
+An eligible missing named set can open empty for an authorized editor. It must
+not display a different saved set as a substitute. Readers gain no editing
+rights from a missing set or a visible embed.
+
+Use an explicit name to select a particular set. After migration completion,
+`layerset=on` selects `Default`; it does not mean the most recently saved set.
+`layerset=off` and `layerset=none` suppress layers. A name that is also a display
+command can use a literal-name selector, such as `layerset=name:on` for a set
+named `on`. Prefer descriptive names that avoid that ambiguity.
+
+## Naming rules
+
+Page-owned names allow up to 255 Unicode characters after trimming and
+collapsing whitespace. Spaces, dots, parentheses, hyphens and underscores are
+allowed. Control characters and `| [ ] { } < > :` are not.
+
+Names compare without case differences; runs of spaces and underscores compare
+alike. `Safety Labels`, `safety_labels` and `SAFETY LABELS` identify the same name
+within one owner/file scope. Stored spelling remains the display label. Do not
+use capitalization alone to create variants.
+
+| Example | Valid page-owned name? |
+| --- | --- |
+| `001` | Yes; numeric names are names, not row IDs. |
+| `Safety Labels` | Yes. |
+| `Tutorial (EN)` | Yes. |
+| `version 2.0` | Yes. |
+| `Chapter:One` | No; contains a colon. |
+| `Labels` followed by a vertical bar | No; contains an option separator. |
+
+Migration may allocate a numbered name to avoid a collision in the same scope.
+This is different from numbering individual PDF pages. Check the completed
+migration report and saved page before changing existing embeds.
+
+## Native Save and history
+
+Save publishes the owner's complete layer snapshot as one native page revision,
+preserving unrelated sets, including every member of an edited PDF set. It is
+not a series of independent legacy page saves.
+
+Use the **owning page's history** for earlier saved content and the available
+comparison/restoration workflows. Local draft recovery is separate: restoring
+a draft does not create a page revision until Save succeeds.
+
+Renaming or removing a page-owned set changes the current snapshot. Earlier
+readable native revisions retain their content. Legacy warnings that deletion
+permanently removes all set revisions do not describe native history. Ordinary
+revision visibility, suppression and restoration rules still apply. Refused or
+stale Saves must preserve unsaved work.
+
+## Permissions and limits
+
+Editing requires read/edit authority on the **owning page**, `editlayers`,
+readable sources and fresh revision/source checks. File-page edit permission
+alone does not authorize another page's sets. See [Permissions](Permissions.md).
+
+Native document limits are 2 MiB serialized content, 100 members, 100 layers per
+member and 1,000 total layers. PDF members count toward these limits while
+sharing one visible name. Legacy `LayersMaxNamedSets` and
+`LayersMaxRevisionsPerSet` settings do not raise native schema limits or prune
+native history. See [Configuration Reference](Configuration-Reference.md).
+
+## Older shared sets and APIs
+
+Before completion, shared sets use Layers-specific storage and retained
+revisions. Their selection, stricter naming, creator-based rename/delete and
+configured retention differ from the native model. Legacy shared `on` selection
+uses recency, and legacy deletion can remove retained revisions.
+
+After completion, those shared sets remain read-only. Do not use `layerssave`,
+`layersrename` or `layersdelete` to update page-owned sets. Use the owner-page
+editor; integrations must follow the [API guide](../docs/PAGE_OWNED_API_GUIDE.md).
+
+## See also
+
+- [Wikitext Syntax](Wikitext-Syntax.md)
+- [Slide Mode](Slide-Mode.md)
+- [Quick Start](Quick-Start-Guide.md)
+- [Upgrade and recovery](../docs/UPGRADING.md)

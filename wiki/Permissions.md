@@ -1,15 +1,19 @@
 # Permissions
 
-Reviewed September 6, 2026. Rights come from `extension.json`; write checks live in the API modules and shared helpers.
+Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
+legacy shared storage. [Migration completion](../docs/UPGRADING.md) changes the
+storage and editing path; it does not grant additional rights.
 
 ## Rights and defaults
 
 | Right | Purpose | Default groups |
 | --- | --- | --- |
-| `editlayers` | Create/edit annotation sets and slides | Logged-in users and sysops |
-| `layers-admin` | Delete/rename sets without being their creator | Sysops |
+| `editlayers` | Create/edit layers and slides, subject to owner/source checks | Logged-in users and sysops |
+| `layers-admin` | Override creator checks on legacy shared rename/delete | Sysops |
 
-Anonymous users do not receive `editlayers` by default. Ordinary MediaWiki `delete` is **not** the Layers administrator override.
+Anonymous users do not receive `editlayers` by default. Ordinary MediaWiki
+`delete` is not the legacy Layers administrator override. `layers-admin` does
+not bypass native owner protection or revision/source visibility checks.
 
 ```php
 wfLoadExtension( 'Layers' );
@@ -18,26 +22,60 @@ $wgGroupPermissions['layer-editors']['editlayers'] = true;
 $wgGroupPermissions['sysop']['layers-admin'] = true;
 ```
 
-Assign custom groups through `Special:UserRights`. MediaWiki combines granted rights across groups; removing one group's grant does not remove a grant from another group.
+Assign custom groups through `Special:UserRights`. Grants across groups combine;
+removing one group's grant does not remove another group's grant.
 
-## Image and PDF writes
+## Page-owned images, PDFs and slides
 
-Creating/saving requires `editlayers`, source read access and ordinary edit authority on the File page. Page protection, blocks and rate limits still apply. POST requests require a CSRF token.
+Editing requires ordinary read/edit authority on the **owning page** and
+`editlayers`. Creating an owner also requires the applicable native page creation
+right. Blocks, page protection and rate limits still apply. Save is a
+CSRF-protected POST and checks the current owner revision and source again.
 
-Deleting or renaming additionally requires the original creator or `layers-admin`. For a document-wide operation (`allpages`), every affected PDF page's set must be authorized. Owning the current page's set does not authorize another creator's set on another page.
+Reading requires access to the owner, its exact requested revision and the
+source. Suppression or unavailable sources can prevent historical viewing.
+Access must be refused rather than silently using another revision, file
+version or PDF page.
 
-Newly saved revisions carry server-generated creator metadata so pruning does not transfer ownership to a later editor. If an old set's creator revision was already pruned and no metadata survives, deletion/renaming requires `layers-admin`; editing remains possible. The server never accepts a client-supplied owner assignment.
+A File page and an article embedding that file are different owners. File-page
+edit permission does not authorize the article's sets. Slides also belong to
+the page containing their saved snapshot and follow its native edit policy.
 
-## Standalone slides
-
-Slides use Layers-specific data identities and global Layers/read checks. They are not yet bound to an owning SOP article's revision or protection policy. Do not assume protecting the page containing `{{#Slide:...}}` protects the underlying shared slide. Page-owned publication is planned; see [[Current Status]].
+Import rechecks target edit authority and exact source visibility. A listing,
+preview or earlier read is not lasting permission to apply or save. Internal
+owner IDs are transport identity, not wikitext or authorization tokens.
 
 ## Visibility is not authorization
 
-`noedit`, `editable=no`, a hidden toolbar and a locked drawing layer are interface controls, not access controls. A user with API authorization may still edit. Read restrictions also need consideration in cached content, exports and slide listings; test any third-party access-control extension with your deployment.
+`noedit`, legacy `editable=no`, a hidden toolbar and a locked layer control the
+interface. They do not replace server checks. Overlays offer editing only when
+authorized; hiding a button is not a security boundary.
+
+Test third-party access-control extensions against the intended deployment,
+including cached output, historical views, source listings and exports. Current
+binding reads can use the configured anonymous cache policy; control, historical
+and full-source responses have stricter policies. See the
+[API guide](../docs/PAGE_OWNED_API_GUIDE.md).
 
 ## History and exports
 
-The legacy `LayersTrackChangesInRecentChanges` setting does not guarantee an audit trail. Layer-set revisions are separate from article history.
+After completion, layer changes are captured in native owner-page history.
+`LayersTrackChangesInRecentChanges` and legacy per-set revision caps do not
+control that history. Draft recovery remains local until Save succeeds. Native
+history operations retain their MediaWiki rights and visibility rules.
 
-Server PDF export requires a CSRF-protected POST; downloading an existing export checks source access through `Special:LayersExport`. Keep export files outside the document root. See [[Configuration Reference]] and [[Current Status]].
+The full-size viewer exports admitted saved content, rechecking access and exact
+sources. Images/slides offer PNG first and a PDF choice; PDFs offer PDF only.
+An old viewer descriptor or delivery URL is not permanent access.
+
+## Legacy shared storage
+
+Before cutover, file saves require `editlayers`, source access and File-page
+edit authority; shared slides lack the native owner binding. Rename/delete also
+require creator ownership or `layers-admin`, checked for every affected PDF
+page. The server generates creator metadata; clients cannot assign ownership.
+Unknown old creator identity requires the override for destructive operations.
+
+Completion makes shared writes read-only. The retained `layerspdfexport` /
+`Special:LayersExport` server path reads legacy content and is separate from
+page-owned viewer export. Keep its configured cache outside the document root.

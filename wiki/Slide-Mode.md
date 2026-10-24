@@ -1,6 +1,47 @@
-# Slide Mode
+# Slide mode
 
-> **Current guidance — September 6, 2026:** Slides are standalone canvas content, not File attachments. Their Layers revisions are separate from the article embedding them; article revision capture, full-text indexing and Cargo annotation rows remain planned. `Special:Slides` searches names, not instruction text.
+Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
+shared slides. Follow [UPGRADING.md](../docs/UPGRADING.md) to complete the native
+migration. Milestone 1 acceptance remains open.
+
+## Page-owned slides after completion
+
+A slide is a standalone canvas owned by the wiki page whose saved snapshot
+contains it. It needs no uploaded base image. Equal slide names on different
+pages are independent; editing one does not update another.
+
+```wikitext
+{{#Slide: Safety overview}}
+{{#Slide: Safety overview | noedit}}
+```
+
+Save the embed on its owning page, then use **Edit layers** on hover, focus or
+tap. Save publishes a native owner-page revision. Reopen from the same page;
+inspect earlier saved content through that page's history. **View full size**
+provides viewing, Print, Download PNG first and a separate Download PDF choice.
+No technical owner/revision heading is added above an ordinary slide.
+
+The first argument names the saved page-owned slide. Migration can turn shared
+variants into names such as `Safety overview (english)`; use the actual saved
+name. Do not add page IDs or internal binding tokens to author wikitext.
+Saved canvas geometry and background come from the exact snapshot, rather than
+being replaced by a legacy shared set. Existing size/noedit syntax remains part
+of the protected interface; qualify its result on the intended candidate page.
+`noedit` suppresses the edit overlay and does not change server authorization.
+
+Creating/editing requires owner-page read/edit authority and `editlayers`,
+with fresh source/base checks. See [Permissions](Permissions.md) and
+[Named Layer Sets](Named-Layer-Sets.md). A shared `Special:EditSlide` URL is not
+an alternate route to another page's native slide. After completion the old
+shared storage is read-only.
+
+## Legacy shared-slide reference
+
+The remaining sections describe the older shared model, its management pages,
+parameters, API examples and retained history. They do **not** override the
+page-owned workflow above. The old per-set revision cap does not prune native
+owner history. Search/Cargo release acceptance belongs to later milestones;
+`Special:Slides` name listing is not proof of instruction-text indexing.
 
 *New in v1.5.22*
 
