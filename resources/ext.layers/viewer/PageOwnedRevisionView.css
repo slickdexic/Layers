@@ -14,6 +14,12 @@
 	position: relative;
 }
 
+/* Keep the existing overlay anchored to the slide canvas, not the page width. */
+.layers-bound-slide {
+	width: fit-content;
+	max-width: 100%;
+}
+
 .layers-bound-controls:focus-within > .layers-viewer-overlay {
 	opacity: 1;
 	visibility: visible;
