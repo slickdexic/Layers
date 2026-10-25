@@ -17,6 +17,8 @@ search, Cargo and link milestones do not delay this release.
   Preserve test patterns, assertions and coverage settings, and compare the
   complete suite list with the preceding run. Temporary evidence must not make
   ordinary test discovery scan copied repositories.
+- Include the [portable native regression package](NATIVE_REGRESSION_TESTING.md)
+  and its maintained helper/media fixtures; native coverage is separate from CI.
 - Preserve maintained test fixtures, committed runtime assets, fonts, licenses
   and vendored PDF support. A generated file can still be a required asset;
   classify it through its callers before removing it.

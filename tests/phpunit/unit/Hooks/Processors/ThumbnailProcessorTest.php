@@ -47,6 +47,52 @@ class ThumbnailProcessorTest extends TestCase {
 	}
 
 	/**
+	 * @dataProvider provideNativeDescriptionPages
+	 * @param string $href
+	 * @param int $expected
+	 * @covers ::sourcePage
+	 */
+	public function testNativeDescriptionLinkSuppliesEffectivePage( string $href, int $expected ): void {
+		$thumbnail = $this->getMockBuilder( \stdClass::class )->addMethods( [ 'getDescLinkAttribs' ] )->getMock();
+		$thumbnail->method( 'getDescLinkAttribs' )->willReturn( [ 'href' => $href ] );
+		$this->assertSame( $expected, ThumbnailProcessor::sourcePage( $thumbnail ) );
+	}
+
+	/** @return array */
+	public static function provideNativeDescriptionPages(): array {
+		return [
+			'PDF second page' => [ '/wiki/File:Doc.pdf?page=2', 2 ],
+			'Other query fields' => [ '/w/index.php?title=File%3ADoc.pdf&page=3&oldid=15', 3 ],
+			'Encoded second page' => [ '/wiki/File:Doc.pdf?page=%32', 2 ],
+			'Fragment is not a page query' => [ '/wiki/File:Doc.pdf#page=2', 1 ],
+			'Empty page' => [ '/wiki/File:Doc.pdf?page=', 1 ],
+			'Invalid page' => [ '/wiki/File:Doc.pdf?page=oops', 1 ],
+			'No page' => [ '/wiki/File:Doc.pdf', 1 ],
+			'Zero page' => [ '/wiki/File:Doc.pdf?page=0', 1 ],
+			'Negative page' => [ '/wiki/File:Doc.pdf?page=-2', 1 ]
+		];
+	}
+
+	/** @covers ::sourcePage */
+	public function testTransformParamsRetainPrecedenceOverDescriptionLink(): void {
+		$cases = [ [ [ 'page' => 3 ], 3 ], [ [], 1 ], [ null, 1 ], [ [ 'page' => 0 ], 1 ],
+			[ [ 'page' => 2 ], 2 ], [ [ 'page' => 'oops' ], 1 ], [ [ 'page' => -1 ], 1 ] ];
+		foreach ( $cases as [ $params, $expected ] ) {
+			$thumbnail = $this->getMockBuilder( \stdClass::class )
+				->addMethods( [ 'getParams', 'getDescLinkAttribs' ] )->getMock();
+			$thumbnail->method( 'getParams' )->willReturn( $params );
+			$thumbnail->expects( $this->never() )->method( 'getDescLinkAttribs' );
+			$this->assertSame( $expected, ThumbnailProcessor::sourcePage( $thumbnail ) );
+		}
+	}
+
+	/** @covers ::sourcePage */
+	public function testSourcePageDefaultsWithoutThumbnailPageApi(): void {
+		$this->assertSame( 1, ThumbnailProcessor::sourcePage( null ) );
+		$this->assertSame( 1, ThumbnailProcessor::sourcePage( new \stdClass() ) );
+	}
+
+	/**
 	 * @covers ::resetPageHasLayers
 	 */
 	public function testResetPageHasLayers(): void {

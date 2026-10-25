@@ -25,6 +25,10 @@ Database doubles establish call scope; they do not establish live transaction/co
 
 ## Core-backed revision tests
 
+For current disposable-wiki setup, portable release-package coverage and the
+standalone/native distinction, use the [native regression guide](https://github.com/slickdexic/Layers/blob/main/docs/NATIVE_REGRESSION_TESTING.md).
+The checkpoint below is dated evidence, not the current release qualification.
+
 The internal page-history persistence proof has a separate suite using MediaWiki's real integration harness and isolated test tables. It does not run under the extension's standalone stub bootstrap. Use a disposable development wiki with core test dependencies and set `MW_INSTALL_PATH`:
 
 ```sh

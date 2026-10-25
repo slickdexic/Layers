@@ -25,6 +25,8 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	private ?\MediaWiki\Api\ApiMain $apiMain = null;
 	/** @var callable|null */
 	private $boundReader = null;
+	/** @var callable|null */
+	private $viewerReader = null;
 	private int $bindingMaxAge = 0;
 
 	protected function setUp(): void {
@@ -40,7 +42,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 					new SourceVersionResolver( $s->getRepoGroup()->getLocalRepo(), $s->getTitleFactory() ) );
 				return new ApiLayersRead( $main, $name, $reader, $s->getTitleFactory(),
 					PageOwnedScope::newFromServices( $s, $this->ownerKeys ), $this->boundReader,
-					$this->bindingMaxAge );
+					$this->bindingMaxAge, $this->viewerReader );
 			} ]
 		] ) );
 	}
@@ -103,6 +105,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	}
 
 	public function testAnonymousReadOfCurrentDrawingsIsBrieflyCacheable(): void {
+		$this->setGroupPermissions( '*', 'read', true );
 		[ $title, $id, $user ] = $this->publish();
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
 		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
@@ -128,6 +131,90 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( 'anon-public-user-private', $read( $newId )[1] );
 		$this->bindingMaxAge = 0;
 		$this->assertSame( 'private', $read( $newId )[1] );
+	}
+
+	public function testViewerAndControlsAlwaysStayPrivateAndUseCurrentEditAdmission(): void {
+		$this->setGroupPermissions( '*', 'read', true );
+		[ $title, $id, $user ] = $this->publish();
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
+		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
+		$this->viewerReader = [ $pilot, 'prepareFullSizeViewer' ];
+		$this->bindingMaxAge = 300;
+		$binding = 'v1:' . $title->getArticleID() . ':presentation';
+		$request = [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(), 'revid' => $id,
+			'binding' => $binding, 'maxage' => 3600, 'smaxage' => 3600 ];
+		foreach ( [ 'viewer', 'controls' ] as $mode ) {
+			$result = $this->doApiRequest( $request + [ $mode => true ], null, false, $user )[0]['layersread'];
+			$bundle = $mode === 'viewer' ? $result['viewer'] : $result['bindings'][$binding];
+			$this->assertIsString( $bundle['editUrl'] );
+			$this->assertStringContainsString( 'surface=presentation', $bundle['editUrl'] );
+			$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+			$this->assertSame( [ 'max-age' => 0, 's-maxage' => 0 ],
+				TestingAccessWrapper::newFromObject( $this->apiMain )->mCacheControl );
+		}
+		$anon = $this->getServiceContainer()->getUserFactory()->newAnonymous();
+		$read = $this->doApiRequest( $request + [ 'viewer' => true ], null, false, $anon )[0]['layersread']['viewer'];
+		$this->assertNull( $read['editUrl'] );
+		$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+		$this->assertSame( $id, $read['revisionId'] );
+		TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $user, $id,
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Later revision',
+			new WikitextContent( 'Later viewer text' ) );
+		$old = $this->doApiRequest( $request + [ 'viewer' => true ], null, false, $user )[0]['layersread']['viewer'];
+		$this->assertNull( $old['editUrl'] );
+		$this->assertSame( $id, $old['revisionId'] );
+	}
+
+	public function testViewerRejectsMultipleOrMissingBindingsPrivately(): void {
+		[ $title, $id, $user ] = $this->publish();
+		$this->viewerReader = static function (): array {
+			throw new \LogicException( 'Invalid selection reached viewer reader' );
+		};
+		foreach ( [ null, 'v1:1:a|v1:1:b' ] as $binding ) {
+			try {
+				$this->doApiRequest( [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+					'revid' => $id, 'viewer' => true, 'binding' => $binding, 'smaxage' => 3600 ], null, false, $user );
+				$this->fail( 'Invalid viewer selection accepted' );
+			} catch ( ApiUsageException $e ) {
+				$this->assertTrue( self::apiExceptionHasCode( $e, 'layers-revision-unavailable' ) );
+				$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+			}
+		}
+	}
+
+	public function testEditPreparationCannotReturnViewerDataAfterReadRevocation(): void {
+		[ $title, $id, $user ] = $this->publish();
+		$pilot = new class( $this->getServiceContainer(), $this->ownerKeys ) extends PageOwnedPilot {
+			/** @var callable */
+			public $afterPrepare;
+
+			public function prepareEditor( string $ownerText, int $revisionId, string $surfaceId,
+				\MediaWiki\Permissions\Authority $authority, ?int $targetPage = null
+			): array {
+				$result = parent::prepareEditor( $ownerText, $revisionId, $surfaceId, $authority, $targetPage );
+				( $this->afterPrepare )();
+				return $result;
+			}
+		};
+		$pilot->afterPrepare = function () use ( $id ): void {
+			$this->getDb()->newUpdateQueryBuilder()->update( 'revision' )
+				->set( [ 'rev_deleted' => \MediaWiki\Revision\RevisionRecord::DELETED_TEXT ] )
+				->where( [ 'rev_id' => $id ] )->caller( 'J114J edit preparation revocation fixture' )->execute();
+		};
+		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
+		$this->viewerReader = [ $pilot, 'prepareFullSizeViewer' ];
+		$request = [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(), 'revid' => $id,
+			'binding' => 'v1:' . $title->getArticleID() . ':presentation' ];
+		try {
+			$result = $this->doApiRequest( $request + [ 'controls' => true ], null, false, $user )[0]['layersread'];
+			$this->assertSame( [], $result['bindings'] );
+			$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+		} finally {
+			$this->getDb()->newUpdateQueryBuilder()->update( 'revision' )->set( [ 'rev_deleted' => 0 ] )
+				->where( [ 'rev_id' => $id ] )->caller( __METHOD__ )->execute();
+		}
+		$this->expectApiErrorCode( 'layers-revision-unavailable' );
+		$this->doApiRequest( $request + [ 'viewer' => true ], null, false, $user );
 	}
 
 	public function testHiddenHistoricalContentIsUnavailable(): void {

@@ -42,6 +42,7 @@ class MigrationUndoTest extends \MediaWikiIntegrationTestCase {
 		$this->saveSlide( 'Undo_lonely', 'default', 'Lonely' );
 		$created = $slides->commit( $slides->plan( 'Undo_lonely' ), $this->actor );
 		$copies->commit( $copies->plan( $created, $this->actor ), $this->actor );
+		$this->runDeferredUpdates();
 
 		$undo = $this->pilot->newMigrationUndo();
 		$this->assertEqualsCanonicalizing(
@@ -79,6 +80,7 @@ class MigrationUndoTest extends \MediaWikiIntegrationTestCase {
 		$again = $copies->plan( $page->getArticleID(), $this->actor );
 		$this->assertCount( 2, $again['copies'] );
 		$copies->commit( $again, $this->actor );
+		$this->runDeferredUpdates();
 		$this->assertSame( $revisionId, $undo->plan( $page->getArticleID() )['baseRevisionId'] );
 	}
 
