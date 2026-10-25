@@ -19,6 +19,8 @@ search, Cargo and link milestones do not delay this release.
   ordinary test discovery scan copied repositories.
 - Include the [portable native regression package](NATIVE_REGRESSION_TESTING.md)
   and its maintained helper/media fixtures; native coverage is separate from CI.
+- Run `npm run check:assets` on the final artifact; preserve the
+  [asset inventory and individual notices](SHIPPED_ASSET_AUDIT.md) on updates.
 - Preserve maintained test fixtures, committed runtime assets, fonts, licenses
   and vendored PDF support. A generated file can still be a required asset;
   classify it through its callers before removing it.
