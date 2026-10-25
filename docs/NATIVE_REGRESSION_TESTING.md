@@ -6,12 +6,17 @@ handlers. They are separate from the extension's standalone PHPUnit suite.
 The [release acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) remains authoritative;
 passing this suite does not qualify HTTP, browser or owner acceptance.
 
-## Prepare a disposable wiki
+## Prepare the maintained version's test environment
 
-- Install a supported MediaWiki checkout with its integration-test development
+Reuse the [maintained version wikis](DEVELOPMENT_ENVIRONMENTS.md). The owner's
+local setup has one installed wiki per target MediaWiki version; a new task does
+not require a new wiki, container or web port. The installation notes below also
+apply when another developer prepares their own version environment once.
+
+- Use a supported MediaWiki checkout with its integration-test development
   dependencies, and load Layers in that wiki's settings. Install the extension's
   development dependencies too. Match PHP to that MediaWiki version.
-- Use a separate database and a database account restricted to that database.
+- Use the version's dedicated test database and an account restricted to it.
   Do not grant the test account access to an ordinary or production wiki.
   Allow the native test harness to manage its isolated test tables.
 - Give this wiki dedicated writable upload, archive/deleted-file, temporary,
@@ -31,7 +36,7 @@ into the repository to reproduce a test.
 
 ## Run from the Layers checkout
 
-Set `MW_INSTALL_PATH` to the disposable MediaWiki checkout and `MW_CONFIG_FILE`
+Set `MW_INSTALL_PATH` to the maintained test MediaWiki checkout and `MW_CONFIG_FILE`
 to its dedicated settings file. For example, in a POSIX shell:
 
 ```sh
