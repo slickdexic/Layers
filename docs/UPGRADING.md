@@ -26,6 +26,12 @@ Layers 1.5.95 on MySQL and native MediaWiki 1.44.6; it does not establish every
 with that core release's PHP/database requirements. A separate older-core
 branch is not interchangeable with this candidate.
 
+A separate [intended-wiki data recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md)
+restored persistent data, retained uploads and matching local Layers files on
+MediaWiki 1.45.3 / MySQL 8.4.6. Configuration/application restoration and a new
+exact-candidate upgrade remain unqualified; this does not replace the complete
+backup and rehearsal below.
+
 Before cutover:
 
 1. Record the exact old and candidate Layers commits, MediaWiki/PHP/database
