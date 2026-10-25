@@ -63,9 +63,15 @@ mouse control. Native button taps, Enter/Space activation, Shift+Arrow separatio
 from PDF navigation, reset/focus and close pass. Axe reports zero violations in
 each case; this remains scoped automated evidence.
 
-Native layouts pass at 320 × 568, 844 × 390 and 1100 × 800, plus a 320-pixel
-layout with doubled body text. Every new button remains at least 44 × 44 pixels
-and the strip stays inside the viewport. The enabled-text worst-case contrast
+Native Pan-strip layouts fit at 320 × 568, 844 × 390 and 1100 × 800, plus a
+320-pixel layout with doubled body text. Every new button remains at least
+44 × 44 pixels and the strip stays inside the viewport. Visual review caught
+oversized font-based arrow symbols under doubled text; fixed 24-pixel decorative
+SVG icons, as in the approved preview, correct that issue. Final native captures
+verify those icons on images, slides and PDF pages and with doubled text.
+The existing top toolbar's fixed-height buttons still clip Download wording at
+320 pixels with doubled body text. Its styling is unchanged by this repair;
+that separate accessibility limitation remains open. The enabled-text worst-case contrast
 is 6.08:1; the new blue focus ring has a black backing, giving 3.91:1 contrast.
 Forced-colors rendering was captured; it is not a complete manual sign-off.
 
@@ -78,8 +84,10 @@ failed observer remains recorded; only actual two-finger input qualifies the
 pinch behavior. An initial journey also retained mouse hover from its preceding
 positive control; clearing that hover allowed the remaining native cases to run.
 
-The new 21-case regression suite and existing viewer/export suites pass together:
-216 tests. All 18,973 client tests pass. Three isolated copied-source controls
+The new 22-case regression suite and existing viewer/export suites pass together:
+217 tests. All 18,973 client tests passed before the final decorative-icon
+correction; the final affected suite passes and exact-commit CI retains the full
+client gate. Three isolated copied-source controls
 demonstrate the original missing touch movement, unbounded button movement and
 lost keyboard panning; production sources stay unchanged during these controls
 and pass the positive replay. Existing owner revisions and complete main/layers

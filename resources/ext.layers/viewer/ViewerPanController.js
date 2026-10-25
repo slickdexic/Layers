@@ -38,20 +38,26 @@
 			this.strip.setAttribute( 'aria-label', label.textContent );
 			this.strip.appendChild( label );
 			const directions = [
-				[ 'left', '←', 'layers-lightbox-pan-left', 'Pan left',
+				[ 'left', 'M19 12H5m6-6-6 6 6 6', 'layers-lightbox-pan-left', 'Pan left',
 					'layers-lightbox-pan-left-tooltip', 'Pan left (Shift+Left Arrow)' ],
-				[ 'up', '↑', 'layers-lightbox-pan-up', 'Pan up',
+				[ 'up', 'M12 19V5m-6 6 6-6 6 6', 'layers-lightbox-pan-up', 'Pan up',
 					'layers-lightbox-pan-up-tooltip', 'Pan up (Shift+Up Arrow)' ],
-				[ 'down', '↓', 'layers-lightbox-pan-down', 'Pan down',
+				[ 'down', 'M12 5v14m-6-6 6 6 6-6', 'layers-lightbox-pan-down', 'Pan down',
 					'layers-lightbox-pan-down-tooltip', 'Pan down (Shift+Down Arrow)' ],
-				[ 'right', '→', 'layers-lightbox-pan-right', 'Pan right',
+				[ 'right', 'M5 12h14m-6-6 6 6-6 6', 'layers-lightbox-pan-right', 'Pan right',
 					'layers-lightbox-pan-right-tooltip', 'Pan right (Shift+Right Arrow)' ]
 			];
 			this.buttons = {};
-			for ( const [ direction, arrow, key, fallback, tooltipKey, tooltip ] of directions ) {
+			for ( const [ direction, arrowPath, key, fallback, tooltipKey, tooltip ] of directions ) {
 				const button = document.createElement( 'button' );
 				button.type = 'button';
-				button.textContent = arrow;
+				const icon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+				icon.setAttribute( 'viewBox', '0 0 24 24' );
+				icon.setAttribute( 'aria-hidden', 'true' );
+				const arrow = document.createElementNS( 'http://www.w3.org/2000/svg', 'path' );
+				arrow.setAttribute( 'd', arrowPath );
+				icon.appendChild( arrow );
+				button.appendChild( icon );
 				button.setAttribute( 'aria-label', box.getMessage( key, fallback ) );
 				button.title = box.getMessage( tooltipKey, tooltip );
 				button.addEventListener( 'click', ( e ) => {

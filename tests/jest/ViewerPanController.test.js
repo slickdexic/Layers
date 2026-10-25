@@ -61,6 +61,16 @@ test( 'a stationary tap and small jitter keep default browser behavior', () => {
 	expect( [ box.panX, box.panY ] ).toEqual( [ 0, 0 ] );
 } );
 
+test( 'decorative arrow icons keep their own geometry and accessible names', () => {
+	for ( const button of Object.values( controller.buttons ) ) {
+		const icon = button.querySelector( 'svg' );
+		expect( icon.getAttribute( 'viewBox' ) ).toBe( '0 0 24 24' );
+		expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		expect( icon.querySelector( 'path' ).getAttribute( 'd' ) ).toBeTruthy();
+		expect( button.getAttribute( 'aria-label' ) ).toMatch( /^Pan / );
+	}
+} );
+
 test( 'one finger translates enlarged media exactly like the mouse', () => {
 	box.setZoom( 1.25 );
 	touch( 'touchstart', [ point( 100, 300 ) ] );
