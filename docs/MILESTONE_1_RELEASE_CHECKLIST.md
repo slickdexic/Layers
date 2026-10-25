@@ -30,6 +30,11 @@ with the original authority and unchanged inherited-source exemption. The
 records the native-writer scope and limits; full-release security acceptance
 remains open.
 
+The final owner binding and edit authorization now follow callback-capable source
+and caller checks. Four late permission-revocation cases demonstrated successful
+publication before this correction; all 117 affected native cases now pass.
+The source, inherited-data and stricter-caller protections remain in place.
+
 Ready **for owner testing** means the integrated candidate and technical checks
 above are complete. **Milestone 1 accepted** additionally requires the owner's
 acceptance. Neither waits for milestone 2–5 functionality.

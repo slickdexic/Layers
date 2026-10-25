@@ -182,13 +182,6 @@ class PagePublicationService {
 							throw new PublicationException( 'layers-owner-unavailable' );
 						}
 					}
-					// Core preparation may run extension callbacks. Finalize authorization
-					// once before granting a scope, retaining the restricted caller.
-					try {
-						$this->access->assertCanEdit( $owner, $authority );
-					} catch ( \DomainException $e ) {
-						throw new PublicationException( 'layers-owner-edit-denied', 0, $e );
-					}
 					$preparedLayers = $prepared->getRawContent( PageRevisionWriter::SLOT );
 					if ( $preparedLayers->getModel() !== LayersDocumentContent::MODEL ||
 						$preparedLayers->serialize() !== $content->getCanonicalText()
@@ -204,6 +197,16 @@ class PagePublicationService {
 						$this->sources->resolve( $content, $authority, $changed );
 					} catch ( \DomainException $e ) {
 						throw new PublicationException( 'layers-source-unavailable', 0, $e );
+					}
+					// Source/caller checks may run hooks. Finalize the owner only after they finish,
+					// retaining the restricted caller and one secure write-authorization pass.
+					if ( $expectedPageId !== null ) {
+						$this->assertOwnerIdentity( $owner, $expectedPageId );
+					}
+					try {
+						$this->access->assertCanEdit( $owner, $authority );
+					} catch ( \DomainException $e ) {
+						throw new PublicationException( 'layers-owner-edit-denied', 0, $e );
 					}
 					$intent = new PublicationAdmissionIntent(
 						$authority, $authority->getUser(), $prepared->getPage()->getId(),

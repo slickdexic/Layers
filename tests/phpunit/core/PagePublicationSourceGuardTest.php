@@ -27,7 +27,8 @@ class PagePublicationSourceGuardTest extends \MediaWikiIntegrationTestCase {
 	/** @return array Mutable source state, restricted actor, resolver and snapshot */
 	private function fixture( string $kind ): array {
 		$state = (object)[ 'read' => true, 'visible' => true, 'bytes' => true,
-			'prepared' => false, 'finalReads' => 0 ];
+			'prepared' => false, 'finalReads' => 0, 'ownerEditable' => true,
+			'afterSourceRead' => null, 'events' => [] ];
 		$actor = $this->getTestSysop()->getUser();
 		$this->overrideUserPermissions( $actor, [ 'read', 'edit', 'editlayers', 'createpage', 'createtalk' ] );
 		$doc = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/mixed-document-v1.json' ) );
@@ -37,7 +38,12 @@ class PagePublicationSourceGuardTest extends \MediaWikiIntegrationTestCase {
 		$authority = $this->createMock( Authority::class );
 		$authority->method( 'getUser' )->willReturn( $actor );
 		$authority->method( 'definitelyCan' )->willReturn( true );
-		$authority->method( 'authorizeWrite' )->willReturn( true );
+		$authority->method( 'authorizeWrite' )->willReturnCallback( static function () use ( $state ) {
+			if ( $state->prepared ) {
+				$state->events[] = 'owner-check';
+			}
+			return $state->ownerEditable;
+		} );
 		$authority->method( 'isAllowed' )->willReturnCallback( static fn ( $right ) => $actor->isAllowed( $right ) );
 		$authority->method( 'authorizeRead' )->willReturnCallback( static function ( $right, $title ) use (
 			$state, $sourceTitle, $actor
@@ -46,6 +52,12 @@ class PagePublicationSourceGuardTest extends \MediaWikiIntegrationTestCase {
 				$title->getDBkey() === $sourceTitle->getDBkey() ) {
 				if ( $state->prepared ) {
 					$state->finalReads++;
+					$state->events[] = 'source-check';
+					if ( $state->afterSourceRead !== null ) {
+						$callback = $state->afterSourceRead;
+						$state->afterSourceRead = null;
+						$callback();
+					}
 				}
 				return $state->read;
 			}
@@ -205,5 +217,82 @@ class PagePublicationSourceGuardTest extends \MediaWikiIntegrationTestCase {
 			$this->assertSame( 'layers-revision-unavailable', $error->getMessage() );
 		}
 		$this->assertSame( $before, $this->contentState() );
+	}
+
+	/** @return array */
+	public static function provideLateOwnerRevocations(): array {
+		return [ 'image-source' => [ 'image', 'source' ], 'pdf-source' => [ 'pdf', 'source' ],
+			'image-caller' => [ 'image', 'caller' ], 'pdf-caller' => [ 'pdf', 'caller' ] ];
+	}
+
+	/**
+	 * @dataProvider provideLateOwnerRevocations
+	 * @param string $kind
+	 * @param string $phase
+	 */
+	public function testLateOwnerRevocationCannotPublish( string $kind, string $phase ): void {
+		[ $state, $actor, $sources, $doc ] = $this->fixture( $kind );
+		$page = $this->getExistingTestPage();
+		$before = $this->contentState();
+		$revoke = static function () use ( $state ) {
+			$state->ownerEditable = false;
+		};
+		if ( $phase === 'source' ) {
+			$state->afterSourceRead = $revoke;
+		}
+		$publisher = $this->publisher( $sources, static function () use ( $state ) {
+			$state->prepared = true;
+		} );
+		$failure = null;
+		try {
+			$publisher->publish( $page->getTitle(), $actor, $page->getLatest(), json_encode( $doc ),
+				'Must refuse', null, $page->getId(), null, $phase === 'caller' ? $revoke : null );
+		} catch ( PublicationException $error ) {
+			$failure = $error;
+		}
+		$this->assertFalse( $state->ownerEditable );
+		$this->assertTrue( $state->read, 'Source read permission remains available' );
+		$this->assertInstanceOf( PublicationException::class, $failure, 'Late owner revocation must refuse Save' );
+		$this->assertSame( 'layers-owner-edit-denied', $failure->getMessage() );
+		$this->assertSame( $before, $this->contentState() );
+	}
+
+	public function testLateOwnerAuthorizationFollowsSourceValidation(): void {
+		[ $state, $actor, $sources, $doc ] = $this->fixture( 'image' );
+		$page = $this->getExistingTestPage();
+		$id = $this->publisher( $sources, static function () use ( $state ) {
+			$state->prepared = true;
+		} )->publish( $page->getTitle(), $actor, $page->getLatest(), json_encode( $doc ), 'Authorized',
+			null, $page->getId() );
+		$this->assertSame( 'source-check', $state->events[0], 'Authorize the owner after callback-capable checks' );
+		$this->assertContains( 'owner-check', $state->events );
+		$this->assertSame( $id, $this->getServiceContainer()->getRevisionLookup()
+			->getRevisionByTitle( $page->getTitle() )->getId() );
+	}
+
+	public function testLateOwnerMoveRefusesTheOriginalBinding(): void {
+		[ $state, $actor, $sources, $doc ] = $this->fixture( 'image' );
+		$this->overrideUserPermissions( $actor->getUser(),
+			[ 'read', 'edit', 'editlayers', 'createpage', 'createtalk', 'move' ] );
+		$page = $this->getExistingTestPage();
+		$destination = $this->getNonexistingTestPage()->getTitle();
+		$movedState = null;
+		$state->afterSourceRead = function () use ( $page, $destination, $actor, &$movedState ) {
+			$status = $this->getServiceContainer()->getMovePageFactory()->newMovePage( $page->getTitle(), $destination )
+				->moveIfAllowed( $actor, 'Preparation callback move' );
+			$this->assertStatusGood( $status );
+			$movedState = $this->contentState();
+		};
+		try {
+			$this->publisher( $sources, static function () use ( $state ) {
+				$state->prepared = true;
+			} )->publish( $page->getTitle(), $actor, $page->getLatest(), json_encode( $doc ), 'Must refuse',
+				null, $page->getId() );
+			$this->fail( 'A moved owner must refuse its original page binding' );
+		} catch ( PublicationException $error ) {
+			$this->assertSame( 'layers-owner-unavailable', $error->getMessage() );
+		}
+		$this->assertNotNull( $movedState );
+		$this->assertSame( $movedState, $this->contentState(), 'Only the independent native move is preserved' );
 	}
 }

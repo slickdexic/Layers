@@ -184,3 +184,23 @@ migration/copy guard class passes another 12 tests / 122 assertions, including
 its stricter post-preparation refusals. Standalone PHP passes 1,611 tests /
 3,994 assertions with one existing skip. The grouped-PDF regression now requires
 the same expanded sibling/source selection at both admission checks.
+
+### Final owner checks after callbacks
+
+A follow-up found that owner authorization preceded callback-capable source and
+caller checks. Four image/PDF cases could therefore publish after those callbacks
+revoked the owner's edit permission. An ordering assertion also failed. A native
+move was already refused by admission, but returned a later admission error.
+
+The owner binding is now checked again after those callbacks, and the existing
+secure owner-authorization pass runs last, before publication admission. Early
+prepared-owner mismatch checks, source verification, inherited-source preservation
+and stricter caller refusals remain. Successful publication still has one secure
+owner-authorization pass.
+
+All six affected native classes pass 117 tests / 495 assertions. The rights
+refusals preserve complete content/history rows; the move refusal preserves the
+independent native move without publishing the pending layers. Standalone PHP
+passes 1,611 tests / 3,994 assertions with one existing skip. These are native
+callback-boundary results, not a complete concurrent HTTP or release-security
+qualification.
