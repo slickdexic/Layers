@@ -51,16 +51,55 @@ baseline from intentionally mutated disposable fixtures.
 The actual 1.5.95/MySQL upgrade, post-upgrade PDF Save/reopen and reruns preserving
 newer edits also pass in their recorded scope; see the [upgrade guide](UPGRADING.md).
 
-Download file collection remains unqualified on 1.44. The browser's download
-observer stalled both before a Layers Download click and when coupled with a
-native MediaWiki Export click. That establishes an observer limitation outside
-Layers and supplies no delivered annotated PDF. Do not repeat that waiting path.
-The actual Print button reached Preparing pages, but further script inspection
-was blocked and no prepared document was retained. Print is unqualified; no
-production defect is established by this incomplete observation.
+The earlier download observer stalled before Layers Download and with native
+MediaWiki Export. Those failures remain recorded; do not repeat that waiting
+path. The October 25 check below instead collected the actual delivered PDF from
+disk and verified both complete pages. The actual Print button also reached the
+native beforeprint event with both page images decoded and retained. These close
+Download collection and Print preparation in the recorded browser scope;
+operating-system dialog and physical Print acceptance remain unproved.
 
 Remaining version/device combinations, broader security/performance checks
 and owner acceptance stay on the
 [Milestone 1 release checklist](MILESTONE_1_RELEASE_CHECKLIST.md).
 This checkpoint qualifies the recorded journeys and does not complete the
 supported-version matrix or Milestone 1.
+
+## Complete PDF Download and native Print preparation — October 25, 2026
+
+This read-only check reused the maintained MediaWiki 1.44.6 / MySQL wiki and its
+existing saved two-page PDF. The shared checkout matched published baseline
+`2a25d28`; no installation, database clone, content Save or runtime change was
+needed. Browser: installed Chromium 145.0.7632.6 in headless mode on Windows.
+This is browser acceptance against native MediaWiki services, not a mock server.
+
+One actual **Download PDF** click delivered a strict-parseable, complete two-page
+PDF. The file was collected from the browser's download directory without a
+download-event waiter or substituted export. Each page contains its complete
+composite at 1600 × 800 and 1600 × 3200 pixels respectively. The full-bleed image
+transforms preserve the saved landscape/portrait proportions without cropping.
+Independent Poppler rendering and visual inspection confirm both native
+backgrounds and both saved layer-text labels.
+
+One actual **Print** click prepared the same two decoded page images and invoked
+the browser's native beforeprint event. A passive event listener retained the
+prepared images and document; the print method was not replaced. The original
+JPEG stream of each downloaded PDF page matches its corresponding Print image
+byte for byte. This verifies complete Print preparation and agreement with
+Download. It does not establish the operating-system print dialog, printer
+selection, physical pagination or paper output.
+
+The initial viewer opened on page 2 of 2 and offered PDF Download without PNG,
+as required for PDFs. The owner retained every revision and exact main/layers
+slot payload, including both members and their source pins. Unordered API tag
+sets were compared independently of their response ordering. The browser was
+closed after the single Download/Print journey. Credentials, PDF captures and
+screenshots remain local and outside the published extension.
+
+Both built-in browser-control kernels were unavailable. The installed direct
+browser run avoided the earlier stalled observer. Preliminary checks stopped
+before either action on an unordered-tag comparison and a hidden-overlay
+selector; both observations remain retained. Independent verification uses the
+PDF's original encoded JPEG streams, not an image library's recompressed copy.
+Existing native/client suites were retained without another unchanged full run;
+the remaining release matrix and owner acceptance are still separate.
