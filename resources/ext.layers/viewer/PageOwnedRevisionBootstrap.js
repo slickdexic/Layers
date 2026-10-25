@@ -10,6 +10,49 @@
 			'border-' + side + '-width', 'border-' + side + '-style', 'border-' + side + '-color' ] ) );
 	// {{name}} in drawing text shows the value the page gives through {{#layers_fields:}}.
 	const DrawingFields = () => window.Layers.DrawingFields;
+	/** Defer ordinary vector slides; retain eager preparation for source images and async SVG/image layers. */
+	function renderInline( canvas, surface, failure, source, defer ) {
+		const paint = () => window.Layers.Viewer.renderPageOwnedRevision(
+			canvas, surface, failure, window.Layers.LayerRenderer, document.fonts, source );
+		if ( !defer || surface.kind !== 'slide' || surface.layers.some( layer =>
+			layer.type === 'image' || layer.type === 'customShape' ) ||
+			typeof window.IntersectionObserver !== 'function' ) {
+			return paint();
+		}
+		let observer = null, started = false, stopped = false, cleanup = null;
+		const host = canvas.closest( '.layers-bound-slide' ) || canvas.parentElement;
+		const clearHooks = () => {
+			if ( observer ) {
+				try { observer.disconnect(); } catch ( error ) { /* A failed observer must not block painting. */ }
+				observer = null;
+			}
+			window.removeEventListener( 'beforeprint', start );
+			host.removeEventListener( 'focusin', start );
+		};
+		const dispose = () => {
+			if ( stopped ) { return; }
+			stopped = true; clearHooks();
+			if ( cleanup ) { const release = cleanup; cleanup = null; release(); }
+		};
+		const start = () => {
+			if ( stopped || started ) { return; }
+			started = true; clearHooks();
+			try {
+				const release = paint();
+				if ( typeof release !== 'function' ) { failure(); return; }
+				if ( stopped ) { release(); } else { cleanup = release; }
+			} catch ( error ) { failure(); }
+		};
+		window.addEventListener( 'beforeprint', start );
+		host.addEventListener( 'focusin', start );
+		try {
+			observer = new window.IntersectionObserver( entries => {
+				if ( entries.some( entry => entry.target === canvas && entry.isIntersecting ) ) { start(); }
+			}, { rootMargin: '0px' } );
+			if ( started || stopped ) { clearHooks(); } else { observer.observe( canvas ); }
+		} catch ( error ) { start(); }
+		return dispose;
+	}
 	/**
 	 * @param {Object} bundle Bound drawing
 	 * @param {Object|undefined} fields Plain-text values by name for this drawing
@@ -34,8 +77,10 @@
 				bundle,
 				adapter: new window.Layers.Editor.PageOwnedSnapshotAdapter(),
 				message: ( ...args ) => mw.msg( ...args ),
-				render: ( canvas, surface, failure, source ) => window.Layers.Viewer.renderPageOwnedRevision(
-					canvas, surface, failure, window.Layers.LayerRenderer, document.fonts, source )
+				render: options && options.deferUntilVisible ?
+					( canvas, surface, failure, source ) => renderInline( canvas, surface, failure, source, true ) :
+					( canvas, surface, failure, source ) => window.Layers.Viewer.renderPageOwnedRevision(
+						canvas, surface, failure, window.Layers.LayerRenderer, document.fonts, source )
 			}, options ) );
 			view.mount( container );
 		} catch ( error ) {
@@ -207,7 +252,7 @@
 			}
 			if ( !isFile ) {
 				container.textContent = '';
-				const viewDispose = mount( container, bundle, { caption: false } );
+				const viewDispose = mount( container, bundle, { caption: false, deferUntilVisible: true } );
 				const controlsDispose = mountControls( container, admitted, binding, fields, api );
 				const dispose = () => {
 					if ( mounted.get( container ) === dispose ) {

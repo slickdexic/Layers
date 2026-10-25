@@ -42,6 +42,14 @@ tracks generated-output cleanup, the remaining documentation audit and the
 explicit upgrade/recovery instructions; these are delivery work within this
 milestone, not additional product scope.
 
+The native twenty-slide check now defers offscreen vector/text painting: two sets
+paint initially on desktop and three at the narrow viewport, with all twenty
+correct after traversal. Geometry, overlays, keyboard activation and Print
+preparation are preserved. No long task was reported during either traversal;
+the observer detected a deliberate 240 ms control. This is bounded PERF-6
+qualification; asynchronous image/SVG preparation and the other media/device
+combinations retain their separate scope in the performance report.
+
 Work proceeds through these packages to completion. New internal helpers must
 close a named gap in one of these journeys; they do not create additional scope.
 Do not run unchanged full suites repeatedly or grow evidence machinery as a

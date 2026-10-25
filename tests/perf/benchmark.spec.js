@@ -1203,7 +1203,26 @@ test( 'PERF-0 repeatable performance benchmark: PERF-1 to PERF-7 baseline', asyn
 
 			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }` );
 
-			// Wait until all 20 layer sets are confirmed painted before reading entries
+			// Offscreen vector slides must remain unpainted until visited.
+			await page.waitForFunction( () => document.querySelectorAll( '.layers-bound-slide canvas' ).length >= 20 );
+			const initialSlidePaint = await page.evaluate( () =>
+				Array.from( document.querySelectorAll( '.layers-bound-slide canvas' ), ( canvas ) => {
+					const bounds = canvas.getBoundingClientRect();
+					return { inViewport: bounds.bottom > 0 && bounds.top < innerHeight,
+						painted: canvas.getContext( '2d' ).getImageData( 10, 10, 1, 1 ).data[ 3 ] > 0 };
+				} ) );
+			expect( initialSlidePaint.some( ( row ) => !row.inViewport ) ).toBe( true );
+			expect( initialSlidePaint.filter( ( row ) => !row.inViewport && row.painted ) ).toHaveLength( 0 );
+			const slideCanvases = page.locator( '.layers-bound-slide canvas' );
+			for ( let index = 0; index < await slideCanvases.count(); index++ ) {
+				await slideCanvases.nth( index ).scrollIntoViewIfNeeded();
+				await page.waitForFunction( ( i ) => {
+					const canvas = document.querySelectorAll( '.layers-bound-slide canvas' )[ i ];
+					return canvas.getContext( '2d' ).getImageData( 10, 10, 1, 1 ).data[ 3 ] > 0;
+				}, index );
+			}
+
+			// All 20 visited layer sets must be painted before reading task entries.
 			await page.waitForFunction( () => {
 				const canvases = document.querySelectorAll( '.layers-bound-slide canvas' );
 				if ( canvases.length < 20 ) return false;

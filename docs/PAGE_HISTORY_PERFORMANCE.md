@@ -200,3 +200,48 @@ The final maintained test passed five observations at 296.0, 273.8, 275.5, 286.0
 and 287.7 ms. Its request guard adds observation overhead; these remain separate
 from the comparison above. No-configuration skipping and ordinary-port refusal
 were also checked. The same host/device and cold-server limitations still apply.
+
+## Offscreen slide rendering
+
+The native twenty-set check reproduced eager painting of all twenty slide sets,
+including eighteen outside the desktop viewport. Inline vector/text slides now
+defer painting until they enter the viewport or receive keyboard focus. Their
+canvas dimensions and both overlay buttons are present immediately. Authorization,
+the exact saved snapshot and the existing batched read remain unchanged.
+
+| Native check | Result |
+| --- | --- |
+| Desktop, 1280 × 800 | Two sets painted initially; no offscreen sets painted |
+| Narrow viewport, 390 × 844 | Three sets painted initially; no offscreen sets painted |
+| Traversal | All twenty sets painted correctly when visited, at both widths |
+| Layout and controls | Original dimensions and both buttons retained on all twenty hosts |
+| Browser tasks | No task of 50 ms or longer reported in either positive traversal |
+| Observer control | A deliberate 240 ms page-timer task was detected and correctly exceeds the 200 ms budget |
+| Keyboard and page-print preparation | Focus starts the selected slide synchronously; `beforeprint` prepares every pending vector slide |
+| Full-size Print preparation | Exact selected owner/revision, complete 400 × 300 image, text and colored layer verified |
+
+The existing benchmark's PERF-6 section now checks that offscreen canvases are
+unpainted, visits each host, and then retains its all-twenty-painted assertion
+before reading task entries. Waiting for all offscreen slides to paint without
+visiting them would contradict deferral. The broader write benchmark was not
+run against ordinary content for this correction.
+
+The scheduling change is limited to ordinary inline slides without image or
+custom SVG layers. Image/PDF sources and slides containing those asynchronous
+assets keep their existing eager preparation. Dedicated history/diff views,
+full-size viewing and export preparation keep their existing rendering paths.
+Missing or failed viewport observers fall back to immediate painting. Disposal
+cancels pending callbacks and releases an activated renderer once.
+
+These results qualify the recorded twenty-slide case. They do not close all-media
+PERF-6, large-PDF or reference-device qualification. Full-size Print was exercised
+through actual composition; only the final print transport was intercepted.
+Physical printing and the operating-system dialog remain outside this result.
+
+The affected first-visit reader check also retained over-budget samples. One
+candidate run measured 346.1, 279.8, 286.1, 306.1 and 291.0 ms; the prior-code
+comparison measured 284.1–299.7 ms, and the restored candidate measured
+280.0–346.6 ms. These serial observations do not establish whether the outliers
+are caused by the change. Image and dedicated-history rendering retain the
+original direct call in the final dispatch. First-visit PERF-2 remains unqualified;
+none of these slower observations or the 300 ms target was removed.
