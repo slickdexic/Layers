@@ -13,7 +13,7 @@ from the broader 2.0 roadmap. Start with
 | Area | Limit or unfinished acceptance |
 | --- | --- |
 | Supported versions/devices | Recorded desktop/narrow results and [six native Minerva phone-viewer checks](PHONE_VIEWER_ACCEPTANCE.md) do not cover every supported physical device or assistive technology. Tablet editing and manual acceptance remain open. |
-| Phone viewer touch panning | **Demonstrated defect:** after zooming above 100%, finger dragging does not move images, slides or PDF pages; mouse dragging works. Tap opening, Zoom/Fit, controls and keyboard/focus pass. The [bounded repair brief](VIEWER_TOUCH_PANNING_BEHAVIOUR_BRIEF.md) awaits owner approval before implementation. |
+| Phone viewer touch panning | **Corrected in bounded browser scope:** the owner-approved [accessible repair](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification) passes six native image/slide/PDF light/dark cases. Finger and mouse translation, Pan buttons, keyboard/focus, PDF shortcuts and actual browser pinch pass. Physical-device and manual accessibility acceptance remain open. |
 | Viewer/export/Print | The approved PNG/PDF choices and whole-PDF assembly have bounded checks. Reuse inspected complete artifacts in their recorded scope. Remaining 1.44/device/export combinations and OS/physical Print acceptance are not claimed. Legacy cached server export is a separate path with its own fidelity limits. |
 | Security/data | HTTP, token/method, owner/source visibility, roles/protection/revocation and retained-row preservation checks are partial release evidence. The full current implementation still needs its relevant security/data review; older audits do not certify new boundaries. |
 | Cache visibility | Anonymous current-binding reads may remain publicly cached for up to `LayersBindingReadMaxAge` (default 300 seconds). Historical/control/viewer/editor reads and exact PDF delivery use stricter policies. A stale public binding response is not lasting source-delivery authority. |
@@ -22,8 +22,8 @@ from the broader 2.0 roadmap. Start with
 | Previously migrated data | Fresh/replayed upgrades preserve their recorded source and owner data. Existing earlier migrations can require a separate naming/source reconciliation audit. Do not automatically relabel historical snapshots or claim that a fresh migration repairs all earlier data. |
 | Packaging/recovery | Verify which maintained native regressions and required fixtures/assets are shipped; local-only evidence is not automatically in public source or CI. Intended-wiki backup/recovery rehearsal, external documentation publication and final release/tag acceptance remain open. |
 
-The touch-panning row is a demonstrated current defect. The other rows record
-existing release requirements and explicit limits, not newly asserted defects. Demonstrated recent corrections include missing
+These rows record current release requirements and explicit limits, not newly
+asserted defects. Demonstrated recent corrections include touch panning, missing
 slide overlays, PNG Download routing, request-limit enforcement and retention
 of legacy rows after native file deletion. Their successful scoped replays do
 not close unrelated acceptance combinations.

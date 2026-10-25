@@ -495,6 +495,7 @@
 				"viewer/ViewerOverlay.js",
 				"viewer/PdfRenderer.js",
 				"viewer/PdfBuilder.js",
+				"viewer/ViewerPanController.js",
 				"viewer/LayersLightbox.js"
 			],
 			"messages": [
@@ -512,6 +513,15 @@
 				"layers-export-failed",
 				"layers-lightbox-download-tooltip",
 				"layers-lightbox-fit",
+				"layers-lightbox-pan",
+				"layers-lightbox-pan-left",
+				"layers-lightbox-pan-up",
+				"layers-lightbox-pan-down",
+				"layers-lightbox-pan-right",
+				"layers-lightbox-pan-left-tooltip",
+				"layers-lightbox-pan-up-tooltip",
+				"layers-lightbox-pan-down-tooltip",
+				"layers-lightbox-pan-right-tooltip",
 				"layers-lightbox-export-generating",
 				"layers-export-incomplete",
 				"layers-page-history-render-failed",

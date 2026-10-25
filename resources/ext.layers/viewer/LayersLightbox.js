@@ -427,6 +427,8 @@
 			this.overlay.appendChild( this.toolbar );
 			this.overlay.appendChild( closeBtn );
 			document.body.appendChild( this.overlay );
+			const PanController = getClass( 'Viewer.PanController', 'LayersPanController' );
+			this.panController = typeof PanController === 'function' ? new PanController( this ) : null;
 
 			// Add event listeners
 			this.boundKeyHandler = ( e ) => this.handleKeyDown( e );
@@ -767,6 +769,9 @@
 				'translate(' + px + 'px, ' + py + 'px) scale(' + z + ')';
 			this.imageWrapper.style.cursor = z > 1 ? 'grab' : '';
 			this.updateZoomIndicator();
+			if ( this.panController ) {
+				this.panController.update();
+			}
 		}
 
 		/**
@@ -787,6 +792,10 @@
 		 * @private
 		 */
 		setZoom( z ) {
+			this.endPan();
+			if ( this.panController ) {
+				this.panController.cancelTouch();
+			}
 			const limits = this.getZoomLimits();
 			this.zoom = Math.min( limits.max, Math.max( limits.min, z ) );
 			if ( this.zoom === 1 ) {
@@ -818,6 +827,10 @@
 		 * @private
 		 */
 		resetZoom() {
+			this.endPan();
+			if ( this.panController ) {
+				this.panController.cancelTouch();
+			}
 			this.zoom = 1;
 			this.panX = 0;
 			this.panY = 0;
@@ -867,6 +880,9 @@
 		 * @private
 		 */
 		handleWheel( e ) {
+			if ( e.ctrlKey ) {
+				return;
+			}
 			e.preventDefault();
 			this.zoomBy( e.deltaY < 0 ? 1.1 : 1 / 1.1 );
 		}
@@ -1947,6 +1963,9 @@
 				}
 
 				this.debugLog( 'Image loaded:', img.naturalWidth, 'x', img.naturalHeight );
+				if ( this.panController ) {
+					this.panController.update();
+				}
 
 				// Create viewer overlay
 				const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' ) ||
@@ -2016,9 +2035,12 @@
 		 * @private
 		 */
 		handleKeyDown( e ) {
+			if ( this.panController && this.panController.handleKeyDown( e ) ) {
+				return;
+			}
 			if ( ( this.pageOwned || this.explicitEmpty ) && e.key === 'Tab' ) {
 				const buttons = Array.from( this.overlay.querySelectorAll( 'button:not([disabled])' ) )
-					.filter( ( button ) => button.style.display !== 'none' );
+					.filter( ( button ) => button.style.display !== 'none' && !button.closest( '[hidden]' ) );
 				const first = buttons[ 0 ];
 				const last = buttons[ buttons.length - 1 ];
 				if ( !this.overlay.contains( document.activeElement ) ||
@@ -2130,6 +2152,10 @@
 			}
 
 			// Remove zoom/pan listeners
+			if ( this.panController ) {
+				this.panController.destroy();
+				this.panController = null;
+			}
 			if ( this.boundWheelHandler && this.overlay ) {
 				this.overlay.removeEventListener( 'wheel', this.boundWheelHandler );
 				this.boundWheelHandler = null;

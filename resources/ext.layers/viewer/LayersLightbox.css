@@ -118,6 +118,21 @@
 	transition: background 0.15s ease;
 }
 
+.layers-lightbox-pan button {
+	box-sizing: border-box;
+	flex-shrink: 0;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	background: rgba( 255, 255, 255, 0.18 );
+	border: 1px solid rgba( 255, 255, 255, 0.45 );
+	border-radius: 4px;
+	color: #fff;
+	font-size: 1.5em;
+	line-height: 1;
+	cursor: pointer;
+}
+
 .layers-lightbox-toolbar button:hover {
 	background: rgba( 255, 255, 255, 0.25 );
 }
@@ -164,6 +179,49 @@
 .layers-lightbox-toolbar button.layers-lightbox-download-png:hover,
 .layers-lightbox-toolbar button.layers-lightbox-download:hover {
 	background: rgba( 51, 102, 204, 0.8 );
+}
+
+/* Non-drag panning stays separate from the existing top toolbar. */
+.layers-lightbox-pan {
+	position: absolute;
+	bottom: calc( 16px + env( safe-area-inset-bottom, 0px ) );
+	left: 50%;
+	transform: translateX( -50% );
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	background: rgba( 0, 0, 0, 0.75 );
+	border: 1px solid rgba( 255, 255, 255, 0.35 );
+	border-radius: 6px;
+	box-shadow: 0 1px 4px rgba( 0, 0, 0, 0.5 );
+	color: #fff;
+	z-index: 1002;
+}
+
+.layers-lightbox-pan[ hidden ] {
+	display: none;
+}
+
+.layers-lightbox-pan > span {
+	padding: 0 4px;
+	font-size: 0.875em;
+	font-weight: 600;
+}
+
+.layers-lightbox-pan button:hover {
+	background: rgba( 255, 255, 255, 0.25 );
+}
+
+.layers-lightbox-pan button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.layers-lightbox-pan button:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+	box-shadow: 0 0 0 4px #000;
 }
 
 /* Image wrapper - contains both img and canvas overlay */
