@@ -1,13 +1,16 @@
-# Milestone 1 release checklist
+# Milestone 1 / Layers 1.8 release checklist
 
-**Lead review: October 24, 2026.** This implements the existing charter scope;
-it adds no feature requirement. The preceding rolling calendar estimate is
+**Release-scope review: October 25, 2026.** The owner has made page ownership
+and native history an independent release, working version **Layers 1.8**.
+The [charter release gate](PROJECT_CHARTER.md#32-independent-page-history-release)
+and [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) define this release; the full
+2.0 roadmap is not a prerequisite. This adds no feature requirement. The preceding rolling calendar estimate is
 withdrawn because it was not based on measured delivery of integrated journeys.
 Tests and inactive components do not count as a completed user journey.
 
 The target is page-owned layer sets with native page history, preserving images,
 slides, whole PDFs and existing editing/viewing capabilities. Search, Cargo and
-layer-object links remain later milestones and cannot delay this checkpoint.
+layer-object links remain later milestones and cannot delay this release.
 
 | Remaining package | Observable completion condition | Current state |
 | --- | --- | --- |
@@ -15,7 +18,7 @@ layer-object links remain later milestones and cannot delay this checkpoint.
 | Finish Save and recovery | First Save records source attribution in one owner-page revision. Reopen and saved-session handoff work. A refusal preserves work; a lost response cannot mark unsaved work as saved or cause duplicate publication. Current and earlier drafts recover safely, including after the attempted Save advanced the page. | Consecutive native Saves each create one owner revision. Genuine stale Save refuses without changing visible work/history or creating a revision. Disjoint Check reconciliation, fresh complete-draft recovery, group/later-edit Redo and explicit recovery Save passed natively. Actual desktop lost-success-reply acceptance now passes: one committed Save, an empty HTTP 200 response body after the committed Save, one explicit Check, no republishing, newer local work kept dirty, and complete Import/later-edit Undo/Redo across page turns. Earlier-backup qualification is retained. Supported-version/mobile combinations remain in the release-candidate package. |
 | Qualify complete native journeys | Images, slides and PDFs complete create/edit, Save, owning-page return, reopen, history/diff/restore, scoped rename/copy/Import, recovery/conflict and viewer/export journeys. Same names on different owners/files remain independent. | The missing-PDF desktop journey now reaches saved handoff, recovery, conflict preservation and inspected complete Download. Prior image/slide/history results remain valid in their recorded scopes. Consolidate the release matrix and close only its unproved combinations; do not repeat successful Saves or unchanged suites. |
 | Qualify the release candidate | Upgrade a 1.5.x wiki without losing layer sets; test declared MediaWiki 1.44 and 1.45, desktop/mobile and keyboard access; verify permissions, HTTP privacy, relevant security/data checks and charter performance budgets. | The actual 1.5.95 / MySQL upgrade on MediaWiki 1.44.6 preserves all recorded data and passes post-upgrade PDF Save/reopen and safe reruns; see the [upgrade guide](UPGRADING.md). The [HTTP privacy checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md) retains 52 read-only baseline cases with all seven owners and 17 tables unchanged. Twenty role/protection/revocation and twenty-four visibility/deletion cases also pass. A detected post-migration legacy-row deletion defect is corrected; thirteen fresh HTTP lifecycle cases prove preservation, cache purging and deleted-file refusal. Remaining version/device, broader security/data and reference-performance combinations are open. These are bounded results, not blanket acceptance. |
-| Deliver and accept | Publish a reviewed extension-only release candidate with exact-commit CI, installation/upgrade directions, the test matrix and explicit remaining limitations. The owner then completes the charter acceptance scenarios. | Intermediate code is being preserved publicly. Milestone 1 has not passed. |
+| Deliver and accept | Publish a reviewed extension-only release candidate with exact-commit CI, installation/upgrade directions, the test matrix and explicit remaining limitations. The owner then completes the charter acceptance scenarios. | Reviewed code is being preserved publicly. The independent 1.8 version/tag awaits the applicable checks and owner acceptance; Milestone 1 has not yet passed. |
 
 The native HTTP checkpoint also closes a demonstrated request-limit bypass in
 six page-owned read paths. Existing information/render quotas now refuse work

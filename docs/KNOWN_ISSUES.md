@@ -1,8 +1,10 @@
 # Known limits and release acceptance
 
-**Reviewed October 24, 2026.** The page-owned candidate is integrated, while
-Milestone 1 acceptance remains open. The manifest's 1.5.95 value does not
-identify a tagged Layers 2.0 release. Start with
+**Reviewed October 25, 2026.** The page-owned candidate targets an independent
+**Layers 1.8** release (working version); Milestone 1 acceptance remains open.
+The manifest stays at 1.5.95 until the release cut. The
+[1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) separates its remaining checks
+from the broader 2.0 roadmap. Start with
 [current release status](CURRENT_STATUS.md) and the existing
 [release checklist](MILESTONE_1_RELEASE_CHECKLIST.md).
 

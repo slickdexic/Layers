@@ -2,10 +2,15 @@
 
 **Adopted:** September 27, 2026. The project owner settled decisions D1–D5 the same day.
 **Applies to:** all lead and junior work on `main`.
-**Finish line:** Layers 2.0 (the current version is 1.5.95 plus later fixes on `main`).
+**Next release:** Page ownership and native revision history, working target **Layers 1.8**.
+**Broader finish line:** Layers 2.0, after the remaining ordered milestones and
+applicable charter criteria. The manifest stays at 1.5.95 until the release cut.
 **Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
 set the current work order and commit/push targets. They supersede earlier work
 orders and estimates; dated evidence remains a record of what was proved then.
+**Owner release amendment:** October 25, 2026. Milestone 1 is an independently
+shippable release, with 1.8 as its working version. Section 3.2 defines its exit
+gate; completing the whole 2.0 roadmap is not a prerequisite.
 
 ## Read this first: the rules for everyone
 
@@ -78,6 +83,8 @@ Layers has grown quickly, and each piece of work has been reasonable on its own.
 The primary goal is page ownership of layer sets: saving a layer-set change
 creates a native revision of its owning wiki page, with history, diffs and restore.
 Images, PDFs and slides keep their existing editing and viewing capabilities.
+This outcome is substantial enough to ship as its own release. The immediate
+delivery target is the independent page-history release, working version 1.8.
 
 Next, MediaWiki's built-in search makes text fields in layer sets discoverable.
 Then the page-owned data contract makes Cargo integration possible, followed by
@@ -92,8 +99,9 @@ Nothing Layers adds weakens the wiki's security, data integrity or speed.
 
 Layers 2.0 ships when all of the following are true on a standard MediaWiki install, each backed by evidence:
 
-This is the complete release checklist. The delivery order is section 3.1;
-later product milestones do not hold up an earlier milestone's code checkpoint.
+The list below remains the complete **2.0** finish line. Section 3.1 sets the
+delivery order; section 3.2 defines a separate **Milestone 1 / 1.8** release gate.
+Later product milestones do not hold up that independent release.
 
 1. **History:** every Layers edit, whether on an image, a PDF page or a slide, is a native revision of a wiki page. It shows in history, diffs, watchlists and recent changes, and it can be restored. This is on by default. (HIST)
 2. **Search:** MediaWiki search finds pages and files by the words in their layers. (SRCH)
@@ -119,7 +127,7 @@ charter criterion they advance.
 
 | Milestone | Goal and required outcome | Commit/push target |
 | --- | --- | --- |
-| **1. Page ownership and version history** | Each layer set belongs to its owning wiki page and file or slide. Saving its changes creates that page's native revision; history, diff, old-version viewing and restoration work. Images, slides and whole-PDF layer sets keep their approved identities, source versions and existing editor/viewer entry points. Migration, scoped rename/copy/Import, first-Save provenance and refusal/recovery must preserve content. Advances HIST-1 to HIST-9, relevant TYPES/UI-10, DATA and OPS-1. | Reviewed page-ownership/history commit and push after the milestone's native/browser and upgrade acceptance; verify CI for that exact commit. |
+| **1. Page ownership and version history** | Each layer set belongs to its owning wiki page and file or slide. Saving its changes creates that page's native revision; history, diff, old-version viewing and restoration work. Images, slides and whole-PDF layer sets keep their approved identities, source versions and existing editor/viewer entry points. Migration, scoped rename/copy/Import, first-Save provenance and refusal/recovery must preserve content. Advances HIST-1 to HIST-9, relevant TYPES/UI-10, DATA and OPS-1. | Independent page-ownership/history release, working version 1.8: reviewed commit/push, native/browser and upgrade acceptance, exact-commit CI, owner sign-off, release notes and version/tag. Later milestone functionality is not required. |
 | **2. Built-in text search** | Text fields in page-owned layer sets are discoverable through MediaWiki's built-in database search on the owning page. Indexes follow saves, deletes, restores and visibility changes; rebuilding works and hidden content stays hidden. No Cargo or external search backend is required. Advances SRCH-1/SRCH-2 and SEC-2. | Reviewed search commit and push after real save/search/restore and visibility/rebuild checks; verify exact-commit CI. |
 | **3. Cargo integration readiness** | Document and qualify the page-owned data/read contract needed by Cargo: owner and revision, file/slide and layer-set identity, internal PDF page where applicable, and text fields. Extraction respects visibility and revision identity. History, search, editing and rendering remain independent of Cargo. This is readiness for integration, separate from implementing it. Advances CARGO-0/CARGO-4 and SEC-2. | Reviewed Cargo-readiness contract/code/tests commit and push after the optional-dependency boundary is verified; verify exact-commit CI. |
 | **4. Cargo integration** | Implement and qualify optional Cargo querying/storage of layer text and filling layer text from page/Cargo values, with compatibility, rebuilds, visibility and exact historical behavior. Preserve existing Cargo functionality. New link authoring is not a prerequisite; existing optional link fields remain compatible. Advances CARGO-1 to CARGO-4 and SEC-2. | Reviewed Cargo-integration commit and push after native/browser acceptance with Cargo and regression checks without it; verify exact-commit CI. |
@@ -141,6 +149,52 @@ or text search. Remaining agreed 2.0 criteria and the final security/owner revie
 still govern the final release; this amendment changes priority, not the
 protected-feature register or the evidence needed to declare victory.
 
+### 3.2 Independent page history release
+
+**Owner decision, October 25, 2026:** Milestone 1 earns its own public release.
+Its working version is **Layers 1.8**. The owner confirms the final version/tag
+at acceptance; this amendment does not change the manifest or create a release.
+
+The release scope is the Milestone 1 outcome in section 3.1: page-owned image,
+slide and whole-PDF layer sets; native revisions/history/diffs/restore; exact
+source identity; migration; scoped rename/copy/Import and attribution; and safe
+Save, refusal and draft recovery. New built-in search qualification, Cargo
+readiness, Cargo integration and layer-object links stay in milestones 2–5.
+Broader 2.0 improvements not needed for Milestone 1 remain later roadmap work.
+Their unfinished feature criteria do not block 1.8.
+
+The independent release must still satisfy these gates:
+
+1. Qualify the applicable HIST, TYPES, DATA and OPS behavior for this release,
+   preserving the protected tools, overlays, viewers and existing capabilities.
+2. Verify the declared MediaWiki versions and supported interface scope. Tablets
+   can edit by touch and phones can view, as already specified by UI-8 and
+   section 8. Phone editing is not added as a release requirement.
+3. Leave no known data-loss defect open. Rehearse upgrade and recovery on a copy
+   of the intended wiki, retaining complete layer sets, source versions and
+   legacy recovery data.
+4. Review the current candidate's relevant security/privacy boundaries and
+   shipped dependencies/assets. No open high or critical finding may ship.
+5. Qualify the existing performance targets for the shipped workflows. Numeric
+   budgets are unchanged; missing measurements or limitations remain explicit
+   and need an owner decision before being treated as accepted.
+6. Prepare a clean extension-only package, final release notes and installation/
+   upgrade directions, with green gates and CI on the exact release commit.
+   Private data/evidence remain local; bulk private archival is separate from
+   keeping the distributable clean.
+7. Obtain the owner's acceptance of the Milestone 1 portions of section 7 on
+   their wiki, then publish the independent version/tag and release.
+
+The [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) records retained passes,
+unproved checks and owner decisions. Reuse valid evidence and close only missing
+or affected rows. Missing evidence is not automatically a production defect.
+New release requirements need the owner's approval; changing the version number
+does not waive quality gates for the functionality being shipped.
+
+After this release, continue milestones 2–5 in order. Their reviewed commits and
+qualification contribute to the broader 2.0 finish line. Shipping 1.8 does not
+declare 2.0 complete or remove any protected capability or later commitment.
+
 ## 4. Constraints
 
 These hold for every piece of work and are not traded against features.
@@ -156,7 +210,10 @@ These hold for every piece of work and are not traded against features.
 
 ## 5. Pillars and exit criteria
 
-Every criterion is required for 2.0. Status values: **Met** (done and verified), **Partial** (some of it done or not yet verified), **Open** (not started).
+Every criterion is required for 2.0. The independent 1.8 release uses the
+Milestone 1 gate in section 3.2; later feature criteria retain their 2.0 status.
+Baseline evidence is not promoted to a current release pass by this amendment.
+Status values: **Met** (done and verified), **Partial** (some of it done or not yet verified), **Open** (not started).
 
 ### 5.1 Secure (SEC)
 
@@ -304,7 +361,7 @@ Layers changes must show in page history for revision tracking in production, so
 
 ### D3 — Existing layer sets move into page history once (lead decision)
 
-Today's layer sets are stored outside page history: *shared sets* attached to a file, and standalone *slides*. Upgrading to 2.0 moves them into page history with a maintenance script:
+Unmigrated 1.5.x wikis store *shared sets* attached to files and standalone *slides*. Upgrading to the page-owned release (working target 1.8) moves them into page history with a maintenance script:
 
 1. Each file's shared sets become layer sets of that file's `File:` page, under the same names, so every set keeps a home. Their current versions become one new revision of the `File:` page. Earlier versions stay viewable, read-only.
 2. Each page that shows one of these sets gets its own copy in one edit, and its embed then names that copy, so the page looks exactly as before. The copy's revision says it came from the `File:` page's layer set. An embed that asked for "the latest set" (`layerset=on`) gets the set that was latest at the time of migration.
@@ -347,7 +404,10 @@ recovery/permissions and upgrade at milestone 1; text search at milestone 2;
 Cargo independence/read-contract checks at milestone 3; Cargo queries and value
 filling at milestone 4; on-page links at milestone 5. A scenario spanning several
 milestones is completed in stages, not used to require later features early.
-Final 2.0 sign-off still requires the complete applicable scenarios. Milestone 5
+Milestone 1 sign-off authorizes its independent release, working version 1.8.
+Search, Cargo and new link portions of a combined scenario wait for their own
+milestones; privacy and preservation of existing shipped behavior still apply.
+Final 2.0 sign-off requires the complete applicable scenarios. Milestone 5
 also checks clickable image, slide and PDF-page layers on the wiki page and
 inactive layer links in the lightbox/full-size viewer.
 
@@ -387,13 +447,14 @@ Worth doing later, but none of these holds up the finish line:
 - Counting lines, tests or large files instead of meeting criteria.
 - Rewriting dated records to make them look current.
 
-## 10. Remaining work, in the owner's milestone order (October 11, 2026)
+## 10. Remaining work, in the owner's milestone order (October 25, 2026)
 
-1. **Close page ownership and history.** Review returned J116J, then integrate
-   and qualify the remaining approved Import/editor behavior, first-Save
-   provenance, whole-PDF behavior and history/migration/upgrade acceptance.
-   Preserve overlays and existing viewers; close their required owning-page
-   journeys and obtain the owner's acceptance. Commit/push milestone 1.
+1. **Release page ownership and history independently.** Use the
+   [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) to reconcile retained
+   evidence and close only unproved release checks. Preserve the integrated
+   Import, first-Save, whole-PDF, recovery and history behavior. Complete the
+   release package and intended-wiki upgrade/recovery check, obtain the owner's
+   acceptance, then commit/push and tag the independent release.
 2. **Qualify built-in text search against the accepted ownership model.** Audit
    existing indexing rather than assume dated "Met" rows cover the current
    model. Prove text discovery, updates, visibility and rebuilds. Commit/push
@@ -412,7 +473,8 @@ Worth doing later, but none of these holds up the finish line:
 
 Support work belongs to the earliest milestone it is needed to deliver. Broader
 agreed 2.0 improvements that are not needed for that milestone wait behind these
-five priorities; final release checks remain as defined in section 3. Re-estimate
+five priorities. The independent 1.8 release uses section 3.2; the final 2.0
+finish line remains section 3. Re-estimate
 from the remaining accepted work at each milestone. No new calendar deadline is
 established here; the September estimate below is historical.
 

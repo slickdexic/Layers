@@ -1,9 +1,12 @@
-# Milestone 1 release preparation
+# Layers 1.8 / Milestone 1 release preparation
 
 This is delivery work for the existing charter, advancing OPS-1, OPS-2 and
 OPS-3. It adds no feature or runtime dependency. The
 [release checklist](MILESTONE_1_RELEASE_CHECKLIST.md) remains the acceptance
-boundary; later search, Cargo and link milestones do not delay page ownership.
+boundary. Under the October 25 owner amendment, page ownership/history ships
+independently, with **1.8** as the working version. Use the
+[acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) for the remaining checks; later
+search, Cargo and link milestones do not delay this release.
 
 ## Code and workspace cleanup
 
@@ -52,4 +55,6 @@ evidence archival and unused-code removal remain separate reviewable steps.
    instructions on the intended wiki copy.
 4. Run required gates on the exact reviewed commit and record its CI result.
 5. Have the project owner complete acceptance on the intended wiki. Only the
-   owner declares the milestone accepted and Layers 2.0 ready.
+   owner declares Milestone 1 accepted and its independent release ready.
+   Confirm the final 1.8 version/tag at that cut; the complete 2.0 sign-off
+   remains separate.

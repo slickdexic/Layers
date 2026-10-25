@@ -1,8 +1,10 @@
 # Upgrading layer sets to page revision history
 
-This guide advances [Milestone 1 and OPS-1](PROJECT_CHARTER.md). Layers uses
-MediaWiki's extension, database and maintenance mechanisms; Docker is not a
-deployment requirement.
+This guide covers the independent page-history release, working target
+**Layers 1.8**, and advances [Milestone 1 and OPS-1](PROJECT_CHARTER.md).
+The [release acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) tracks the remaining
+qualification. Layers uses MediaWiki's extension, database and maintenance
+mechanisms; Docker is not a deployment requirement.
 
 Migration copies legacy shared layer sets into their owning pages' native
 `layers` revision slots. It retains the `layer_sets` rows for historical reads
