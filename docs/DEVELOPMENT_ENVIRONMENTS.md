@@ -15,7 +15,10 @@ It describes the local development setup, not an extension runtime requirement.
 The 8080 lane follows the latest target version through deliberate core updates;
 the table records the installed version, not an assertion about the newest
 upstream release. The page-history candidate requires MediaWiki 1.44 or newer.
-The 1.43 wiki remains available for older Layers builds.
+The 1.43 wiki remains available for older Layers builds. The 1.44 test wiki
+also enables its bundled Minerva skin for `useskin=minerva` checks; default
+Vector remains. [Phone viewer results](PHONE_VIEWER_ACCEPTANCE.md) distinguish
+passed checks, the open touch-panning defect and physical-device acceptance.
 
 The existing local Compose project manages the version services. Each wiki keeps
 its own settings and uploads outside the Layers repository. The retained 1.44
