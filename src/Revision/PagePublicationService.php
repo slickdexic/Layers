@@ -171,7 +171,8 @@ class PagePublicationService {
 			$revision = $this->writer->save( $updater, $baseRevisionId,
 				$content, CommentStoreComment::newUnsavedComment( $summary, $commentData ), $main,
 				function ( PreparedUpdate $prepared, callable $commit ) use (
-					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId, $verifySources
+					$owner, $authority, $baseRevisionId, $action, $content, $main, $expectedPageId,
+					$verifySources, $changed
 				) {
 					if ( $expectedPageId !== null ) {
 						$this->assertOwnerIdentity( $owner, $expectedPageId );
@@ -196,6 +197,13 @@ class PagePublicationService {
 					}
 					if ( $verifySources !== null ) {
 						$verifySources();
+					}
+					// Source visibility/read access may change during native preparation or caller checks.
+					// Revalidate only changed surfaces; unavailable inherited sources remain preservable.
+					try {
+						$this->sources->resolve( $content, $authority, $changed );
+					} catch ( \DomainException $e ) {
+						throw new PublicationException( 'layers-source-unavailable', 0, $e );
 					}
 					$intent = new PublicationAdmissionIntent(
 						$authority, $authority->getUser(), $prepared->getPage()->getId(),

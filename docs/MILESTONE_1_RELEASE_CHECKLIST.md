@@ -23,6 +23,13 @@ after exhaustion, while metadata remains independent of the render budget.
 Configured limits, permissions and UI are unchanged. This bounded correction
 does not close the broader security-review package.
 
+Native Save admission also closes a demonstrated source-permission/visibility
+race during preparation: changed sources are rechecked before publication,
+with the original authority and unchanged inherited-source exemption. The
+[security checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md#native-save-source-admission)
+records the native-writer scope and limits; full-release security acceptance
+remains open.
+
 Ready **for owner testing** means the integrated candidate and technical checks
 above are complete. **Milestone 1 accepted** additionally requires the owner's
 acceptance. Neither waits for milestone 2–5 functionality.

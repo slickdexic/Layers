@@ -158,3 +158,29 @@ This checkpoint does not
 qualify annotated Download, Print preparation, the OS print dialog or physical
 output. The in-app browser's download observer stalled outside Layers; that
 observation path is excluded from subsequent checks.
+
+## Native Save source admission
+
+A separate native publication check reproduced a preparation-time race on
+ordinary Save. Changed image/PDF sources passed initial admission, then lost
+read permission, visibility or accessible bytes during native preparation.
+The ordinary API supplied no specialized caller guard, so publication continued.
+Six revocation cases and two final-check assertions demonstrated the gap.
+
+Publication now rechecks the exact changed surfaces with the original authority
+after preparation and any stricter caller check, before granting the native
+publication scope. Refusal uses the existing source-unavailable error and
+preserves complete content/history rows. Unchanged inherited sources retain
+their exemption, so an unavailable file does not prevent an unrelated slide
+edit. Existing stricter caller refusals retain their error contract.
+
+The regression uses the real native page writer and preparation/admission
+boundary, with controlled repository availability. It does not claim source-byte
+disclosure, a concurrent HTTP/browser reproduction or full-release security
+acceptance. Ordinary wiki data and configuration are outside the test database.
+
+The affected native classes pass 99 tests / 340 assertions. The unchanged retained
+migration/copy guard class passes another 12 tests / 122 assertions, including
+its stricter post-preparation refusals. Standalone PHP passes 1,611 tests /
+3,994 assertions with one existing skip. The grouped-PDF regression now requires
+the same expanded sibling/source selection at both admission checks.

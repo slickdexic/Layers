@@ -171,7 +171,7 @@ class ScopedPublicationTest extends \MediaWikiIntegrationTestCase {
 		$expected['a-one']['label'] = 'XYZ';
 		$expected['a-two']['label'] = 'XYZ';
 		$sources = $this->createMock( SourceVersionResolver::class );
-		$sources->expects( $this->once() )->method( 'resolve' )->willReturnCallback(
+		$sources->expects( $this->exactly( 2 ) )->method( 'resolve' )->willReturnCallback(
 			function ( LayersDocumentContent $content, Authority $actor, ?array $changed ) use ( $expected ) {
 				$this->assertEqualsCanonicalizing( [ 'a-one', 'a-two' ], $changed );
 				$admitted = json_decode( $content->getText(), true )['surfaces'];
