@@ -245,3 +245,35 @@ comparison measured 284.1–299.7 ms, and the restored candidate measured
 are caused by the change. Image and dedicated-history rendering retain the
 original direct call in the final dispatch. First-visit PERF-2 remains unqualified;
 none of these slower observations or the 300 ms target was removed.
+
+### Cache-preserving reader measurement
+
+The October 24 follow-up found measurement overhead in the native-reader test.
+Playwright routing disables HTTP caching: every intercepted visit downloaded
+the same source image twice. Five counterbalanced ordinary-browser visits took
+261.4–287.1 ms (median 270.7 ms), with one image transfer each; intercepted
+visits took 291.2–302.8 ms (median 295.0 ms), with two transfers each. These are
+separate observations on unchanged application code, not a product speedup.
+The original routed run's 288.6–364.5 ms samples remain retained.
+
+The maintained Chromium benchmark now admits page requests through native
+Fetch interception without changing cache settings. It retains exact-origin
+GET-only admission before navigation, blocks service workers and rejects
+unexpected pages, frames or workers. It is a single-page image benchmark;
+other execution targets require their own admission before extending its scope.
+All existing fixture, identity, pixel, sample and 300 ms checks remain.
+
+A second counterbalanced comparison measured 265.0–275.2 ms with the native
+guard and one image transfer, versus 274.2–290.2 ms with Playwright routing
+and two transfers. Live loopback controls prove same-origin GET and cache reuse,
+refuse POST and foreign/redirected origins before server receipt, and force a
+second transfer when caching is deliberately disabled. Copied-source controls
+also fail when method admission is removed or caching is disabled.
+
+The corrected maintained test passed five fresh-browser contexts at 285.6,
+295.5, 273.3, 269.9 and 268.7 ms, each with one source-image transfer and no
+guard violations. Its server was warmed separately. This qualifies the recorded
+desktop/warm-server case only; cold-server and reference-laptop acceptance remain
+open. A failed attempt to restore caching through an additional CDP session did
+not remove duplicate transfers and was not adopted. No application runtime,
+permissions, quota, source selection, UI or performance target changed.

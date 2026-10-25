@@ -2,6 +2,7 @@
 /** PERF-0/PERF-2: repeatable image-to-layer paint timing without content writes. */
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
+const guardNativeReads = require( './native-request-guard.js' );
 
 test.skip( !process.env.LAYERS_NATIVE_PERF_CONFIG,
 	'Requires an explicit isolated native performance configuration' );
@@ -59,18 +60,10 @@ test( 'native reader: fresh-browser layer paint on an isolated warm server', asy
 		for ( let index = 0; index < 6; index++ ) {
 			const context = await browser.newContext( {
 				storageState: config.storageState,
-				viewport: { width: 1920, height: 1080 }
+				viewport: { width: 1920, height: 1080 },
+				serviceWorkers: 'block'
 			} );
 			try {
-				// Every browser/API request in this measurement is read-only and stays on the fixture origin.
-				await context.route( '**/*', ( route ) => {
-					const request = route.request(), url = new URL( request.url() );
-					if ( url.origin !== base.origin || request.method() !== 'GET' ) {
-						errors.push( { method: request.method(), url: url.origin + url.pathname } );
-						return route.abort();
-					}
-					return route.continue();
-				} );
 				const identity = await context.request.get( base.origin + '/api.php', {
 					params: { action: 'query', meta: 'siteinfo', siprop: 'general', format: 'json', formatversion: 2 },
 					maxRedirects: 0
@@ -78,6 +71,18 @@ test( 'native reader: fresh-browser layer paint on an isolated warm server', asy
 				expect( ( await identity.json() ).query.general.wikiid ).toBe( config.wikiId );
 				await context.addInitScript( observePaint, config.probe );
 				const page = await context.newPage();
+				// Admit only same-origin GET traffic before navigation, retaining normal browser caching.
+				await guardNativeReads( page, base.origin, errors );
+				// This is a single-page image benchmark; other execution targets need separate admission.
+				page.on( 'worker', () => errors.push( { message: 'Unexpected benchmark worker' } ) );
+				page.on( 'frameattached', () => errors.push( { message: 'Unexpected benchmark frame' } ) );
+				context.on( 'page', () => errors.push( { message: 'Unexpected benchmark page' } ) );
+				context.on( 'request', ( request ) => {
+					const url = new URL( request.url() );
+					if ( url.origin !== base.origin || request.method() !== 'GET' ) {
+						errors.push( { method: request.method(), url: url.origin + url.pathname } );
+					}
+				} );
 				page.on( 'pageerror', error => errors.push( { message: error.message } ) );
 				await page.goto( base.origin + '/index.php?title=' + encodeURIComponent( config.owner ), {
 					waitUntil: 'load'

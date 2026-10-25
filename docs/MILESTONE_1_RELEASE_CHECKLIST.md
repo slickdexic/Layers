@@ -50,6 +50,14 @@ the observer detected a deliberate 240 ms control. This is bounded PERF-6
 qualification; asynchronous image/SVG preparation and the other media/device
 combinations retain their separate scope in the performance report.
 
+The reader benchmark now preserves normal HTTP caching while retaining native
+GET/origin admission. Earlier interception forced duplicate image downloads;
+the comparison and all slower samples remain recorded. The corrected maintained
+test passes five fresh-browser visits at 269–296 ms, with one image transfer
+each. This closes the demonstrated measurement artifact, without changing
+application code or the 300 ms target. Cold-server, reference-device and broader
+performance acceptance remain open.
+
 Work proceeds through these packages to completion. New internal helpers must
 close a named gap in one of these journeys; they do not create additional scope.
 Do not run unchanged full suites repeatedly or grow evidence machinery as a
