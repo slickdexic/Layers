@@ -26,11 +26,14 @@ Layers 1.5.95 on MySQL and native MediaWiki 1.44.6; it does not establish every
 with that core release's PHP/database requirements. A separate older-core
 branch is not interchangeable with this candidate.
 
-A separate [intended-wiki data recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md)
-restored persistent data, retained uploads and matching local Layers files on
-MediaWiki 1.45.3 / MySQL 8.4.6. Configuration/application restoration and a new
-exact-candidate upgrade remain unqualified; this does not replace the complete
-backup and rehearsal below.
+A separate [intended-wiki recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md)
+restored persistent data, retained uploads and matching captured Layers files on
+MediaWiki 1.45.3 / MySQL 8.4.6. Its October 26 application follow-up also passes
+native startup, representative image/slide/PDF reads and exact HTTP source
+delivery, with persistent data unchanged. It uses reconstructed test settings;
+it does not archive a site's private configuration or replace the complete
+backup and rehearsal below. The source was already migrated, so a fresh legacy
+transition is covered by the separate retained 1.5.95 rehearsal.
 
 Before cutover:
 
@@ -212,6 +215,7 @@ fixture, without resetting its database or installing another wiki:
 This closes the current-command rerun and rollback-planning check. It does not
 claim a second fresh 1.5.x upgrade or a complete application restore. Existing
 owner-qualified fixture revisions were preserved, not rewritten to make a new
-bare-output result. Full intended-wiki application restoration and pilot-data
-review remain separate release work. Main-wiki configuration was not copied;
+bare-output result. The [application read-restoration follow-up](INTENDED_WIKI_RECOVERY_CHECKPOINT.md#application-level-restore--october-26-2026)
+now passes in its recorded scope; site-specific configuration preservation,
+final-artifact reconciliation and pilot-data review remain. Main-wiki configuration was not copied;
 no additional wiki, container, database clone or port was created.
