@@ -496,6 +496,7 @@
 				"viewer/PdfRenderer.js",
 				"viewer/PdfBuilder.js",
 				"viewer/ViewerPanController.js",
+				"viewer/ViewerToolbarController.js",
 				"viewer/LayersLightbox.js"
 			],
 			"messages": [

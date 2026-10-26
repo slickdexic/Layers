@@ -20,6 +20,25 @@ filename/metadata provenance. It is not a warranty of copyright status in every
 jurisdiction. Source/reference links and change notices are retained; the
 software license and product interface are unchanged.
 
+## Current candidate refresh
+
+The `e9ecad5` candidate's successful exact-commit CI runs the same package guard
+with **223 ResourceLoader file references**. The additional reference is the
+approved viewer's `ViewerPanController.js`, extension code rather than a new
+third-party dependency. Its four decorative direction icons are inline SVG
+control geometry; the external font, symbol, emoji and pdf.js inventory stays
+unchanged. The earlier 222-reference review above remains a dated record.
+
+This carries the inventory forward without repeating unchanged artwork/source
+reviews or treating it as a complete security audit. Recheck advisories at the
+release cut as described below.
+
+The subsequently approved bounded-toolbar implementation adds
+`ViewerToolbarController.js`, bringing the checked registration count to **224**.
+It adds extension UI code and small inline direction cues, with no new third-party
+dependency or external artwork. The same package guard checks this candidate;
+the dated inventory and source/notice review above remain intact.
+
 ## Repeatable package guard
 
 ```sh

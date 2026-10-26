@@ -87,6 +87,7 @@
  * viewers behave. Dark scrim for the same contrast reason as the close button. */
 .layers-lightbox-toolbar {
 	position: absolute;
+	box-sizing: border-box;
 	top: 12px;
 	left: 50%;
 	transform: translateX( -50% );
@@ -95,6 +96,13 @@
 	flex-wrap: wrap;
 	justify-content: center;
 	max-width: calc( 100vw - 120px );
+	width: max-content;
+	max-height: min( 96px, 25vh );
+	overflow: auto;
+	scrollbar-gutter: stable;
+	scrollbar-width: thin;
+	scrollbar-color: #a2a9b1 #202122;
+	font-size: 0.875rem;
 	gap: 8px;
 	padding: 4px 8px;
 	background: rgba( 0, 0, 0, 0.75 );
@@ -105,15 +113,20 @@
 }
 
 .layers-lightbox-toolbar button {
+	box-sizing: border-box;
 	min-width: 32px;
-	height: 30px;
-	padding: 0 10px;
+	min-height: 32px;
+	height: auto;
+	max-width: 100%;
+	padding: 0.25em 0.625em;
 	background: rgba( 255, 255, 255, 0.18 );
 	border: 1px solid rgba( 255, 255, 255, 0.45 );
 	border-radius: 4px;
 	color: #fff;
 	font-size: 1em;
-	line-height: 1;
+	line-height: 1.25;
+	white-space: normal;
+	overflow-wrap: anywhere;
 	cursor: pointer;
 	transition: background 0.15s ease;
 }
@@ -148,6 +161,7 @@
 .layers-lightbox-toolbar button:focus {
 	outline: 2px solid #36c;
 	outline-offset: 2px;
+	box-shadow: 0 0 0 4px #000;
 }
 
 .layers-lightbox-page-indicator {
@@ -155,7 +169,44 @@
 	font-size: 0.9em;
 	min-width: 80px;
 	text-align: center;
-	white-space: nowrap;
+	max-width: 100%;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.layers-lightbox-pages {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 100%;
+}
+
+.layers-lightbox-pages[ hidden ],
+.layers-lightbox-toolbar-cue[ hidden ] {
+	display: none;
+}
+
+.layers-lightbox-toolbar-cue {
+	position: absolute;
+	box-sizing: border-box;
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+	background: #202122;
+	color: #fff;
+	pointer-events: none;
+	z-index: 1004;
+}
+
+.layers-lightbox-toolbar-cue svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	fill: none;
+	stroke: currentcolor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 
 .layers-lightbox-zoom-indicator {

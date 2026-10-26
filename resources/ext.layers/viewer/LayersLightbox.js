@@ -429,6 +429,8 @@
 			document.body.appendChild( this.overlay );
 			const PanController = getClass( 'Viewer.PanController', 'LayersPanController' );
 			this.panController = typeof PanController === 'function' ? new PanController( this ) : null;
+			const ToolbarController = getClass( 'Viewer.ToolbarController', 'LayersToolbarController' );
+			this.toolbarController = typeof ToolbarController === 'function' ? new ToolbarController( this ) : null;
 
 			// Add event listeners
 			this.boundKeyHandler = ( e ) => this.handleKeyDown( e );
@@ -738,6 +740,9 @@
 				this.prevBtn.disabled = this.currentPage <= 1;
 				this.nextBtn.disabled = this.currentPage >= this.pageCount;
 			}
+			if ( this.toolbarController ) {
+				this.toolbarController.update();
+			}
 		}
 
 		/**
@@ -781,7 +786,10 @@
 		 */
 		updateZoomIndicator() {
 			if ( this.zoomIndicator ) {
-				this.zoomIndicator.textContent = Math.round( ( this.zoom || 1 ) * 100 ) + '%';
+				const text = Math.round( ( this.zoom || 1 ) * 100 ) + '%';
+				if ( this.zoomIndicator.textContent !== text ) {
+					this.zoomIndicator.textContent = text;
+				}
 			}
 		}
 
@@ -853,6 +861,10 @@
 			if ( !this.imageWrapper || !this.overlay ) {
 				return;
 			}
+			if ( this.toolbarController ) {
+				this.toolbarController.fit();
+				return;
+			}
 			// offsetWidth/Height are layout values, so they report the unscaled box
 			// regardless of the transform currently applied.
 			const naturalW = this.imageWrapper.offsetWidth;
@@ -881,6 +893,9 @@
 		 */
 		handleWheel( e ) {
 			if ( e.ctrlKey ) {
+				return;
+			}
+			if ( this.toolbar && e.target && this.toolbar.contains( e.target ) ) {
 				return;
 			}
 			e.preventDefault();
@@ -2152,6 +2167,10 @@
 			}
 
 			// Remove zoom/pan listeners
+			if ( this.toolbarController ) {
+				this.toolbarController.destroy();
+				this.toolbarController = null;
+			}
 			if ( this.panController ) {
 				this.panController.destroy();
 				this.panController = null;

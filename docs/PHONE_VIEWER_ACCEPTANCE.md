@@ -69,9 +69,10 @@ Native Pan-strip layouts fit at 320 × 568, 844 × 390 and 1100 × 800, plus a
 oversized font-based arrow symbols under doubled text; fixed 24-pixel decorative
 SVG icons, as in the approved preview, correct that issue. Final native captures
 verify those icons on images, slides and PDF pages and with doubled text.
-The existing top toolbar's fixed-height buttons still clip Download wording at
-320 pixels with doubled body text. Its styling is unchanged by this repair;
-that separate accessibility limitation remains open. The enabled-text worst-case contrast
+The existing top toolbar's fixed-height buttons clipped Download wording at
+320 pixels with doubled body text. The subsequent owner-approved
+[bounded toolbar repair](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) corrects that
+limitation in the recorded native browser scope. The enabled-text worst-case contrast
 is 6.08:1; the new blue focus ring has a black backing, giving 3.91:1 contrast.
 Forced-colors rendering was captured; it is not a complete manual sign-off.
 
