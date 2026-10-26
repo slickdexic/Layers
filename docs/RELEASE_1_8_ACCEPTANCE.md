@@ -11,8 +11,10 @@ retained evidence. It introduces no new feature or quality target. Runtime
 baseline: reviewed code at `b04679d`, with passing exact-commit CI. The
 [page-history evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) records the exact
 backend/editor reuse boundary from `62f7ba1`; later viewer changes have their own
-acceptance. Documentation commits may follow without invalidating unchanged
-runtime evidence.
+acceptance. The current candidate also includes the
+[post-migration rename/copy output correction](PILOT_DATA_REVIEW.md), qualified
+separately from that dated byte-comparison baseline. Documentation commits may
+follow without invalidating unchanged runtime evidence.
 
 **Recorded pass** means the linked journey passed in its recorded environment,
 not every possible version/device combination. **Partial** means some required
@@ -29,11 +31,17 @@ results; run only missing or affected checks and keep original failures.
 | Supported UI, touch and accessibility | **Partial:** [phone-viewer panning](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification) and the owner-approved [bounded toolbar](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) pass native type/theme, narrow/landscape/enlarged-text, scrolling, focus, Fit, PDF shortcuts and browser-magnification checks. The enlarged-text toolbar clipping is corrected in the recorded browser scope. | Finish remaining tablet-touch editing, physical-device and manual accessibility acceptance. Browser emulation is not physical-device sign-off. Phone editing is not required. |
 | Security, privacy and data integrity | **Partial:** [HTTP roles/visibility/lifecycle and native Save admission](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md), including 117 current native cases. | Complete the current candidate's relevant API/data review and shipped dependency/asset audit; fix and retest release-blocking findings. No open high/critical finding or known data-loss defect may ship. |
 | Performance | **Partial:** [recorded server/browser budgets](PAGE_HISTORY_PERFORMANCE.md), including cache-preserving 269–296 ms fresh-browser paint on a warm server. | Close cold-server, reference-device and remaining applicable media/deferral measurements. Keep numeric budgets and explicit scope; record any required owner disposition of unproved limits. |
-| Package and documentation | **Partial:** primary guides, upgrade instructions and public/private separation are refreshed. | The [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) are recorded. Keep both guards green on the final artifact. Finalize release notes, version consistency, clean distributable and public documentation. Private captures, credentials and database exports stay local. |
+| Package and documentation | **Partial:** primary guides, upgrade instructions and public/private separation are refreshed; [draft 1.8 release notes](RELEASE_NOTES_1_8.md) now consolidate behavior, upgrade requirements and disclosed limits. | The [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) are recorded. Keep both guards green on the final artifact. Finalize the draft after acceptance, version consistency, clean distributable and public documentation. Private captures, credentials and database exports stay local. |
 | Owner acceptance | **Pending.** | Complete the Milestone 1 portions of charter scenarios S1–S7 on the intended wiki. Search, Cargo and new link portions belong to their later milestones. Record acceptance of the release scope and remaining disclosed limits. |
 | Final release cut | **Pending.** | Freeze the reviewed artifact, run required gates and exact-commit CI, confirm version/tag with the owner and publish the independent release. Preserve a consistent upgrade/rollback reference. |
 
 ## Scope control
+
+The [read-only pilot review](PILOT_DATA_REVIEW.md) covers 28 current owners and
+identifies three retained groups with split PDF names. Their disposition needs
+complete payload/provenance comparison and owner review; no automatic rename,
+merge or historical rewrite has been performed. This is separate from the
+current writer correction and the qualified fresh upgrade path.
 
 The [upgrade-path acceptance matrix](UPGRADE_PATH_ACCEPTANCE.md) identifies
 1.5.95 as the fully tested starting release. Older released schemas pass native

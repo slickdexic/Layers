@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Content\WikitextContent;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
@@ -269,7 +270,8 @@ class PageDrawingCopy {
 		$document->surfaces = array_merge( $document->surfaces,
 			self::copySet( $source['surfaces'], $source['surface'], $pageId, $revisionId, $source['label'] ) );
 		try {
-			$main = $this->rewriter->rewrite( $main, $start, $expected, $pageId, $source['label'], $this->fileTargets );
+			$main = $this->rewriter->rewrite( $main, $start, $expected, $pageId, $source['label'],
+				$this->fileTargets, MigrationState::isCompleteNow() );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-embedding-selection-unavailable' );
 		}

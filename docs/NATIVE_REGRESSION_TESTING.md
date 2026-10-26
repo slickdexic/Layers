@@ -50,6 +50,19 @@ to run without MediaWiki's integration bootstrap. Do not run `core.xml` through
 the standalone stub bootstrap, disable native validation, or point these commands
 at production settings. Avoid concurrent runs sharing a test database/repository.
 
+On MySQL, native permission checks may query one test table more than once in a
+`UNION`. MySQL rejects that query when the harness uses temporary tables
+(`Can't reopen table`). Set `PHPUNIT_USE_NORMAL_TABLES=1` for that environment:
+MediaWiki still uses its isolated `unittest_` tables, but creates them as ordinary
+test tables. This does not authorize using installed wiki tables. Verify the
+checkout's test prefix and dedicated database before enabling this mode.
+
+The shared legacy-migration fixture installs a framework-owned temporary upload
+repository and checks that boundary before every upload. Existing guarded test
+repositories are reused; an unguarded installed repository cannot receive these
+fixture uploads. Keep the installed upload inventory unchanged when checking a
+maintained version environment.
+
 For the release-package regression slice:
 
 ```sh
@@ -109,3 +122,21 @@ its two conditional cases remain unqualified.
 This is the bounded package slice, not the complete native suite, a second
 MediaWiki-version qualification or actual HTTP/browser acceptance. Shipped
 fixture/helper dependencies were checked. Application runtime was unchanged.
+
+## Shared migration fixture refresh — October 26, 2026
+
+The guarded-repository change was exercised across all 24 shared-fixture
+consumers and three affected publication classes on MediaWiki 1.44.6 / PHP
+8.3.33. The normal-test-table run completed 337 cases / 3,809 assertions with
+two optional Cargo skips and one copy-list fixture setup error. Configuring
+that fixture's public-read/editor-only permissions before service/admission
+registration corrected the error; its complete five-case class then passed
+32 assertions. Qualification combines those unchanged classes with the
+corrected class, rather than claiming a second complete suite run.
+
+The earlier temporary-table failures and the service-reset setup error remain
+recorded. All original installed upload files and installed-table witnesses
+remain unchanged. The native configuration now includes core's standard
+`MediaWikiTeardownPHPUnitExtension`: a single-case check passes and verifies
+that the framework removes its own normal test tables after the suite. Without
+that extension, the bootstrap alone left the isolated test tables behind.

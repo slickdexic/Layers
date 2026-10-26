@@ -6,7 +6,7 @@ declare the milestone complete or add a release requirement.
 
 ## Candidate and reuse boundary
 
-The reviewed runtime candidate is `b04679d`, with passing
+The viewer-era reviewed runtime baseline is `b04679d`, with passing
 [exact-commit CI](https://github.com/slickdexic/Layers/actions/runs/40255423435).
 Compared with the final owner-admission baseline `62f7ba1`, every tracked byte
 under `src`, `maintenance` and `sql`, and `services.php`, is unchanged.
@@ -15,6 +15,13 @@ asset notices/licenses and one font-license comment; the font CSS directives
 remain identical. Viewer changes have their own
 [bounded toolbar acceptance](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) and
 [panning acceptance](PHONE_VIEWER_ACCEPTANCE.md).
+
+The current candidate additionally contains the
+[post-migration rename/copy output correction](PILOT_DATA_REVIEW.md).
+Those two callers now request bare output; the earlier backend-byte comparison
+is dated baseline evidence, not a claim that every current source file still
+matches it. Publication/source authorization ordering is unchanged. New native
+regressions demonstrate the old owner-ID output and verify the corrected scope.
 
 This permits reuse of the final native publication/admission tests and recorded
 editor results within their existing scope. It does not turn older browser
@@ -73,7 +80,7 @@ neither a revision tag nor a watchlist entry demonstrates a delivered notificati
 | HIST-6: historical content | Recorded historical viewing and exact-source delivery; selective restore preserves unrelated members. | Applicable manual Print acceptance and remaining owner scenarios. |
 | HIST-7: scoped rename | Retained scoped atomic rename/refusal regression and browser evidence. | Current intended-wiki rename acceptance is not replaced by feed inspection. |
 | HIST-8: migration and recovery | Recorded 1.5.95/MySQL transition, retained sources and newer-edit preservation; [persistent-data and application-read restoration](INTENDED_WIKI_RECOVERY_CHECKPOINT.md#application-level-restore--october-26-2026) now passes with exact retained data. The [current native rerun](UPGRADING.md#current-candidate-migration-check--october-25-2026) adds zero revisions and qualifies no-write rollback planning. | Final-artifact reconciliation and separate earlier pilot-data review. Site-specific settings/software still need operator preservation. No fresh database transition or actual undo was repeated. |
-| HIST-9: bare author-facing names | The native migration command, factory/component and four associated regression files exactly match the final retained upgrade rehearsal, which qualifies bare output. The supported older owner-qualified form stays readable as input. | Intended-wiki pilot-data review and final-artifact reconciliation. The current rerun preserves existing references and is not a second fresh-output rehearsal. |
+| HIST-9: bare author-facing names | The native migration command, factory/component and four associated regression files match the retained upgrade rehearsal. Post-migration rename/copy now also request bare output, with before/after native regressions. Older qualified input remains readable. | The read-only pilot review identifies three split-name groups needing owner disposition. Final-artifact reconciliation remains; no automatic historical repair or wholesale reference tidy was performed. |
 
 The existing combined migration fixture retains older owner-qualified embeds.
 Its historical and current revisions were inspected without rewriting them.

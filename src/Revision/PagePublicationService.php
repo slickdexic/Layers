@@ -305,13 +305,14 @@ class PagePublicationService {
 			throw new PublicationException( 'layers-embedding-source-unavailable' );
 		}
 		try {
+			$bareNames = MigrationState::isCompleteNow();
 			$rewritten = ( new DirectEmbeddingRewriter() )->renameScopedReferences( $text,
 				$owner->getArticleID( IDBAccessObject::READ_LATEST ), $renames,
 				static function ( string $name ): ?string {
 					$title = Title::newFromText( $name );
 					return $title && $title->getNamespace() === NS_FILE && !$title->hasFragment() &&
 						!$title->isExternal() ? 'File:' . $title->getDBkey() : null;
-				}, MigrationState::isCompleteNow() );
+				}, $bareNames, $bareNames );
 		} catch ( \InvalidArgumentException $e ) {
 			throw new PublicationException( 'layers-embedding-source-unavailable', 0, $e );
 		}

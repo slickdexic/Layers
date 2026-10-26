@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Tests\Core;
 
 use MediaWiki\Content\WikitextContent;
 use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\PageHistoryAccess;
@@ -36,6 +37,7 @@ class ScopedPublicationTest extends \MediaWikiIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		MigrationState::clear( $this->getDb() );
 		$this->context = TestingAdmissionRegistration::install( $this )['context'];
 		$this->actor = $this->getTestUser()->getUser();
 		$this->overrideUserPermissions( $this->actor->getUser(),
@@ -132,6 +134,38 @@ class ScopedPublicationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertSame( $this->mainText( $revisionId ), $current->getContent( 'main' )->getText() );
 		$this->assertSame( $this->revision( $revisionId )->getContent( PageRevisionWriter::SLOT )->getText(),
 			$current->getContent( PageRevisionWriter::SLOT )->getText() );
+	}
+
+	public function testCompletedMigrationRenameWritesBareScopedNames(): void {
+		MigrationState::markComplete( $this->getDb() );
+		try {
+			$page = $this->getExistingTestPage();
+			$id = $page->getId();
+			$surfaces = array_merge( $this->pdfPages(), [
+				$this->surface( 'other-file', 'pdf', 'ABC', 'File:Publication_B.pdf' ),
+				$this->surface( 'deck', 'slide', 'ABC' )
+			] );
+			$main = "[[File:Publication_A.pdf|page=1|layerset=ABC|caption]]\n" .
+				"[[File:Publication_A.pdf|page=2|layers=$id:ABC]]\n" .
+				"[[File:Publication_B.pdf|layerset=ABC]]\n{{#Slide:ABC|width=400}}";
+			$service = $this->service();
+			$base = $service->publish( $page->getTitle(), $this->actor, $page->getLatest(),
+				$this->snapshot( $surfaces ), 'Initial groups', new WikitextContent( $main ) );
+			$surfaces[1]['label'] = 'Renamed PDF';
+			$surfaces[3]['label'] = 'Renamed slide';
+			$next = $service->publish( $page->getTitle(), $this->actor, $base,
+				$this->snapshot( $surfaces ), 'Rename scoped groups' );
+			$this->assertSame( "[[File:Publication_A.pdf|page=1|layerset=Renamed PDF|caption]]\n" .
+				"[[File:Publication_A.pdf|page=2|layers=Renamed PDF]]\n" .
+				"[[File:Publication_B.pdf|layerset=ABC]]\n{{#Slide:Renamed slide|width=400}}",
+				$this->mainText( $next ) );
+			$actual = $this->surfaces( $next );
+			$this->assertSame( [ 'Renamed PDF', 'Renamed PDF', 'ABC', 'Renamed slide' ],
+				array_values( array_column( $actual, 'label' ) ) );
+			$this->assertSame( $main, $this->mainText( $base ), 'Historical source must remain exact' );
+		} finally {
+			MigrationState::clear( $this->getDb() );
+		}
 	}
 
 	public function testEqualLabelsAcrossFilesAndSlidePublishWithoutSuffixes(): void {

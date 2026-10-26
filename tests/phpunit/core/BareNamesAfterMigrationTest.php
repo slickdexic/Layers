@@ -170,7 +170,7 @@ class BareNamesAfterMigrationTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 		$renamed = $this->doApiRequestWithToken( [ 'action' => 'layerspublish', 'owner' => $page->getPrefixedText(),
 			'baserevid' => $first, 'data' => $slide( 'Deck two' ) ], null, $this->actor )[0]['layerspublish']['revid'];
-		$this->assertSame( "Intro\n{{#Slide:" . $page->getArticleID() . ':Deck two}}',
+		$this->assertSame( "Intro\n{{#Slide:Deck two}}",
 			$lookup->getRevisionById( $renamed )->getContent( 'main' )->getText() );
 	}
 

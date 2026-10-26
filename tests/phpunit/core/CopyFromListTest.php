@@ -29,6 +29,9 @@ class CopyFromListTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		// Configure permissions before installing services and publication admission.
+		$this->setGroupPermissions( '*', 'read', true );
+		$this->setGroupPermissions( '*', 'editlayers', false );
 		$this->setUpMigration();
 		$this->setContentLang( 'en' );
 	}

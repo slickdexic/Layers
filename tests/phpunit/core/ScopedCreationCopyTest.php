@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Tests\Core;
 
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\NewPageDrawing;
 use MediaWiki\Title\Title;
 
@@ -28,6 +29,7 @@ class ScopedCreationCopyTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		parent::setUp();
 		$this->setUpIsolatedLocalRepoFixture();
 		$this->setUpMigration();
+		MigrationState::clear( $this->getDb() );
 	}
 
 	private function pdf(): \MediaWiki\FileRepo\File\LocalFile {
@@ -54,6 +56,32 @@ class ScopedCreationCopyTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	private function revision( int $id ): \MediaWiki\Revision\RevisionRecord {
 		return $this->getServiceContainer()->getRevisionLookup()->getRevisionById( $id );
+	}
+
+	public function testCompletedMigrationCopyWritesBareWholePdfName(): void {
+		MigrationState::markComplete( $this->getDb() );
+		try {
+			$file = $this->pdf();
+			$source = $this->getExistingTestPage();
+			$sourceRev = $this->publish( $source->getTitle(), $source->getLatest(), [
+				$this->pdfSurface( $file, 1, 'first' ), $this->pdfSurface( $file, 2, 'second' )
+			] );
+			$sourceBytes = $this->revision( $sourceRev )->getContent( 'layers' )->getText();
+			$target = $this->getExistingTestPage();
+			$embed = "[[File:{$file->getName()}|page=2|layerset={$source->getId()}:ABC|caption]]";
+			$base = $this->editPage( $target, $embed )->getNewRevision()->getId();
+			$next = $this->pilot->copyDrawing( $target->getId(), $base, 0, $embed,
+				$sourceRev, $this->actor, '' );
+			$this->assertSame( "[[File:{$file->getName()}|page=2|layerset=ABC|caption]]",
+				$this->revision( $next )->getContent( 'main' )->getText() );
+			$copies = $this->surfaces( $this->revision( $next ) );
+			$this->assertSame( [ 1, 2 ], array_column( array_column( $copies, 'source' ), 'page' ) );
+			$this->assertSame( [ 'ABC', 'ABC' ], array_column( $copies, 'label' ) );
+			$this->assertSame( $sourceBytes, $this->revision( $sourceRev )->getContent( 'layers' )->getText() );
+			$this->assertSame( $embed, $this->revision( $base )->getContent( 'main' )->getText() );
+		} finally {
+			MigrationState::clear( $this->getDb() );
+		}
 	}
 
 	public function testNewFileAndPdfPageIdsAreIndependentAndRepeatedEmbedsShareOne(): void {

@@ -11,16 +11,24 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\User\User;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * Legacy rows and uploads for the D3 migration tests, stored as older saves stored them.
  */
 trait LegacyMigrationFixtures {
+	use IsolatedLocalRepoFixture;
+
 	private PageOwnedPilot $pilot;
 	private User $actor;
 	private int $nextId = 9000;
 
 	private function setUpMigration(): void {
+		$repo = $this->getServiceContainer()->getRepoGroup()->getLocalRepo();
+		if ( !method_exists( $repo->getBackend(), 'fixturePath' ) ) {
+			$this->setUpIsolatedLocalRepoFixture();
+		}
+		self::guardIsolatedFixtureRepository( $this->getServiceContainer()->getRepoGroup()->getLocalRepo() );
 		if ( !$this->getDb()->tableExists( 'layer_sets', __METHOD__ ) ) {
 			$this->markTestSkipped( 'layer_sets table not available' );
 		}
@@ -42,7 +50,9 @@ trait LegacyMigrationFixtures {
 		string $timestamp = '20260906120000'
 	): LocalFile {
 		$title = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $name );
-		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $title );
+		$repo = $this->getServiceContainer()->getRepoGroup()->getLocalRepo();
+		self::guardIsolatedFixtureRepository( $repo );
+		$file = $repo->newFile( $title );
 		$this->assertStatusGood( $file->upload( __DIR__ . '/../../fixtures/assets/' . $fixture, 'Fixture', '',
 			0, false, $timestamp, $this->actor ) );
 		return $file;
