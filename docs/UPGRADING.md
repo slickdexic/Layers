@@ -18,6 +18,62 @@ that already select the same local set retain their bytes. A legacy
 the Default shortcut can remain unchanged. Multiple old sets of one slide use
 the approved names `<slide> (<set>)` when separate slide names are needed.
 
+## Starting version and prerequisites
+
+**The fully tested starting release is Layers 1.5.95.** The documented full
+upgrade path is **1.5.95 → the 1.8 candidate**, on MediaWiki 1.44.6 / MySQL.
+This is the qualified starting point, not a runtime version gate or proof that
+earlier releases cannot upgrade directly. Do not describe it as a technical
+minimum enforced by the extension.
+
+The native schema updater also passes isolated tests using released layouts
+from **0.8.2, 1.0.0, 1.3.0 and 1.5.0**. Those tests preserve a representative
+legacy payload and pass reruns; they are not complete old-release-to-1.8
+application migrations. For an earlier installation, rehearse its actual data
+on a copy before choosing a direct or staged route. An intermediate 1.5.95 hop
+is not established as technically necessary, and a blind staged upgrade is not
+a substitute for that rehearsal. See [test coverage](UPGRADE_PATH_ACCEPTANCE.md).
+
+A new installation needs no previous Layers version. It still runs the updater
+and the unscoped migration completion step below, even when there is no legacy
+data to copy. The 1.8 manifest/version tag is assigned at release cut; current
+acceptance uses exact Git candidates rather than the provisional version label.
+
+| Requirement | What to prepare |
+| --- | --- |
+| MediaWiki | **1.44 or newer**, with the PHP/database versions supported by that core release. The separate Layers builds for older MediaWiki are not this candidate. Upgrade core separately if needed, following its supported upgrade path. |
+| Layers package | One reviewed candidate containing matching PHP, JavaScript, registration, translations and committed assets. Runtime installation does not require Node.js or the extension's development-only Composer packages. |
+| Maintenance access | PHP command-line access, or a hosting operator who can run the maintenance steps. The browser updater alone cannot perform the Layers content migration. |
+| Database access | Normal MediaWiki schema-update privileges for the updater, and normal page-publication access for migration. Do not use a SELECT-only recovery-test account for an upgrade. |
+| Media | Existing uploads and retained file versions; normal image/PDF handlers and their configured programs. PDF sites need MediaWiki's PDF Handler and its native prerequisites. |
+| Writable storage | The web-server user's normal upload/thumbnail, cache and temporary storage. Private source capture and regenerated media must work; preserve existing access controls. |
+| Configuration | Keep `wfLoadExtension( 'Layers' );`, review enabled owner namespaces, and preserve site-specific rights/settings. No new Docker, worker, Node.js or host service is required. |
+| Recovery | A verified consistent database/upload/configuration backup and matching old code/software, retained through acceptance. GitHub preserves extension code; it does not preserve a wiki's database, uploaded versions or private settings. |
+
+The full upgrade rehearsal currently qualifies MySQL. Do not infer a complete
+MariaDB or SQLite upgrade from schema-unit coverage or a fresh SQLite install.
+Retain each database's actual rehearsal result with the site's upgrade record.
+
+## Is `mw-config` enough?
+
+**No.** `/mw-config/index.php` is MediaWiki's browser **schema updater**. Its
+command-line alternative is `php maintenance/run.php update`; use either route
+for schema updates, not both as a mandatory sequence. Both use extension schema
+hooks. See MediaWiki's [updater instructions](https://www.mediawiki.org/wiki/Manual:Update.php).
+
+Layers then requires separate **link discovery and page-history migration**:
+
+1. Refresh links and process jobs while legacy shared-set discovery is active.
+2. Run the Layers migration without `--commit`, inspect its plan and refusals.
+3. Run the reviewed unscoped migration with `--commit`.
+4. Verify completion, retained content and native editing/history before
+   reopening editing.
+
+Neither the schema updater nor `refreshLinks`/`runJobs` records Layers migration
+completion. There is no documented browser-only replacement for this content
+migration; ask the hosting operator to run it if shell access is unavailable.
+Do not insert the completion record by hand.
+
 ## 1. Prepare and rehearse
 
 Use a copy of the actual wiki first. The retained upgrade rehearsal covers
@@ -70,10 +126,22 @@ Follow the site's normal opcode/ResourceLoader cache deployment procedure;
 do not mix an older branch's PHP with newer client files. No new Docker, Node.js
 or host-service runtime is required.
 
-From the MediaWiki root, as the web server user, run:
+From the MediaWiki root, as the web server user, run the preferred schema route:
 
 ```sh
 php maintenance/run.php update
+```
+
+Alternatively, run the browser updater at `/mw-config/index.php`, using the
+site's upgrade key if requested. Complete its database-update step and retain
+the result. Keep the existing private configuration; do not replace it with a
+fresh-install settings file. The web wizard itself is separate from Layers'
+content migration. The tested full Layers rehearsal used the CLI route; the
+new historical-schema tests exercise the native updater engine, not the wizard UI.
+
+After **either** schema-update route, continue from the MediaWiki root:
+
+```sh
 php maintenance/run.php refreshLinks
 php maintenance/run.php runJobs
 ```
@@ -82,6 +150,13 @@ Keep uploads, thumbnails, cache and temporary directories writable by that user.
 Images and PDFs retain their existing media-handler prerequisites. Refresh links
 **before** migration completion, while discovery still records shared sets shown
 through templates and galleries.
+
+The updater may add/backfill legacy fields, normalize legacy file-name keys,
+replace indexes and remove the unused `layer_assets`/`layer_set_usage`
+bookkeeping tables. It does not delete uploaded media or migrate layer sets
+into page revisions. Do not perform these SQL changes manually. Keep the backup
+because expected legacy metadata normalization can change stored key fields even
+when payload bytes are preserved.
 
 ## 3. Review and apply
 
@@ -114,7 +189,7 @@ Confirm `meta=siteinfo` reports `layerspagehistorymigrated: true`.
 For example, read this API URL on the wiki, authenticating if it is private:
 
 ```text
-api.php?action=query&meta=siteinfo&siprop=general&format=json
+api.php?action=query&meta=siteinfo&siprop=general&format=json&formatversion=2
 ```
 
 Check `query.general.layerspagehistorymigrated` is the boolean `true`. The

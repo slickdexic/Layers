@@ -35,6 +35,12 @@ results; run only missing or affected checks and keep original failures.
 
 ## Scope control
 
+The [upgrade-path acceptance matrix](UPGRADE_PATH_ACCEPTANCE.md) identifies
+1.5.95 as the fully tested starting release. Older released schemas pass native
+update/rerun checks, but their full application migrations are not thereby
+qualified. `mw-config` or CLI `update` handles schema only; link/job refresh and
+the separately reviewed Layers migration remain required.
+
 Milestones 2–5 remain ordered: built-in text search, Cargo readiness, Cargo
 integration, then on-page layer-object links. Broader 2.0 improvements outside
 Milestone 1 remain later roadmap work. They do not block this independent release;
