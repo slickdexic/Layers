@@ -8,8 +8,11 @@ remains unchanged by this document.
 
 This is the release closeout ledger, consolidating existing requirements and
 retained evidence. It introduces no new feature or quality target. Runtime
-baseline: reviewed code at `62f7ba1`, with passing exact-commit CI. Documentation
-commits may follow without invalidating unchanged runtime evidence.
+baseline: reviewed code at `b04679d`, with passing exact-commit CI. The
+[page-history evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) records the exact
+backend/editor reuse boundary from `62f7ba1`; later viewer changes have their own
+acceptance. Documentation commits may follow without invalidating unchanged
+runtime evidence.
 
 **Recorded pass** means the linked journey passed in its recorded environment,
 not every possible version/device combination. **Partial** means some required
@@ -19,7 +22,7 @@ results; run only missing or affected checks and keep original failures.
 
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |
-| Page ownership, native Save/history/diff/restore and owner isolation | **Recorded passes:** [1.44 native journeys](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md), [whole-PDF Import](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and retained image/slide journeys. | Map the retained results to the chosen candidate and applicable HIST scenarios, including watchlist/recent-changes evidence. Close only unmapped or affected checks. |
+| Page ownership, native Save/history/diff/restore and owner isolation | **Recorded passes:** [1.44 native journeys](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md), [whole-PDF Import](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and retained image/slide journeys. The [candidate evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) ties retained results to current source: four existing ordinary edits on 1.45 match recent changes/contributions; eight migration revisions on 1.44 match those feeds, with six watchlist matches. | Complete remaining intended-wiki HIST scenarios and applicable notification acceptance. The watchlist check covers migration revisions; Echo is absent on that wiki and no notification delivery is claimed. Close only missing or affected checks. |
 | Import, first-Save attribution, recovery and refusal preservation | **Recorded passes:** whole-PDF Import/Undo/Redo, saved handoff, complete recovery, stale Save, reconciliation and lost-success-reply handling. | Reuse the recorded desktop and narrow-layout results; reconcile only missing supported-version/device combinations. |
 | Upgrade and recovery | **Partial:** [1.5.95/MySQL rehearsal and safe reruns](UPGRADING.md), fresh 1.44 installation, and [intended-wiki persistent-data/upload recovery](INTENDED_WIKI_RECOVERY_CHECKPOINT.md) on 1.45.3, including exact damage/replay recovery and preserved local Layers code. | Preserve/verify matching configuration and installed prerequisites; complete application restoration and exact-candidate upgrade rehearsal. The source was already migrated; audit earlier pilot data separately without relabeling or repair. |
 | Viewer, Download and Print | **Recorded passes:** inspected exports, exact historical-source viewing, and [complete 1.44 PDF Download/native Print preparation](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md#complete-pdf-download-and-native-print-preparation--october-25-2026). Both pages retain saved layers; Print and Download composites match byte for byte. | Obtain the applicable manual Print/export owner acceptance. The headless check does not qualify the operating-system dialog, physical pagination or paper output. Retain earlier observer failures without repeating that stalled loop. |
