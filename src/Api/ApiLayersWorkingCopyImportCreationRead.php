@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\PageWorkingCopyImportCreationService;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Native read-only missing-target Import route; editor callers are separate. */
 class ApiLayersWorkingCopyImportCreationRead extends ApiBase {
@@ -25,6 +26,9 @@ class ApiLayersWorkingCopyImportCreationRead extends ApiBase {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		try {
 			$data = $this->reader->read( $params['targetpageid'], $params['baserevid'],
 				$params['targetsurface'], $params['embedstart'], $params['embedtext'], [

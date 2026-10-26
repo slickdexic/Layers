@@ -55,6 +55,10 @@ Read the [complete upgrade guide](UPGRADING.md) before deployment.
 
 ## Evidence and disclosed limits
 
+The [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md) records the
+corrected Import/recovery request-budget bypass, the documentation-tool security
+patch and remaining review limits. It does not declare the release accepted.
+
 The [upgrade matrix](UPGRADE_PATH_ACCEPTANCE.md),
 [native acceptance](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md),
 [whole-PDF Import evidence](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and

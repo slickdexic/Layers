@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Native historical draft association proof only; never applies work or publishes. */
 class ApiLayersWorkingCopyImportCreationDraftRebase extends ApiBase {
@@ -24,6 +25,9 @@ class ApiLayersWorkingCopyImportCreationDraftRebase extends ApiBase {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		try {
 			$data = $this->pilot->prepareCreationDraftRebase( $params['targetpageid'], $params['baserevid'],
 				$params['originsurface'], $params['originrevid'], $this->getAuthority() );

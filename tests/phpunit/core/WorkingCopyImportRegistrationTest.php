@@ -159,8 +159,10 @@ class WorkingCopyImportRegistrationTest extends \MediaWiki\Tests\Api\ApiTestCase
 		$this->assertSame( $this->pilot->getScope(), $composition->scope );
 		$this->assertSame( $this->getServiceContainer()->getTitleFactory(), $composition->titles );
 		$allowed = $module->getAllowedParams();
-		$this->assertSame( [ 'targetpageid', 'baserevid', 'targetsurface', 'sourcepageid',
+		$this->assertSame( [ 'exacttext', 'targetpageid', 'baserevid', 'targetsurface', 'sourcepageid',
 			'sourcerevid', 'sourcesurface' ], array_keys( $allowed ) );
+		$this->assertSame( 'boolean', $allowed['exacttext'][ApiBase::PARAM_TYPE] );
+		$this->assertFalse( $allowed['exacttext'][ApiBase::PARAM_DFLT] );
 		foreach ( [ 'targetpageid', 'baserevid', 'sourcepageid', 'sourcerevid' ] as $key ) {
 			$this->assertSame( 'integer', $allowed[$key][ApiBase::PARAM_TYPE] );
 			$this->assertSame( 1, $allowed[$key][ApiBase::PARAM_MIN] );

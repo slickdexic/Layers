@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\PageWorkingCopyImportReadService;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Registered native working-copy Import read endpoint. */
 class ApiLayersWorkingCopyImportRead extends ApiBase {
@@ -26,6 +27,9 @@ class ApiLayersWorkingCopyImportRead extends ApiBase {
 	public function execute() {
 		$this->makePrivate();
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		if ( $params['targetsurface'] === '' || $params['sourcesurface'] === '' ) {
 			$this->dieWithError( 'layers-revision-unavailable', 'layers-working-copy-import-unavailable' );
 		}

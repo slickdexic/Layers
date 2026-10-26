@@ -39,9 +39,17 @@ results; run only missing or affected checks and keep original failures.
 
 The [read-only pilot review](PILOT_DATA_REVIEW.md) covers 28 current owners and
 identifies three retained groups with split PDF names. Their disposition needs
-complete payload/provenance comparison and owner review; no automatic rename,
+a reference-aware repair proposal and owner review; no automatic rename,
 merge or historical rewrite has been performed. This is separate from the
 current writer correction and the qualified fresh upgrade path.
+
+The pilot review's separate ten-member comparison now establishes equality to
+earliest saved surfaces and strict retained-row conversion, with exact source
+versions available. A reference-aware repair proposal and owner disposition
+remain. The [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md) records
+the demonstrated Import information-quota correction and a development-tool
+critical-advisory patch; broader review and other development warnings remain
+explicit rather than being marked complete by the earlier HTTP checks.
 
 The [upgrade-path acceptance matrix](UPGRADE_PATH_ACCEPTANCE.md) identifies
 1.5.95 as the fully tested starting release. Older released schemas pass native

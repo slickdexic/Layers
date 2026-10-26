@@ -8,6 +8,7 @@ use MediaWiki\Api\ApiBase;
 use MediaWiki\Api\ApiMain;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /** Read-only historical association proof; never changes a working copy or publishes. */
 class ApiLayersWorkingCopyImportCreationRebase extends ApiBase {
@@ -25,6 +26,9 @@ class ApiLayersWorkingCopyImportCreationRebase extends ApiBase {
 			$this->dieWithError( [ 'apierror-mustbeposted', $this->getModuleName() ], 'mustbeposted' );
 		}
 		$params = $this->extractRequestParams();
+		if ( !( new RateLimiter() )->checkRateLimit( $this->getUser(), 'info' ) ) {
+			$this->dieWithError( 'apierror-ratelimited', 'ratelimited' );
+		}
 		try {
 			$data = $this->pilot->prepareCreationRebase( $params['targetpageid'], $params['baserevid'],
 				$params['targetsurface'], $params['originrevid'], $params['originstart'], $params['origintext'],

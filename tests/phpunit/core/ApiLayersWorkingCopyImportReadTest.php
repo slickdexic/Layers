@@ -88,6 +88,7 @@ class ApiLayersWorkingCopyImportReadTest extends \MediaWiki\Tests\Api\ApiTestCas
 	private function authority(): Authority {
 		$authority = $this->createMock( Authority::class );
 		$authority->method( 'getUser' )->willReturn( $this->actor->getUser() );
+		$authority->method( 'isAllowed' )->willReturnCallback( fn ( $right ) => $this->actor->isAllowed( $right ) );
 		$callback = function ( $right, $title ): bool {
 			$id = $title->getArticleID( IDBAccessObject::READ_LATEST );
 			$this->checks[] = [ $right, $id ];
