@@ -184,3 +184,34 @@ or database changes. Rehearse recovery on the copy before using it on the wiki.
 Search, Cargo and layer-object links remain later milestones. If separately
 validating an existing search index, the native `reindexPageDrawings.php`
 maintenance script is available; those checks do not gate this ownership upgrade.
+
+## Current-candidate migration check — October 25, 2026
+
+This advances Milestone 1 / HIST-8 / HIST-9 / DATA-1 / OPS-1. The maintained
+MediaWiki 1.44.6 / MySQL wiki directly mounted the reviewed `0220126` checkout.
+The native migration command, page-copy migration component, pilot factory and
+four associated regression files exactly match the final retained 1.5.95
+upgrade rehearsal. That rehearsal's bare-name output, whole-PDF preservation,
+template refusal and newer-edit/rerun results remain applicable within their
+recorded scope. Later publication admission changes have the separate
+[117-case native checkpoint](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md).
+
+The current native command was exercised on the existing migrated synthetic
+fixture, without resetting its database or installing another wiki:
+
+- Dry run retained all 23 table/absence witnesses exactly.
+- One unscoped `--commit` rerun added **zero revisions**; all 16 existing
+  revisions, stored content, legacy rows, file records, activity and watchlist
+  witnesses remained exact. Only `page_touched` changed during the expected
+  native page-cache purge; other page fields were preserved.
+- All 25 installed upload files, including existing generated files, remained
+  byte-identical. No upload or configuration was replaced.
+- A following `--undo` **dry run** left every witnessed table and page row exact.
+  No undo, deletion or restore was applied. Completion stayed true.
+
+This closes the current-command rerun and rollback-planning check. It does not
+claim a second fresh 1.5.x upgrade or a complete application restore. Existing
+owner-qualified fixture revisions were preserved, not rewritten to make a new
+bare-output result. Full intended-wiki application restoration and pilot-data
+review remain separate release work. Main-wiki configuration was not copied;
+no additional wiki, container, database clone or port was created.

@@ -72,13 +72,15 @@ neither a revision tag nor a watchlist entry demonstrates a delivered notificati
 | HIST-5: independent copy/Import and provenance | Whole-PDF Import, one group Undo/Redo, first-Save source attribution and preserved source owner. | Remaining owner acceptance; partial-selection copying is not claimed by this whole-set evidence. |
 | HIST-6: historical content | Recorded historical viewing and exact-source delivery; selective restore preserves unrelated members. | Applicable manual Print acceptance and remaining owner scenarios. |
 | HIST-7: scoped rename | Retained scoped atomic rename/refusal regression and browser evidence. | Current intended-wiki rename acceptance is not replaced by feed inspection. |
-| HIST-8: migration and recovery | Recorded 1.5.95/MySQL transition, dry run/reruns, retained sources and newer-edit preservation; persistent-data/upload restore checkpoint. | Application restoration and fresh exact-candidate rehearsal; earlier pilot data needs separate review. |
-| HIST-9: bare author-facing names | Current native migration command explicitly requests bare output; the supported older owner-qualified form stays readable as input. | Fresh exact-candidate output and intended-wiki pilot-data review; source inspection alone is not a migration rehearsal. |
+| HIST-8: migration and recovery | Recorded 1.5.95/MySQL transition, retained sources and newer-edit preservation; persistent-data/upload restore checkpoint. The [current native rerun](UPGRADING.md#current-candidate-migration-check--october-25-2026) adds zero revisions, preserves retained data/uploads and qualifies no-write rollback planning. | Intended-wiki application restoration and final-artifact reconciliation; earlier pilot data needs separate review. No fresh database transition or actual undo was repeated. |
+| HIST-9: bare author-facing names | The native migration command, factory/component and four associated regression files exactly match the final retained upgrade rehearsal, which qualifies bare output. The supported older owner-qualified form stays readable as input. | Intended-wiki pilot-data review and final-artifact reconciliation. The current rerun preserves existing references and is not a second fresh-output rehearsal. |
 
 The existing combined migration fixture retains older owner-qualified embeds.
 Its historical and current revisions were inspected without rewriting them.
 This is evidence of the earlier migration's output, not proof that the current
-command writes owner IDs and not a fresh bare-output qualification. Keep the
+command writes owner IDs and not a second fresh bare-output qualification. The
+command/factory/component and four regression files have now been compared
+byte for byte with the final retained upgrade rehearsal. Keep the
 distinction when planning the intended-wiki upgrade; do not silently relabel
 or repair retained pilot data.
 
