@@ -18,7 +18,7 @@ upstream release. The page-history candidate requires MediaWiki 1.44 or newer.
 The 1.43 wiki remains available for older Layers builds. The 1.44 test wiki
 also enables its bundled Minerva skin for `useskin=minerva` checks; default
 Vector remains. [Phone viewer results](PHONE_VIEWER_ACCEPTANCE.md) distinguish
-passed checks, the open touch-panning defect and physical-device acceptance.
+passed checks from the remaining physical-device acceptance.
 
 The existing local Compose project manages the version services. Each wiki keeps
 its own settings and uploads outside the Layers repository. The retained 1.44
@@ -44,6 +44,42 @@ another fresh wiki. Main-wiki settings and the 1.43 setup stay in place.
   recovery plan; do not change the owner's shared test content silently.
 - Reuse the maintained services for HTTP/browser acceptance and bounded cache or
   restart checks. Coordinate any interruption of a wiki the owner is using.
+
+## Private working material and HTTP access
+
+A checkout mounted into a web server is a served directory, even when its files
+are ignored by Git. Wiki read permissions do not automatically protect static
+logs, local Markdown documents or development artifacts in that directory.
+Production should use a clean extension package, with private settings, logs,
+uploads and captures outside served source paths.
+
+The shared 8080/8082 development checkout now has a **local-only root `.htaccess`**
+guard, based on the [generic Apache example](DEVELOPMENT_HTTP_GUARD.htaccess).
+It permits `resources/` and maintained synthetic `tests/fixtures/assets/`; other
+checkout URLs are refused. ResourceLoader, wiki pages, APIs and REST delivery
+remain core entry points outside this directory. No application help links
+depend on the raw local documentation URLs. Read guides on GitHub or locally.
+
+The example is opt-in development configuration, not a Layers runtime dependency
+or an automatic deployment step. Check Apache `mod_rewrite`, override support
+and required asset URLs before copying it to a checkout root. Without that
+module the example fails closed. Other servers need their own equivalent
+access policy; merely copying `.htaccess` to a server that ignores it protects
+nothing. Never replace an existing operator configuration blindly.
+
+The local guard is ignored through this repository's local Git exclude file,
+with its existing contents preserved. It is not included in the published
+extension. **Preserve the root guard**, along with the existing denial files
+in `tmp/`, `acceptance/` and `.git/`, during cleanup. No private log, archived
+settings or historical evidence was moved, truncated or made readable to fix
+the boundary. Moving the retained active log later is a separate operator task.
+
+Validate access with generated harmless canaries only. Do not download real
+logs, settings, private documents or archives as a test. The recorded check
+proves before/after denial on both supported-version ports, while viewer code,
+stylesheet, font, PDF worker and synthetic image assets remain available.
+All generated canaries and the temporary flat-file fixture are removed afterward.
+This creates no additional wiki, database clone, container or web port.
 
 ## Retired environments
 

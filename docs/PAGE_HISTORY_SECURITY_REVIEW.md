@@ -110,6 +110,33 @@ artifact-permission change is used.
 
 ## Review boundary and remaining work
 
+### Shared development-checkout privacy
+
+Harmless static-file canaries at a root log path and a documentation path
+returned HTTP 200 without a wiki login. This established a development-server
+boundary problem; no real private artifact was requested or disclosure of real
+private contents claimed. Git exclusions and wiki authentication alone do not
+protect files served directly by the web server.
+
+The [development checkout guard](DEVELOPMENT_ENVIRONMENTS.md#private-working-material-and-http-access)
+now refuses non-runtime checkout paths while retaining public runtime and
+synthetic-image assets. The same rules first passed on an isolated flat-file
+fixture, then were installed atomically without replacing an existing file.
+All 32 checks passed across ports 8080 and 8082: before/after canaries, five
+public asset classes and five denied private-path classes. No real log, settings,
+private document or wiki content was downloaded. Markers were removed afterward.
+Eight additional raw HTTP requests using plain and encoded traversal forms
+were also refused without returning the generated marker.
+
+The installed root guard and Git exclude entry are local development
+configuration. The generic example is public; it is not auto-installed or a new
+extension/server requirement. Existing private artifact permissions, historical
+bytes and wiki settings remain unchanged. Clean release packaging and operator
+storage outside web roots remain required; this does not qualify every possible
+server alias or replace application authorization checks.
+
+### Application review still open
+
 Retained [HTTP privacy and native admission evidence](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md)
 covers roles, visibility transitions, private exact-source delivery, source
 revocation and final owner checks. Those results remain within their recorded
@@ -122,7 +149,7 @@ corrections; missing evidence alone is not a production defect. New search,
 Cargo and layer-object-link features remain later milestones. Preserve the
 security of existing functionality while reviewing this release's changes.
 
-No ordinary wiki content, pilot names, historical snapshots, permissions or
-configuration are changed by this review. The [pilot-data comparison](PILOT_DATA_REVIEW.md)
+No ordinary wiki content, pilot names, historical snapshots, wiki permissions or
+wiki settings are changed by this review. The [pilot-data comparison](PILOT_DATA_REVIEW.md)
 is separate and authorizes no reconciliation. Release version/tag and owner
 acceptance remain pending.

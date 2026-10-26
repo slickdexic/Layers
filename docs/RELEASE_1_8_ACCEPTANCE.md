@@ -52,6 +52,13 @@ development-tool security updates. The full locked npm audit now has zero
 known vulnerabilities; the broader application review remains explicit rather
 than being marked complete by the earlier HTTP checks or a dependency scan.
 
+Harmless HTTP canaries also exposed the shared checkout's raw log/document
+paths. A local [development HTTP guard](DEVELOPMENT_ENVIRONMENTS.md#private-working-material-and-http-access)
+now denies those working paths while preserving required assets on both
+supported-version ports. No real private artifact was requested or moved.
+This is development-server protection, separate from the extension's API
+authorization and the clean release package.
+
 The [upgrade-path acceptance matrix](UPGRADE_PATH_ACCEPTANCE.md) identifies
 1.5.95 as the fully tested starting release. Older released schemas pass native
 update/rerun checks, but their full application migrations are not thereby

@@ -1,0 +1,11 @@
+# Optional Apache guard for a development checkout containing private local work.
+# Copy to the checkout root only after checking its asset URLs and mod_rewrite.
+# This is not an extension runtime dependency or an automatic installation step.
+<IfModule !mod_rewrite.c>
+	Require all denied
+</IfModule>
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule ^(?:resources/|tests/fixtures/assets/) - [END]
+	RewriteRule ^ - [F,END]
+</IfModule>
