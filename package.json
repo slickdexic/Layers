@@ -53,7 +53,7 @@
 		"@types/node": "^25.2.3",
 		"babel-loader": "^10.0.0",
 		"eslint-config-wikimedia": "0.31.0",
-		"grunt": "1.6.1",
+		"grunt": "1.6.3",
 		"grunt-banana-checker": "0.13.0",
 		"grunt-eslint": "24.3.0",
 		"grunt-stylelint": "0.20.1",

@@ -56,8 +56,10 @@ Read the [complete upgrade guide](UPGRADING.md) before deployment.
 ## Evidence and disclosed limits
 
 The [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md) records the
-corrected Import/recovery request-budget bypass, the documentation-tool security
-patch and remaining review limits. It does not declare the release accepted.
+corrected Import/recovery request-budget bypass, compatible development-tool
+security updates and remaining application-review limits. The full locked npm
+audit reports zero known vulnerabilities at this checkpoint; shipped assets
+remain unchanged. This does not declare the release accepted.
 
 The [upgrade matrix](UPGRADE_PATH_ACCEPTANCE.md),
 [native acceptance](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md),

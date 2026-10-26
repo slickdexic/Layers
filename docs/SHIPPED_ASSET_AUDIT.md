@@ -69,8 +69,11 @@ The October 26 [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md)
 repeats the exact-version pdf.js query with no affected matches and preserves
 all shipped assets. It separately patches the documentation generator's
 Handlebars dependency from 4.7.9 to 4.7.10, resolving its critical advisories.
-Other development-tool warnings remain recorded for assessment; a runtime-only
-audit is not used to dismiss the vendored PDF library or the build toolchain.
+The follow-up compatible development-tool updates resolve the remaining 21
+warnings; the full locked npm audit now reports zero vulnerabilities. Grunt's
+direct pin moves to 1.6.3, while other declared ranges and the pdf.js/Handlebars
+entries stay unchanged. No runtime assets are rebuilt. A runtime-only audit is
+not used to dismiss the vendored PDF library or the build toolchain.
 
 The retained native/browser/security results remain in the
 [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md). Missing supported-scope

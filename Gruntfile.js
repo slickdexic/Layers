@@ -12,31 +12,37 @@ module.exports = function ( grunt ) {
 				cache: true,
 				fix: grunt.option( 'fix' )
 			},
-			all: [
-				'**/*.js',
-				'!node_modules/**',
-				'!vendor/**',
-				'!resources/dist/**',
-				'!resources/lib/**',
-				'!resources/ext.layers.editor/shapeLibrary/scripts/**',
-				'!scripts/**',
-				'!TempToolIcons/**',
-				'!docs/api/**',
-				'!.eslintrc.json',
-				'!**/*.ts'
-			]
+			all: {
+				ignore: [ 'node_modules/**', 'vendor/**', 'tmp/**', 'acceptance/**', 'coverage/**' ],
+				src: [
+					'**/*.js',
+					'!node_modules/**',
+					'!vendor/**',
+					'!resources/dist/**',
+					'!resources/lib/**',
+					'!resources/ext.layers.editor/shapeLibrary/scripts/**',
+					'!scripts/**',
+					'!TempToolIcons/**',
+					'!docs/api/**',
+					'!.eslintrc.json',
+					'!**/*.ts'
+				]
+			}
 		},
 		stylelint: {
 			options: {
 				// Ensure the repo config is used so our linebreaks override is respected
 				configFile: '.stylelintrc.json'
 			},
-			all: [
-				'**/*.{css,less}',
-				'!node_modules/**',
-				'!vendor/**',
-				'!coverage/**'
-			]
+			all: {
+				ignore: [ 'node_modules/**', 'vendor/**', 'tmp/**', 'acceptance/**', 'coverage/**' ],
+				src: [
+					'**/*.{css,less}',
+					'!node_modules/**',
+					'!vendor/**',
+					'!coverage/**'
+				]
+			}
 		},
 		banana: conf.MessagesDirs
 	} );
