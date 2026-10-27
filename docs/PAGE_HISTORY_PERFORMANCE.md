@@ -5,6 +5,12 @@ Save/history responses and browser asset size, image paint, editor opening and
 100-layer interaction measurements. Results qualify only the environments and
 compositions described below; they do not certify every performance criterion.
 
+The [charter's reference conditions](PROJECT_CHARTER.md#53-fast-perf) already
+require production settings and local-disk files, explicitly excluding the shared
+development mount. A slow shared-mount observation is useful diagnostic evidence;
+it does not by itself establish failure on the required reference installation.
+The 300 ms paint target is unchanged.
+
 ## October 24, 2026 observations
 
 Runtime: reviewed commit `c07ff0e`, MediaWiki 1.44.6, PHP 8.3 and MySQL 8.
@@ -313,6 +319,48 @@ separately from extension behavior. No Docker-specific runtime backend, relaxed
 authorization, stale source selection or weakened freshness check is justified
 by these observations. The 300 ms target and the failed current-lane result
 remain unchanged; no new end-to-end pass is claimed.
+
+### Native loader path comparison — October 27, 2026
+
+On the same maintained 1.44 wiki, eight counterbalanced GET requests compared
+the existing linked resources with verified container-local copies of the same
+public files. Both modes used identical native registrations, public URLs and
+general-logging settings. Existing indirect dependencies were read through, with
+all dependency updates confined to request-local memory.
+
+| Response | Linked resources | Identical local resources |
+| --- | --- | --- |
+| Combined core/skin/Layers scripts | 1,954.9–1,959.7 ms | 127.1–154.6 ms |
+| Script-loader startup | 741.2–787.6 ms | 107.2–137.0 ms |
+
+Every response matched the accepted original body byte for byte; all 23 module
+definitions matched apart from local base paths. Native dependency records stayed
+unchanged, and the expected duplicate-registration warnings were accounted for
+equally in both modes. This demonstrates a large linked-path contribution to
+these loader responses; it does not isolate USB hardware from the sharing stack.
+
+The existing reader test was then run with diagnostic headers, general logging
+off and local public resource inputs. Import/header insertions reconstruct the
+original benchmark exactly; sample, identity, pixel, request and budget assertions
+were retained. The five fresh-browser/warm-server observations were **487.1,
+480.7, 475.1, 455.6 and 498.3 ms**; the separate warm-up was 648.1 ms. All six
+page/revision/pixel checks passed, with no guard violations. **All five samples
+still exceed 300 ms.**
+
+This was a partial path diagnostic, not a fully local reference installation:
+PHP extension code, media and the LESS-only module remained on their deployed
+paths. Keeping LESS inputs there avoided leaving temporary paths in its cache.
+The remaining trace has roughly 140 ms each for startup and the combined script
+response, followed by JavaScript setup and the authorized read. Those stages are
+serial. Further reference testing should distinguish remaining deployment costs
+from opportunities to overlap existing work without weakening admission.
+
+No product source, content, permission, public URL, service or installed wiki was
+changed. Generated test settings were restored exactly and all 1,761 verified
+temporary public-resource copies were removed after each run. No copied PHP was
+executed. The earlier capture race and preflight refusal remain retained locally;
+the completed comparison uses atomic capture publication. No end-to-end pass,
+cold-server result or reference-laptop qualification is claimed.
 
 ## Offscreen slide rendering
 
