@@ -253,6 +253,67 @@ each fail the corresponding unchanged test. The existing GET-only/cache-preservi
 guard and unconfigured skip remain covered. This qualifies the test-tool change,
 not the failed product performance budget.
 
+### Server and linked-filesystem investigation — October 27, 2026
+
+The owner identified that extensions are linked from a local USB drive into the
+development containers. That was treated as a hypothesis, not the assumed cause.
+The following checks reuse the maintained wiki; no new wiki, port or service was
+created, and product source, content and permissions were unchanged.
+
+Seven tagged read-only requests captured native API phases and the actual Apache
+PHP cache state. OPcache was enabled, not full, with 1,774 cached scripts,
+approximately 76.8 MB free and a cumulative hit rate above 99.8%. No cache restart
+was pending. This rules out the suspected full bytecode cache for these requests;
+it does not establish that every other cache or I/O path is efficient.
+
+A counterbalanced comparison changed only general developer logging for tagged
+requests, retaining explicit channel routes and the same profiling. Two samples
+per mode/type produced:
+
+| Response | General logging on | General logging off |
+| --- | --- | --- |
+| Core site information | 442.7–483.7 ms | 66.9–70.7 ms |
+| Authorized Layers read | 787.2–810.4 ms | 115.7–130.2 ms |
+| Combined core/skin/Layers scripts | 1,768.9–2,053.2 ms | 1,644.8–1,650.7 ms |
+| Script-loader startup | 774.2–792.1 ms | 769.6–771.8 ms |
+
+Layers and script bodies match byte for byte across modes. Core includes its
+current clock: all four original full response hashes were independently
+reconstructed by changing only that documented field in a fresh response.
+Actual general-log state was checked after setup and at shutdown. Explicit
+channel logging remained, so logging-off requests could still append to the
+same file.
+
+This demonstrates a substantial general-logging cost for API responses in this
+development setup. It does not explain the remaining script delay: neither
+script response wrote to the general log in either mode. Two observations per
+mode are a diagnostic comparison, not broad production or release qualification.
+Temporary generated test settings were restored byte-exactly after each check;
+the main wiki's settings were not read or changed.
+
+A separate public-file I/O test compared five identical files on the linked
+extension path and temporary container-local copies. Four rounds reversed the
+order; hashes and source bytes stayed exact. Each round measured:
+
+| Operation | Linked extension path | Container-local copies |
+| --- | --- | --- |
+| 250 metadata reads, with PHP stat caching cleared | 413.5–437.9 ms | 0.665–0.799 ms |
+| 50 complete file reads | 171.8–180.4 ms | 0.608–0.657 ms |
+
+This establishes a large I/O cost for that linked path under the recorded test.
+It does **not** isolate the USB device from Windows/Docker file sharing, measure
+cold storage, or prove how many milliseconds of an actual page request it causes.
+Copied source was never executed, and the five owned copies were removed.
+The core script loader does read module files and compute version registrations;
+attributing the remaining request delay requires a controlled loader comparison.
+
+Keep production general-debug logging disabled outside troubleshooting while
+preserving required channel/error logging. Diagnose slow development mounts
+separately from extension behavior. No Docker-specific runtime backend, relaxed
+authorization, stale source selection or weakened freshness check is justified
+by these observations. The 300 ms target and the failed current-lane result
+remain unchanged; no new end-to-end pass is claimed.
+
 ## Offscreen slide rendering
 
 The native twenty-set check reproduced eager painting of all twenty slide sets,

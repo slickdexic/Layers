@@ -35,6 +35,15 @@ results; run only missing or affected checks and keep original failures.
 | Owner acceptance | **Pending.** | Complete the Milestone 1 portions of charter scenarios S1–S7 on the intended wiki. Search, Cargo and new link portions belong to their later milestones. Record acceptance of the release scope and remaining disclosed limits. |
 | Final release cut | **Pending.** | Freeze the reviewed artifact, run required gates and exact-commit CI, confirm version/tag with the owner and publish the independent release. Preserve a consistent upgrade/rollback reference. |
 
+The October 27 [server/filesystem investigation](PAGE_HISTORY_PERFORMANCE.md#server-and-linked-filesystem-investigation--october-27-2026)
+rules out a full web OPcache for the measured requests and demonstrates a large
+general-debug-logging cost for API reads. Identical-file comparisons also measure
+substantial linked-path I/O overhead. Script responses remain slow with general
+logging off; neither the USB device alone nor an extension regression is thereby
+established as the remaining cause. Original test settings were restored exactly.
+These diagnostic results do not replace the failed 300 ms reader gate or qualify
+reference hardware. Keep environment costs distinct from product defects.
+
 ## Scope control
 
 The [read-only pilot review](PILOT_DATA_REVIEW.md) covers 28 current owners and
