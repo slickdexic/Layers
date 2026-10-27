@@ -460,6 +460,47 @@ This follow-up does not justify removing fresh visibility/source checks or
 changing controls. The retained mount and reference-install limitations still
 apply. The selected runtime and the two measured budget misses remain unchanged.
 
+### Installed asset and editor-entry checks — October 27, 2026
+
+The same maintained 1.44 installation now qualifies the asset-size and warm
+editor-entry checks on the reviewed early-read runtime. Existing synthetic
+image, slide and two-page PDF content is reused without saving changes or
+altering settings. Browser traffic is restricted to same-origin GET requests.
+
+The six Layers modules actually ready on the combined page transfer **102,129
+bytes** in one real HTTP gzip response, including their code, styles and messages.
+The decoded response is 518,340 bytes. This is below the unchanged 150 × 1024
+byte limit. A separate fresh browser context for the existing plain main page
+loads no Layers module and makes no Layers module request. Core/skin modules
+are excluded from the Layers byte total; fonts and other binary assets are
+outside this code/styles measurement. Render-blocking behavior is not separately
+certified by the size check.
+
+| Native Edit overlay entry | First opening, recorded separately | Five warm openings (ms) | Three-second warm budget |
+| --- | --- | --- | --- |
+| Image | 1677.0 ms | 929.6, 822.2, 829.4, 831.4, 813.7 | Passed |
+| Slide | 800.5 ms | 802.9, 801.1, 862.0, 800.6, 800.2 | Passed |
+| PDF, embedded second page | 1107.6 ms | 837.8, 845.0, 881.6, 896.4, 843.7 | Passed |
+
+Timing starts in the actual overlay click handler and ends when the editor has
+a visible canvas, ready draft handling and a ready, writable, clean session.
+Every opening matches the saved owner, revision, selected surface and layer IDs;
+the PDF opens its actual embedded second page. All eighteen normal Close actions
+return to the owning page without saving. The same browser context reuses assets
+within each run; first openings are not a formal cold-server measurement.
+
+The first observer selected the first *stored* PDF page, which was not embedded
+on the page, and stopped before opening the PDF. That refusal and the twelve
+completed image/slide openings are retained. A fresh PDF-only replay selects
+the actual rendered binding and matches it to the saved surface; it passes all
+six openings. Earlier successful cases are not repeated to repair the observer.
+
+All three owner revisions/slots, 25 persistent tables/schema and 26 uploads
+remain exact. Runtime, tests, permissions, settings and other version services
+are unchanged. This qualifies these representative desktop asset/entry cases;
+it does not qualify reference-laptop hardware, physical touch, cold-server or
+large-PDF combinations. The two retained 300 ms reader-paint misses remain open.
+
 ## Offscreen slide rendering
 
 The native twenty-set check reproduced eager painting of all twenty slide sets,

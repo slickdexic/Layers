@@ -47,7 +47,7 @@ jobs:
       - name: Documentation consistency check
         run: npm run check:docs
 
-      - name: Lint/i18n (grunt)
+      - name: JavaScript tests, lint and source checks
         run: npm test
 
       - name: PHP checks
@@ -55,9 +55,6 @@ jobs:
 
       - name: PHP unit tests (PHPUnit)
         run: npm run test:phpunit
-
-      - name: JS unit tests (Jest)
-        run: npm run test:js
 
       # Runtime dependencies are what ships to a wiki, so a high/critical
       # advisory there fails the build. Dev-only advisories are reported into the
