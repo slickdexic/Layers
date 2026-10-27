@@ -202,7 +202,8 @@ class ImageLinkProcessor {
 						$res,
 						$file,
 						$layersArray,
-						$context . '-direct'
+						$context . '-direct',
+						$page
 					);
 				}
 
@@ -364,20 +365,22 @@ class ImageLinkProcessor {
 	 * @param mixed $file The File object
 	 * @param array $layerData The layers to inject
 	 * @param string $context Logging context
+	 * @param int $page Effective 1-based page for multi-page files
 	 * @return string Modified HTML
 	 */
 	private function injectLayersDirect(
 		string $html,
 		$file,
 		array $layerData,
-		string $context
+		string $context,
+		int $page = 1
 	): string {
 		// Handle both old format (raw layers array) and new format (object with layers + settings)
 		$layers = isset( $layerData['layers'] ) ? $layerData['layers'] : $layerData;
 		$backgroundVisible = $layerData['backgroundVisible'] ?? true;
 		$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
 
-		$dimensions = $this->htmlInjector->getFileDimensions( $file );
+		$dimensions = $this->htmlInjector->getFileDimensions( $file, $page );
 		$result = $this->htmlInjector->injectIntoHtml(
 			$html,
 			$layers,

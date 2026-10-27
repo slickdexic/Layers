@@ -59,19 +59,32 @@
 	 * Handles plain objects and arrays; other types are returned as-is.
 	 *
 	 * @param {*} obj - The value to clone
+	 * @param {WeakMap} [seen] - Objects already cloned in this fallback traversal
 	 * @return {*} A deep clone of the value
 	 */
-	function manualDeepClone( obj ) {
+	function manualDeepClone( obj, seen = new WeakMap() ) {
 		if ( obj === null || typeof obj !== 'object' ) {
 			return obj;
 		}
-		if ( Array.isArray( obj ) ) {
-			return obj.map( ( item ) => manualDeepClone( item ) );
+		if ( seen.has( obj ) ) {
+			return seen.get( obj );
 		}
-		const clone = {};
+		const clone = Array.isArray( obj ) ? new Array( obj.length ) : {};
+		seen.set( obj, clone );
+		if ( Array.isArray( obj ) ) {
+			obj.forEach( ( item, index ) => {
+				clone[ index ] = manualDeepClone( item, seen );
+			} );
+			return clone;
+		}
 		for ( const key in obj ) {
 			if ( Object.prototype.hasOwnProperty.call( obj, key ) ) {
-				clone[ key ] = manualDeepClone( obj[ key ] );
+				Object.defineProperty( clone, key, {
+					value: manualDeepClone( obj[ key ], seen ),
+					enumerable: true,
+					writable: true,
+					configurable: true
+				} );
 			}
 		}
 		return clone;

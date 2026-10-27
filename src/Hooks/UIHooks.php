@@ -72,7 +72,7 @@ class UIHooks {
 			return;
 		}
 
-		// Check editlayers permission using PermissionManager (unless debugging enabled)
+		// Debug logging must never grant editor navigation permission.
 		$hasEditLayersPermission = false;
 		try {
 			$permManager = MediaWikiServices::getInstance()->getPermissionManager();
@@ -94,9 +94,7 @@ class UIHooks {
 			}
 			$groupText = $userGroups ? implode( ',', $userGroups ) : 'unknown';
 			$log( 'Skip: user missing editlayers permission - user groups: ' . $groupText );
-			if ( !$dbg ) {
-				return;
-			}
+			return;
 		}
 
 		// Do not block on config; if set explicitly false, skip

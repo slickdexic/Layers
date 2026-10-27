@@ -303,7 +303,7 @@ class LayerInjector {
 
 		// Use the HTML injector to add attributes with background settings
 		$injector = $this->getHtmlInjector();
-		$dimensions = $injector->getFileDimensions( $file );
+		$dimensions = $injector->getFileDimensions( $file, $page );
 
 		$injector->injectIntoAttributes(
 			$attribs,

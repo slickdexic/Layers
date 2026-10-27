@@ -69,6 +69,7 @@ Changes the owner has approved (the only removals allowed):
 | October 24, 2026 | Images and slides offer PNG as the first Download choice, with an explicit PDF option. PDFs download only as PDF. | [Download format correction](LIGHTBOX_DOWNLOAD_FORMATS.md); project owner requested PNG for images/slides or two options, and PDF only for PDFs. |
 | October 25, 2026 | Enlarged media may pan by one-finger drag, four bottom Pan buttons or Shift+Arrow. Existing toolbar, PDF shortcuts, browser zoom, Print and Download stay. | [Accessible viewer panning](VIEWER_TOUCH_PANNING_BEHAVIOUR_BRIEF.md); project owner: “Approve the revised design”. |
 | October 25, 2026 | The viewer toolbar uses a normal 14px UI base, is capped at 96px or one quarter of viewer height, and scrolls its existing actions within that limit. PDF navigation stays together and Fit uses the remaining media area; controls, wording, shortcuts, Close and Pan remain. | [Bounded toolbar](VIEWER_TOOLBAR_TEXT_LAYOUT_BEHAVIOUR_BRIEF.md); project owner: “Approve bounded toolbar”. The earlier tall-stack proposal was not approved. |
+| October 27, 2026 | Before migration, users without `editlayers` no longer receive the legacy File-page editor tab or debug action, even when debug mode is enabled. Authorized entries and owning-page overlays stay. | [Permission correction](LEGACY_DEBUG_NAVIGATION_PERMISSION_BEHAVIOUR_BRIEF.md); project owner: “Approve the bounded correction”. |
 
 Not yet decided (owner questions, do not act on them): whether to delete the old shared-set editor and its APIs in 2.0.
 
