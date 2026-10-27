@@ -34,8 +34,12 @@ The existing `npm run bench` suite remains the broader repository benchmark.
 Provision its explicitly authorized fixture first; do not point a write
 benchmark at ordinary content. For this narrower server measurement:
 
-1. Copy a completed test wiki into an isolated database/uploads/configuration
-   boundary and verify the exact candidate source and original data.
+1. Reuse the [maintained wiki for the target MediaWiki version](DEVELOPMENT_ENVIRONMENTS.md).
+   Verify its candidate source and original-data witnesses. Use a dedicated
+   synthetic owner and normal isolated test tables/repositories where applicable;
+   do not copy a wiki or create containers, ports or database clones without the
+   owner's separate approval. The earlier disposable environments above are
+   historical evidence, not instructions to recreate them.
 2. Create one disposable owner containing a slide with 99 rectangles and one
    textbox. Publish and verify the complete 100-layer initial snapshot.
 3. Make five serial one-property edits through the native publication API using

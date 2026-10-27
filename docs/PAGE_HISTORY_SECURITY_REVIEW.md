@@ -1,13 +1,16 @@
 # Page-history release security review
 
-**Candidate baseline:** `57daa35`, October 26, 2026. This review advances the
-independent 1.8 release's SEC-4, SEC-6 and SEC-7 gates. The review is in progress;
-the findings below do not declare the full release security gate complete.
+**Review checkpoint:** October 26, 2026. Opened at `57daa35` and reconciled with
+the subsequent accepted changes below. The independent 1.8 source/evidence
+security review is complete within the recorded scope, including the corrected
+literal-text renderer. This advances SEC-2, SEC-3, SEC-4, SEC-6 and SEC-7 for
+Milestone 1; it does not qualify later 2.0 features or declare the release accepted.
 The [release ledger](RELEASE_1_8_ACCEPTANCE.md) remains authoritative.
 
 **Current dependency result:** the compatible toolchain update below brings
 the full locked npm audit to zero known vulnerabilities, with shipped runtime
-assets unchanged. The wider application security review is still in progress.
+assets unchanged. The locked PHP dependency audit also reports no advisories
+or abandoned packages. Recheck both at the final release cut.
 
 ## Confirmed Import request-budget bypass
 
@@ -157,7 +160,51 @@ all-green full run. No native CLI suite, ordinary content edit, pilot repair,
 configuration change or source rebuild accompanies this review. No new blocker
 was demonstrated in this authorization/request/admission scope.
 
-## Review boundary and remaining work
+## Literal text and remaining application boundaries
+
+The server thumbnail/PDF renderer passed authored text directly to ImageMagick
+annotation arguments. A bounded native pixel comparison demonstrated that
+`%[fx:6*7]` painted exactly as `42`, rather than the text the editor entered.
+This establishes unintended renderer-expression interpretation; it does not
+establish private-file disclosure or remote code execution.
+
+All six text-producing paths now escape percent signs at the annotation
+boundary: text, text box, marker, callout, dimension and angle dimension. The
+existing leading-`@` guard remains. Stored text is unchanged. Ordinary percentage
+text retains identical pixels. A shared rendering-cache version changes both
+thumbnail and PDF-export keys so new requests do not reuse old interpreted-text
+artifacts; retained files follow their normal cache lifecycle.
+
+The new regressions reproduce twelve literal-text failures before correction.
+The corrected full standalone suite passes **1,630 tests / 4,051 assertions**,
+with one existing skip. A copied original renderer fails thirteen companion
+cases, including stale-cache reuse; production and existing tests are not
+mutated for that control. Six actual production argument paths also pass native
+pixel comparisons against evaluated-expression controls. These are tiny
+synthetic renders, with no private input file or wiki edit. The initial observer
+format/bootstrap failures are retained; no source or permission bypass qualifies
+the successful checks. Existing client/native authorization evidence is reused
+because those sources are unchanged.
+
+| Review area | Current-candidate result and limits |
+| --- | --- |
+| Content and stored-data integrity | The bounded schema rejects duplicate JSON members, non-finite numbers, unsupported structure, invalid references and lossy sanitization before publication. Historical structural reads remain separate from strict new writes. Existing schema, preservation and API-proof tests cover those contracts. |
+| Output and script injection | Page-owned controls and recovery previews use text nodes; rich-text HTML escapes authored text and filters interpolated style values. Canvas text remains data. Native JSON configuration transport and text-slot diffs supply context-appropriate encoding. Image data allows bounded raster data URLs with matching signatures, excluding SVG; SVG path commands use a character/count whitelist. Stored raw SVG fallback is not server-rasterized. Existing validation/rendering tests and the literal-text correction above cover the reviewed paths. |
+| Resource bounds | Snapshots have byte, depth, surface and layer limits; styles, text, paths and inline images have their existing bounds. Private raster admission limits source metadata to 64 MiB / 40 million pixels and output to 4096 pixels per side / 8 MiB, with full generated-image decoding. Native shell/media-handler execution retains core resource limits and existing quotas. These limits are not a proof against every decoder defect or a concurrent load benchmark. |
+| External I/O and command execution | Page-owned source lookup uses the local repository and exact title/timestamp/hash/page, not a caller-supplied download URL. Shell arguments carry bounded validated data; executable/converter configuration is operator-controlled. The legacy SVG converter template is trusted configuration with escaped temporary paths. Native MediaWiki media-handler requirements remain; no worker/backend architecture is introduced. |
+| Capture, caches and privacy | Exact PDF capture hashes the same private handle later delivered, repeats admission and releases owned resources on refusal/close. PDF routes keep private no-store responses. Export delivery rechecks the source title and uses private staging; legacy public thumbnail storage remains subject to core upload-access configuration. The retained HTTP visibility/lifecycle checks and local checkout guard supply their recorded protection. |
+| Configuration, authentication and logging | Authentication, CSRF and permissions remain native. Private wiki operators must protect uploads and keep settings/logs/captures outside public paths. Error logs can contain diagnostic paths and authored text; they require operator access control and are not a public export or a redacted data format. Responses use the documented generic failures. The review changes no site settings, log permissions or user data. |
+| Dependencies and software/data integrity | Full locked npm audit is zero at the recorded toolchain checkpoint; the fresh locked Composer audit has no advisories or abandoned packages. The first local Composer attempt failed certificate validation; the successful process uses Windows-trusted public roots with TLS verification enabled, then removes its temporary bundle. No dependency install/update or persistent trust change occurs. Shipped asset hashes/notices, exact source delivery and native revision admission retain their own tests. |
+
+This completes the source-led engineering review of the relevant 1.8 application
+boundaries, using current source, the new correction and retained qualified
+tests. No unresolved high/critical finding or demonstrated data-loss defect was
+identified in that scope. This is not an independent penetration test, proof
+against unknown flaws, qualification of every server configuration or acceptance
+of later search/Cargo/link features. Performance/device/owner gates remain in
+the release ledger; missing evidence is not automatically a vulnerability.
+
+## Deployment boundary and release-cut recheck
 
 ### Shared development-checkout privacy
 
@@ -184,19 +231,17 @@ bytes and wiki settings remain unchanged. Clean release packaging and operator
 storage outside web roots remain required; this does not qualify every possible
 server alias or replace application authorization checks.
 
-### Application review still open
+### Final release actions
 
 Retained [HTTP privacy and native admission evidence](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md)
 covers roles, visibility transitions, private exact-source delivery, source
 revocation and final owner checks. Those results remain within their recorded
 scope; an API counter test does not replace them.
 
-The registered request/access-control and native revision/admission review is
-recorded above. Remaining application-review work is content/output validation
-and resource/external-I/O/configuration/logging boundaries, reconciled against
-their retained tests. Dependency findings are resolved at this dated checkpoint;
-recheck them at the release cut. Classify actual findings and retest corrections;
-missing evidence alone is not a production defect. New search,
+The registered request/access-control, native admission and remaining application
+boundaries are reviewed above. Recheck dependency advisories and source/artifact
+consistency at the release cut; reopen affected checks if the candidate changes.
+Classify actual findings and retest corrections. New search,
 Cargo and layer-object-link features remain later milestones. Preserve the
 security of existing functionality while reviewing this release's changes.
 

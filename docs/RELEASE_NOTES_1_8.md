@@ -57,9 +57,12 @@ Read the [complete upgrade guide](UPGRADING.md) before deployment.
 
 The [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md) records the
 corrected Import/recovery request-budget bypass, compatible development-tool
-security updates and remaining application-review limits. The full locked npm
-audit reports zero known vulnerabilities at this checkpoint; shipped assets
-remain unchanged. This does not declare the release accepted.
+security updates and the completed source-led application review with its
+limits. Server-generated thumbnail/PDF text now stays literal instead of
+expanding renderer expressions; new cache keys prevent reuse of older affected
+renders. Stored text is preserved. Locked npm and PHP audits report no known
+advisories at this checkpoint; shipped assets remain unchanged. Final-cut
+rechecks and owner acceptance remain; this does not declare the release accepted.
 
 The [upgrade matrix](UPGRADE_PATH_ACCEPTANCE.md),
 [native acceptance](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md),

@@ -21,6 +21,9 @@ use Psr\Log\LoggerInterface;
 use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
+	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
+	public const CACHE_VERSION = 2;
+
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
 	 *
@@ -126,7 +129,7 @@ class ThumbnailRenderer {
 
 			$outputPath = $thumbDir . '/' .
 				RenderCache::artefactKey( ForeignFileHelper::getFileSha1( $file ) ) . '_' .
-				md5( json_encode( $params ) ) . '.png';
+				md5( self::CACHE_VERSION . ':' . json_encode( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
 				return $outputPath;
 			}
@@ -395,9 +398,7 @@ class ThumbnailRenderer {
 	private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$x = ( $layer['x'] ?? 0 ) * $scaleX;
 		$y = ( $layer['y'] ?? 0 ) * $scaleY;
-		// SECURITY: Strip leading '@' to prevent ImageMagick file read injection.
-		// IM interprets '@filename' as "read contents from file" in -annotate.
-		$text = ltrim( (string)( $layer['text'] ?? '' ), '@' );
+		$text = $this->safeText( $layer['text'] ?? '' );
 		$fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? '#000000' );
 		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
@@ -479,8 +480,7 @@ class ThumbnailRenderer {
 		] );
 
 		// Draw text if present
-		// SECURITY: Strip leading '@' to prevent ImageMagick file read injection.
-		$text = ltrim( (string)( $layer['text'] ?? '' ), '@' );
+		$text = $this->safeText( $layer['text'] ?? '' );
 		if ( $text !== '' ) {
 			$fontSize = (int)round( ( $layer['fontSize'] ?? 16 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 			$textColor = (string)( $layer['color'] ?? '#000000' );
@@ -802,12 +802,13 @@ class ThumbnailRenderer {
 	 * Strip characters ImageMagick would interpret rather than draw.
 	 *
 	 * A leading '@' makes -annotate read the rest as a filename.
+	 * Percent escapes otherwise expand image properties and expressions instead of literal text.
 	 *
 	 * @param mixed $text Raw text
 	 * @return string Text safe to pass to -annotate
 	 */
 	private function safeText( $text ): string {
-		return ltrim( (string)$text, '@' );
+		return str_replace( '%', '%%', ltrim( (string)$text, '@' ) );
 	}
 
 	/**

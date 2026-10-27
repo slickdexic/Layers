@@ -168,6 +168,7 @@ class ApiLayersExport extends ApiBase {
 
 		$cacheKey = md5( implode( '|', [
 			$sha1, $setName, (string)$width, (string)$pageCount, implode( ',', $pageMeta ),
+			(string)ThumbnailRenderer::CACHE_VERSION,
 		] ) );
 
 		$outputDir = $this->getExportDir();
