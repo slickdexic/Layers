@@ -394,6 +394,49 @@ failure. Private configuration/media/log storage still uses the retained data
 mount, and the reference laptop has not been qualified. No broad reference,
 all-media, cold-server, physical-device or release acceptance is implied.
 
+### Earlier authorized read — October 27, 2026
+
+The installed 1.44 candidate now starts the existing authorized inline read from
+a small ResourceLoader dependency that needs only jQuery and `mediawiki.api`.
+It can request the exact displayed revision while renderer dependencies finish
+initializing. Rendering and overlay mounting still wait for the existing ready
+callback. The response is used once, only for the same document, owner, revision
+and ordered bindings; a changed context takes the existing fresh-read path.
+Leaving the page discards it. No persistent response cache, permission bypass,
+extra retry, UI change or new endpoint is introduced.
+
+The unchanged six-visit benchmark retains its separate warm-up and all five
+measured samples, identity/pixel assertions and 300 ms limit:
+
+| Installed candidate | Warm-up | Five measured visits | Result |
+| --- | --- | --- | --- |
+| Earlier baseline | 2515.2 ms | 367.9, 351.9, 363.1, 349.5, 340.8 ms | Five over budget |
+| Preparation inside renderer-dependent bootstrap | 353.8 ms | 341.2, 335.5, 320.6, 330.7, 336.8 ms | Five over budget; not selected |
+| Separate light read dependency | 299.4 ms | 300.4, 301.8, 296.5, 292.4, 296.2 ms | Three pass, two over budget; selected |
+| Additional transport callback bridge | 305.4 ms | 306.9, 304.3, 297.8, 305.3, 305.9 ms | No reliable additional benefit; withdrawn |
+
+The selected change reduces the measured script-end-to-read dispatch interval
+from about 68–81 ms to 28.6–30.9 ms. The API transfer remains about 71–74 ms.
+These serial measurements demonstrate a scheduling improvement in this recorded
+environment; they do **not** pass the five-sample budget. The selected source was
+restored exactly after the callback experiment, without repeating the benchmark
+until green. All slower observations stay retained.
+
+Focused tests cover exact context reuse/refusal, batching, duplicate embeds,
+failures, page disposal and unchanged mounting timing. Copied-source controls
+demonstrate the missing early request and duplicate-request regression. Native
+image/slide/PDF views, selected-page PDF navigation, historical Edit refusal and
+the maintained exact image pixel pass. Each recorded visit makes one inline
+batch for its displayed bindings. The final delivered-script observer initially
+ignored combined ResourceLoader responses without `only=scripts`; correcting
+that filter confirms the selected helper, with no product change.
+
+The same core, settings, accounts, data, uploads and port remain in use. Private
+data/configuration storage is still on the retained mount. Cold-server,
+reference-device and broader-media performance acceptance remain open; this
+checkpoint does not attribute the remaining time to USB storage alone or waive
+the original budget.
+
 ## Offscreen slide rendering
 
 The native twenty-set check reproduced eager painting of all twenty slide sets,

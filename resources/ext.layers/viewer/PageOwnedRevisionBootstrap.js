@@ -320,6 +320,14 @@
 		if ( !bindings.length || typeof owner !== 'string' || !owner || !Number.isInteger( revisionId ) ) {
 			return Promise.resolve( creationDispose );
 		}
+		const reader = window.Layers && window.Layers.InlineRead;
+		const early = reader && typeof reader.take === 'function' ? reader.take( root, owner, revisionId, bindings ) : null;
+		if ( early ) {
+			return early.then( bundles => {
+				const inlineDispose = mountInline( root, bundles, fields, api );
+				return () => { creationDispose(); inlineDispose(); };
+			} );
+		}
 		const requests = [];
 		for ( let i = 0; i < bindings.length; i += 50 ) {
 			requests.push( Promise.resolve( api.get( { action: 'layersread', formatversion: 2, owner,

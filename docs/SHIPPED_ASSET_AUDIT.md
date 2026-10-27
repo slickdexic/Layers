@@ -39,6 +39,13 @@ It adds extension UI code and small inline direction cues, with no new third-par
 dependency or external artwork. The same package guard checks this candidate;
 the dated inventory and source/notice review above remain intact.
 
+The October 27 early-read scheduling change adds one first-party JavaScript
+file, `PageOwnedInlineRead.js`, and its ResourceLoader registration. The package
+guard now checks 225 registered references. The 106 font files, 1,385 shape
+symbols, 2,817 emoji, notices and pinned pdf.js files remain unchanged. This
+introduces no new third-party asset or runtime dependency; the earlier dated
+inventory remains evidence of its own checkpoint.
+
 ## Repeatable package guard
 
 ```sh

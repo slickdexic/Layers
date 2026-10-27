@@ -467,10 +467,17 @@
 			"remoteExtPath": "Layers/resources/ext.layers/viewer",
 			"styles": [ "PageDrawingControls.less" ]
 		},
+		"ext.layers.history.read": {
+			"localBasePath": "resources",
+			"remoteExtPath": "Layers/resources",
+			"dependencies": [ "jquery", "mediawiki.api" ],
+			"targets": [ "desktop", "mobile" ],
+			"scripts": [ "ext.layers/viewer/PageOwnedInlineRead.js" ]
+		},
 		"ext.layers.history": {
 			"localBasePath": "resources",
 			"remoteExtPath": "Layers/resources",
-			"dependencies": [ "jquery", "mediawiki.api", "ext.layers.shared", "ext.layers.viewer.core" ],
+			"dependencies": [ "ext.layers.history.read", "jquery", "mediawiki.api", "ext.layers.shared", "ext.layers.viewer.core" ],
 			"scripts": [
 				"ext.layers.editor/PageOwnedSnapshotAdapter.js",
 				"ext.layers/viewer/PageOwnedRevisionView.js",
