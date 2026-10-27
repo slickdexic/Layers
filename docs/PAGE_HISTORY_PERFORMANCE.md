@@ -362,6 +362,38 @@ executed. The earlier capture race and preflight refusal remain retained locally
 the completed comparison uses atomic capture publication. No end-to-end pass,
 cold-server result or reference-laptop qualification is claimed.
 
+### Installed 1.44 candidate — October 27, 2026
+
+Following owner approval, the existing 8082 wiki now uses an installed public
+candidate on local image storage rather than the working-folder mount. Core,
+database, accounts, data, port and explicit logging routes were preserved. This
+is the maintained version wiki, not another task-specific installation.
+
+The unchanged reader spec ran without diagnostic headers, import changes or
+request-scoped path replacements. The first warm-up measured **2,515.2 ms**;
+the five fresh-browser/warm-server samples measured **367.9, 351.9, 363.1, 349.5
+and 340.8 ms**. Every page/revision/pixel assertion passed, with no guard errors.
+**All five measured samples still fail the unchanged 300 ms target.** The warm-up
+is retained separately; it is not a formal cold-server measurement.
+
+The warm trace has 108–127 ms for startup and 100–104 ms for the main script
+response. The authorized Layers request starts 68–81 ms after that response ends,
+takes 70–74 ms, and painting follows 7–17 ms later. The next bounded investigation
+is the client dispatch/dependency gap: overlap the existing authorized read with
+renderer preparation if it can preserve exact identity, errors, controls and one
+request per batch. No such product change is included in this setup checkpoint.
+
+Deployment checks verify all 2,851 public files, unchanged slots on three owners,
+image/slide/PDF reads and exact original two-page PDF delivery. All 25 witnessed
+persistent tables/schema and all 25 original uploads match; one normal derived
+JPEG thumbnail was added. A harmless canary proves source-directory HTTP denial.
+The other two web services and both database services remain unchanged.
+
+This verifies the installed-candidate setup and records the remaining timing
+failure. Private configuration/media/log storage still uses the retained data
+mount, and the reference laptop has not been qualified. No broad reference,
+all-media, cold-server, physical-device or release acceptance is implied.
+
 ## Offscreen slide rendering
 
 The native twenty-set check reproduced eager painting of all twenty slide sets,

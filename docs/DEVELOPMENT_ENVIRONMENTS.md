@@ -9,7 +9,7 @@ It describes the local development setup, not an extension runtime requirement.
 | Purpose | Local URL | Core version currently installed | Layers source |
 | --- | --- | --- | --- |
 | Primary development and owner testing | <http://localhost:8080> | 1.45.3 | The actual working Layers checkout, mounted directly. |
-| Compatibility testing | <http://localhost:8082> | 1.44.6 | The same working Layers checkout, mounted directly. |
+| Compatibility and release-installation testing | <http://localhost:8082> | 1.44.6 | A reviewed public candidate installed on the service's local filesystem; no working-checkout mount. |
 | Older-build testing | <http://localhost:8081> | 1.43.6 | The existing separate legacy extension checkout. |
 
 The 8080 lane follows the latest target version through deliberate core updates;
@@ -25,12 +25,29 @@ its own settings and uploads outside the Layers repository. The retained 1.44
 wiki reuses its existing database and upload data; consolidation does not create
 another fresh wiki. Main-wiki settings and the 1.43 setup stay in place.
 
+The owner approved the installed-candidate arrangement on October 27, 2026.
+It retains the same 1.44 wiki, database, uploads, accounts, URL and port. Only its
+web service was recreated from the same core/base with the public candidate
+installed. General catch-all developer logging is disabled for release testing;
+explicit channel/error configuration is preserved. The 8080 and 8081 services and
+both existing database services were not restarted or replaced.
+
+The local Compose release override keeps this arrangement persistent. Use the
+normal combined Compose configuration; passing only the base file explicitly
+would bypass the override and restore the earlier working-folder mount. Keep
+the private override/settings out of the public extension package. The same
+generic [HTTP guard](DEVELOPMENT_HTTP_GUARD.htaccess) protects the test image;
+the extension itself acquires no Docker dependency.
+
 ## Work on the maintained wikis
 
 - Use the appropriate version URL and record which version a result covers.
-  Changes to the shared checkout appear on both supported-version wikis after
-  the normal PHP/ResourceLoader cache handling. A saved copy in a task directory
-  is not the active extension.
+  Working-folder changes appear on 8080 after normal PHP/ResourceLoader cache
+  handling. The 8082 lane remains on its installed candidate: rebuild and install
+  a reviewed public-only candidate before claiming changed code passed on 1.44.
+  A saved copy in a task directory is not the active extension. Candidate inputs
+  must exclude private settings, data, credentials, captures and private Git history;
+  pre-publication test candidates must use an explicitly reviewed file allowlist.
 - Use the version's existing test accounts and configuration. Keep credentials,
   uploaded files, database exports, logs and local browser captures off GitHub
   and out of release artifacts. Never copy the main wiki's live settings into a
