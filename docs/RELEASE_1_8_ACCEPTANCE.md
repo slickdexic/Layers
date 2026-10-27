@@ -59,6 +59,15 @@ supported-version ports. No real private artifact was requested or moved.
 This is development-server protection, separate from the extension's API
 authorization and the clean release package.
 
+The [registered request and revision review](PAGE_HISTORY_SECURITY_REVIEW.md#registered-request-and-native-revision-review)
+now accounts for all 23 action APIs and both exact-PDF REST paths. Native metadata
+and 54 fresh HTTP refusals verify the nine write routes' method/token boundary
+on both maintained versions. Current backend sources match the published
+candidate; existing authority, visibility and final-admission evidence is reused
+within its recorded scope. No new blocker was demonstrated in that partition.
+Content/output validation and resource/external-I/O/configuration/logging review
+remain explicit; this is not full security or release acceptance.
+
 The [upgrade-path acceptance matrix](UPGRADE_PATH_ACCEPTANCE.md) identifies
 1.5.95 as the fully tested starting release. Older released schemas pass native
 update/rerun checks, but their full application migrations are not thereby

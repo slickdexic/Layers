@@ -108,6 +108,55 @@ restricted-process workspace resolution. The successful run uses normal host
 path access and the maintained command; no force flag, rule suppression or
 artifact-permission change is used.
 
+## Registered request and native revision review
+
+The current-candidate source review covers **23 registered action APIs**, plus
+two exact-PDF REST paths with GET/HEAD registrations. All **167 PHP/backend
+source files** in scope match the published candidate after normalizing source
+line endings. Registration contracts and service wiring match the qualified
+final-owner-admission baseline. This is a source/evidence review, not a new
+execution of every endpoint or every retained test.
+
+The backend changes since that baseline are accounted for: the four Import
+information-budget corrections above and the two
+[post-migration reference-output callers](PILOT_DATA_REVIEW.md). The manifest's
+other changes add the approved viewer controls. The ordinary publisher's
+source/owner authorization ordering and native admission implementation remain
+unchanged by the reference-output correction.
+
+| Boundary | Reviewed behavior and evidence |
+| --- | --- |
+| Request methods and CSRF | All nine write-capable action routes advertise POST and required CSRF tokens through native parameter metadata on both maintained versions. Fresh anonymous HTTP checks refuse a token supplied through GET, POST without a token and POST with an invalid token for every route: **54 refusals**, plus two metadata queries. |
+| Owning page and revision reads | `PageHistoryAccess` binds the exact revision to its owner, checks native text visibility, including current-record bitfields, and returns a generic unavailable result. Import/editor identity resolution also requires the current base and original owner ID. Existing HTTP role/visibility results and native read/proof suites remain applicable. |
+| Publication authorization | The public boundaries require the layer-edit right and save quota. Native publication preflights page read/edit rights, validates sources, repeats changed-source checks after preparation/caller callbacks, then finalizes owner identity and secure write authorization. Retained late-revocation/move controls qualify that ordering. |
+| Atomicity and revision admission | `PageRevisionWriter` captures the native parent before mutation; core checks it at commit. Admission binds actor, owner, parent, slot/model and exact prepared content through a consumed request-local scope. Foreign-slot models, unauthorized replacement and slot removal are refused; inherited unchanged content and unrelated slots remain preservable. |
+| First Save, Import and recovery | Source descriptors are exact owner/revision/member associations, not bearer permission. Creation and whole-PDF services revalidate them and target identity before the native publisher; protected content is not replaced through a latest-page fallback. The recorded API/proof, stale-save, recovery and lost-reply results retain their stated scope. |
+| Legacy writes and history merge | Save/delete/rename keep their native token/right/limit checks and refuse shared-set mutation after migration completion. The merge adapter delegates core permissions, parameters and token handling while the page-owned merge factory enforces its admission restriction. |
+
+The nine transport-tested routes are ordinary page publication, missing-PDF
+publication, image/slide Import creation publication, whole-PDF Import
+publication, legacy save/delete/rename, legacy PDF export and native history
+merge. All eighteen metadata records confirm the expected registered classes.
+The refusals are native API errors in HTTP 200 responses, not successful writes:
+`mustpostparams`, missing `token`, and `badtoken`, respectively.
+
+Only deliberately invalid probe values, absent tokens and invalid tokens were
+submitted. No session, credentials, valid write token, uploaded file or
+publishable layer payload was used. These checks establish the transport
+boundary; they do not exercise an authorized Save or independently prove all
+downstream role checks. Three modified evidence copies are rejected on replay:
+missing request, changed refusal and removed CSRF requirement. They are evidence
+controls, not runtime mutations. Original observer failures are retained; repairs
+handle native raw-error arrays and the specific GET-token refusal code, without
+changing production or maintained tests.
+
+The retained 117-case admission result and the subsequent combined native
+qualifications are reused within their original limits. The Import follow-up
+combines its unchanged cases and corrected fixture replays; it is not a new
+all-green full run. No native CLI suite, ordinary content edit, pilot repair,
+configuration change or source rebuild accompanies this review. No new blocker
+was demonstrated in this authorization/request/admission scope.
+
 ## Review boundary and remaining work
 
 ### Shared development-checkout privacy
@@ -142,10 +191,12 @@ covers roles, visibility transitions, private exact-source delivery, source
 revocation and final owner checks. Those results remain within their recorded
 scope; an API counter test does not replace them.
 
-Complete the release-candidate review of access control, content/output
-validation, native revision/admission integrity, resource bounds, configuration,
-logging, dependencies and external I/O. Classify actual findings and retest
-corrections; missing evidence alone is not a production defect. New search,
+The registered request/access-control and native revision/admission review is
+recorded above. Remaining application-review work is content/output validation
+and resource/external-I/O/configuration/logging boundaries, reconciled against
+their retained tests. Dependency findings are resolved at this dated checkpoint;
+recheck them at the release cut. Classify actual findings and retest corrections;
+missing evidence alone is not a production defect. New search,
 Cargo and layer-object-link features remain later milestones. Preserve the
 security of existing functionality while reviewing this release's changes.
 
