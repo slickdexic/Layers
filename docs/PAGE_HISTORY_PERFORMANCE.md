@@ -169,10 +169,12 @@ revisions remained exact; there were no content edits or browser Saves.
 `npm run bench:native-read` runs
 [native-reader.spec.js](../tests/perf/native-reader.spec.js). Without
 `LAYERS_NATIVE_PERF_CONFIG` it skips before launching a browser. The configuration
-must identify a disposable loopback HTTP wiki, its exact wiki ID, owner page ID and
-revision, plus an opaque known-color pixel in a saved image layer set. Ordinary
-development ports 8080/8081 and the default HTTP port are refused before fixture
-requests. Do not reuse the broader write benchmark's ordinary-content fixture.
+must explicitly identify a read-only target, its exact wiki ID, owner page ID and
+revision, plus an opaque known-color pixel in an existing saved image layer set.
+Use `readOnlyMaintainedWiki: true` for the maintained supported-version lanes on
+ports 8080 or 8082. Selection is never implicit. Port 8081, foreign origins,
+credentials in URLs, non-root paths and ambiguous target flags are refused before
+fixture requests. Do not reuse the broader write benchmark's ordinary-content fixture.
 
 Keep configuration and authenticated Playwright storage state outside published
 source. Set `LAYERS_NATIVE_PERF_CONFIG` to a private JSON file shaped as follows;
@@ -180,8 +182,8 @@ the owner must contain one image embed with the stated probe pixel:
 
 ```json
 {
-  "disposable": true,
-  "base": "http://127.0.0.1:8099",
+  "readOnlyMaintainedWiki": true,
+  "base": "http://127.0.0.1:8082",
   "wikiId": "layers_performance_fixture",
   "owner": "Performance image",
   "pageId": 10,
@@ -191,19 +193,65 @@ the owner must contain one image embed with the stated probe pixel:
 }
 ```
 
-Use production settings and a pre-created fixture; the benchmark never provisions
-content, changes settings or Saves. Browser requests are restricted to GET on the
+Select a pre-existing synthetic fixture whose source pixel differs from the
+layer's opaque probe pixel; otherwise the background could produce a false paint
+observation. Verify its exact page/revision before measuring. Keep settings fixed
+and record whether they are representative of production; developer logging is
+not a production baseline. The benchmark never provisions content, changes settings
+or Saves. Browser requests are restricted to GET on the
 fixture origin. The test verifies wiki/owner/revision identity, the actual native
 image load, authorized native layer-read timing and the expected canvas pixel.
 It retains one warm-up and five fresh-browser observations, including failures,
 and applies the unchanged 300 ms budget to all five warm-server samples. Point
 Playwright's `--output` at a private results directory to retain its attachments.
 Authenticated storage state is optional only for an anonymously readable fixture.
+An existing separately approved disposable fixture can still use `disposable: true`
+on its admitted non-default port; this compatibility mode does not authorize
+creating another wiki, container or port. Reuse maintained version wikis.
 
-The final maintained test passed five observations at 296.0, 273.8, 275.5, 286.0
+The earlier maintained test passed five observations at 296.0, 273.8, 275.5, 286.0
 and 287.7 ms. Its request guard adds observation overhead; these remain separate
 from the comparison above. No-configuration skipping and ordinary-port refusal
 were also checked. The same host/device and cold-server limitations still apply.
+
+### Maintained 1.44 lane — October 26, 2026
+
+The current read-only check used an existing image owner on MediaWiki 1.44.6,
+PHP 8.3.33 and Chromium 145.0.7632.6. The original image's probe pixel differs
+from the saved layer color. All six exact page/revision and canvas-pixel checks
+passed, with no request-guard violation. No fixture creation, content Save,
+settings change or service restart was performed.
+
+**The performance gate failed.** The separate warm-up measured 3,038.4 ms;
+the five fresh-browser/warm-server samples measured **3,025.7, 2,803.0,
+3,080.7, 3,072.3 and 3,447.0 ms**, all above the unchanged 300 ms target.
+Earlier faster observations remain dated evidence, not qualification of this lane.
+
+Resource timing locates most delay in serial server responses: approximately
+673 ms for ResourceLoader startup, 1,680 ms for the combined core/skin/Layers
+scripts, then 618–1,036 ms for the authorized layer read. Separate read-only
+requests measured core site-information responses at 414–614 ms and layer reads
+at 638–754 ms. This demonstrates shared server overhead and additional Layers
+work; it does not establish their causes or isolate a Layers regression.
+
+A separate response-size/header check measured 34,793 decoded bytes for startup,
+906,171 for the combined scripts and 788 for the layer read. All used gzip;
+scripts advertised public caching and layer data retained private caching.
+These are decoded sizes, not transferred byte counts. The compatibility wiki
+was writing its development debug log during the comparison. No logging-off
+control was run, so neither logging nor filesystem/cache configuration is
+claimed as the cause. CLI extension/settings probes do not prove the web
+server's OPcache hit rate or available cache memory.
+
+Next work is a bounded server/profile and module-loading investigation on this
+maintained lane, followed by the unchanged reader gate after a demonstrated
+correction. Cold-server and reference-device qualification also remain open.
+The reusable test now retains response-start, transfer/body sizes and initiator
+type with future resource observations. Its explicit target admission passes
+17 focused cases; copied guards that accept a truthy string or a foreign host
+each fail the corresponding unchanged test. The existing GET-only/cache-preserving
+guard and unconfigured skip remain covered. This qualifies the test-tool change,
+not the failed product performance budget.
 
 ## Offscreen slide rendering
 

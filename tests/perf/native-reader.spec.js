@@ -3,9 +3,10 @@
 const { test, expect } = require( '@playwright/test' );
 const fs = require( 'fs' );
 const guardNativeReads = require( './native-request-guard.js' );
+const admitNativeReaderTarget = require( './native-reader-target.js' );
 
 test.skip( !process.env.LAYERS_NATIVE_PERF_CONFIG,
-	'Requires an explicit isolated native performance configuration' );
+	'Requires an explicit read-only native performance configuration' );
 
 function observePaint( probe ) {
 	performance.setResourceTimingBufferSize( 1000 );
@@ -33,17 +34,11 @@ function observePaint( probe ) {
 	requestAnimationFrame( check );
 }
 
-test( 'native reader: fresh-browser layer paint on an isolated warm server', async ( { browser }, testInfo ) => {
+test( 'native reader: fresh-browser layer paint on an explicitly selected warm server', async ( { browser }, testInfo ) => {
 	test.setTimeout( 180000 );
 	const configPath = process.env.LAYERS_NATIVE_PERF_CONFIG;
 	const config = JSON.parse( fs.readFileSync( configPath, 'utf8' ).replace( /^\uFEFF/, '' ) );
-	const base = new URL( config.base );
-	expect( config.disposable ).toBe( true );
-	expect( base.protocol ).toBe( 'http:' );
-	expect( [ 'localhost', '127.0.0.1' ] ).toContain( base.hostname );
-	expect( base.username + base.password + base.search + base.hash ).toBe( '' );
-	expect( [ '', '80', '8080', '8081' ] ).not.toContain( base.port );
-	expect( base.pathname ).toBe( '/' );
+	const base = admitNativeReaderTarget( config );
 	expect( config.wikiId ).toEqual( expect.any( String ) );
 	expect( config.owner ).toEqual( expect.any( String ) );
 	expect( Number.isSafeInteger( config.revision ) && config.revision > 0 ).toBe( true );
@@ -95,7 +90,10 @@ test( 'native reader: fresh-browser layer paint on an isolated warm server', asy
 					pageId: mw.config.get( 'wgArticleId' ),
 					revision: mw.config.get( 'wgRevisionId' ),
 					resources: performance.getEntriesByType( 'resource' ).map( r => ( {
-						url: r.name, start: r.startTime, end: r.responseEnd, duration: r.duration
+						url: r.name, start: r.startTime, end: r.responseEnd, duration: r.duration,
+						responseStart: r.responseStart, transferSize: r.transferSize,
+						encodedBodySize: r.encodedBodySize, decodedBodySize: r.decodedBodySize,
+						initiatorType: r.initiatorType
 					} ) )
 				} ) );
 				expect( sample.pageId ).toBe( config.pageId );
