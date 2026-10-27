@@ -41,7 +41,7 @@ evidence archival and unused-code removal remain separate reviewable steps.
 | Area | Release requirement and current scope |
 | --- | --- |
 | Primary entry guides | README, installation, quick start and configuration introductions now describe owner-page overlays, migration completion, shared PDF naming and native atomic publication. They distinguish the candidate from the old tagged release. |
-| Upgrade and recovery | Follow [UPGRADING.md](UPGRADING.md): exact versions, consistent backup, rehearsal, update/discovery, dry run, unscoped completion, verification, safe rerun and rollback. The retained migration rehearsal covers 1.5.95/MySQL on MediaWiki 1.44.6. The [intended-wiki recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md) adds persistent-data/upload and local Layers-code recovery on 1.45.3; matching configuration/application restoration and exact-candidate upgrade remain open. |
+| Upgrade and recovery | Follow [UPGRADING.md](UPGRADING.md): exact versions, consistent backup, rehearsal, update/discovery, dry run, unscoped completion, verification, safe rerun and rollback. The retained migration rehearsal covers 1.5.95/MySQL on MediaWiki 1.44.6. The [intended-wiki recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md#application-level-restore--october-26-2026) also qualifies application startup and representative native/HTTP image, slide and PDF reads with restored data on 1.45.3. It uses reconstructed test settings, not the site's private configuration; preserve that limit and reconcile sources with the final artifact. |
 | APIs, permissions and author syntax | The [native API guide](PAGE_OWNED_API_GUIDE.md), API entry/reference, permissions, named sets, embed syntax and slide workflow now distinguish native ownership from legacy shared storage, including Default selection, PDF naming, history and caching. Source/schema and maintained regressions were checked; no runtime behavior changed. |
 | Settings and user help | Configuration defaults/callers, native versus legacy bounds, FAQ, troubleshooting and the wiki home now follow the owner-page workflow. Guidance preserves uncertain Saves/drafts and distinguishes physical-device/Print acceptance. Candidate wiki-to-repository links use full source URLs. |
 | MediaWiki publication sources | All three source documents now describe native ownership/history, atomic PDF Save, overlays, upgrade completion and the required milestone order. The extension page checks manifest metadata/settings; the table page is explicitly legacy storage. Updating these files does not publish to mediawiki.org. |
@@ -49,6 +49,42 @@ evidence archival and unused-code removal remain separate reviewable steps.
 | Status and known issues | Public status and known limits now summarize the existing release matrix, current integrated behavior and remaining qualifications. Prior public records remain in Git history; private investigation prefixes remain exact and local. |
 | Published documentation | Repository/wiki sources and the three MediaWiki source documents are refreshed. Separate GitHub-wiki/mediawiki.org publication and remote verification remain release actions; this source update performs neither. |
 | Release notes and version | Describe the final accepted behavior, supported versions, measured limits and migration requirements. Assign the release version/tag only at the agreed acceptance checkpoint. |
+
+## Reviewed candidate archive — October 27, 2026
+
+The public snapshot at `ff57fa0ece2d9275deb9ef7f70b877c17c63dc44` has a
+verified clean archive containing 2,859 regular files under `Layers/`:
+
+```sh
+git archive --format=tar --prefix=Layers/ --output=Layers-candidate-ff57fa0.tar ff57fa0ece2d9275deb9ef7f70b877c17c63dc44
+```
+
+Archive size: **74,905,600 bytes**. SHA-256:
+
+```text
+43f4c93559af2ba18266348f6ff08b469a0889ed3d7bf85fbd9ab6d97005ebf9
+```
+
+The extracted files match the public Git blobs. Non-guide files match the
+installed, tested candidate; the asset guard verifies all 225 registered file
+references and retained fonts, shapes, emoji, notices and pdf.js files. The
+26 migration, schema, maintenance and native composition sources in the retained
+application-recovery snapshot remain exact in the checkout and equivalent in
+the archive after Git's line-ending normalization. This carries forward the
+documented upgrade/recovery scope; it is not another fresh upgrade rehearsal.
+
+This is a source snapshot, **not the versioned 1.8 release**. Its manifest still
+says 1.5.95, as required before the release cut. The archive comes from the
+reviewed public commit, never private working HEAD, and contains no local settings,
+database, uploads, credentials, logs, private test evidence, development dependency
+directories or Git history. Local privacy guards remain development setup, not
+private files to copy into the release.
+
+At the final version/tag cut, regenerate the archive from that exact accepted
+public commit, repeat extraction/blob and asset checks, publish its new checksum
+and reconcile any changed sources. This dated snapshot and its checksum do not
+automatically qualify a later artifact. Remaining performance, manual/device,
+owner and release actions stay in the [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md).
 
 ## Before the milestone commit/tag
 

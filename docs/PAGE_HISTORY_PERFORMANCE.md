@@ -437,6 +437,29 @@ reference-device and broader-media performance acceptance remain open; this
 checkpoint does not attribute the remaining time to USB storage alone or waive
 the original budget.
 
+### Selected-candidate follow-up diagnostic
+
+A single instrumented CPU profile of the selected candidate records a 23.3 ms
+script-end-to-read interval, including 10.26 ms sampled as browser idle. The
+largest other sampled stacks each account for about 1.5–1.7 ms; it does not
+identify another large JavaScript hotspot. This is a diagnostic, not a replacement
+for the retained five-sample benchmark or a new performance pass.
+
+A tagged, temporary server profile captures one core request and one exact
+Layers read before its observer reads an incompletely written profile file.
+The original refusal is retained. After request completion, both complete files
+parse successfully: their shutdown callbacks occur about 61 and 65 ms after
+request start respectively. The Layers module's execution interval is about
+48 ms and includes its source, rendition and editor-admission work; five backend
+file-existence calls account for about 4.8 ms within that request. These are
+overlapping measurements, not additive costs or isolated proof of a bottleneck.
+No complete repeated server comparison is claimed. Test settings are restored
+byte-exactly, and persistent data and uploads remain exact.
+
+This follow-up does not justify removing fresh visibility/source checks or
+changing controls. The retained mount and reference-install limitations still
+apply. The selected runtime and the two measured budget misses remain unchanged.
+
 ## Offscreen slide rendering
 
 The native twenty-set check reproduced eager painting of all twenty slide sets,
