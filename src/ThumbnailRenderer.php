@@ -12,8 +12,10 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers;
 
 use MediaWiki\Config\Config;
+use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Utility\RenderCache;
+use MediaWiki\Extension\Layers\Validation\SvgResourceGuard;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
@@ -22,7 +24,7 @@ use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
-	public const CACHE_VERSION = 2;
+	public const CACHE_VERSION = 3;
 
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
@@ -1376,6 +1378,12 @@ class ThumbnailRenderer {
 	 */
 	private function rasterizeShapeSvg( string $svg, int $width, int $height ): ?string {
 		if ( $svg === '' || stripos( ltrim( $svg ), '<svg' ) !== 0 ) {
+			return null;
+		}
+		// New writes retain the validator's 100 KiB limit. Existing stored documents
+		// previously had no renderer byte cap; preserve their larger bundled shapes
+		// within the existing snapshot ceiling while refusing resource lookups.
+		if ( !SvgResourceGuard::isSelfContained( $svg, DocumentSchema::MAX_BYTES ) ) {
 			return null;
 		}
 		// Entity and DOCTYPE declarations are the XXE vector; the shape library

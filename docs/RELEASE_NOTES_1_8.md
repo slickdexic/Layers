@@ -60,7 +60,9 @@ corrected Import/recovery request-budget bypass, compatible development-tool
 security updates and the completed source-led application review with its
 limits. Server-generated thumbnail/PDF text now stays literal instead of
 expanding renderer expressions; new cache keys prevent reuse of older affected
-renders. Stored text is preserved. Locked npm and PHP audits report no known
+renders. Stored text is preserved. Custom-shape SVG now refuses external file/network
+resource references before native conversion, preserving internal references
+and existing publication limits. Locked npm and PHP audits report no known
 advisories at this checkpoint; shipped assets remain unchanged. Final-cut
 rechecks and owner acceptance remain; this does not declare the release accepted.
 

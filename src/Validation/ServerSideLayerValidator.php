@@ -1652,6 +1652,9 @@ class ServerSideLayerValidator {
 		if ( preg_match( '/@import\b/i', $svg ) || preg_match( '/@import\b/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain CSS @import' ];
 		}
+		if ( !SvgResourceGuard::isSelfContained( $svg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must be self-contained without external resources' ];
+		}
 
 		return [ 'valid' => true, 'value' => $svg ];
 	}

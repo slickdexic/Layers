@@ -2,8 +2,8 @@
 
 **Review checkpoint:** October 26, 2026. Opened at `57daa35` and reconciled with
 the subsequent accepted changes below. The independent 1.8 source/evidence
-security review is complete within the recorded scope, including the corrected
-literal-text renderer. This advances SEC-2, SEC-3, SEC-4, SEC-6 and SEC-7 for
+security review is complete within the recorded scope, including corrected
+literal text and custom-shape SVG resource admission. This advances SEC-2, SEC-3, SEC-4, SEC-6 and SEC-7 for
 Milestone 1; it does not qualify later 2.0 features or declare the release accepted.
 The [release ledger](RELEASE_1_8_ACCEPTANCE.md) remains authoritative.
 
@@ -189,7 +189,7 @@ because those sources are unchanged.
 | Review area | Current-candidate result and limits |
 | --- | --- |
 | Content and stored-data integrity | The bounded schema rejects duplicate JSON members, non-finite numbers, unsupported structure, invalid references and lossy sanitization before publication. Historical structural reads remain separate from strict new writes. Existing schema, preservation and API-proof tests cover those contracts. |
-| Output and script injection | Page-owned controls and recovery previews use text nodes; rich-text HTML escapes authored text and filters interpolated style values. Canvas text remains data. Native JSON configuration transport and text-slot diffs supply context-appropriate encoding. Image data allows bounded raster data URLs with matching signatures, excluding SVG; SVG path commands use a character/count whitelist. Stored raw SVG fallback is not server-rasterized. Existing validation/rendering tests and the literal-text correction above cover the reviewed paths. |
+| Output and script injection | Page-owned controls and recovery previews use text nodes; rich-text HTML escapes authored text and filters interpolated style values. Canvas text remains data. Native JSON configuration transport and text-slot diffs supply context-appropriate encoding. Image data allows bounded raster data URLs with matching signatures, excluding SVG; SVG path commands use a character/count whitelist. Raw custom-shape SVG uses the configured converter only after the resource guard described below. Existing validation/rendering tests and the literal-text correction above cover the reviewed paths. |
 | Resource bounds | Snapshots have byte, depth, surface and layer limits; styles, text, paths and inline images have their existing bounds. Private raster admission limits source metadata to 64 MiB / 40 million pixels and output to 4096 pixels per side / 8 MiB, with full generated-image decoding. Native shell/media-handler execution retains core resource limits and existing quotas. These limits are not a proof against every decoder defect or a concurrent load benchmark. |
 | External I/O and command execution | Page-owned source lookup uses the local repository and exact title/timestamp/hash/page, not a caller-supplied download URL. Shell arguments carry bounded validated data; executable/converter configuration is operator-controlled. The legacy SVG converter template is trusted configuration with escaped temporary paths. Native MediaWiki media-handler requirements remain; no worker/backend architecture is introduced. |
 | Capture, caches and privacy | Exact PDF capture hashes the same private handle later delivered, repeats admission and releases owned resources on refusal/close. PDF routes keep private no-store responses. Export delivery rechecks the source title and uses private staging; legacy public thumbnail storage remains subject to core upload-access configuration. The retained HTTP visibility/lifecycle checks and local checkout guard supply their recorded protection. |
@@ -197,12 +197,41 @@ because those sources are unchanged.
 | Dependencies and software/data integrity | Full locked npm audit is zero at the recorded toolchain checkpoint; the fresh locked Composer audit has no advisories or abandoned packages. The first local Composer attempt failed certificate validation; the successful process uses Windows-trusted public roots with TLS verification enabled, then removes its temporary bundle. No dependency install/update or persistent trust change occurs. Shipped asset hashes/notices, exact source delivery and native revision admission retain their own tests. |
 
 This completes the source-led engineering review of the relevant 1.8 application
-boundaries, using current source, the new correction and retained qualified
+boundaries, using current source, both corrections and retained qualified
 tests. No unresolved high/critical finding or demonstrated data-loss defect was
 identified in that scope. This is not an independent penetration test, proof
 against unknown flaws, qualification of every server configuration or acceptance
 of later search/Cargo/link features. Performance/device/owner gates remain in
 the release ledger; missing evidence is not automatically a vulnerability.
+
+## Custom-shape SVG resource lookup
+
+A follow-up corrected an inaccurate review statement: raw custom-shape SVG can
+use the configured native converter. Owned 16-pixel canaries demonstrated that
+the earlier converter path could load file-URI and relative image references.
+Only generated markers were read; no actual private file was requested.
+
+The shared SVG resource guard now parses without network/entity expansion,
+refuses file/network/relative references and checks CSS escapes, base URIs and
+resource-changing animation. Internal fragments and validated embedded raster
+data remain supported. New publication retains its existing 100 KiB limit.
+Historical rendering keeps larger retained shapes within the existing 2 MiB
+snapshot ceiling; that does not increase the publication limit. Existing size,
+converter and native permission controls remain in place.
+
+The guard runs both in validation and before a stored shape reaches converter
+configuration or temporary files. Both native file-reference canaries now refuse
+before conversion; the internal-fragment control still paints its marker.
+Every generated canary is removed. Copied pre-guard publication/renderer code
+fails two wiring controls. The final complete standalone run passes **1,655
+tests / 4,079 assertions**, with one existing skip.
+
+All 1,385 bundled SVGs were inventoried. The guard admits 1,373, including the
+two large shapes and the styled shape that an initial overly broad check would
+have rejected. The other twelve malformed SVGs also fail the original native
+converter; their existing failure is retained, not claimed as a new regression
+or repair. No library asset is changed. These are bounded native/resource tests,
+not a claim that every configured converter is immune to unknown decoder flaws.
 
 ## Deployment boundary and release-cut recheck
 
