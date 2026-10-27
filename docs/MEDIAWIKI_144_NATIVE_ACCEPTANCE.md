@@ -3,6 +3,11 @@
 This checkpoint advances Milestone 1: page ownership and native revision history,
 including HIST-1, HIST-4, DATA-1, UI-10 and installation compatibility.
 
+**Current maintained lane:** the [October 27 review follow-up](#review-corrections-on-the-maintained-installed-wiki--october-27-2026)
+uses the existing 1.44 wiki on port 8082 with installed public code. Earlier
+checkpoints retain their original setup descriptions; do not recreate retired
+task wikis. Follow the current [environment layout](DEVELOPMENT_ENVIRONMENTS.md).
+
 The published candidate at `27721b0` was installed on a separate MediaWiki 1.44.6
 wiki using the native SQLite installer, extension database update and migration.
 The migration dry run passed; HTTP then confirmed completion with no added
@@ -103,3 +108,41 @@ selector; both observations remain retained. Independent verification uses the
 PDF's original encoded JPEG streams, not an image library's recompressed copy.
 Existing native/client suites were retained without another unchanged full run;
 the remaining release matrix and owner acceptance are still separate.
+
+## Review corrections on the maintained installed wiki — October 27, 2026
+
+The existing 8082 wiki was refreshed to public runtime `a42a8e7`, retaining its
+core/base, settings, accounts, data and port. All 2,856 installed public files
+verify; 8080 remains the direct development checkout and the older 8081 build
+remains separate. Neither database service nor either other web service changed.
+
+The new `LegacyReviewBoundaryTest` uses real native PDF metadata and permissions.
+It verifies second-page geometry through attribute, direct-JSON and database
+injection, authorized/unauthorized debug navigation, request overrides and
+completed migration through both navigation hooks. The existing File-page
+retirement and PDF-routing classes provide affected regressions. Combined native
+coverage is 32 passes and one optional Cargo skip. Seventeen passes are retained
+from the first run; the PDF replay passes 16 cases / 1,335 assertions with that
+skip after aligning CLI and MediaWiki temporary-folder settings. The first
+folder-guard failures remain retained; no assertion or runtime repair followed.
+
+Actual Chromium image/slide/PDF overlays and full-size viewers show their layers.
+The PDF opens on its selected second page and traverses to page one and back.
+Image/slide Download choices remain PNG/PDF, while PDF offers PDF only. Both
+fallback cloning modes pass in the delivered module, the existing image pixel
+matches exactly, and ordinary embeds add no historical captions. The final
+complete observer waits for painted layers and settled transitions; two earlier
+observer mistakes remain recorded separately.
+
+All three observed owner revisions and main/layers slots remain exact. All 25
+witnessed persistent table data/schema hashes and 26 installed upload files
+remain exact, with no new upload file. Native tests use isolated test tables,
+guarded temporary repositories and task-local logs. No ordinary Save, account or
+permission change, new wiki/port/database clone, main-settings copy or private
+data publication occurred. No unchanged local client/standalone suite was
+repeated; the accepted exact-commit results are retained.
+
+These checks qualify the review corrections in the recorded native/browser
+scope. They do not rerun exports, physical Print, every supported device or owner
+acceptance. The 300 ms reader performance failure remains open. See the
+[review follow-up](RELEASE_REVIEW_FOLLOWUP.md) and [1.8 release ledger](RELEASE_1_8_ACCEPTANCE.md).

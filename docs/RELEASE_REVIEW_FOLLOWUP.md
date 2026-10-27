@@ -30,6 +30,45 @@ do not establish native parser, browser or supported-version acceptance. The
 installed compatibility wiki remains on its explicitly recorded candidate until
 a reviewed rebuild; working-folder edits apply to the primary development lane.
 
+## Native and browser follow-up — October 27, 2026
+
+The maintained MediaWiki 1.44.6 wiki now runs installed public runtime
+`a42a8e7`. All 2,856 public files verify against that tree. The same wiki,
+accounts, database, uploads, settings and port remain; other maintained services
+were unchanged. No new wiki or content revision was created for these checks.
+
+The native regression uses real LocalFile/PDF metadata and the permission
+manager, with isolated test tables and guarded temporary media. All three legacy
+injection paths select the second page's **208 × 416** geometry, independently
+of the first page. Authorized, unauthorized, configuration/request debug and
+completed-migration navigation cases preserve all other links through both
+navigation hooks.
+
+Coverage combines 17 retained passes with a 16-case PDF-routing replay:
+**32 passing cases and one optional Cargo skip**. The replay has 1,335 assertions.
+The first PDF run refused at an inconsistent CLI/MediaWiki temporary-folder
+boundary. Aligning the runner settings resolves it without changing application
+code or protected assertions; the original 16 failures remain recorded.
+
+Chromium checks the delivered clone utility with native cloning unavailable and
+with native cloning refusing a value. Both circular graphs remain independent,
+and the original browser global is restored. On-page image/slide/PDF layers,
+authorized overlays, full-size viewing and selected-page PDF navigation pass.
+Images/slides retain PNG and PDF choices; PDFs retain PDF only. An existing exact
+image-pixel assertion passes, with no added historical captions or refused
+read-only requests. All three owning revisions/slots stay exact, as do all
+25 witnessed persistent tables/schema and 26 installed upload files.
+
+Two earlier browser observers were corrected: one incorrectly assumed every PDF
+opens on page one, and another expected a selector field absent from the pixel
+fixture. The final complete run uses the actual selected page and maintained
+canvas selector, and waits for decoded images, painted layer canvases and the
+completed overlay transition. Earlier failures and captures stay distinct.
+
+This is bounded native/browser qualification of these corrections. It does not
+qualify physical devices, operating-system Print, every layer style, owner
+acceptance or the unchanged 300 ms performance target.
+
 ## Suggestions requiring care
 
 - The editor's raw source bundle has only 31 bytes of headroom at this checkpoint.
