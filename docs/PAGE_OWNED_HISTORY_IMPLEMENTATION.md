@@ -1,5 +1,10 @@
 # Page-owned Layers history: implementation contract
 
+> **Historical implementation log:** The dated checkpoints and assignments
+> below describe earlier stages, not the current activation state. The 1.8
+> candidate integrates page-owned history; see the [release ledger](RELEASE_1_8_ACCEPTANCE.md),
+> [current native API guide](PAGE_OWNED_API_GUIDE.md) and [architecture](ARCHITECTURE.md).
+
 ## Direct source rewrite implemented and independently reviewed — September 25, 2026
 
 Lead implemented internal DirectEmbeddingRewriter for a conservative raw-wikitext subset. It records complete top-level literal file/slide spans with UTF-8 byte offsets and ordered raw options, distinguishes repeated identical embeds, excludes nested/template/comment/opaque-tag content, and requires exact original bytes and start position before replacement. It replaces one legacy selector with a canonical binding (or appends one if absent), retaining all other bytes. Duplicate selectors, already-bound targets, control bytes, malformed nesting and unsupported source structures reject.

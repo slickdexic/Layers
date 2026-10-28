@@ -1,6 +1,6 @@
 # Future Improvements
 
-> **Current guidance — September 6, 2026:** Priority order superseding the older idea backlog below: **page-owned revision history → MediaWiki search for slide/annotation text → Cargo query/filter support**. All three content types are in scope. See [the implementation proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+> **Current guidance:** The independent 1.8 release is page-owned revision history. Then come MediaWiki layer-text search, Cargo readiness, Cargo integration, and layer-object links on wiki-page images, slides and PDF pages. Links are excluded from the lightbox. All three content types are in scope; see the [charter](PROJECT_CHARTER.md) and [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md).
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 

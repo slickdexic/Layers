@@ -2,13 +2,13 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Updated October 24, 2026 for the page-history candidate. The manifest still says **1.5.95**; this does not make the candidate a tagged Layers 2.0 release. Select a reviewed commit with passing CI and check the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md).
+The page-history candidate targets an independent **Layers 1.8** release. Its manifest still says **1.5.95**; 1.8 has not yet been accepted or tagged. Select a reviewed commit with passing CI and check the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md).
 
 ## Requirements and branches
 
 | Wiki | Layers branch | Manifest version | Notes |
 | --- | --- | --- | --- |
-| 1.44+ | **`main`** | 1.5.95 | Manifest compatibility floor; use a currently supported MediaWiki release |
+| 1.44+ | Reviewed page-history candidate or, once released, its 1.8 tag | See manifest version above | Manifest compatibility floor; a default `main` checkout is not proof that the candidate is installed |
 | MediaWiki 1.43 | `REL1_43` | Check branch manifest | Separate branch; verify required fixes in its changelog |
 | MediaWiki 1.39–1.42 | `REL1_39` | Check branch manifest | Unmaintained; upgrade core rather than choosing it for a new deployment |
 
@@ -64,6 +64,11 @@ sets also needs the empty migration to record completion. Verify
 An editor opening alone does not verify publication, revision history or permissions.
 
 ## Upgrade
+
+The fully rehearsed Layers starting release is **1.5.95** on MediaWiki 1.44.6
+with MySQL. This is a tested starting point, not an enforced technical minimum.
+Rehearse an older installation's actual data before choosing its upgrade route;
+see the [upgrade coverage](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADE_PATH_ACCEPTANCE.md).
 
 Back up the database, uploads and configuration. Record the current branch/commit
 and review the target's changelog. From a clean Layers checkout:

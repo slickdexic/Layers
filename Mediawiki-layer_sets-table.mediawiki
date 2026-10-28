@@ -6,7 +6,7 @@
 | '''Scope''' || Retained shared-set revisions; native page-owned snapshots use core revision/slot storage.
 |}
 
-Reviewed October 24, 2026 against the candidate's MySQL/SQLite schemas, database code and native revision writer. This is a publication source; no external wiki update is implied.
+Reviewed against the page-history candidate's MySQL/SQLite schemas, database code and native revision writer. The candidate targets Layers '''1.8'''; it has not yet been accepted or tagged. This is a publication source; no external wiki update is implied.
 
 The '''layer_sets''' table retains the older shared revisions for files, PDF pages and slides. After migration completion, those shared writes are read-only. The implemented page-owned model stores the complete snapshot in the owner's native <code>layers</code> slot alongside its main content. A legacy row ID/revision counter is '''not''' a native owner page ID or MediaWiki revision ID.
 

@@ -1,6 +1,11 @@
 # Named Layer Sets Architecture
 
-> **Current guidance — September 6, 2026:** Current ownership uses original-creator metadata and `layers-admin`; older rows with pruned creator evidence require admin deletion/renaming. Layer revisions are separate from article history. See [current status](CURRENT_STATUS.md) for intent-like naming and default-path limitations.
+> **Page-history candidate:** After migration completion, each layer set belongs to an owning page and a file or slide; Save records the complete snapshot in that page's native history. Equal names on different owners or files are independent, and one PDF name covers its pages. See the [current named-set guide](../wiki/Named-Layer-Sets.md) and [upgrade guide](UPGRADING.md).
+
+The material below describes the **legacy shared-set architecture**, not the
+native page-history contract. Legacy creator/`layers-admin` rules and revision
+retention still apply to retained shared rows; they do not define native page
+ownership or prune page history.
 
 **Created:** January 2025  
 **Status:** ✅ Implemented (verified on v1.5.62)  

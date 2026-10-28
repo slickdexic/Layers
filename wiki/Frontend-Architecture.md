@@ -1,6 +1,6 @@
 # Frontend architecture
 
-Reviewed September 6, 2026. See [[Architecture Overview]] for storage/server boundaries and [[API Reference]] for request contracts.
+Reviewed for the page-history candidate. See [[Architecture Overview]] for native and legacy storage boundaries and [[API Reference]] for request contracts.
 
 ## Modules
 
@@ -10,7 +10,7 @@ ResourceLoader declarations in `extension.json` determine execution order. The v
 
 - Use the editor's state/store and manager interfaces. Do not add a parallel dirty flag or bypass the API manager's state processing.
 - Keep source coordinate dimensions separate from display size and zoom. A slide has canvas dimensions; an image has source dimensions; each PDF page can differ.
-- Navigation must retain the selected set, backgrounds, dimensions and unsaved layers. Buffered-page saving is currently sequential and can partially succeed.
+- Navigation must retain the selected set, backgrounds, dimensions and unsaved layers. Page-owned Save publishes the complete snapshot in one native revision; the legacy shared-storage path is separate.
 - Tag asynchronous work with request/session generations. Ignore stale success and failure paths before they mutate state, hide loading indicators or attach overlays.
 - Destroy viewers/listeners when replacing content. A detached thumbnail may still fire its load handler; it must not attach a full-resolution canvas to the current view.
 - Preserve explicit false/zero values. `opacity || 1` is incorrect when zero is valid.
@@ -22,7 +22,7 @@ ResourceLoader declarations in `extension.json` determine execution order. The v
 
 ## Text and SOPs
 
-Textbox/callout text is structured data, including rich-text runs. Canvas drawing does not make that text available to ordinary MediaWiki search or screen readers automatically. A reusable text extractor, accessible transcript and explicit indexing are planned. Keep images, standalone slides and PDF pages in the acceptance matrix.
+Textbox/callout text is structured data, including rich-text runs. Canvas rendering does not by itself make that text available to ordinary MediaWiki search or screen readers. Complete native layer-text search and accessible transcript acceptance remain separate work. Keep images, standalone slides and PDF pages in the acceptance matrix.
 
 ## Tests and source
 

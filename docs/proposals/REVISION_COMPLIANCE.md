@@ -1,5 +1,11 @@
 # Revision Compliance Architecture
 
+> **Historical proposal:** The legacy null-edit limitation below remains
+> relevant to the shared-storage path. Native page-owned publication is now
+> integrated in the 1.8 candidate; consult the [release ledger](../RELEASE_1_8_ACCEPTANCE.md)
+> for its acceptance status. The dated proposal text below is not a current
+> description of the candidate.
+
 ## Status: audit guarantee not implemented — corrected September 6, 2026
 
 The earlier completion claim below is incorrect. `AuditTrailTrait` re-saves unchanged main-slot content with `PageUpdater`; ordinary null edits do **not** create a page-history or Recent Changes entry, and their summaries are discarded. The operation is also best-effort after the separate Layers save. Enabling `LayersTrackChangesInRecentChanges` must not be represented as reliable revision compliance. See [MediaWiki's null-edit documentation](https://www.mediawiki.org/wiki/Help:Dummy_edit#Null_edit).

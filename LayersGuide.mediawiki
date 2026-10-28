@@ -1,10 +1,12 @@
 '''Layers is a MediaWiki extension. Docker is only one development/test environment, not a runtime dependency.'''
 
 = Layers user guide =
-Reviewed October 24, 2026 for the page-owned candidate. The last tagged release and the unchanged manifest number are '''1.5.95'''; this guide does not declare a stable Layers 2.0 release. Use a reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md release checklist]. This repository file is a publication source, not proof of an external wiki update.
+The page-owned candidate targets an independent '''Layers 1.8''' release; it has not yet been accepted or tagged. The last tagged release and the unchanged manifest number are '''1.5.95'''. Use a reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md release checklist]. This repository file is a publication source, not proof of an external wiki update.
 
 == Complete setup first ==
 Follow [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.
+
+The fully rehearsed starting release is '''Layers 1.5.95''' on MediaWiki 1.44.6 with MySQL. This is a tested starting point, not an enforced technical minimum. Rehearse an older installation's actual data before choosing its route.
 
 Rehearse on a wiki copy, retain consistent database/uploads/configuration backups and matching old code, review discovery/dry-run results, and use the documented edit freeze and verification. Do not insert a completion record or prune old layers/sources manually.
 

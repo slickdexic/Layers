@@ -1,6 +1,6 @@
 # Accessibility Guide
 
-> **Current guidance — September 6, 2026:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas annotations do not automatically provide a readable/searchable transcript. The planned SOP text extraction is described in [the roadmap](proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+> **Current guidance:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas rendering does not automatically provide a readable or searchable transcript. Layer-text search and accessible transcript acceptance remain separate work; see the [charter](PROJECT_CHARTER.md).
 
 **Last Updated:** February 2026
 

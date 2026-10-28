@@ -1,5 +1,11 @@
 # Page-owned history, searchable content, and Cargo integration
 
+> **Historical proposal:** The status and investigation below date from
+> September 2026. Page-owned history is integrated in the 1.8 candidate;
+> search, Cargo readiness, Cargo integration and on-page layer links follow in
+> the [charter's milestone order](../PROJECT_CHARTER.md). See the
+> [1.8 release ledger](../RELEASE_1_8_ACCEPTANCE.md) for current status.
+
 Status: proposed architecture, September 6, 2026. The original investigation made no feature or configuration changes. Implementation now includes an internal MCR persistence proof and versioned snapshot model; see [the implementation contract](../PAGE_OWNED_HISTORY_IMPLEMENTATION.md). Public page-owned history remains unavailable.
 
 ## Recommendation

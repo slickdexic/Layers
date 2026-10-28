@@ -6,7 +6,7 @@ Active milestone: [page ownership and native page history](MILESTONE_1_RELEASE_C
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Entry guides updated October 24, 2026. The candidate covers images, PDFs and standalone slides after migration completion. The manifest still reports 1.5.95; this is not a tagged Layers 2.0 release. Dated designs and older wiki guides require the review tracked in release preparation.
+The page-history candidate covers images, PDFs and standalone slides after migration completion. It targets an independent Layers 1.8 release; the manifest still reports 1.5.95 and 1.8 is not yet accepted or tagged. Search, Cargo and layer links follow toward 2.0. Dated designs and older wiki guides require the review tracked in release preparation.
 
 ## Find the right guide
 
@@ -20,7 +20,7 @@ Entry guides updated October 24, 2026. The candidate covers images, PDFs and sta
 | Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
 | Assign implementation work | [Ordered junior/lead task packets](IMPLEMENTATION_HANDOFF_PLAN.md) · [Junior implementation review](JUNIOR_IMPLEMENTATION_REVIEW.md) · [Product roadmap](../improvement_plan.md) |
 | Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |
-| Plan revision-controlled visual content | [Implementation contract](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) · [Internal document format](PAGE_OWNED_DOCUMENT_FORMAT.md) · [Current native API guide](PAGE_OWNED_API_GUIDE.md) · [Dated API design contract](PAGE_OWNED_API_CONTRACT.md) · [Admission design](PAGE_OWNED_ADMISSION_DESIGN.md) · [Internal read contract](PAGE_OWNED_READ_CONTRACT.md) · [Private delivery design](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md) · [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
+| Plan revision-controlled visual content | [Current native API guide](PAGE_OWNED_API_GUIDE.md) · [Internal document format](PAGE_OWNED_DOCUMENT_FORMAT.md) · [Dated implementation log](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) · [Dated API design contract](PAGE_OWNED_API_CONTRACT.md) · [Dated admission design](PAGE_OWNED_ADMISSION_DESIGN.md) · [Internal read contract](PAGE_OWNED_READ_CONTRACT.md) · [Private delivery design](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md) · [Historical history/search/Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
 | Maintain/publish docs | [Maintenance guide](DOCUMENTATION_UPDATE_GUIDE.md) · [Release guide](RELEASE_GUIDE.md) · [Wiki publishing](../wiki/README.md) |
 | Review documentation scope | [Inventory](DOCUMENTATION_INVENTORY.md) · [Documentation review](DOCUMENTATION_REVIEW_REPORT.md) |
 

@@ -1,6 +1,6 @@
 # Slide Mode Implementation Plan
 
-> **Current guidance — September 6, 2026:** Standalone slides are a primary supported content type. This document contains the original implementation design and explicitly unimplemented sections; use [the current slide guide](../wiki/Slide-Mode.md) for behavior. SOP-page history, full-text search and Cargo annotation rows are still proposals.
+> **Current guidance:** Standalone slides are a primary supported content type. This document retains the original shared-slide implementation design and unimplemented sections; use [the current slide guide](../wiki/Slide-Mode.md) for page-owned behavior. Native page history is the 1.8 candidate milestone; complete layer-text search and Cargo integration follow separately.
 
 > **Status:** Implemented (Core Features)  
 > **Version:** 1.0  

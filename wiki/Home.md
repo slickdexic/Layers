@@ -8,7 +8,13 @@ possible development/test environment, not a runtime requirement.
 its manifest. Tagged 1.5.95 uses older shared storage. Choose a reviewed commit
 with passing CI and follow [[Installation]] and the
 [upgrade procedure](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), including migration completion.
-This candidate has not been accepted as Layers 2.0.
+The independent page-history release targets Layers **1.8**; it has not yet
+been accepted or tagged. Search, Cargo and layer links follow toward 2.0.
+
+| Current manifest and tagged baseline | Value |
+| --- | --- |
+| **Manifest version** | 1.5.95 |
+| **Release date for this version** | September 2, 2026 |
 
 ## What the candidate does
 

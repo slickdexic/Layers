@@ -93,8 +93,8 @@ const VERSION_FILES = [
 	},
 	{
 		file: 'wiki/Installation.md',
-		pattern: /\| 1\.44\+ \| \*\*`main`\*\* \| (\d+\.\d+\.\d+)/,
-		replacement: ( version ) => `| 1.44+ | **\`main\`** | ${ version }`
+		pattern: /manifest still says \*\*(\d+\.\d+\.\d+)\*\*/,
+		replacement: ( version ) => `manifest still says **${ version }**`
 	},
 	{
 		file: 'improvement_plan.md',

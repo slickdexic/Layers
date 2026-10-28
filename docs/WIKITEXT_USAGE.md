@@ -1,6 +1,9 @@
 # Using Layers in Wiki Articles
 
-> **Current guidance — September 6, 2026:** For maintained user examples see [Wikitext syntax](../wiki/Wikitext-Syntax.md). Parameters choose shared image/PDF/slide content, not an owner-page revision. Intent-like set names can still be ambiguous; use descriptive names.
+> **Page-history candidate:** After migration completion, a bare set name selects the owning page's layer set for that file or slide, and `layerset=on` selects `Default`. A PDF uses the same visible name on every page. See the maintained [Wikitext syntax](../wiki/Wikitext-Syntax.md) and [upgrade guide](UPGRADING.md).
+
+The examples below document the **legacy shared-storage behavior**. They do not
+override the page-owned selection and history rules in the maintained guide.
 
 ## Layer Control in File Syntax
 

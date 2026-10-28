@@ -1,5 +1,10 @@
 # Page-owned publication admission: L01 decision record
 
+> **Historical decision record:** The dated pilot states and assignments below
+> are not current release status. Page-owned publication is integrated in the
+> 1.8 candidate; see the [release ledger](RELEASE_1_8_ACCEPTANCE.md),
+> [current native API guide](PAGE_OWNED_API_GUIDE.md) and [architecture](ARCHITECTURE.md).
+
 ## Authenticated HTTP history acceptance — September 20, 2026
 
 The lead verified a fresh native MediaWiki startup with retained owners and publication disabled: the content model, importer wrapper, merge factory and paired merge API adapter were installed. A separate disposable SQLite wiki then passed real authenticated HTTP acceptance: two complete Layers publications created two core page-history revisions with the correct actor and summaries; exact reading returned the first saved snapshot after the second save; reads remained private/zero-age; a stale save failed without a third revision.
