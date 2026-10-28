@@ -68,6 +68,11 @@ class ReleasePackageTest(unittest.TestCase):
             self.build([('Layers/LocalSettings.php', b'configuration')])
         self.assertFalse(self.output.exists())
 
+    def test_refuses_nested_temporary_data(self):
+        with self.assertRaises(ValueError):
+            self.build([('Layers/docs/tmp/fixture.log', b'local evidence')])
+        self.assertFalse(self.output.exists())
+
     def test_refuses_archive_path_traversal(self):
         with self.assertRaises(ValueError):
             self.build([('Layers/../outside', b'data')])

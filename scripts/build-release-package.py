@@ -48,12 +48,14 @@ def make_package(commit, output):
                     parts = PurePosixPath(item.name).parts
                     if not parts or parts[0] != 'Layers' or '..' in parts:
                         raise ValueError('Unexpected archive path: ' + item.name)
-                    if item.name.startswith(EVIDENCE):
+                    if item.name == EVIDENCE.rstrip('/') or item.name.startswith(EVIDENCE):
                         if item.isfile():
                             omitted.append(item.name)
                         continue
                     relative = parts[1:]
-                    if relative and (relative[0] in PRIVATE_DIRS or relative[-1].lower() in PRIVATE_FILES):
+                    directories = relative if item.isdir() else relative[:-1]
+                    if relative and (any(part.lower() in PRIVATE_DIRS for part in directories) or
+                                     relative[-1].lower() in PRIVATE_FILES):
                         raise ValueError('Local or generated file in source commit: ' + item.name)
                     if item.isdir():
                         target.addfile(item)
