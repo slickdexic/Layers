@@ -95,3 +95,6 @@ docs/API.generated.md
 
 # Python bytecode from the page-owned HTTP test harness
 __pycache__/
+
+# Local acceptance captures and logs are not part of public releases.
+docs/acceptance/

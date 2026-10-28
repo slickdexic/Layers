@@ -9,9 +9,9 @@ integration is under independent review. The later
 [J113E/F/H evidence](J113EFH_CHECKPOINT_EVIDENCE_2026-10-04.md) records that
 continuation separately; the archive below is unchanged.
 
-The [evidence archive](acceptance/2026-10-04-checkpoint.zip) copies selected
+The evidence archive (historical test evidence retained separately) copies selected
 files from the ignored local `tmp/` directory. The
-[SHA-256 manifest](acceptance/2026-10-04-checkpoint-manifest.json) records each
+SHA-256 manifest (historical test evidence retained separately) records each
 original file's bytes and fingerprint, plus the archive fingerprint. Original
 local artifacts remain intact. Generated `.last-run.json`, duplicate fixture
 attachments, caches and unrelated scratch files are excluded.

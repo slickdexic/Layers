@@ -36,7 +36,9 @@ artifact and affected checks; the earlier green CI run predates the slide change
 test-evidence ZIPs with screenshots and logs. The earlier claim that the archive
 contained no captures or logs was wrong. Their presence does not establish that
 they contain private information; review their public-history exposure and exclude
-them from the release package. See [release preparation](RELEASE_PREPARATION.md).
+them from the release package. The current public candidate tree removes those
+files while their local copies and public Git history remain. Verify final source
+archives as well as the custom package. See [release preparation](RELEASE_PREPARATION.md).
 
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |

@@ -5,9 +5,9 @@ This preserves bounded component and migration verification, not release or
 owner acceptance. It supplements the unchanged
 [earlier acceptance archive](CHECKPOINT_ACCEPTANCE_EVIDENCE_2026-10-04.md).
 
-The [log archive](acceptance/2026-10-04-j113efh.zip) contains eleven selected
+The log archive (historical test evidence retained separately) contains eleven selected
 lead verification logs from ignored `tmp/`. Its
-[SHA-256 manifest](acceptance/2026-10-04-j113efh-manifest.json) records original
+SHA-256 manifest (historical test evidence retained separately) records original
 paths, exact bytes, individual fingerprints and the archive fingerprint.
 Original logs and the earlier screenshots/restoration receipts remain intact.
 Extract this archive into a separate directory to inspect the logs.

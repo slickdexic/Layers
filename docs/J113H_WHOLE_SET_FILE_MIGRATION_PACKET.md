@@ -496,8 +496,8 @@ coverage-driver warning remains. Three-file changed PHP style/syntax and
 reference/parallel-list/atomicity checks pass. Final documentation checks pass
 for **93 maintained/policy documents / 53 historical records**; exact mirrors
 and whitespace checks pass after the new packets/status updates. The fresh lead
-logs are preserved in [the H/J archive](acceptance/2026-10-04-j113hj.zip) with
-[its SHA-256 manifest](acceptance/2026-10-04-j113hj-manifest.json).
+logs are preserved in the H/J archive (historical test evidence retained separately) with
+its SHA-256 manifest (historical test evidence retained separately).
 
 This acceptance advances HIST-4/HIST-8/HIST-9 and DATA-1 within H's first-pass
 scope. Copy allocation, proven historical/partial reconciliation, Default/output,

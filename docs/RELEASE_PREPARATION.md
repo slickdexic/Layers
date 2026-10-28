@@ -79,12 +79,13 @@ reviewed public commit, never private working HEAD. A later inspection found
 that the commit also contains historical `docs/acceptance` archives, including
 test screenshots and logs. The earlier statement that the snapshot contained no
 captures or logs was incorrect. The presence of those test artifacts does not by
-itself establish that they contain private information, but they must be excluded
-from the release package. They were already tracked in public Git history; a
-package exclusion alone cannot remove that history. Local privacy guards remain
+itself establish that they contain private information. They are removed from the
+current public candidate tree while their local copies are retained. They remain
+in public Git history; removing them from the current tree cannot erase that
+history. Local privacy guards remain
 development setup, not files to copy into the release.
 
-The four tracked ZIPs contain 104 entries in total. A limited text scan found no
+The four previously tracked ZIPs contain 104 entries in total. A limited text scan found no
 matches for common credential labels or Windows user paths; one screenshot
 reviewed depicts a synthetic test fixture. This is not a complete review of the
 images or a guarantee that every historical artifact is free of private data.
@@ -100,8 +101,8 @@ versioned release; the final package must be rebuilt from its accepted commit.
 At the final version/tag cut, build from that exact accepted public commit with
 the historical evidence excluded, verify the package's contents and documentation
 links as well as its runtime assets, publish its new checksum, and reconcile any
-changed sources. A plain `git archive` is insufficient while those artifacts
-remain tracked. This dated snapshot and its checksum do not
+changed sources. Verify that the chosen commit's tree excludes the evidence before
+using any source-archive route. This dated snapshot and its checksum do not
 automatically qualify a later artifact. Remaining performance, manual/device,
 owner and release actions stay in the [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md).
 
@@ -119,6 +120,11 @@ tests/release` to check its safety boundaries. Independently inspect the final
 archive and verify its assets and documentation; the builder's filename checks
 are not a complete privacy review. The source commit must contain the builder,
 and a trial package does not replace final version/tag acceptance.
+
+**Distribution limitation:** Historical evidence has been removed from the current
+candidate tree, but remains in older public commits. Before creating a release,
+verify the actual published artifacts from every download route, including
+automatically generated source archives. This change does not remove old history.
 
 ## Before the milestone commit/tag
 

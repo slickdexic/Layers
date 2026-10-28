@@ -77,8 +77,8 @@ The lead's accepted raw source SHA-256 is
 `CAD1811D9D3FB6A1E40521F10AB1DCFD9936DBFCBEE5C9AC7367A571F2828B66`.
 H/F/G raw hashes are unchanged. Before/after and combined/standalone evidence,
 plus the native listing that identifies inherited `testValidCovers`, are
-preserved in [the five-log archive](acceptance/2026-10-04-j113hj.zip) and its
-[hash manifest](acceptance/2026-10-04-j113hj-manifest.json). The archive is
+preserved in the five-log archive (historical test evidence retained separately) and its
+hash manifest (historical test evidence retained separately). The archive is
 12,607 bytes; SHA-256
 `7BC84739065AA329FAE78922DB5E935DDD4E0BAE112DBE1B8029AFD3D88C368C`.
 Original logs remain intact; archive integrity and each entry hash were verified.

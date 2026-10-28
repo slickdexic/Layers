@@ -246,9 +246,9 @@ restoration fingerprint:
 The two control failures and restorations remain attributed to JE2; the lead
 did not repeat the mutations or claim their execution as fresh lead evidence.
 
-The [lead log archive](acceptance/2026-10-04-j113g.zip) retains the focused and
+The lead log archive (historical test evidence retained separately) retains the focused and
 full standalone runs below. Its
-[SHA-256 manifest](acceptance/2026-10-04-j113g-manifest.json) verifies exact
+SHA-256 manifest (historical test evidence retained separately) verifies exact
 source-log bytes and archive integrity; the original local logs remain intact.
 It contains no newly executed negative controls or native/browser evidence.
 

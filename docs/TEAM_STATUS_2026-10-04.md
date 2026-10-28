@@ -30,8 +30,8 @@ pass. No metadata producer is activated.
 
 [J113G](J113G_SHOWN_PDF_PAGE_METADATA_PACKET.md)'s accepted foundation remains
 unchanged and inactive. Earlier focused host **29 / 57** and JE2's controls
-retain historical attribution. [The H/J lead log archive](acceptance/2026-10-04-j113hj.zip)
-and [SHA-256 manifest](acceptance/2026-10-04-j113hj-manifest.json) preserve the
+retain historical attribution. The H/J lead log archive (historical test evidence retained separately)
+and SHA-256 manifest (historical test evidence retained separately) preserve the
 before/after search filters, combined native gate, standalone gate and a
 full-native listing; the listing is not a full-native test execution.
 
