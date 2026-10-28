@@ -41,9 +41,10 @@ files while their local copies and public Git history remain. Verify final sourc
 archives as well as the custom package. See [release preparation](RELEASE_PREPARATION.md).
 
 **New review findings:** A strict MySQL temporary-table test confirms that the
-legacy foreign-file fallback exceeds its 32-character storage column. Native
-strict validation also refuses some literal layer text after sanitization would
-change it. Compatibility, security and affected save/upgrade paths require
+legacy foreign-file fallback exceeds its 32-character storage column. The editor
+can alter some literal layer text before publication; native strict validation
+also refuses other text that server sanitization would change. Compatibility,
+security and affected save/upgrade paths require
 review before these are resolved. See [Gemini review triage](GEMINI_REVIEW_TRIAGE.md).
 
 | Check | Current evidence/state | Work before the 1.8 release |
