@@ -22,6 +22,16 @@ evidence is present. **Pending** means a release action or owner decision remain
 Missing evidence alone does not establish a production defect. Reuse accepted
 results; run only missing or affected checks and keep original failures.
 
+**Current candidate update:** Public commit `ab76060` passed exact-commit CI
+after the approved revision-check bar. The subsequently approved quiet slide
+loading change follows that commit. On the 1.45 test page, delayed loading,
+successful rendering, a failed read and disabled JavaScript were checked in a
+browser. The full client suite passed 19,028 tests in 319 suites; standalone
+PHP passed 1,675 tests with one existing skip. A native 1.44 parser run using
+the changed source passed 5 tests and 77 assertions in isolated test tables.
+The installed 1.44 candidate has not yet been updated. Reconcile the final
+artifact and affected checks; the earlier green CI run predates the slide change.
+
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |
 | Page ownership, native Save/history/diff/restore and owner isolation | **Recorded passes:** [1.44 native journeys](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md), [whole-PDF Import](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and retained image/slide journeys. The [candidate evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) ties retained results to current source: four existing ordinary edits on 1.45 match recent changes/contributions; eight migration revisions on 1.44 match those feeds, with six watchlist matches. | Complete remaining intended-wiki HIST scenarios and applicable notification acceptance. The watchlist check covers migration revisions; Echo is absent on that wiki and no notification delivery is claimed. Close only missing or affected checks. |

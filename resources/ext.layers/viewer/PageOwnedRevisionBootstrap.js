@@ -233,12 +233,20 @@
 				return;
 			}
 			const binding = container.getAttribute( 'data-layers-binding' );
+			const unavailable = () => {
+				if ( container.classList.contains( 'layers-bound-slide' ) &&
+					container.hasAttribute( 'data-layers-unavailable' ) ) {
+					container.textContent = container.getAttribute( 'data-layers-unavailable' );
+				}
+			};
 			if ( !bundles || !Object.prototype.hasOwnProperty.call( bundles, binding ) ) {
+				unavailable();
 				return;
 			}
 			let bundle = bundles[ binding ];
 			if ( !bundle || !bundle.surface ||
 				String( bundle.revisionId ) !== container.getAttribute( 'data-layers-revision' ) ) {
+				unavailable();
 				return;
 			}
 			const admitted = bundle;
@@ -248,6 +256,7 @@
 			}
 			const isFile = container.tagName === 'IMG' || container.classList.contains( 'layers-bound-file-view' );
 			if ( isFile !== ( bundle.surface.kind === 'image' || bundle.surface.kind === 'pdf' ) ) {
+				unavailable();
 				return;
 			}
 			if ( !isFile ) {
@@ -318,19 +327,20 @@
 			}
 		} );
 		if ( !bindings.length || typeof owner !== 'string' || !owner || !Number.isInteger( revisionId ) ) {
+			mountInline( root, {}, fields, api );
 			return Promise.resolve( creationDispose );
 		}
 		const reader = window.Layers && window.Layers.InlineRead;
 		const early = reader && typeof reader.take === 'function' ? reader.take( root, owner, revisionId, bindings ) : null;
 		if ( early ) {
-			return early.then( bundles => {
+			return Promise.resolve( early ).catch( () => ( {} ) ).then( bundles => {
 				const inlineDispose = mountInline( root, bundles, fields, api );
 				return () => { creationDispose(); inlineDispose(); };
 			} );
 		}
 		const requests = [];
 		for ( let i = 0; i < bindings.length; i += 50 ) {
-			requests.push( Promise.resolve( api.get( { action: 'layersread', formatversion: 2, owner,
+			requests.push( Promise.resolve().then( () => api.get( { action: 'layersread', formatversion: 2, owner,
 				revid: revisionId, binding: bindings.slice( i, i + 50 ), controls: 1 } ) )
 				.then( ( response ) => ( response && response.layersread && response.layersread.bindings ) || {} )
 				.catch( () => ( {} ) ) );

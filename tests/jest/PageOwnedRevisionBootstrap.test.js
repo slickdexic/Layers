@@ -140,6 +140,41 @@ describe( 'Historical viewer bootstrap', () => {
 		dispose();
 		expect( cleanup ).toHaveBeenCalledTimes( 2 );
 	} );
+	it( 'keeps slide placeholders quiet while loading, then reports only failed reads', async () => {
+		const slide = ( binding ) => {
+			const el = document.createElement( 'div' );
+			el.className = 'layers-bound-slide';
+			el.dataset.layersBinding = binding;
+			el.dataset.layersRevision = '42';
+			el.dataset.layersUnavailable = 'This Layers revision is unavailable.';
+			container.append( el );
+			return el;
+		};
+		const successful = slide( 'v1:10:ok' );
+		const failed = slide( 'v1:10:missing' );
+		let resolve;
+		const api = { get: jest.fn( () => new Promise( done => { resolve = done; } ) ) };
+		const pending = mount.loadInline( container, api, 'Owner', 42 );
+		await Promise.resolve();
+		expect( successful.textContent ).toBe( '' );
+		expect( failed.textContent ).toBe( '' );
+		resolve( { layersread: { bindings: { 'v1:10:ok': bundle } } } );
+		const dispose = await pending;
+		expect( successful.querySelector( 'canvas' ) ).not.toBeNull();
+		expect( successful.textContent ).not.toContain( 'unavailable' );
+		expect( failed.textContent ).toBe( 'This Layers revision is unavailable.' );
+		dispose();
+	} );
+	it( 'reports synchronous read failures without exposing their details', async () => {
+		const slide = document.createElement( 'div' );
+		slide.className = 'layers-bound-slide';
+		slide.dataset.layersBinding = 'v1:10:a';
+		slide.dataset.layersRevision = '42';
+		slide.dataset.layersUnavailable = 'Unavailable';
+		container.append( slide );
+		await mount.loadInline( container, { get: () => { throw new Error( 'private' ); } }, 'Owner', 42 );
+		expect( slide.textContent ).toBe( 'Unavailable' );
+	} );
 	it( 'fills {{name}} tokens from the page fields of that drawing only, leaving the bundle untouched', () => {
 		const surface = Object.assign( {}, fixture.surfaces[ 0 ], { layers: [
 			Object.assign( {}, fixture.surfaces[ 0 ].layers[ 0 ], { text: 'Pressure {{ pressure }}, {{unknown}}' } ),

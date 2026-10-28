@@ -35,9 +35,10 @@ class BoundSlideHooks {
 	 */
 	public static function placeholder( Parser $parser, array $binding, bool $noEdit = false ): array {
 		[ $value, $revisionId ] = self::register( $parser, $binding );
-		$html = Html::element( 'div', [ 'class' => 'layers-bound-slide', 'data-layers-binding' => $value,
-			'data-layers-revision' => $revisionId, 'data-layers-noedit' => $noEdit ? '1' : null ],
-			$parser->msg( 'layers-revision-unavailable' )->text() );
+		$unavailable = $parser->msg( 'layers-revision-unavailable' )->text();
+		$html = Html::rawElement( 'div', [ 'class' => 'layers-bound-slide', 'data-layers-binding' => $value,
+			'data-layers-revision' => $revisionId, 'data-layers-noedit' => $noEdit ? '1' : null,
+			'data-layers-unavailable' => $unavailable ], Html::element( 'noscript', [], $unavailable ) );
 		return [ $html, 'noparse' => true, 'isHTML' => true ];
 	}
 

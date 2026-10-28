@@ -37,6 +37,9 @@ class BoundSlideHooksTest extends \MediaWikiIntegrationTestCase {
 		$binding = "v1:$pageId:presentation";
 		$parsed = $parse( $text );
 		$this->assertStringContainsString( 'data-layers-binding="' . $binding . '"', $parsed->getRawText() );
+		$this->assertStringContainsString( 'data-layers-unavailable=', $parsed->getRawText() );
+		$this->assertStringContainsString( '<noscript>', $parsed->getRawText() );
+		$this->assertStringContainsString( '</noscript>', $parsed->getRawText() );
 		$this->assertSame( $revisionId,
 			$parsed->getExtensionData( BoundSlideHooks::DATA_KEY )[$binding]['revisionId'] );
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), [ $title->getPrefixedDBkey() ] );
