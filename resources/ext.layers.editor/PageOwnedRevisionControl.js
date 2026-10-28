@@ -34,6 +34,10 @@
 
 			this.check = options.check;
 			this.message = options.message;
+			this.onLayoutChange = typeof options.onLayoutChange === 'function' ? options.onLayoutChange :
+				options.editor ? () => options.editor.canvasManager?.resizeCanvas?.() : null;
+			this.layoutObserver = null;
+			this.layoutFrame = null;
 
 			this.mounted = false;
 			this.disposed = false;
@@ -98,6 +102,7 @@
 			this.status.className = 'layers-page-revision-check-status';
 			this.status.setAttribute( 'role', 'status' );
 			this.status.setAttribute( 'aria-live', 'polite' );
+			this.status.setAttribute( 'tabindex', '0' );
 
 			this.clickHandler = () => {
 				this._handleClick();
@@ -109,6 +114,32 @@
 			parent.appendChild( this.container );
 
 			this.mounted = true;
+			const workspace = typeof parent.querySelector === 'function' ? parent.querySelector( '.layers-content' ) : null;
+			if ( workspace && this.onLayoutChange && typeof ResizeObserver === 'function' ) {
+				try {
+					this.layoutObserver = new ResizeObserver( () => this._scheduleLayout() );
+					this.layoutObserver.observe( workspace );
+				} catch ( error ) {
+					if ( this.layoutObserver ) { this.layoutObserver.disconnect(); }
+					this.layoutObserver = null;
+				}
+			}
+			this._scheduleLayout();
+		}
+
+		_scheduleLayout() {
+			if ( !this.onLayoutChange || this.disposed || this.layoutFrame !== null ) { return; }
+			const update = () => {
+				this.layoutFrame = null;
+				if ( !this.disposed ) {
+					try { this.onLayoutChange(); } catch ( error ) { /* Keep the revision check usable. */ }
+				}
+			};
+			if ( typeof window.requestAnimationFrame === 'function' ) {
+				this.layoutFrame = window.requestAnimationFrame( update );
+			} else {
+				update();
+			}
 		}
 
 		/**
@@ -128,6 +159,7 @@
 			this.pending = true;
 			this.button.disabled = true;
 			this.status.textContent = String( this.message( 'layers-page-revision-check-checking' ) || '' );
+			this._scheduleLayout();
 
 			let messageKey = 'layers-page-revision-check-failed';
 			try {
@@ -169,6 +201,7 @@
 				this.pending = false;
 				if ( !this.disposed && this.button && this.status ) {
 					this.status.textContent = String( this.message( messageKey ) || '' );
+					this._scheduleLayout();
 					this.button.disabled = false;
 					// Restore focus lost by disabling the button, but never steal it from another control.
 					if ( hadFocus && typeof this.button.focus === 'function' && document.activeElement === document.body ) {
@@ -189,6 +222,15 @@
 
 			this.disposed = true;
 			this.mounted = false;
+			if ( this.layoutObserver ) {
+				this.layoutObserver.disconnect();
+				this.layoutObserver = null;
+			}
+			if ( this.layoutFrame !== null && typeof window.cancelAnimationFrame === 'function' ) {
+				window.cancelAnimationFrame( this.layoutFrame );
+			}
+			this.layoutFrame = null;
+			this.onLayoutChange = null;
 
 			if ( this.button && this.clickHandler ) {
 				this.button.removeEventListener( 'click', this.clickHandler );

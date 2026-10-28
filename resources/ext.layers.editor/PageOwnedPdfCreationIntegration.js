@@ -66,7 +66,7 @@
 				// Recovery presentation ran before unsavedPages could read the initialized host.
 				this.editor.refreshPageControls();
 				this.manager.pageOwnedRevisionControl = new this.classes.PageOwnedRevisionControl( {
-					check: () => this.manager.checkPageOwnedRevision(), message: ( ...args ) => mw.msg( ...args ) } );
+					check: () => this.manager.checkPageOwnedRevision(), message: ( ...args ) => mw.msg( ...args ), editor: this.editor } );
 				this.manager.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
 				const header = this.editor.uiManager.container.querySelector( '.layers-header' );
 				if ( header && this.classes.PageOwnedSummaryField ) {

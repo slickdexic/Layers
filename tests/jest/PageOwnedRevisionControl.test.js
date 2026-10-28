@@ -92,10 +92,60 @@ describe( 'PageOwnedRevisionControl', () => {
 			const status = parent.querySelector( '[role="status"]' );
 			expect( status ).not.toBeNull();
 			expect( status.getAttribute( 'aria-live' ) ).toBe( 'polite' );
+			expect( status.getAttribute( 'tabindex' ) ).toBe( '0' );
 			expect( status.className ).toBe( 'layers-page-revision-check-status' );
 			expect( status.textContent ).toBe( '' );
 
 			control.dispose();
+		} );
+
+		it( 'refits the workspace after layout changes and disconnects on disposal', () => {
+			const savedObserver = global.ResizeObserver;
+			const frames = [];
+			const raf = jest.spyOn( window, 'requestAnimationFrame' ).mockImplementation( callback => {
+				frames.push( callback ); return frames.length;
+			} );
+			const cancel = jest.spyOn( window, 'cancelAnimationFrame' ).mockImplementation( () => {} );
+			const observer = { observe: jest.fn(), disconnect: jest.fn() };
+			let resized;
+			global.ResizeObserver = jest.fn( callback => { resized = callback; return observer; } );
+			const workspace = document.createElement( 'div' ); workspace.className = 'layers-content'; parent.appendChild( workspace );
+			const onLayoutChange = jest.fn(), control = new PageOwnedRevisionControl( {
+				check: jest.fn(), message: messageMock, onLayoutChange
+			} );
+			try {
+				control.mount( parent );
+				expect( observer.observe ).toHaveBeenCalledWith( workspace );
+				frames[ 0 ](); expect( onLayoutChange ).toHaveBeenCalledTimes( 1 );
+				resized(); expect( frames ).toHaveLength( 2 );
+				control.dispose(); expect( observer.disconnect ).toHaveBeenCalledTimes( 1 );
+				expect( cancel ).toHaveBeenCalledWith( 2 );
+				frames[ 1 ](); resized(); expect( onLayoutChange ).toHaveBeenCalledTimes( 1 );
+			} finally {
+				control.dispose(); global.ResizeObserver = savedObserver; raf.mockRestore(); cancel.mockRestore();
+			}
+		} );
+
+		it( 'refits after status changes when ResizeObserver is unavailable', async () => {
+			const savedObserver = global.ResizeObserver, frames = [], pending = createDeferred();
+			global.ResizeObserver = undefined;
+			const raf = jest.spyOn( window, 'requestAnimationFrame' ).mockImplementation( callback => {
+				frames.push( callback ); return frames.length;
+			} );
+			const cancel = jest.spyOn( window, 'cancelAnimationFrame' ).mockImplementation( () => {} );
+			const onLayoutChange = jest.fn(), control = new PageOwnedRevisionControl( {
+				check: () => pending.promise, message: messageMock, onLayoutChange
+			} );
+			try {
+				control.mount( parent ); frames[ 0 ]();
+				control.button.click(); expect( frames ).toHaveLength( 2 );
+				pending.resolve( { phase: 'ready', revisionId: 1, dirty: false, editorStateValid: true, draftPersisted: true } );
+				await Promise.resolve(); frames[ 1 ]();
+				expect( onLayoutChange ).toHaveBeenCalledTimes( 2 );
+				expect( control.status.textContent ).toBe( 'msg:layers-page-revision-check-matched' );
+			} finally {
+				control.dispose(); global.ResizeObserver = savedObserver; raf.mockRestore(); cancel.mockRestore();
+			}
 		} );
 
 		it.each( [

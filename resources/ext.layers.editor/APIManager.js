@@ -454,7 +454,7 @@
 		return this.pageOwnedDrafts.initialize().then( () => {
 			if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
 				this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {
-					check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key )
+					check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key ), editor: this.editor
 				} );
 				this.pageOwnedRevisionControl.mount( this.editor.uiManager.container );
 				const header = this.editor.uiManager.container.querySelector( '.layers-header' );
