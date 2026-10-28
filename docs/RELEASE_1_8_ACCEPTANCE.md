@@ -40,6 +40,12 @@ them from the release package. The current public candidate tree removes those
 files while their local copies and public Git history remain. Verify final source
 archives as well as the custom package. See [release preparation](RELEASE_PREPARATION.md).
 
+**New review findings:** A strict MySQL temporary-table test confirms that the
+legacy foreign-file fallback exceeds its 32-character storage column. Native
+strict validation also refuses some literal layer text after sanitization would
+change it. Compatibility, security and affected save/upgrade paths require
+review before these are resolved. See [Gemini review triage](GEMINI_REVIEW_TRIAGE.md).
+
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |
 | Page ownership, native Save/history/diff/restore and owner isolation | **Recorded passes:** [1.44 native journeys](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md), [whole-PDF Import](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and retained image/slide journeys. The [candidate evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) ties retained results to current source: four existing ordinary edits on 1.45 match recent changes/contributions; eight migration revisions on 1.44 match those feeds, with six watchlist matches. | Complete remaining intended-wiki HIST scenarios and applicable notification acceptance. The watchlist check covers migration revisions; Echo is absent on that wiki and no notification delivery is claimed. Close only missing or affected checks. |

@@ -312,6 +312,28 @@ describe( 'HelpDialog', () => {
 			expect( panel.querySelector( 'h3' ) ).not.toBeNull();
 			expect( panel.querySelectorAll( 'li' ).length ).toBeGreaterThan( 0 );
 		} );
+
+		it( 'treats localized overview and tips messages as text, not HTML', () => {
+			const payload = '<img src=x onerror="alert(1)">';
+			global.mw.message = jest.fn( () => ( {
+				exists: () => true,
+				text: () => payload,
+				escaped: () => {
+					const node = document.createElement( 'div' );
+					node.textContent = payload;
+					return node.innerHTML;
+				}
+			} ) );
+			const dialog = new HelpDialog();
+			const overview = document.createElement( 'div' );
+			const tips = document.createElement( 'div' );
+			dialog.renderOverview( overview );
+			dialog.renderTips( tips );
+			for ( const panel of [ overview, tips ] ) {
+				expect( panel.querySelector( 'img' ) ).toBeNull();
+				expect( panel.textContent ).toContain( payload );
+			}
+		} );
 	} );
 
 	describe( 'renderTools', () => {
