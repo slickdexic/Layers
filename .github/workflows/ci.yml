@@ -47,6 +47,9 @@ jobs:
       - name: Documentation consistency check
         run: npm run check:docs
 
+      - name: Release package safety tests
+        run: python3 -m unittest discover -s tests/release
+
       - name: JavaScript tests, lint and source checks
         run: npm test
 

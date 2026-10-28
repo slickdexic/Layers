@@ -89,6 +89,14 @@ matches for common credential labels or Windows user paths; one screenshot
 reviewed depicts a synthetic test fixture. This is not a complete review of the
 images or a guarantee that every historical artifact is free of private data.
 
+An unversioned trial package from public commit `e7e7fea` excludes the four
+archives and their four manifests. Its six affected historical documents replace
+12 links with an omission notice. Independent comparison verified the remaining
+2,847 files against their public Git blobs and the six rewritten documents
+against the stated transformation. The shipped-asset check passed, as did a
+package-local link check of 179 maintained documents. This is a trial, not the
+versioned release; the final package must be rebuilt from its accepted commit.
+
 At the final version/tag cut, build from that exact accepted public commit with
 the historical evidence excluded, verify the package's contents and documentation
 links as well as its runtime assets, publish its new checksum, and reconcile any
@@ -96,6 +104,21 @@ changed sources. A plain `git archive` is insufficient while those artifacts
 remain tracked. This dated snapshot and its checksum do not
 automatically qualify a later artifact. Remaining performance, manual/device,
 owner and release actions stay in the [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md).
+
+The release builder uses Git and Python 3.8 or newer on the release workstation;
+neither is a Layers runtime dependency. Select the reviewed public commit or tag
+explicitly and supply a new output path. It refuses to overwrite an existing file:
+
+```sh
+python3 scripts/build-release-package.py --commit REVIEWED_COMMIT --output Layers-release.tar
+```
+
+The builder emits the source commit, archive SHA-256, excluded evidence paths and
+rewritten documentation links as JSON. Run `python3 -m unittest discover -s
+tests/release` to check its safety boundaries. Independently inspect the final
+archive and verify its assets and documentation; the builder's filename checks
+are not a complete privacy review. The source commit must contain the builder,
+and a trial package does not replace final version/tag acceptance.
 
 ## Before the milestone commit/tag
 
