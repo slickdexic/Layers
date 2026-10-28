@@ -75,14 +75,25 @@ documented upgrade/recovery scope; it is not another fresh upgrade rehearsal.
 
 This is a source snapshot, **not the versioned 1.8 release**. Its manifest still
 says 1.5.95, as required before the release cut. The archive comes from the
-reviewed public commit, never private working HEAD, and contains no local settings,
-database, uploads, credentials, logs, private test evidence, development dependency
-directories or Git history. Local privacy guards remain development setup, not
-private files to copy into the release.
+reviewed public commit, never private working HEAD. A later inspection found
+that the commit also contains historical `docs/acceptance` archives, including
+test screenshots and logs. The earlier statement that the snapshot contained no
+captures or logs was incorrect. The presence of those test artifacts does not by
+itself establish that they contain private information, but they must be excluded
+from the release package. They were already tracked in public Git history; a
+package exclusion alone cannot remove that history. Local privacy guards remain
+development setup, not files to copy into the release.
 
-At the final version/tag cut, regenerate the archive from that exact accepted
-public commit, repeat extraction/blob and asset checks, publish its new checksum
-and reconcile any changed sources. This dated snapshot and its checksum do not
+The four tracked ZIPs contain 104 entries in total. A limited text scan found no
+matches for common credential labels or Windows user paths; one screenshot
+reviewed depicts a synthetic test fixture. This is not a complete review of the
+images or a guarantee that every historical artifact is free of private data.
+
+At the final version/tag cut, build from that exact accepted public commit with
+the historical evidence excluded, verify the package's contents and documentation
+links as well as its runtime assets, publish its new checksum, and reconcile any
+changed sources. A plain `git archive` is insufficient while those artifacts
+remain tracked. This dated snapshot and its checksum do not
 automatically qualify a later artifact. Remaining performance, manual/device,
 owner and release actions stay in the [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md).
 

@@ -24,13 +24,19 @@ results; run only missing or affected checks and keep original failures.
 
 **Current candidate update:** Public commit `ab76060` passed exact-commit CI
 after the approved revision-check bar. The subsequently approved quiet slide
-loading change follows that commit. On the 1.45 test page, delayed loading,
+loading change is published as `04665a3` with [passing exact-commit CI](https://github.com/slickdexic/Layers/actions/runs/40613892452). On the 1.45 test page, delayed loading,
 successful rendering, a failed read and disabled JavaScript were checked in a
 browser. The full client suite passed 19,028 tests in 319 suites; standalone
 PHP passed 1,675 tests with one existing skip. A native 1.44 parser run using
 the changed source passed 5 tests and 77 assertions in isolated test tables.
 The installed 1.44 candidate has not yet been updated. Reconcile the final
 artifact and affected checks; the earlier green CI run predates the slide change.
+
+**Package correction:** The earlier candidate archive included tracked historical
+test-evidence ZIPs with screenshots and logs. The earlier claim that the archive
+contained no captures or logs was wrong. Their presence does not establish that
+they contain private information; review their public-history exposure and exclude
+them from the release package. See [release preparation](RELEASE_PREPARATION.md).
 
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |
