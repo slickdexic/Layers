@@ -30,47 +30,18 @@ describeEditor( 'Layers Editor', () => {
 	} );
 
 	describeEditor( 'Editor Loading', () => {
-		test( 'can open editor from page drawing edit link', async ( { page } ) => {
+		test( 'can open the editor from the owning page overlay', async ( { page } ) => {
 			const cfg = getAcceptanceConfig();
 			const base = process.env.MW_SERVER || cfg?.base || 'http://localhost:8080';
 			const owner = 'Layers_browser_acceptance';
-
-			const initialSnapshot = await editorPage.readSnapshot( owner );
-			const api = await editorPage.getApiClient();
-			const histRes = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids|content', rvslots: 'main' } );
-			const initialRevId = histRes.query.pages[ 0 ].revisions[ 0 ].revid;
-			const baselineText = histRes.query.pages[ 0 ].revisions[ 0 ].slots.main.content;
-
-			let currentRevId = initialRevId;
-			try {
-				const tokenRes = await api.get( { action: 'query', meta: 'tokens', type: 'csrf' } );
-				const csrfToken = tokenRes.query.tokens.csrftoken;
-				const seedRes = await api.post( {
-					action: 'layerspublish',
-					owner,
-					baserevid: String( currentRevId ),
-					maintext: `${ baselineText }\n\n{{#Slide:Welcome Slide}}`,
-					data: JSON.stringify( initialSnapshot ),
-					summary: 'Temporary embed for edit link test',
-					token: csrfToken
-				} );
-				expect( seedRes?.layerspublish?.result ).toBe( 'Success' );
-				currentRevId = seedRes.layerspublish.revid;
-
-				await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
-				const editLink = page.locator( '.layers-page-edit-link' ).first();
-				await expect( editLink ).toBeVisible( { timeout: 15000 } );
-				await expect( editLink ).toContainText( 'Edit layer set: Welcome Slide' );
-				await Promise.all( [
-					page.waitForNavigation(),
-					editLink.click()
-				] );
-
-				const loaded = await editorPage.isEditorLoaded();
-				expect( loaded ).toBe( true );
-			} finally {
-				await editorPage.restoreSnapshot( initialSnapshot, currentRevId, owner );
-			}
+			await page.goto( `${ base }/index.php?title=${ encodeURIComponent( owner ) }&useskin=vector-2022` );
+			const host = page.locator( '.layers-bound-slide.layers-bound-controls' ).first();
+			await expect( host ).toBeVisible( { timeout: 15000 } );
+			await host.hover();
+			const editButton = host.locator( '.layers-viewer-overlay-btn--edit' );
+			await expect( editButton ).toBeVisible();
+			await Promise.all( [ page.waitForNavigation(), editButton.click() ] );
+			expect( await editorPage.isEditorLoaded() ).toBe( true );
 		} );
 
 		test( 'editor has required components', async ( { page } ) => {
@@ -307,6 +278,8 @@ describeEditor( 'Layers Editor', () => {
 	} );
 
 	describeEditor( 'Save and Load', () => {
+		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
+			'Save journeys require the disposable CI fixture' );
 		test( 'can save layers', async () => {
 			const initialSnapshot = await editorPage.readSnapshot();
 			try {
