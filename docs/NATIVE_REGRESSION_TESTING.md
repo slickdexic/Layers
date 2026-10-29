@@ -108,8 +108,8 @@ uses MediaWiki 1.44 and a disposable SQLite wiki to run the selected
 classes on pushes and pull requests. The same test selection passed locally
 on MediaWiki 1.44 / MySQL (47 tests / 132 assertions), using the installed
 candidate with the current reader and source-resolver files preloaded. The
-GitHub-hosted setup and SQLite execution await their first successful CI run;
-they are not qualified by the local MySQL result. The full native suite,
+GitHub-hosted SQLite execution also [passed on candidate commit 0fd1a24](https://github.com/slickdexic/Layers/actions/runs/40809337201)
+with 47 tests / 132 assertions. The full native suite,
 other supported versions, HTTP and browser journeys remain separate checks.
 
 ## Recorded package qualification — October 25, 2026

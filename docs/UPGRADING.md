@@ -66,6 +66,13 @@ column when needed, retaining existing identifiers. This accommodates the
 complete fallback identifier for foreign files. SQLite already uses unrestricted
 text for this column.
 
+On the maintained MediaWiki 1.44.6 / MySQL test wiki, the candidate updater
+widened an existing `VARBINARY(32)` identifier column to `VARBINARY(48)` and a
+second run succeeded. Data hashes for 24 checked content tables were unchanged,
+and image, slide and PDF editors reopened afterward. This was a schema update
+on an already-migrated test wiki; it does not replace the separate migration
+rehearsal or prove every starting version and database combination.
+
 Layers then requires separate **link discovery and page-history migration**:
 
 1. Refresh links and process jobs while legacy shared-set discovery is active.

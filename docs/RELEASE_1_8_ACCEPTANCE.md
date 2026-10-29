@@ -29,8 +29,16 @@ successful rendering, a failed read and disabled JavaScript were checked in a
 browser. The full client suite passed 19,028 tests in 319 suites; standalone
 PHP passed 1,675 tests with one existing skip. A native 1.44 parser run using
 the changed source passed 5 tests and 77 assertions in isolated test tables.
-The installed 1.44 candidate has not yet been updated. Reconcile the final
-artifact and affected checks; the earlier green CI run predates the slide change.
+At that checkpoint the installed 1.44 candidate had not yet been updated; the
+later installed-candidate result is recorded below.
+
+**Latest candidate:** Public commit `0fd1a2466c618504ed8eda0577c6715b4fa05a53`
+passed both [main CI](https://github.com/slickdexic/Layers/actions/runs/40809337232)
+and [native 1.44 SQLite CI](https://github.com/slickdexic/Layers/actions/runs/40809337201).
+The main run passed 19,067 client tests and 1,697 standalone PHP tests with one
+existing skip; the native job passed 47 tests / 132 assertions. An independently
+verified 2,883-file package from that commit is installed on the maintained
+1.44 test wiki; the version is still the pre-release manifest version, not 1.8.
 
 **Package correction:** The earlier candidate archive included tracked historical
 test-evidence ZIPs with screenshots and logs. The earlier claim that the archive
@@ -47,7 +55,11 @@ wiki, a read-only schema check subsequently found `VARBINARY(32)`, which the
 first correction failed to recognize. The corrected updater preserves the
 existing `VARBINARY` or `VARCHAR` type while widening it; both cases pass on
 native temporary tables, and the binary case failed before the fix. The actual
-wiki updater and cross-version acceptance remain open. The editor
+wiki updater ran successfully twice on the maintained 1.44 / MySQL test wiki,
+widening the actual column to `VARBINARY(48)`. Hashes for 24 content tables
+remained unchanged, and no-Save image, slide and PDF editor journeys passed
+afterward. This is an already-migrated test wiki, not a fresh migration or
+cross-version qualification. The editor
 can alter some literal layer text before publication; native strict validation
 also refuses other text that server sanitization would change. An approved local
 literal-text correction has passed focused editor, publication and export tests;
@@ -116,8 +128,8 @@ remaining reader performance checks are still open.
 disposable SQLite wiki to run selected native history-access, publication and
 batched-read tests. Its exact test selection passed locally on 1.44 / MySQL:
 47 tests / 132 assertions, with the current reader files preloaded into the
-installed test candidate. GitHub-hosted execution and SQLite compatibility are
-not yet verified; exact-commit CI acceptance remains pending.
+installed test candidate. The later `0fd1a246` candidate passed the same
+selection on GitHub's MediaWiki 1.44 / SQLite workflow, as linked above.
 
 **Shipped dependency check:** A synthetic local advisory now verifies that the
 real production `npm audit` command rejects a high-severity finding for the
@@ -145,8 +157,8 @@ of Rectangle also cleared a multi-selection in that test session. The full
 client suite passed 19,067 tests across 325 suites; the editor bundle remains
 within its existing size limit.
 
-**Public candidate reconciliation:** The public branch and the remote both
-pointed to `4122f6d8` at this check. A preliminary comparison of 41 selected
+**Earlier public candidate reconciliation:** The public branch and the remote both
+pointed to `4122f6d8` at that check. A preliminary comparison of 41 selected
 audit/editor source and test files against that branch found 21 changed, 18
 new and two unchanged files. It compares actual working-file Git hashes, not
 the private checkout's index: some files present and Git-blob-equivalent to the
@@ -162,8 +174,8 @@ review. Final dependency, documentation, artifact and exact-commit checks remain
 | Viewer, Download and Print | **Recorded passes:** inspected exports, exact historical-source viewing, and [complete 1.44 PDF Download/native Print preparation](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md#complete-pdf-download-and-native-print-preparation--october-25-2026). Both pages retain saved layers; Print and Download composites match byte for byte. | Obtain the applicable manual Print/export owner acceptance. The headless check does not qualify the operating-system dialog, physical pagination or paper output. Retain earlier observer failures without repeating that stalled loop. |
 | Supported UI, touch and accessibility | **Partial:** [phone-viewer panning](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification), the owner-approved [bounded toolbar](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) and [revision-check bar](REVISION_CHECK_BAR.md) pass their recorded browser scopes. The bar retains its action and fits image/slide/PDF editors in tested light/dark desktop, tablet and narrow layouts. | Finish remaining tablet-touch editing, physical-device and manual accessibility acceptance. Browser emulation is not physical-device sign-off. Phone editing is not required. |
 | Security, privacy and data integrity | **Recorded engineering review:** [HTTP roles/visibility/lifecycle and native Save admission](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md); the [candidate review](PAGE_HISTORY_SECURITY_REVIEW.md) now covers request/access/admission, validation/output, bounds, I/O, configuration/logging and dependencies. Import quotas, renderer text interpretation and SVG resource lookup are corrected; locked npm and PHP audits are clear at this checkpoint. | Reconcile final source/artifact consistency and recheck dated dependency results at the release cut. Reopen affected checks after changes and fix/retest release-blocking findings. No open high/critical finding or known data-loss defect may ship; this is not independent penetration-test or owner acceptance. |
-| Performance | **Recorded installed-desktop passes / reader misses retained:** [asset and editor-entry checks](PAGE_HISTORY_PERFORMANCE.md#installed-asset-and-editor-entry-checks--october-27-2026) measure 102,129 gzip bytes of Layers modules, none on the plain page, and all fifteen warm image/slide/PDF editor openings at 800–930 ms, below three seconds. Eighteen clean Closings return to the owner without Saves. The [earlier authorized read](PAGE_HISTORY_PERFORMANCE.md#earlier-authorized-read--october-27-2026) still has two of five visits above 300 ms (300.4/301.8 ms); all slower baselines and withdrawn experiments remain retained. | Close the remaining measured reader misses and applicable cold-server/reference-device/media checks without changing controls or weakening read admission. These are representative desktop passes, not physical-device or blanket PDF acceptance. Source/assets are local; retained private data/configuration storage and reference hardware remain explicit limits. Keep environment costs distinct from product defects and obtain owner disposition of unproved limits. |
-| Package and documentation | **Recorded candidate package pass / final cut pending:** the [clean public snapshot archive](RELEASE_PREPARATION.md#reviewed-candidate-archive--october-27-2026) at `ff57fa0` contains 2,859 exact public files and passes the 225-reference asset guard. Non-guide files match the installed tested candidate; 26 retained upgrade/recovery source files reconcile. Primary guides, upgrade instructions and [draft release notes](RELEASE_NOTES_1_8.md) are refreshed. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. The candidate snapshot still reports manifest 1.5.95; it is not a released 1.8 build. Private captures, credentials, configuration and database exports stay local. |
+| Performance | **Recorded installed-desktop passes / reader misses retained:** [asset and editor-entry checks](PAGE_HISTORY_PERFORMANCE.md#installed-asset-and-editor-entry-checks--october-27-2026) measure 102,129 gzip bytes of Layers modules, none on the plain page, and all fifteen warm image/slide/PDF editor openings at 800–930 ms, below three seconds. The [October 29 installed-candidate reader recheck](PAGE_HISTORY_PERFORMANCE.md#installed-144-candidate-recheck--october-29-2026) measured 319.8–326.1 ms on all five visits, above the 300 ms target. Earlier observations and withdrawn experiments remain retained. | Investigate the reader misses and applicable cold-server/reference-device/media checks without changing controls or weakening read admission. These are representative desktop observations, not physical-device or blanket PDF acceptance. Source/assets are local; retained private data/configuration storage and reference hardware remain explicit limits. Keep environment costs distinct from product defects and obtain owner disposition of unproved limits. |
+| Package and documentation | **Recorded candidate package pass / final cut pending:** the independently verified `0fd1a246` archive contains 2,883 exact public files and is installed on the 1.44 wiki. Primary guides, upgrade instructions and [draft release notes](RELEASE_NOTES_1_8.md) are refreshed. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. The candidate still reports manifest 1.5.95; it is not a released 1.8 build. Private captures, credentials, configuration and database exports stay local. |
 | Owner acceptance | **Pending.** | Complete the Milestone 1 portions of charter scenarios S1–S7 on the intended wiki. Search, Cargo and new link portions belong to their later milestones. Record acceptance of the release scope and remaining disclosed limits. |
 | Final release cut | **Pending.** | Freeze the reviewed artifact, run required gates and exact-commit CI, confirm version/tag with the owner and publish the independent release. Preserve a consistent upgrade/rollback reference. |
 

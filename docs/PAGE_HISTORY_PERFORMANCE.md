@@ -1,5 +1,23 @@
 # Page-history performance
 
+## Installed 1.44 candidate recheck — October 29, 2026
+
+This check advances Milestone 1 / PERF-2. The maintained MediaWiki 1.44.6
+installation used the verified public candidate `0fd1a246`, after its normal
+schema upgrade and idempotent rerun. The unchanged native reader benchmark used
+one warm-up and five fresh browser contexts, with the existing exact owner,
+revision, pixel, request-admission and 300 ms checks. It made no content writes.
+
+The warm-up took 643.4 ms. The five measured visits took **326.1, 319.8,
+325.3, 323.0 and 323.9 ms** after image load. All five exceeded the target;
+the benchmark failed. In one measured visit, the source image completed at
+about 886 ms, MediaWiki's startup module at 983 ms, the combined script response
+at 1,094 ms and the authorized layer read at 1,205 ms. These are observational
+resource timings, not a controlled attribution to any one component. The
+private data mount and desktop hardware limitations described below still
+apply. This result does not establish reference-device performance or justify
+weakening authorization or changing the target.
+
 This checkpoint advances Milestone 1 / PERF-0 to PERF-5. It records native HTTP
 Save/history responses and browser asset size, image paint, editor opening and
 100-layer interaction measurements. Results qualify only the environments and
