@@ -41,6 +41,7 @@ use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
+use Psr\Log\NullLogger;
 use Wikimedia\AtEase\AtEase;
 use Wikimedia\ParamValidator\ParamValidator;
 
@@ -88,10 +89,7 @@ class ApiLayersExport extends ApiBase {
 		} catch ( ApiUsageException $e ) {
 			throw $e;
 		} catch ( \Throwable $e ) {
-			$this->getLogger()->error(
-				'Layers export failed: {message}',
-				[ 'message' => $e->getMessage(), 'exception' => $e ]
-			);
+			$this->getLogger()->error( 'Layers export failed' );
 			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 		}
 	}
@@ -357,10 +355,7 @@ class ApiLayersExport extends ApiBase {
 				}
 			}
 		} catch ( \Throwable $e ) {
-			$this->getLogger()->debug(
-				'Layers export: base page transform failed: {msg}',
-				[ 'msg' => $e->getMessage() ]
-			);
+			$this->getLogger()->debug( 'Layers export: base page transform failed' );
 		}
 		return null;
 	}
@@ -396,23 +391,19 @@ class ApiLayersExport extends ApiBase {
 		}
 
 		try {
-			$result = Shell::command( ...$args )
+			$command = Shell::command( ...$args );
+			$command->setLogger( new NullLogger() );
+			$result = $command
 				->limits( $limits )
 				->includeStderr()
 				->execute();
 			$exit = method_exists( $result, 'getExitCode' ) ? $result->getExitCode() : 0;
 			if ( $exit !== 0 ) {
-				$this->getLogger()->warning(
-					'Layers export: convert failed: {out}',
-					[ 'out' => method_exists( $result, 'getStdout' ) ? $result->getStdout() : '' ]
-				);
+				$this->getLogger()->warning( 'Layers export: convert failed', [ 'exitCode' => $exit ] );
 				return false;
 			}
 		} catch ( \Throwable $e ) {
-			$this->getLogger()->warning(
-				'Layers export: convert threw: {msg}',
-				[ 'msg' => $e->getMessage() ]
-			);
+			$this->getLogger()->warning( 'Layers export: convert threw' );
 			return false;
 		}
 
@@ -427,7 +418,7 @@ class ApiLayersExport extends ApiBase {
 	private function getExportDir(): ?string {
 		$dir = RenderCache::getExportDir( $this->getConfig() );
 		if ( !RenderCache::ensureDir( $this->getConfig(), $dir ) ) {
-			$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
+			$this->getLogger()->error( 'Layers export: cannot create dir' );
 			return null;
 		}
 		return $dir;

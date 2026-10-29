@@ -7,6 +7,8 @@
       <file>core/SlideBindingReadEfficiencyTest.php</file>
       <file>core/LegacyImageLiteralTextSaveTest.php</file>
       <file>core/ThumbnailRendererPrivacyTest.php</file>
+      <file>core/ApiLayersExportPrivacyTest.php</file>
+      <file>core/ThumbnailRendererRotationTest.php</file>
     </testsuite>
   </testsuites>
   <extensions><extension class="MediaWikiTeardownPHPUnitExtension" /></extensions>

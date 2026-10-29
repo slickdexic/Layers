@@ -2,11 +2,7 @@
  * Draft Manager for Layers Editor
  * Handles auto-save to localStorage and draft recovery
  *
- * Features:
- * - Debounced auto-save every 30 seconds when dirty
- * - Draft detection on editor open
- * - Recovery dialog for unsaved drafts
- * - Clears draft on successful save
+ * Debounced local backup and explicit recovery for the legacy editor.
  */
 ( function () {
 	'use strict';
@@ -84,10 +80,7 @@
 		/**
 		 * Identify the current wiki for draft key scoping.
 		 *
-		 * Standardizes discovery on MediaWiki's canonical wgWikiID (WikiMap::getCurrentWikiId(),
-		 * e.g. 'my_wiki-T01') with fallback to wgDBname and table prefix wgDBprefix.
-		 * For multiple wikis sharing an origin with different script paths, appends
-		 * wgScriptPath (e.g. 'my_wiki-T01:/wiki2') to guarantee origin-isolated scoping.
+		 * Include the script path to distinguish wikis sharing an origin.
 		 *
 		 * @return {string} Stable wiki identifier ('default' when unknown)
 		 */
@@ -151,10 +144,6 @@
 		/**
 		 * Identify the current user for draft key scoping.
 		 *
-		 * Drafts used to be keyed by filename alone, so on a shared browser profile
-		 * the next person to open the same file was offered the previous person's
-		 * unsaved annotations.
-		 *
 		 * @return {string} Stable per-user token ('anon' when logged out)
 		 */
 		static getUserScope() {
@@ -186,9 +175,7 @@
 		}
 
 		/**
-		 * Decode a versioned storage key into its identity tuple.
-		 * Validates tuple types strictly: 5 elements, all strings except page which
-		 * must be an integer >= 1.
+		 * Decode and validate a versioned five-element identity tuple.
 		 *
 		 * @param {string} key Storage key
 		 * @return {Object|null} Decoded tuple or null if not a valid v2 key
@@ -264,11 +251,7 @@
 		/**
 		 * Remove expired Layers drafts for the current user and wiki.
 		 *
-		 * Does not sweep other users' drafts. Unparseable drafts belonging to
-		 * the current user are removed as dead weight.
-		 *
 		 * @param {boolean} [aggressive] Also drop the oldest surviving drafts
-		 *   for the current user, used to free space after a quota failure
 		 * @return {number} Number of keys removed
 		 */
 		sweepExpiredDrafts( aggressive ) {
@@ -340,9 +323,7 @@
 		 * @param {string} [filename] Target filename
 		 * @param {string} [setName] Target set name
 		 * @param {number|string} [page] Target page number
-		 * @param {Object} [options] Context options override
-		 * @param {string} [options.wikiScope] Explicit wiki scope override
-		 * @param {string} [options.userScope] Explicit user scope override
+		 * @param {Object} [options] Context overrides
 		 * @return {string} Storage key
 		 */
 		buildStorageKey( filename, setName, page, options ) {
@@ -1823,7 +1804,7 @@
 		/**
 		 * Show the recovery dialog
 		 *
-		 * @return {Promise<boolean>} Resolves to true if user chose to recover
+		 * @return {Promise<boolean|null>} True to recover, false to discard, null to preserve
 		 */
 		showRecoveryDialog() {
 			return new Promise( ( resolve ) => {
@@ -1847,7 +1828,36 @@
 				const recoverBtn = this.getMessage( 'layers-draft-recover', 'Recover' );
 				const discardBtn = this.getMessage( 'layers-draft-discard', 'Discard' );
 
-				// Use OOUI dialog if available (OO is a MediaWiki global)
+				// The window result preserves the action; OO.ui.confirm collapses
+				// Escape and an explicit reject into the same false value.
+				// eslint-disable-next-line no-undef
+				if ( typeof OO !== 'undefined' && OO.ui && typeof OO.ui.getWindowManager === 'function' ) {
+					let manager, dialog;
+					try {
+						// eslint-disable-next-line no-undef
+						manager = OO.ui.getWindowManager();
+						dialog = manager.openWindow( 'message', {
+							message, title,
+							actions: [
+								{ label: discardBtn, action: 'reject' },
+								{ label: recoverBtn, action: 'accept', flags: [ 'primary', 'progressive' ] }
+							]
+						} );
+					} catch ( error ) { resolve( null ); return; }
+					const onEscape = ( event ) => {
+						if ( event.key === 'Escape' ) {
+							event.preventDefault(); event.stopImmediatePropagation();
+							manager.closeWindow( 'message' );
+						}
+					};
+					window.addEventListener( 'keydown', onEscape, true );
+					dialog.closed.then( ( data ) => {
+						window.removeEventListener( 'keydown', onEscape, true );
+						resolve( data && data.action === 'accept' ? true : data && data.action === 'reject' ? false : null );
+					}, () => { window.removeEventListener( 'keydown', onEscape, true ); resolve( null ); } );
+					return;
+				}
+				// If the action cannot be distinguished from dismissal, preserve the backup.
 				// eslint-disable-next-line no-undef
 				if ( typeof OO !== 'undefined' && OO.ui && OO.ui.confirm ) {
 					// eslint-disable-next-line no-undef
@@ -1858,12 +1868,12 @@
 							{ label: recoverBtn, action: 'accept', flags: [ 'primary', 'progressive' ] }
 						]
 					} ).then( ( confirmed ) => {
-						resolve( confirmed );
-					} );
+						resolve( confirmed ? true : null );
+					}, () => resolve( null ) );
 				} else {
 					// Fallback to native confirm
 					const confirmed = window.confirm( message );
-					resolve( confirmed );
+					resolve( confirmed ? true : null );
 				}
 			} );
 		}
@@ -1876,13 +1886,21 @@
 		 */
 		async checkAndRecoverDraft() {
 			if ( this.hasDraft() ) {
+				const target = { filename: this.filename,
+					setName: this.editor.stateManager ? this.editor.stateManager.get( 'currentSetName' ) || '' : '',
+					page: Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ) };
+				const observed = this.captureDraft( target );
 				const shouldRecover = await this.showRecoveryDialog();
 
 				if ( shouldRecover ) {
+					if ( observed === undefined || this.getStorageKey() !== this.getStorageKey( target ) ||
+						observed !== this.captureDraft( target ) ) {
+						return false;
+					}
 					const recovered = this.recoverDraft();
 					if ( recovered ) {
 						// Clear the draft after successful recovery
-						this.clearDraft();
+						this.clearDraft( { ...target, expectedDraft: observed } );
 
 						// Show notification
 						if ( typeof mw !== 'undefined' && mw.notify ) {
@@ -1895,9 +1913,9 @@
 						}
 					}
 					return recovered;
-				} else {
+				} else if ( shouldRecover === false ) {
 					// User chose to discard v2 draft
-					this.clearDraft();
+					this.clearDraft( { ...target, expectedDraft: observed } );
 					if ( this.hasLegacyDraft() ) {
 						this.showLegacyNotice();
 					}

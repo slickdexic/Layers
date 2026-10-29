@@ -47,7 +47,7 @@ class ThumbnailRendererPrivacyTest extends \MediaWikiIntegrationTestCase {
 			$factory->setLogger( \MediaWiki\Logger\LoggerFactory::getInstance( 'exec' ) );
 		}
 		$this->assertFalse( $result );
-		$logged = json_encode( [ $entries, $shellLog->entries ] );
+		$logged = json_encode( [ $entries, $shellLog->entries ], JSON_UNESCAPED_SLASHES );
 		$this->assertStringNotContainsString( $marker, $logged );
 		$this->assertStringNotContainsString( $path, $logged );
 		$this->assertSame( 23, $entries[0][1]['exitCode'] );

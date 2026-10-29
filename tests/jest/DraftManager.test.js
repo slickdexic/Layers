@@ -789,7 +789,7 @@ describe( 'DraftManager', function () {
 			expect( mw.notify ).toHaveBeenCalled();
 		} );
 
-		it( 'should discard draft when user cancels', async function () {
+		it( 'should preserve the draft when the fallback confirmation is dismissed', async function () {
 			const draft = {
 				version: 1,
 				timestamp: Date.now(),
@@ -805,7 +805,107 @@ describe( 'DraftManager', function () {
 			const result = await draftManager.checkAndRecoverDraft();
 			
 			expect( result ).toBe( false );
-			expect( global.localStorage.removeItem ).toHaveBeenCalled();
+			expect( mockLocalStorage[ draftManager.getStorageKey() ] ).toBeDefined();
+		} );
+
+		it( 'keeps the exact backup when the native dialog is dismissed', async function () {
+			const key = draftManager.getStorageKey();
+			const raw = JSON.stringify( { version: 2, timestamp: Date.now(), layers: [ { id: 'layer1' } ],
+				setName: 'default' } );
+			mockLocalStorage[ key ] = raw;
+			global.OO.ui.confirm = jest.fn( () => Promise.resolve( false ) );
+			global.OO.ui.getWindowManager = jest.fn( () => ( {
+				openWindow: () => ( { closed: Promise.resolve( undefined ) } )
+			} ) );
+			try {
+				expect( await draftManager.checkAndRecoverDraft() ).toBe( false );
+				expect( mockLocalStorage[ key ] ).toBe( raw );
+				expect( mockEditor.stateManager.update ).not.toHaveBeenCalled();
+			} finally { delete global.OO.ui.getWindowManager; }
+		} );
+
+		it( 'uses Escape to dismiss recovery without triggering the editor shortcut', async function () {
+			const key = draftManager.getStorageKey();
+			const raw = JSON.stringify( { version: 2, timestamp: Date.now(), layers: [ { id: 'layer1' } ],
+				setName: 'default' } );
+			mockLocalStorage[ key ] = raw;
+			let finish;
+			const manager = { openWindow: () => ( { closed: new Promise( resolve => { finish = resolve; } ) } ),
+				closeWindow: jest.fn( () => finish() ) };
+			global.OO.ui.getWindowManager = jest.fn( () => manager );
+			const editorShortcut = jest.fn(); document.addEventListener( 'keydown', editorShortcut );
+			try {
+				const pending = draftManager.checkAndRecoverDraft();
+				document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } ) );
+				expect( await pending ).toBe( false );
+				expect( manager.closeWindow ).toHaveBeenCalledWith( 'message' );
+				expect( editorShortcut ).not.toHaveBeenCalled();
+				expect( mockLocalStorage[ key ] ).toBe( raw );
+			} finally {
+				document.removeEventListener( 'keydown', editorShortcut );
+				delete global.OO.ui.getWindowManager;
+			}
+		} );
+
+		it( 'deletes the chosen backup only when Discard is explicit', async function () {
+			const key = draftManager.getStorageKey();
+			mockLocalStorage[ key ] = JSON.stringify( { version: 2, timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ], setName: 'default' } );
+			global.OO.ui.getWindowManager = jest.fn( () => ( {
+				openWindow: () => ( { closed: Promise.resolve( { action: 'reject' } ) } )
+			} ) );
+			try {
+				expect( await draftManager.checkAndRecoverDraft() ).toBe( false );
+				expect( mockLocalStorage[ key ] ).toBeUndefined();
+				expect( mockEditor.stateManager.update ).not.toHaveBeenCalled();
+			} finally { delete global.OO.ui.getWindowManager; }
+		} );
+
+		it( 'does not discard another tab’s replacement written while the dialog is open', async function () {
+			const key = draftManager.getStorageKey();
+			mockLocalStorage[ key ] = JSON.stringify( { version: 2, timestamp: Date.now(),
+				layers: [ { id: 'old' } ], setName: 'default' } );
+			const replacement = JSON.stringify( { version: 2, timestamp: Date.now(),
+				layers: [ { id: 'newer' } ], setName: 'default' } );
+			global.OO.ui.getWindowManager = jest.fn( () => ( {
+				openWindow: () => ( { closed: Promise.resolve().then( () => {
+					mockLocalStorage[ key ] = replacement; return { action: 'reject' };
+				} ) } )
+			} ) );
+			try {
+				expect( await draftManager.checkAndRecoverDraft() ).toBe( false );
+				expect( mockLocalStorage[ key ] ).toBe( replacement );
+			} finally { delete global.OO.ui.getWindowManager; }
+		} );
+
+		it( 'does not recover an unseen replacement written while the dialog is open', async function () {
+			const key = draftManager.getStorageKey();
+			mockLocalStorage[ key ] = JSON.stringify( { version: 2, timestamp: Date.now(),
+				layers: [ { id: 'old' } ], setName: 'default' } );
+			const replacement = JSON.stringify( { version: 2, timestamp: Date.now(),
+				layers: [ { id: 'newer' } ], setName: 'default' } );
+			global.OO.ui.getWindowManager = jest.fn( () => ( {
+				openWindow: () => ( { closed: Promise.resolve().then( () => {
+					mockLocalStorage[ key ] = replacement; return { action: 'accept' };
+				} ) } )
+			} ) );
+			try {
+				expect( await draftManager.checkAndRecoverDraft() ).toBe( false );
+				expect( mockLocalStorage[ key ] ).toBe( replacement );
+				expect( mockEditor.stateManager.update ).not.toHaveBeenCalled();
+			} finally { delete global.OO.ui.getWindowManager; }
+		} );
+
+		it( 'preserves the backup if the dialog cannot open', async function () {
+			const key = draftManager.getStorageKey();
+			const raw = JSON.stringify( { version: 2, timestamp: Date.now(), layers: [ { id: 'layer1' } ],
+				setName: 'default' } );
+			mockLocalStorage[ key ] = raw;
+			global.OO.ui.getWindowManager = jest.fn( () => ( { openWindow: () => { throw new Error( 'unavailable' ); } } ) );
+			try {
+				expect( await draftManager.checkAndRecoverDraft() ).toBe( false );
+				expect( mockLocalStorage[ key ] ).toBe( raw );
+			} finally { delete global.OO.ui.getWindowManager; }
 		} );
 	} );
 
@@ -954,9 +1054,9 @@ describe( 'DraftManager', function () {
 			
 			const result = await draftManager.checkAndRecoverDraft();
 			
-			// Should handle cancellation gracefully and discard draft
+			// A fallback confirmation cannot distinguish Discard from dismissal.
 			expect( result ).toBe( false );
-			expect( global.localStorage.removeItem ).toHaveBeenCalled();
+			expect( mockLocalStorage[ draftManager.getStorageKey() ] ).toBeDefined();
 		} );
 
 		it( 'should refuse a draft belonging to a different set name', async function () {
@@ -1749,7 +1849,7 @@ describe( 'DraftManager', function () {
 			
 			const result = await draftManager.showRecoveryDialog();
 			
-			expect( result ).toBe( false );
+			expect( result ).toBeNull();
 			expect( global.window.confirm ).toHaveBeenCalled();
 			
 			global.mw = originalMw;

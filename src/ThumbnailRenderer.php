@@ -25,7 +25,7 @@ use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
-	public const CACHE_VERSION = 3;
+	public const CACHE_VERSION = 4;
 
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
@@ -534,6 +534,9 @@ class ThumbnailRenderer {
 		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
 		$fill = $this->withOpacity( $fill, $opacity );
 		$stroke = $this->withOpacity( $stroke, $opacity );
+		$rotation = $this->normalizedRotation( $layer );
+		$transform = $rotation === 0.0 ? '' : sprintf( 'translate %.6F,%.6F rotate %.6F translate %.6F,%.6F ',
+			$x + $width / 2, $y + $height / 2, $rotation, -( $x + $width / 2 ), -( $y + $height / 2 ) );
 
 		$args = [];
 		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
@@ -541,7 +544,7 @@ class ThumbnailRenderer {
 			$shadowDrawArgs = [
 				'-fill', $shadow['color'],
 				'-draw',
-				'rectangle ' .
+				$transform . 'rectangle ' .
 					(int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' ' .
 					(int)( $x + $width + $shadow['offsetX'] ) . ',' . (int)( $y + $height + $shadow['offsetY'] ),
 			];
@@ -553,7 +556,8 @@ class ThumbnailRenderer {
 			'-stroke', $stroke,
 			'-strokewidth', (string)$strokeWidth,
 			'-fill', $fill,
-			'-draw', 'rectangle ' . (int)$x . ',' . (int)$y . ' ' . (int)( $x + $width ) . ',' . (int)( $y + $height )
+			'-draw', $transform . 'rectangle ' . (int)$x . ',' . (int)$y . ' ' .
+				(int)( $x + $width ) . ',' . (int)( $y + $height )
 		] );
 		return $args;
 	}
@@ -1169,8 +1173,37 @@ class ThumbnailRenderer {
 		$y = (int)round( ( $layer['y'] ?? 0 ) * $scaleY );
 		$w = (int)round( ( $layer['width'] ?? 0 ) * $scaleX );
 		$h = (int)round( ( $layer['height'] ?? 0 ) * $scaleY );
+		$rotation = $this->normalizedRotation( $layer );
+		if ( $rotation !== 0.0 && ( $w <= 0 || $h <= 0 || $this->renderWidth <= 0 || $this->renderHeight <= 0 ) ) {
+			if ( !in_array( 'image', $this->droppedTypes, true ) ) {
+				$this->droppedTypes[] = 'image';
+			}
+			return [];
+		}
 
-		$args = [ '(', $path ];
+		$originX = 0;
+		$originY = 0;
+		$args = [];
+		if ( $rotation !== 0.0 ) {
+			$centerX = $x + $w / 2;
+			$centerY = $y + $h / 2;
+			$radius = hypot( $w, $h ) / 2;
+			if ( $centerX + $radius < 0 || $centerY + $radius < 0 ||
+				$centerX - $radius > $this->renderWidth || $centerY - $radius > $this->renderHeight
+			) {
+				return [];
+			}
+			// Include both the source and rotated bounds without allocating a full-page image.
+			$radians = deg2rad( $rotation );
+			$rotatedW = abs( $w * cos( $radians ) ) + abs( $h * sin( $radians ) );
+			$rotatedH = abs( $w * sin( $radians ) ) + abs( $h * cos( $radians ) );
+			$originX = (int)floor( min( $x, $centerX - $rotatedW / 2 ) ) - 2;
+			$originY = (int)floor( min( $y, $centerY - $rotatedH / 2 ) ) - 2;
+			$canvasW = (int)ceil( max( $x + $w, $centerX + $rotatedW / 2 ) ) + 2 - $originX;
+			$canvasH = (int)ceil( max( $y + $h, $centerY + $rotatedH / 2 ) ) + 2 - $originY;
+			$args = [ '(', '-size', $canvasW . 'x' . $canvasH, 'xc:none' ];
+		}
+		$args = array_merge( $args, [ '(', $path ] );
 		if ( $w > 0 && $h > 0 ) {
 			$args[] = '-resize';
 			$args[] = $w . 'x' . $h . '!';
@@ -1188,10 +1221,21 @@ class ThumbnailRenderer {
 		}
 		$args[] = ')';
 		$args[] = '-geometry';
-		$args[] = sprintf( '%+d%+d', $x, $y );
+		$args[] = sprintf( '%+d%+d', $x - $originX, $y - $originY );
 		$args[] = '-composite';
+		if ( $rotation !== 0.0 ) {
+			$args = array_merge( $args, [ '-virtual-pixel', 'transparent', '-distort', 'SRT',
+				sprintf( '%.6F,%.6F %.6F', $centerX - $originX, $centerY - $originY, $rotation ),
+				')', '-geometry', sprintf( '%+d%+d', $originX, $originY ), '-composite' ] );
+		}
 
 		return $args;
+	}
+
+	/** Normalize a finite saved angle without allowing non-finite converter arguments. */
+	private function normalizedRotation( array $layer ): float {
+		$angle = $layer['rotation'] ?? 0;
+		return is_numeric( $angle ) && is_finite( (float)$angle ) ? fmod( (float)$angle, 360.0 ) : 0.0;
 	}
 
 	/**
