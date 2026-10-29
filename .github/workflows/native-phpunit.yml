@@ -34,6 +34,11 @@ jobs:
           tools: composer
           coverage: none
 
+      - name: Install native image-test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends imagemagick poppler-utils ghostscript
+
       - name: Install MediaWiki dependencies and test harness
         working-directory: mediawiki
         run: composer update --no-interaction --no-progress --prefer-dist
