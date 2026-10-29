@@ -82,7 +82,11 @@
 			this.logError( normalizedError, operation, context );
 			
 			// Show user notification
-			this.showUserNotification( userMessage, 'error' );
+			if ( operation === 'save' ) {
+				this.showUserNotification( userMessage, 'error', true );
+			} else {
+				this.showUserNotification( userMessage, 'error' );
+			}
 			
 			// Report to centralized error handler if available
 			this.reportToErrorHandler( normalizedError, operation, context );
@@ -249,11 +253,12 @@
 		 * Show user notification
 		 * @param {string} message Message to show
 		 * @param {string} type Notification type (error, warning, success)
+		 * @param {boolean} saveError Whether this is a Save error
 		 */
-		showUserNotification( message, type = 'error' ) {
+		showUserNotification( message, type = 'error', saveError = false ) {
 			try {
 				if ( typeof mw !== 'undefined' && mw.notify ) {
-					mw.notify( message, { type: type } );
+					mw.notify( message, saveError ? { type: type, classes: 'layers-save-error' } : { type: type } );
 				} else if ( typeof mw !== 'undefined' && mw.log ) {
 					// Fallback for environments without mw.notify
 					mw.log.error( 'User notification:', message );

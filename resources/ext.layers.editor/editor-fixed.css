@@ -1,5 +1,10 @@
 /* Error notification styles */
 
+/* Keep the approved Save error visible above the full-screen editor. */
+body.layers-editor-open :is( .mw-notification-area-overlay, .mw-notification-area ):has( .layers-save-error ) {
+	z-index: 1000002;
+}
+
 .layers-error-notifications {
 	position: fixed;
 	top: 20px;

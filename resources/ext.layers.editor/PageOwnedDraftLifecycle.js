@@ -247,7 +247,7 @@
 		}
 
 		/** @return {boolean} A failed backup never replaces or clears current editor data */
-		flush() {
+		flush( saveError = false ) {
 			clearTimeout( this.timer );
 			if ( !this.ready || this.disposed || this.finalized ) {
 				return false;
@@ -256,7 +256,7 @@
 				this.controller.persist();
 				return true;
 			} catch ( error ) {
-				this.ui.notifyFailure();
+				if ( saveError ) { this.ui.notifyFailure( true ); } else { this.ui.notifyFailure(); }
 				return false;
 			}
 		}
@@ -323,7 +323,7 @@
 			} finally {
 				this.saving = false;
 				// Persist the confirmed new base or the conflict/uncertain state plus latest edits.
-				const persisted = this.flush();
+				const persisted = this.flush( true );
 				if ( result ) {
 					result.draftPersisted = persisted;
 					if ( persisted && result.editorStateValid === true && previous &&

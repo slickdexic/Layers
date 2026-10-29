@@ -1485,7 +1485,7 @@ describe('LayersEditor save error paths', () => {
         rejectFn({ info: 'Rate limit exceeded' });
         
         expect(editorInstance.uiManager.hideSpinner).toHaveBeenCalled();
-        expect(mockNotify).toHaveBeenCalledWith('Rate limit exceeded', { type: 'error' });
+        expect(mockNotify).toHaveBeenCalledWith('Rate limit exceeded', { type: 'error', classes: 'layers-save-error' });
     });
 
     test('should use error.message when error.info is not available', () => {
@@ -1523,7 +1523,7 @@ describe('LayersEditor save error paths', () => {
         
         rejectFn({ message: 'Network error' });
         
-        expect(mockNotify).toHaveBeenCalledWith('Network error', { type: 'error' });
+        expect(mockNotify).toHaveBeenCalledWith('Network error', { type: 'error', classes: 'layers-save-error' });
     });
 
     test('should use fallback message when layersMessages is available', () => {
@@ -1565,7 +1565,7 @@ describe('LayersEditor save error paths', () => {
         // Trigger with no info or message
         rejectFn({});
         
-        expect(mockNotify).toHaveBeenCalledWith('Failed to save layers', { type: 'error' });
+        expect(mockNotify).toHaveBeenCalledWith('Failed to save layers', { type: 'error', classes: 'layers-save-error' });
         
         delete window.layersMessages;
     });

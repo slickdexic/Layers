@@ -6,8 +6,8 @@
 	},
 	{
 		"resourceModule": "ext.layers.editor",
-		"maxSize": "2152 KB",
-		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. Increased by 2 KB for undoable legacy draft recovery; the two affected sources add about 371 gzip bytes measured separately."
+		"maxSize": "2153 KB",
+		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. The budget allows 2 KB for undoable legacy recovery and 1 KB for visible Save-error handling; affected files add about 371 and 287 gzip bytes respectively when compressed separately."
 	},
 	{
 		"resourceModule": "ext.layers.shared",

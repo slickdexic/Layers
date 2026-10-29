@@ -446,7 +446,8 @@
 			confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
 			chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
 			notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
-			notifyFailure: () => mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } ),
+			notifyFailure: ( saveError ) => mw.notify( mw.msg( 'layers-page-draft-failed' ),
+				saveError ? { type: 'error', classes: 'layers-save-error' } : { type: 'error' } ),
 			notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
 		} );
 		if ( durable ) this.pageOwnedCreation.savedDrafts = this.pageOwnedDrafts;
@@ -1217,7 +1218,7 @@
 						msg = this.getMessage( 'layers-data-too-large', 'Layer data exceeds maximum size limit' ) + ' (' + maxBytes + ' bytes)';
 					}
 					if ( typeof mw !== 'undefined' && mw.notify ) {
-						mw.notify( msg, { type: 'error' } );
+						mw.notify( msg, { type: 'error', classes: 'layers-save-error' } );
 					}
 				} catch ( e ) {
 					// Ignore notification errors but keep button enabled

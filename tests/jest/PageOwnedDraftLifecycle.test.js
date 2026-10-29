@@ -56,6 +56,7 @@ describe( 'PageOwnedDraftLifecycle', () => {
 		controller.persist.mockImplementationOnce( () => {} ).mockImplementationOnce( () => { throw new Error(); } );
 		expect( await lifecycle.reconcile( async () => 13 ) ).toMatchObject( { revisionId: 13, draftPersisted: false } );
 		expect( ui.notifyFailure ).toHaveBeenCalledTimes( 1 );
+		expect( ui.notifyFailure ).toHaveBeenCalledWith();
 	} );
 
 	it( 'rejects a check while publication is in flight before discovery', async () => {
@@ -186,6 +187,7 @@ describe( 'PageOwnedDraftLifecycle', () => {
 		controller.persist.mockImplementationOnce( () => {} ).mockImplementationOnce( () => { throw new Error(); } );
 		expect( await lifecycle.save() ).toMatchObject( { revisionId: 13, draftPersisted: false } );
 		expect( ui.notifyFailure ).toHaveBeenCalledTimes( 1 );
+		expect( ui.notifyFailure ).toHaveBeenCalledWith( true );
 	} );
 
 	it( 'does not apply an async recovery decision after disposal', async () => {

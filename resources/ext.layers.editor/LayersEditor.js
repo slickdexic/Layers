@@ -2116,6 +2116,15 @@ class LayersEditor {
 	 * @private
 	 */
 	saveCurrentPage () {
+		try {
+			return LayersEditor.prototype._saveCurrentPage.call( this );
+		} catch ( error ) {
+			return Promise.resolve( LayersEditor.prototype._handleSaveError.call( this, error, true ) );
+		}
+	}
+
+	/** @private */
+	_saveCurrentPage () {
 		const gradientPanel = this.layerPanel;
 		const gradientOwner = this.config;
 		if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
@@ -2194,29 +2203,27 @@ class LayersEditor {
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
 				return !newerGradient;
 			} )
-			.catch( ( error ) => {
-				// APIManager hides the spinner and shows error in production;
-				// handle here as a fallback for unexpected rejections.
-				if ( this.uiManager ) {
-					this.uiManager.hideSpinner();
-				}
-				if ( error && error.reported ) {
-					return false;
-				}
-				let errorMsg = ( error && error.info ) ? error.info :
-					( error && error.message ) ? error.message :
-					( window.layersMessages ? window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) : 'Failed to save layers' );
-				if ( error && error.code === 'layers-content-not-renderable' && typeof mw !== 'undefined' && mw.msg ) {
-					errorMsg = mw.msg( 'layers-content-not-renderable' );
-				}
-				if ( typeof mw !== 'undefined' && mw.notify ) {
-					mw.notify( errorMsg, { type: 'error' } );
-				}
-				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log.error( '[LayersEditor] saveLayers rejected:', error );
-				}
-				return false;
-			} );
+			.catch( ( error ) => LayersEditor.prototype._handleSaveError.call( this, error ) );
+	}
+
+	/** @private */
+	_handleSaveError ( error, synchronous = false ) {
+		if ( this.uiManager && typeof this.uiManager.hideSpinner === 'function' ) {
+			this.uiManager.hideSpinner();
+		}
+		if ( error && error.reported ) { return false; }
+		let errorMsg = !synchronous && error && ( error.info || error.message ) ||
+			( window.layersMessages ? window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) : 'Failed to save layers' );
+		if ( !synchronous && error && error.code === 'layers-content-not-renderable' && typeof mw !== 'undefined' && mw.msg ) {
+			errorMsg = mw.msg( 'layers-content-not-renderable' );
+		}
+		if ( typeof mw !== 'undefined' && mw.notify ) {
+			mw.notify( errorMsg, { type: 'error', classes: 'layers-save-error' } );
+		}
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( '[LayersEditor] saveLayers rejected:', synchronous ? 'synchronous error' : error );
+		}
+		return false;
 	}
 
 	/**

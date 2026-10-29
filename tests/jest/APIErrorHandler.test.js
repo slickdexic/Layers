@@ -378,6 +378,12 @@ describe( 'APIErrorHandler', () => {
 	} );
 
 	describe( 'showUserNotification', () => {
+		it( 'marks Save errors for visibility above the editor', () => {
+			handler.handleError( new Error( 'Save failure' ), 'save' );
+			expect( global.mw.notify ).toHaveBeenCalledWith( expect.any( String ),
+				{ type: 'error', classes: 'layers-save-error' } );
+		} );
+
 		it( 'should call mw.notify with message and type', () => {
 			handler.showUserNotification( 'Test message', 'error' );
 			expect( global.mw.notify ).toHaveBeenCalledWith( 'Test message', { type: 'error' } );

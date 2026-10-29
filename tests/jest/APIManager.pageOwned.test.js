@@ -99,6 +99,16 @@ describe( 'APIManager page-owned routing', () => {
 		expect( editor.uiManager.container.children ).toHaveLength( 0 );
 	} );
 
+	it( 'marks a backup failure during Save for visibility without changing other draft notices', async () => {
+		await manager.loadLayers();
+		mw.notify.mockClear();
+		manager.pageOwnedDrafts.ui.notifyFailure( true );
+		expect( mw.notify ).toHaveBeenLastCalledWith( 'layers-page-draft-failed',
+			{ type: 'error', classes: 'layers-save-error' } );
+		manager.pageOwnedDrafts.ui.notifyFailure();
+		expect( mw.notify ).toHaveBeenLastCalledWith( 'layers-page-draft-failed', { type: 'error' } );
+	} );
+
 	it( 'shows the drawing name in the header, and publishes a rename with the next save', async () => {
 		const header = document.createElement( 'div' );
 		header.className = 'layers-header';
