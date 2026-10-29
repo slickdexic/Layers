@@ -25,7 +25,7 @@ use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
-	public const CACHE_VERSION = 5;
+	public const CACHE_VERSION = 6;
 
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
@@ -1206,6 +1206,13 @@ class ThumbnailRenderer {
 			$originY = (int)floor( min( $y, $centerY - $rotatedH / 2 ) ) - 2;
 			$canvasW = (int)ceil( max( $x + $w, $centerX + $rotatedW / 2 ) ) + 2 - $originX;
 			$canvasH = (int)ceil( max( $y + $h, $centerY + $rotatedH / 2 ) ) + 2 - $originY;
+			if ( $canvasW * $canvasH > 4194304 ) {
+				$dimensions = AtEase::quietCall( 'getimagesize', $path );
+				if ( is_array( $dimensions ) && $dimensions[0] > 0 && $dimensions[1] > 0 ) {
+					return $this->buildViewportImageArguments( $path, $dimensions, $layer, $w, $h,
+						$centerX, $centerY, $radians );
+				}
+			}
 			$args = [ '(', '-size', $canvasW . 'x' . $canvasH, 'xc:none' ];
 		}
 		$args = array_merge( $args, [ '(', $path ] );
@@ -1235,6 +1242,29 @@ class ThumbnailRenderer {
 		}
 
 		return $args;
+	}
+
+	/** Render a large rotated image into the output viewport instead of a huge intermediate canvas. */
+	private function buildViewportImageArguments( string $path, array $dimensions, array $layer, int $w, int $h,
+		float $centerX, float $centerY, float $radians
+	): array {
+		$cos = cos( $radians );
+		$sin = sin( $radians );
+		$sx = $w / $dimensions[0];
+		$sy = $h / $dimensions[1];
+		$matrix = sprintf( '%.12F,%.12F,%.12F,%.12F,%.12F,%.12F',
+			$cos * $sx, $sin * $sx, -$sin * $sy, $cos * $sy,
+			$centerX - $cos * $w / 2 + $sin * $h / 2,
+			$centerY - $sin * $w / 2 - $cos * $h / 2 );
+		$args = [ '(', $path ];
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		if ( $opacity < 1.0 ) {
+			$args = array_merge( $args, [ '-alpha', 'set', '-channel', 'A', '-evaluate', 'multiply',
+				(string)max( 0.0, min( 1.0, $opacity ) ), '+channel' ] );
+		}
+		return array_merge( $args, [ '-virtual-pixel', 'transparent', '-define',
+			'distort:viewport=' . $this->renderWidth . 'x' . $this->renderHeight . '+0+0',
+			'-distort', 'AffineProjection', $matrix, '+repage', ')', '-geometry', '+0+0', '-composite' ] );
 	}
 
 	/** Normalize a finite saved angle without allowing non-finite converter arguments. */

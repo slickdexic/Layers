@@ -129,6 +129,50 @@ class ThumbnailRendererRotationTest extends \MediaWikiIntegrationTestCase {
 		];
 	}
 
+	/** @dataProvider provideLargeRotatedImageCases */
+	public function testLargeRotatedImageRendersWithinShellLimits(
+		int $width, int $height, int $angle, float $opacity, float $sourceOpacity, string $format = 'png'
+	): void {
+		$dir = $this->getNewTempDirectory();
+		$base = "$dir/base.png";
+		$source = "$dir/source.$format";
+		$output = "$dir/output.png";
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '240x180', 'xc:white', 'PNG24:' . $base )
+			->execute()->getExitCode() );
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '4x4',
+			sprintf( 'xc:rgba(255,0,0,%.2F)', $sourceOpacity ),
+			( $format === 'png' ? 'PNG32:' : 'JPEG:' ) . $source )
+			->execute()->getExitCode() );
+		$config = new \HashConfig( [ 'UseImageMagick' => true, 'ImageMagickConvertCommand' => '/usr/bin/convert',
+			'MaxShellMemory' => 307200, 'MaxShellTime' => 180, 'MaxShellFileSize' => 102400,
+			'LayersImageMagickTimeout' => 30, 'LayersMaxImageBytes' => 100000 ] );
+		$renderer = new ThumbnailRenderer( $config, new NullLogger() );
+		$method = new \ReflectionMethod( ThumbnailRenderer::class, 'overlayLayers' );
+		$method->setAccessible( true );
+		$layer = [ 'type' => 'image', 'x' => 120 - $width / 2, 'y' => 90 - $height / 2,
+			'width' => $width, 'height' => $height, 'rotation' => $angle, 'opacity' => $opacity,
+			'src' => 'data:image/' . $format . ';base64,' . base64_encode( file_get_contents( $source ) ) ];
+		$this->assertTrue( $method->invoke( $renderer, $base, [ $layer ], $output, 1.0, 1.0, 240, 180 ) );
+		$sample = Shell::command( '/usr/bin/convert', $output, '-format', '%[fx:round(255*p{120,90}.g)]',
+			'info:' )->execute();
+		$this->assertSame( 0, $sample->getExitCode() );
+		$this->assertEqualsWithDelta( 255 * ( 1 - $opacity * $sourceOpacity ), (float)$sample->getStdout(), 3 );
+		if ( $height === 20 ) {
+			$this->assertStringContainsString( '255,255,255', $this->pixel( $output, 120, 60 ) );
+		}
+	}
+
+	public static function provideLargeRotatedImageCases(): array {
+		return [
+			'45 degrees' => [ 10000, 10000, 45, 1.0, 1.0 ],
+			'90 degrees' => [ 10000, 6000, 90, 1.0, 1.0 ],
+			'180 degrees, translucent' => [ 6000, 10000, 180, 0.5, 1.0 ],
+			'45 degrees, narrow partially visible image' => [ 10000, 20, 45, 1.0, 1.0 ],
+			'45 degrees, source and layer transparency' => [ 10000, 10000, 45, 0.5, 0.5 ],
+			'45 degrees, JPEG source' => [ 10000, 6000, 45, 1.0, 1.0, 'jpeg' ],
+		];
+	}
+
 	public function testRotationSurvivesMultipagePdfConversion(): void {
 		if ( !is_executable( '/usr/bin/pdfinfo' ) || !is_executable( '/usr/bin/pdftoppm' ) ) {
 			$this->markTestSkipped( 'PDF inspection tools are not installed' );

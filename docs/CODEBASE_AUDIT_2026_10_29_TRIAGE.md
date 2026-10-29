@@ -32,3 +32,5 @@ The approved legacy draft changes passed 207 affected tests and the full client
 suite of 19,076 tests in 325 suites. An initial full run exposed one outdated
 PDF test expecting dirty empty drafts to be skipped; the test was updated for
 the approved behavior before the passing replay.
+
+**Large rotated image correction:** A synthetic 10,000 × 10,000 rotated image failed under the maintained 1.45 wiki’s configured shell limits because its intermediate image reached approximately 14,148 × 14,148 pixels. The bounded correction renders large rotated layers into the visible viewport. The 1.45 renderer/privacy group passed 32 tests / 227 assertions, covering PNG, JPEG, transparency, narrow visible geometry and existing rotation/privacy cases. A corresponding unrotated RGB probe passed under the same limits. Exact-commit CI and installed-candidate acceptance remain required; other configurations and output contexts are not claimed.
