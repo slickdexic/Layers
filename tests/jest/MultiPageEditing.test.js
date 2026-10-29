@@ -206,10 +206,10 @@ describe( 'Multi-page (PDF) editing', function () {
 			expect( manager.lastWriteFailed ).toBe( false );
 		} );
 
-		it( 'reports no write failure when the layer list is empty', function () {
+		it( 'backs up a dirty empty page without reporting a write failure', function () {
 			const manager = new DraftManager( makeEditor( 1, [] ) );
 
-			expect( manager.saveDraft() ).toBe( false );
+			expect( manager.saveDraft() ).toBe( true );
 			expect( manager.lastWriteFailed ).toBe( false );
 		} );
 

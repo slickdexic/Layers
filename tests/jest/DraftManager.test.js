@@ -199,7 +199,8 @@ describe( 'DraftManager', function () {
 			expect( savedData.timestamp ).toBeLessThanOrEqual( after );
 		} );
 
-		it( 'should not save empty layers', function () {
+		it( 'should not save a clean empty set', function () {
+			mockEditor.isDirty.mockReturnValue( false );
 			mockEditor.stateManager.get = jest.fn( function ( key ) {
 				if ( key === 'layers' ) {
 					return [];
@@ -218,6 +219,49 @@ describe( 'DraftManager', function () {
 
 			const result = draftManager.saveDraft();
 			expect( result ).toBe( false );
+		} );
+
+		it( 'restores a dirty empty draft and its background after a previous nonempty backup', function () {
+			expect( draftManager.saveDraft() ).toBe( true );
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				return { layers: [], currentSetName: 'default', backgroundVisible: false, backgroundOpacity: 0.4 }[ key ];
+			} );
+			expect( draftManager.saveDraft() ).toBe( true );
+			const reloaded = new DraftManager( mockEditor );
+			expect( reloaded.hasDraft() ).toBe( true );
+			expect( reloaded.recoverDraft() ).toBe( true );
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith( expect.objectContaining( {
+				layers: [], backgroundVisible: false, backgroundOpacity: 0.4, isDirty: true
+			} ) );
+			reloaded.destroy();
+		} );
+
+		it( 'retains image sources exactly in a recoverable legacy draft', function () {
+			const src = 'data:image/png;base64,' + 'A'.repeat( 5000 );
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				return { layers: [ { id: 'img', type: 'image', src } ], currentSetName: 'default' }[ key ];
+			} );
+			expect( draftManager.saveDraft() ).toBe( true );
+			const reloaded = new DraftManager( mockEditor );
+			expect( reloaded.recoverDraft() ).toBe( true );
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith( expect.objectContaining( {
+				layers: [ expect.objectContaining( { id: 'img', src } ) ]
+			} ) );
+			reloaded.destroy();
+		} );
+
+		it( 'preserves existing records and reports a failed backup when storage is full', function () {
+			expect( draftManager.saveDraft() ).toBe( true );
+			const key = draftManager.getStorageKey(), before = mockLocalStorage[ key ];
+			mockLocalStorage['other-tab-draft'] = 'other writer bytes';
+			const quota = new Error( 'full' ); quota.name = 'QuotaExceededError';
+			global.localStorage.setItem.mockImplementation( () => { throw quota; } );
+			const sweep = jest.spyOn( draftManager, 'sweepExpiredDrafts' );
+			expect( draftManager.saveDraft() ).toBe( false );
+			expect( draftManager.lastWriteFailed ).toBe( true );
+			expect( mockLocalStorage[ key ] ).toBe( before );
+			expect( mockLocalStorage['other-tab-draft'] ).toBe( 'other writer bytes' );
+			expect( sweep ).not.toHaveBeenCalled();
 		} );
 	} );
 
@@ -1103,8 +1147,8 @@ describe( 'DraftManager', function () {
 		} );
 	} );
 
-	describe( 'MED-v28-9 regression: base64 image src stripping', function () {
-		it( 'should strip large base64 src from image layers before saving', function () {
+	describe( 'legacy image draft preservation', function () {
+		it( 'should preserve large base64 src in image layers', function () {
 			// Create a large base64 string (>1024 chars)
 			const largeSrc = 'data:image/png;base64,' + 'A'.repeat( 2000 );
 			mockEditor.stateManager.get = jest.fn( function ( key ) {
@@ -1132,12 +1176,12 @@ describe( 'DraftManager', function () {
 			expect( draftCall ).toBeDefined();
 			const savedData = JSON.parse( draftCall[ 1 ] );
 
-			// Image layer should have src stripped and _srcStripped flag set
+			// Image data must remain recoverable after a successful backup.
 			const imgLayer = savedData.layers.find( function ( l ) {
 				return l.id === 'img1';
 			} );
-			expect( imgLayer.src ).toBeUndefined();
-			expect( imgLayer._srcStripped ).toBe( true );
+			expect( imgLayer.src ).toBe( largeSrc );
+			expect( imgLayer._srcStripped ).toBeUndefined();
 
 			// Non-image layer should be unaffected
 			const rectLayer = savedData.layers.find( function ( l ) {
@@ -2028,7 +2072,7 @@ describe( 'DraftManager', function () {
 	} );
 
 	describe( 'quota recovery', function () {
-		it( 'should retry once after freeing space', function () {
+		it( 'should not delete other drafts or retry after a quota failure', function () {
 			const dm = new DraftManager( mockEditor );
 			mockEditor.isDirty = jest.fn( function () {
 				return true;
@@ -2045,8 +2089,9 @@ describe( 'DraftManager', function () {
 			} );
 			jest.spyOn( dm, 'sweepExpiredDrafts' ).mockReturnValue( 3 );
 
-			expect( dm.saveDraft() ).toBe( true );
-			expect( dm.sweepExpiredDrafts ).toHaveBeenCalledWith( true );
+			expect( dm.saveDraft() ).toBe( false );
+			expect( dm.lastWriteFailed ).toBe( true );
+			expect( dm.sweepExpiredDrafts ).not.toHaveBeenCalled();
 			dm.destroy();
 		} );
 

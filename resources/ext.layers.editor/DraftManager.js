@@ -576,14 +576,9 @@
 				return false;
 			}
 
-			let serialized;
 			try {
-				const layers = this.editor.stateManager ?
-					this.editor.stateManager.get( 'layers' ) || [] :
-					[];
-
-				// Don't save empty drafts
-				if ( layers.length === 0 ) {
+				const layers = this.editor.stateManager && this.editor.stateManager.get( 'layers' );
+				if ( !Array.isArray( layers ) ) {
 					return false;
 				}
 
@@ -592,7 +587,7 @@
 					'';
 				const currentPage = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
 
-				serialized = JSON.stringify( {
+				const serialized = JSON.stringify( {
 					version: 2,
 					timestamp: Date.now(),
 					wikiScope: this.wikiScope,
@@ -600,16 +595,7 @@
 					filename: this.filename,
 					setName: currentSetName,
 					page: currentPage,
-					// Strip base64 image src data to avoid localStorage overflow
-					layers: layers.map( ( l ) => {
-						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {
-							const copy = { ...l };
-							delete copy.src;
-							copy._srcStripped = true;
-							return copy;
-						}
-						return l;
-					} ),
+					layers,
 					backgroundVisible: this.editor.stateManager ?
 						this.editor.stateManager.get( 'backgroundVisible' ) :
 						true,
@@ -626,20 +612,7 @@
 
 				return true;
 			} catch ( e ) {
-				// A full origin quota is recoverable: expired and stale drafts for
-				// other files are dead weight, so drop them and try once more.
-				// Previously this just gave up, and autosave stayed dead for the
-				// rest of the session.
-				if ( serialized && DraftManager.isQuotaError( e ) &&
-					this.sweepExpiredDrafts( true ) > 0
-				) {
-					try {
-						localStorage.setItem( this.getStorageKey(), serialized );
-						return true;
-					} catch ( retryError ) {
-						// Genuinely out of space; fall through to the warning.
-					}
-				}
+				// A failed replacement must not delete another editor's backup to make room.
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 					mw.log.warn( '[DraftManager] Failed to save draft:', e.message );
 				}
@@ -899,7 +872,7 @@
 		 */
 		hasDraft( options ) {
 			const draft = this.loadDraft( options );
-			return draft !== null && draft.layers && draft.layers.length > 0;
+			return draft !== null && Array.isArray( draft.layers );
 		}
 
 		/**

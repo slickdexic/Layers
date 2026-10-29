@@ -7,8 +7,8 @@ stay local. The table records disposition, not a claim of release acceptance.
 
 | Finding | Current disposition |
 | --- | --- |
-| A01: empty legacy drafts | Confirmed by source inspection. The owner is reviewing a proposed recovery behavior; no correction has been applied. |
-| A02: legacy image draft loss | Confirmed by source inspection. The same proposal covers complete image data and failed-backup preservation; page-owned recovery uses a separate path. |
+| A01: empty legacy drafts | The owner approved the [recovery behavior](LEGACY_DRAFT_PRESERVATION_BEHAVIOUR_BRIEF.md). The candidate preserves dirty empty sets and background settings; focused tests exercise replacement, reload and Restore. An isolated browser harness exercised the existing recovery dialog and restored the empty state without wiki writes. A real pre-migration legacy-editor journey and owner screen acceptance remain pending. |
+| A02: legacy image draft loss | The same approved correction retains complete image sources and refuses failed backup writes without sweeping other drafts. Focused tests cover reload and Restore, prior-byte retention and failure reporting; page-owned recovery uses a separate path. A real pre-migration legacy-editor journey and owner screen acceptance remain pending. |
 | A03: server-rendered rotation | The server rectangle builder does not apply the browser's rotation. Export fidelity needs a bounded correction and owner-approved behavior before implementation. |
 | A04: browser CI fixture | The workflow seeds a file but the current editor test expects a separately provisioned owner and an obsolete edit link. Clean-fixture and overlay assertions require repair; old successful workflow runs do not qualify this candidate. |
 | A05: native CI breadth | The current 1.44 / SQLite job is a selected slice, not the complete compatibility matrix. Additional native and installed-wiki results remain separately scoped. |
@@ -28,3 +28,7 @@ The complete standalone PHP suite passed 1,697 tests / 4,217 assertions with
 one existing skip. Native privacy tests passed on both maintained supported
 MediaWiki versions; the existing 1.44 PDF-export test passed with the corrected
 renderer preloaded. The 1.45 test harness used a temporary test-access wrapper.
+The approved legacy draft changes passed 201 affected tests and the full client
+suite of 19,070 tests in 325 suites. An initial full run exposed one outdated
+PDF test expecting dirty empty drafts to be skipped; the test was updated for
+the approved behavior before the passing replay.
