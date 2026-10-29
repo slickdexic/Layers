@@ -26,6 +26,13 @@ jobs:
           ref: REL1_44
           path: mediawiki
 
+      - name: Checkout PDF Handler for multi-page migration tests
+        uses: actions/checkout@v4
+        with:
+          repository: wikimedia/mediawiki-extensions-PdfHandler
+          ref: REL1_44
+          path: mediawiki/extensions/PdfHandler
+
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -48,7 +55,7 @@ jobs:
         run: |
           composer mw-install:sqlite
           ln -s "$GITHUB_WORKSPACE/layers" extensions/Layers
-          printf '\n%s\n' "wfLoadExtension( 'Layers' );" >> LocalSettings.php
+          printf '\n%s\n' "wfLoadExtension( 'PdfHandler' );" "wfLoadExtension( 'Layers' );" >> LocalSettings.php
           php maintenance/run.php update --quick
 
       - name: Run native page-history regressions
