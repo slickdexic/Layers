@@ -106,9 +106,13 @@ and the earlier intermittent slide failure remain open.
 
 **Large-draft recovery follow-up:** A fresh client-side store and controller,
 with a new writer identity, discover and decode the previous session's compact
-backup without changing any stored records. This verifies the cross-session
-storage boundary in an integration test; actual browser restart and Restore
-remain unqualified.
+backup without changing any stored records. An isolated browser check on the
+installed 1.44 candidate simulated a quota refusal, wrote a compact draft with
+two image layers, and restored both in a second editor session. Undo and Redo
+recovered the expected one- and two-image states. Publication requests were
+blocked and the saved revision remained unchanged. This is a simulated quota
+refusal in a fresh browser context, not an operating-system restart or a claim
+about every browser's actual storage limit.
 
 **Text selection correction:** The owner reported and approved correcting a
 plain-text selection box that wrapped its measurement while rendering one
