@@ -25,7 +25,7 @@ use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
-	public const CACHE_VERSION = 4;
+	public const CACHE_VERSION = 5;
 
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
@@ -541,12 +541,17 @@ class ThumbnailRenderer {
 		$args = [];
 		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
 		if ( $shadow !== null ) {
+			// Canvas shadow offsets are in canvas coordinates, not the rotated shape's coordinates.
+			$shadowTransform = $rotation === 0.0 ? '' : sprintf( 'translate %.6F,%.6F ',
+				$shadow['offsetX'], $shadow['offsetY'] ) . $transform;
+			$shadowOffsetX = $rotation === 0.0 ? $shadow['offsetX'] : 0;
+			$shadowOffsetY = $rotation === 0.0 ? $shadow['offsetY'] : 0;
 			$shadowDrawArgs = [
 				'-fill', $shadow['color'],
 				'-draw',
-				$transform . 'rectangle ' .
-					(int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' ' .
-					(int)( $x + $width + $shadow['offsetX'] ) . ',' . (int)( $y + $height + $shadow['offsetY'] ),
+				$shadowTransform . 'rectangle ' .
+					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
+					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
 				$shadowDrawArgs, $shadow['blur']

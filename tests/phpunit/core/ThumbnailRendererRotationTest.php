@@ -97,6 +97,38 @@ class ThumbnailRendererRotationTest extends \MediaWikiIntegrationTestCase {
 		$this->assertStringContainsString( '0,0,255', $this->pixel( $output, 180, 30 ) );
 	}
 
+	/** @dataProvider provideRectangleShadowCases */
+	public function testRotatedRectangleShadowUsesCanvasCoordinates(
+		int $angle, int $offsetX, int $offsetY, int $sampleX, int $sampleY
+	): void {
+		$dir = $this->getNewTempDirectory();
+		$base = "$dir/base.png";
+		$output = "$dir/output.png";
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '240x180', 'xc:white',
+			'PNG24:' . $base )->execute()->getExitCode() );
+		$config = new \HashConfig( [ 'UseImageMagick' => true, 'ImageMagickConvertCommand' => '/usr/bin/convert',
+			'MaxShellMemory' => 0, 'MaxShellTime' => 10, 'MaxShellFileSize' => 0,
+			'LayersImageMagickTimeout' => 10 ] );
+		$renderer = new ThumbnailRenderer( $config, new NullLogger() );
+		$method = new \ReflectionMethod( ThumbnailRenderer::class, 'overlayLayers' );
+		$method->setAccessible( true );
+		$layer = [ 'type' => 'rectangle', 'x' => 40, 'y' => 60, 'width' => 80, 'height' => 20,
+			'rotation' => $angle, 'fill' => '#ff0000', 'stroke' => 'none', 'strokeWidth' => 0,
+			'shadow' => true, 'shadowColor' => '#000000', 'shadowBlur' => 0,
+			'shadowOffsetX' => $offsetX, 'shadowOffsetY' => $offsetY ];
+		$this->assertTrue( $method->invoke( $renderer, $base, [ $layer ], $output, 1.0, 1.0, 240, 180 ) );
+		$this->assertStringContainsString( '0,0,0', $this->pixel( $output, $sampleX, $sampleY ) );
+	}
+
+	public static function provideRectangleShadowCases(): array {
+		return [
+			'not rotated' => [ 0, 30, 0, 130, 70 ],
+			'45 degrees, horizontal shadow' => [ 45, 30, 0, 110, 70 ],
+			'90 degrees, horizontal shadow' => [ 90, 30, 0, 110, 70 ],
+			'90 degrees, vertical shadow' => [ 90, 0, 30, 80, 130 ],
+		];
+	}
+
 	public function testRotationSurvivesMultipagePdfConversion(): void {
 		if ( !is_executable( '/usr/bin/pdfinfo' ) || !is_executable( '/usr/bin/pdftoppm' ) ) {
 			$this->markTestSkipped( 'PDF inspection tools are not installed' );

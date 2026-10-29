@@ -32,7 +32,9 @@ the changed source passed 5 tests and 77 assertions in isolated test tables.
 At that checkpoint the installed 1.44 candidate had not yet been updated; the
 later installed-candidate result is recorded below.
 
-**Latest candidate:** Public commit `0fd1a2466c618504ed8eda0577c6715b4fa05a53`
+**October 29 candidate:** Public commit `43d10d7691ea487f18055f9b1f1174af67a86c12` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40922719436), [native 1.44 tests](https://github.com/slickdexic/Layers/actions/runs/40922719502) and the repaired [browser workflow](https://github.com/slickdexic/Layers/actions/runs/40922719429). The complete client suite passed 19,080 tests. The package was verified against all 2,894 committed files. It includes approved legacy recovery and server rotation corrections; real pre-migration editor and owner acceptance remain open. Port 8082 still runs the older installed candidate below. A subsequent rotated-shadow correction has native pixel coverage and requires exact-commit checks. The candidate is not a 1.8 release.
+
+**Earlier installed candidate:** Public commit `0fd1a2466c618504ed8eda0577c6715b4fa05a53`
 passed both [main CI](https://github.com/slickdexic/Layers/actions/runs/40809337232)
 and [native 1.44 SQLite CI](https://github.com/slickdexic/Layers/actions/runs/40809337201).
 The main run passed 19,067 client tests and 1,697 standalone PHP tests with one
