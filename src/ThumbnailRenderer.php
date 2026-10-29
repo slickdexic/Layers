@@ -20,6 +20,7 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
@@ -245,7 +246,10 @@ class ThumbnailRenderer {
 		}
 
 		try {
-			$result = Shell::command( ...$args )
+			$command = Shell::command( ...$args );
+			// Core's exec logger can include the complete command and converter output.
+			$command->setLogger( new NullLogger() );
+			$result = $command
 				->limits( $limits )
 				->includeStderr()
 				->execute();
@@ -1435,7 +1439,9 @@ class ThumbnailRenderer {
 		);
 
 		try {
-			Shell::command( [] )
+			$command = Shell::command( [] );
+			$command->setLogger( new NullLogger() );
+			$command
 				->unsafeParams( $cmd )
 				->limits( [ 'time' => (int)$this->configValue( 'LayersImageMagickTimeout', 30 ) ] )
 				->includeStderr()

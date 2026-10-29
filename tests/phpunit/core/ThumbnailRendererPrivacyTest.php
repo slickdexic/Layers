@@ -28,13 +28,26 @@ class ThumbnailRendererPrivacyTest extends \MediaWikiIntegrationTestCase {
 		$config = new \HashConfig( [ 'UseImageMagick' => true, 'ImageMagickConvertCommand' => $converter,
 			'MaxShellMemory' => 0, 'MaxShellTime' => 10, 'MaxShellFileSize' => 0,
 			'LayersImageMagickTimeout' => 10, 'LayersDefaultFonts' => [ 'DejaVu-Sans' ] ] );
+		$shellLog = new class extends \Psr\Log\AbstractLogger {
+			public array $entries = [];
+
+			public function log( $level, $message, array $context = [] ): void {
+				$this->entries[] = [ $level, $message, $context ];
+			}
+		};
+		$factory = $this->getServiceContainer()->getShellCommandFactory();
+		$factory->setLogger( $shellLog );
 		$renderer = new ThumbnailRenderer( $config, $logger );
 		$method = new \ReflectionMethod( ThumbnailRenderer::class, 'overlayLayers' );
 		$method->setAccessible( true );
-		$result = $method->invoke( $renderer, $path . '-base', [ [ 'type' => 'text', 'x' => 1, 'y' => 1,
-			'text' => $marker, 'fontSize' => 12, 'fill' => '#000000' ] ], $path . '-output', 1.0, 1.0, 10, 10 );
+		try {
+			$result = $method->invoke( $renderer, $path . '-base', [ [ 'type' => 'text', 'x' => 1, 'y' => 1,
+				'text' => $marker, 'fontSize' => 12, 'fill' => '#000000' ] ], $path . '-output', 1.0, 1.0, 10, 10 );
+		} finally {
+			$factory->setLogger( \MediaWiki\Logger\LoggerFactory::getInstance( 'exec' ) );
+		}
 		$this->assertFalse( $result );
-		$logged = json_encode( $entries );
+		$logged = json_encode( [ $entries, $shellLog->entries ] );
 		$this->assertStringNotContainsString( $marker, $logged );
 		$this->assertStringNotContainsString( $path, $logged );
 		$this->assertSame( 23, $entries[0][1]['exitCode'] );
