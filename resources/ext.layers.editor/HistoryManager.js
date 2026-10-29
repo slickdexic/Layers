@@ -719,7 +719,7 @@
 		 *
 		 * @param {string} description Optional description of the change
 		 */
-		saveState( description ) {
+		saveState( description, legacySnapshot ) {
 			if ( workingCopyHistoryModes.has( this ) ) { return this._workingCopyRecord( description ); }
 			if ( this.isDestroyed ) {
 				return;
@@ -744,12 +744,20 @@
 			}
 
 			// Add new state
-			const snapshot = this.getLayersSnapshot();
+			const snapshot = legacySnapshot ? legacySnapshot.layers : this.getLayersSnapshot();
 			const state = {
 				layers: snapshot,
 				description: description || 'Edit',
 				timestamp: Date.now()
 			};
+			const prior = this.history[ this.historyIndex ];
+			const editor = this.getEditor();
+			if ( legacySnapshot || ( prior && prior.legacyBackground && editor && editor.stateManager ) ) {
+				state.legacyBackground = legacySnapshot ? legacySnapshot.background : {
+					visible: editor.stateManager.get( 'backgroundVisible' ),
+					opacity: editor.stateManager.get( 'backgroundOpacity' )
+				};
+			}
 
 			this.history.push( state );
 
@@ -769,6 +777,19 @@
 			this.historyIndex = this.history.length - 1;
 
 			this.updateUndoRedoButtons();
+		}
+
+		/** Record an approved legacy recovery as one reversible change. */
+		recordLegacyDraftRecovery( before ) {
+			if ( this.isDestroyed || this.batchMode || workingCopyHistoryModes.has( this ) ) { return; }
+			const current = this.history[ this.historyIndex ];
+			if ( !current || !workingHistoryEqual( current.layers, before.layers ) ||
+				( current.legacyBackground && !workingHistoryEqual( current.legacyBackground, before.background ) ) ) {
+				this.saveState( 'Before draft recovery', before );
+			} else {
+				current.legacyBackground = before.background;
+			}
+			this.saveState( 'Recover draft' );
 		}
 
 		/**
@@ -932,6 +953,10 @@
 
 			const editor = this.getEditor();
 			const canvasMgr = this.getCanvasManager();
+			if ( state.legacyBackground && editor && editor.stateManager ) {
+				editor.stateManager.set( 'backgroundVisible', state.legacyBackground.visible );
+				editor.stateManager.set( 'backgroundOpacity', state.legacyBackground.opacity );
+			}
 
 			// Track whether StateManager is used (determines if we need explicit renderLayerList)
 			let usedStateManager = false;

@@ -961,6 +961,12 @@
 			this.isRecoveryMode = true;
 
 			try {
+				const history = this.editor.historyManager;
+				const state = this.editor.stateManager;
+				const before = history && state && typeof history.recordLegacyDraftRecovery === 'function' ? {
+					layers: history.getLayersSnapshot(),
+					background: { visible: state.get( 'backgroundVisible' ), opacity: state.get( 'backgroundOpacity' ) }
+				} : null;
 				// Set the layers from draft
 				if ( this.editor.stateManager ) {
 					this.editor.stateManager.update( {
@@ -999,6 +1005,7 @@
 				if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
 					this.editor.layerPanel.updateLayers( draft.layers );
 				}
+				if ( before ) { history.recordLegacyDraftRecovery( before ); }
 
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[DraftManager] Recovered', draft.layers.length, 'layers from draft' );
@@ -1899,9 +1906,6 @@
 					}
 					const recovered = this.recoverDraft();
 					if ( recovered ) {
-						// Clear the draft after successful recovery
-						this.clearDraft( { ...target, expectedDraft: observed } );
-
 						// Show notification
 						if ( typeof mw !== 'undefined' && mw.notify ) {
 							mw.notify(
