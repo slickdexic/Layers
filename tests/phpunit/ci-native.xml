@@ -9,6 +9,8 @@
       <file>core/ThumbnailRendererPrivacyTest.php</file>
       <file>core/ApiLayersExportPrivacyTest.php</file>
       <file>core/ThumbnailRendererRotationTest.php</file>
+      <file>core/FilePageMigrationTest.php</file>
+      <file>core/PageCopyMigrationPdfPageTest.php</file>
     </testsuite>
   </testsuites>
   <extensions><extension class="MediaWikiTeardownPHPUnitExtension" /></extensions>
