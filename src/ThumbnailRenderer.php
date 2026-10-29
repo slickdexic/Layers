@@ -128,7 +128,7 @@ class ThumbnailRenderer {
 			$thumbDir = RenderCache::getThumbDir( $this->config );
 			if ( !RenderCache::ensureDir( $this->config, $thumbDir ) ) {
 				if ( $this->logger ) {
-					$this->logger->error( 'Layers: failed to create thumb directory', [ 'dir' => $thumbDir ] );
+					$this->logger->error( 'Layers: failed to create thumb directory' );
 				}
 				return null;
 			}
@@ -177,10 +177,7 @@ class ThumbnailRenderer {
 			}
 		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
-				$this->logger->warning(
-					'Layers: thumbnail generation failed: {message}',
-					[ 'exception' => $e, 'message' => $e->getMessage() ]
-				);
+				$this->logger->warning( 'Layers: thumbnail generation failed' );
 			}
 		} finally {
 			if ( $exportFresh && !$generated && $outputPath && is_file( $outputPath ) ) {
@@ -258,21 +255,17 @@ class ThumbnailRenderer {
 					? $result->getExitCode() !== 0
 					: ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false )
 			) {
-				$stderr = method_exists( $result, 'getStderr' ) ? $result->getStderr() : '';
 				if ( $this->logger ) {
 					$this->logger->error(
 						'Layers: ImageMagick failed',
-						[ 'stderr' => $stderr, 'args' => $args ]
+						[ 'exitCode' => method_exists( $result, 'getExitCode' ) ? $result->getExitCode() : null ]
 					);
 				}
 				return false;
 			}
 		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
-				$this->logger->error(
-					'Layers: Shell execution failed',
-					[ 'exception' => $e, 'args' => $args ]
-				);
+				$this->logger->error( 'Layers: Shell execution failed' );
 			}
 			return false;
 		} finally {
@@ -1449,7 +1442,7 @@ class ThumbnailRenderer {
 				->execute();
 		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
-				$this->logger->warning( 'Layers: SVG shape rasterise failed', [ 'exception' => $e ] );
+				$this->logger->warning( 'Layers: SVG shape rasterise failed' );
 			}
 			return null;
 		}

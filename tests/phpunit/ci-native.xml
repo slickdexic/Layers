@@ -6,6 +6,7 @@
       <file>core/PagePublicationServiceTest.php</file>
       <file>core/SlideBindingReadEfficiencyTest.php</file>
       <file>core/LegacyImageLiteralTextSaveTest.php</file>
+      <file>core/ThumbnailRendererPrivacyTest.php</file>
     </testsuite>
   </testsuites>
   <extensions><extension class="MediaWikiTeardownPHPUnitExtension" /></extensions>
