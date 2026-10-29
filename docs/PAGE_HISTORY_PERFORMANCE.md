@@ -1,5 +1,11 @@
 # Page-history performance
 
+## Installed 1.44 candidate recheck — large-image correction
+
+Public candidate `58827e3ff355296cf69d6a0a24461d8c3ff8606e` was installed on the existing 1.44 wiki. The unchanged, read-only reader benchmark retained its identity, pixel and request guards, with no reported request or browser errors. The first warm-up after the service restart took 2,810.5 ms. Five fresh-browser samples took **314.3, 295.1, 301.0, 335.4 and 299.2 ms**; three exceeded the unchanged 300 ms target. The benchmark therefore failed. The timing is a result for this development machine and its retained private data storage, not a reference-device qualification.
+
+The authorized layer read completed about 73–77 ms after it began; in these observations it began after the main combined script response. Resource timings alone do not isolate a cause or justify changing request admission. No page content was edited.
+
 ## Installed 1.44 candidate recheck — October 29, 2026
 
 This check advances Milestone 1 / PERF-2. The maintained MediaWiki 1.44.6

@@ -173,6 +173,97 @@ class ThumbnailRendererRotationTest extends \MediaWikiIntegrationTestCase {
 		];
 	}
 
+	/** @dataProvider provideImageColorCases */
+	public function testImageLayerRetainsColorOnBase(
+		bool $grayBase, bool $largeRotated, float $opacity
+	): void {
+		$dir = $this->getNewTempDirectory();
+		$base = "$dir/base.png";
+		$source = "$dir/source.png";
+		$output = "$dir/output.png";
+		$baseArgs = [ '/usr/bin/convert', '-size', '100x100', 'xc:gray(50%)' ];
+		if ( $grayBase ) {
+			$baseArgs = array_merge( $baseArgs, [ '-colorspace', 'Gray', $base ] );
+		} else {
+			$baseArgs[] = 'PNG24:' . $base;
+		}
+		$this->assertSame( 0, Shell::command( ...$baseArgs )->execute()->getExitCode() );
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '4x4', 'xc:red',
+			'PNG32:' . $source )->execute()->getExitCode() );
+		$config = new \HashConfig( [ 'UseImageMagick' => true, 'ImageMagickConvertCommand' => '/usr/bin/convert',
+			'MaxShellMemory' => 307200, 'MaxShellTime' => 180, 'MaxShellFileSize' => 102400,
+			'LayersImageMagickTimeout' => 30, 'LayersMaxImageBytes' => 100000 ] );
+		$renderer = new ThumbnailRenderer( $config, new NullLogger() );
+		$method = new \ReflectionMethod( ThumbnailRenderer::class, 'overlayLayers' );
+		$method->setAccessible( true );
+		$layer = [ 'type' => 'image', 'x' => $largeRotated ? -4950 : 20,
+			'y' => $largeRotated ? -4950 : 20, 'width' => $largeRotated ? 10000 : 20,
+			'height' => $largeRotated ? 10000 : 20, 'rotation' => $largeRotated ? 45 : 0,
+			'opacity' => $opacity, 'src' => 'data:image/png;base64,' . base64_encode( file_get_contents( $source ) ) ];
+		$this->assertTrue( $method->invoke( $renderer, $base, [ $layer ], $output, 1.0, 1.0, 100, 100 ) );
+		$sample = static function ( string $file, int $x, int $y, string $channel ): float {
+			$result = Shell::command( '/usr/bin/convert', $file, '-format',
+				sprintf( '%%[fx:255*p{%d,%d}.%s]', $x, $y, $channel ), 'info:' )->execute();
+			return (float)$result->getStdout();
+		};
+		$before = $sample( $base, 0, 0, 'g' );
+		$this->assertEqualsWithDelta( $opacity * 255 + ( 1 - $opacity ) * $before,
+			$sample( $output, $largeRotated ? 50 : 30, $largeRotated ? 50 : 30, 'r' ), 2 );
+		$this->assertEqualsWithDelta( ( 1 - $opacity ) * $before,
+			$sample( $output, $largeRotated ? 50 : 30, $largeRotated ? 50 : 30, 'g' ), 2 );
+		if ( !$largeRotated ) {
+			$this->assertEqualsWithDelta( $before, $sample( $output, 0, 0, 'g' ), 1 );
+		}
+	}
+
+	public static function provideImageColorCases(): array {
+		return [
+			'gray background, opaque image' => [ true, false, 1.0 ],
+			'gray background, translucent image' => [ true, false, 0.5 ],
+			'gray background, large rotated image' => [ true, true, 0.5 ],
+			'color background, translucent image' => [ false, false, 0.5 ],
+		];
+	}
+
+	public function testImageColorOnGrayscaleBaseSurvivesPdfConversion(): void {
+		if ( !is_executable( '/usr/bin/pdftoppm' ) ) {
+			$this->markTestSkipped( 'PDF inspection tools are not installed' );
+		}
+		$dir = $this->getNewTempDirectory();
+		$base = "$dir/base.png";
+		$source = "$dir/source.png";
+		$output = "$dir/output.png";
+		$pdf = "$dir/result.pdf";
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '100x100', 'xc:gray(50%)',
+			'-colorspace', 'Gray', $base )->execute()->getExitCode() );
+		$this->assertSame( 0, Shell::command( '/usr/bin/convert', '-size', '20x20', 'xc:red',
+			'PNG24:' . $source )->execute()->getExitCode() );
+		$config = new \HashConfig( [ 'UseImageMagick' => true, 'ImageMagickConvertCommand' => '/usr/bin/convert',
+			'MaxShellMemory' => 0, 'MaxShellTime' => 10, 'MaxShellFileSize' => 0,
+			'LayersImageMagickTimeout' => 10, 'LayersMaxImageBytes' => 100000 ] );
+		$renderer = new ThumbnailRenderer( $config, new NullLogger() );
+		$method = new \ReflectionMethod( ThumbnailRenderer::class, 'overlayLayers' );
+		$method->setAccessible( true );
+		$layer = [ 'type' => 'image', 'x' => 20, 'y' => 20, 'width' => 20, 'height' => 20,
+			'src' => 'data:image/png;base64,' . base64_encode( file_get_contents( $source ) ) ];
+		$this->assertTrue( $method->invoke( $renderer, $base, [ $layer ], $output, 1.0, 1.0, 100, 100 ) );
+		$conversion = Shell::command( '/usr/bin/convert', $output, 'pdf:' . $pdf )->includeStderr()->execute();
+		if ( $conversion->getExitCode() !== 0 &&
+			str_contains( $conversion->getStdout() . $conversion->getStderr(), 'security policy' ) ) {
+			$this->markTestSkipped( 'ImageMagick policy prohibits PDF conversion on this host' );
+		}
+		$this->assertSame( 0, $conversion->getExitCode() );
+		$prefix = "$dir/extracted";
+		$this->assertSame( 0, Shell::command( 'pdftoppm', '-f', '1', '-l', '1', '-r', '72',
+			'-png', '-singlefile', $pdf, $prefix )->execute()->getExitCode() );
+		$red = Shell::command( '/usr/bin/convert', $prefix . '.png', '-format', '%[fx:p{30,30}.r]',
+			'info:' )->execute();
+		$green = Shell::command( '/usr/bin/convert', $prefix . '.png', '-format', '%[fx:p{30,30}.g]',
+			'info:' )->execute();
+		$this->assertGreaterThan( 0.8, (float)$red->getStdout() );
+		$this->assertLessThan( 0.2, (float)$green->getStdout() );
+	}
+
 	public function testRotationSurvivesMultipagePdfConversion(): void {
 		if ( !is_executable( '/usr/bin/pdfinfo' ) || !is_executable( '/usr/bin/pdftoppm' ) ) {
 			$this->markTestSkipped( 'PDF inspection tools are not installed' );

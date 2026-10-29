@@ -25,7 +25,7 @@ use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/** Bump when rendered output changes so older thumbnails and PDF exports are not reused. */
-	public const CACHE_VERSION = 6;
+	public const CACHE_VERSION = 7;
 
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
@@ -215,6 +215,16 @@ class ThumbnailRenderer {
 		$this->droppedTypes = [];
 
 		$args = [ $convert, $basePath ];
+		// Grayscale destinations can discard a colored image during compositing.
+		// Convert the destination before drawing when an imported image is visible.
+		foreach ( $layers as $layer ) {
+			if ( ( $layer['type'] ?? '' ) === 'image' &&
+				( $layer['visible'] ?? true ) !== false && ( $layer['visible'] ?? true ) !== 0 ) {
+				$args[] = '-colorspace';
+				$args[] = 'sRGB';
+				break;
+			}
+		}
 
 		// Draw back-to-front: earlier array entries are background; later entries are on top
 		// Render in given order so top-most (last) are applied last
