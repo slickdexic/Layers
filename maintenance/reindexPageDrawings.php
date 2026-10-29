@@ -2,7 +2,7 @@
 
 declare( strict_types=1 );
 /**
- * Maintenance script: add the text of page-owned drawings to the search index.
+ * Maintenance script: add text from page-owned layer sets to the search index.
  *
  * @file
  * @ingroup Maintenance
@@ -26,8 +26,8 @@ use MediaWiki\Storage\NameTableAccessException;
 use MediaWiki\Title\Title;
 
 /**
- * Pages that owned drawings, files that had layer sets and pages that showed shared sets or slides before
- * drawing text was indexed need this once, and so does every such page after core's rebuildtextindex.php,
+ * Pages that owned layer sets, files that had layer sets and pages that showed shared sets or slides before
+ * layer text was indexed need this once, and so does every such page after core's rebuildtextindex.php,
  * which indexes only the main slot.
  */
 class ReindexPageDrawings extends Maintenance {
@@ -37,8 +37,8 @@ class ReindexPageDrawings extends Maintenance {
 
 	public function __construct() {
 		parent::__construct();
-		$this->addDescription( 'Index the text of Layers drawings together with the page text: page-owned ' .
-			'drawings with their page, a file\'s layer sets with its file page, and shared sets and slides ' .
+		$this->addDescription( 'Index layer text together with page text: page-owned layer sets with their page, ' .
+			'a file\'s layer sets with its file page, and shared sets and slides ' .
 			'with the pages that show them.' );
 		$this->setBatchSize( 100 );
 		$this->requireExtension( 'Layers' );
@@ -50,7 +50,7 @@ class ReindexPageDrawings extends Maintenance {
 		$this->indexOwners();
 		$this->indexFilePages();
 		$this->indexPagesShowingSets();
-		$this->output( 'Indexed drawing text for ' . count( $this->indexed ) . " page(s).\n" );
+		$this->output( 'Indexed layer text for ' . count( $this->indexed ) . " page(s).\n" );
 		return true;
 	}
 

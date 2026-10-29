@@ -32,7 +32,7 @@ use MediaWiki\User\User;
 
 /**
  * Without --commit nothing is written and every planned change is listed. A rerun continues where an
- * interrupted one stopped, because moved drawings are recognised by their IDs. layer_sets is only read.
+ * interrupted one stopped, because moved layer sets are recognised by their IDs. layer_sets is only read.
  */
 class MigrateLayersToPageHistory extends Maintenance {
 	/** System account that makes the edits unless --user names another. */
@@ -96,7 +96,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 		if ( $commit && !$scoped ) {
 			MigrationState::markComplete( $this->getPrimaryDB() );
 			$this->output( "Migration recorded as complete: bare set and slide names now mean each page's own " .
-				"drawings.\n" );
+				"layer sets and slides.\n" );
 			$this->purgePagesShowingSets();
 		}
 		return true;
@@ -259,7 +259,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 				'shown through a template' : "named by {$copy['embeds']} embed(s)" ) . "\n" );
 		}
 		if ( $plan['main'] !== null && !$plan['copies'] ) {
-			$this->output( "$page: point embeds at its own drawings\n" );
+			$this->output( "$page: point embeds at its own layer sets and slides\n" );
 		}
 		if ( !$commit || $plan['document'] === null ) {
 			return;
@@ -289,7 +289,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 	}
 
 	/**
-	 * Pages in the drawing namespaces, then pages elsewhere that showed shared sets when last parsed.
+	 * Pages in the configured namespaces, then pages elsewhere that showed shared sets when last parsed.
 	 * @param PageOwnedScope $scope
 	 * @return iterable<int>
 	 */
@@ -347,7 +347,7 @@ class MigrateLayersToPageHistory extends Maintenance {
 			$this->output( "$page: set \"{$skip['set']}\" page {$skip['page']} not moved ({$skip['reason']})\n" );
 		}
 		foreach ( $plan['add'] as $add ) {
-			$this->output( "$page: add drawing \"{$add['name']}\" from set \"{$add['set']}\" page {$add['page']} " .
+			$this->output( "$page: add layer set \"{$add['name']}\" from set \"{$add['set']}\" page {$add['page']} " .
 				"(layer_sets row {$add['legacyId']})\n" );
 		}
 		if ( !$commit || !$plan['add'] ) {

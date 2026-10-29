@@ -7,7 +7,7 @@ namespace MediaWiki\Extension\Layers\Revision;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 
-/** Internal version-one snapshot format. No public write API is enabled. */
+/** Version-one page-owned snapshot validation used by read and publication services. */
 class DocumentSchema {
 	public const VERSION = 1;
 	public const MAX_BYTES = 2097152;

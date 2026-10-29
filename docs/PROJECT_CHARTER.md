@@ -54,6 +54,7 @@ This is a minimum, not a full list (see Rule 1). Updating it is part of every ch
 | **Full-size viewer** | Zoom, pan, fit, page navigation for PDFs, **Print** and **Download**, Escape to close. Images and slides offer **Download PNG** first and **Download PDF**; PDFs offer **Download PDF** only (owner direction October 24). Exports include their layers. Server PDF export preserves imported-image colors over grayscale backgrounds (owner-approved October 29). Toolbar sizing follows the owner-approved [bounded layout](VIEWER_TOOLBAR_TEXT_LAYOUT_BEHAVIOUR_BRIEF.md), retaining its actions within the size cap. Owner-approved October 25: one-finger pan of enlarged media, a separate bottom Pan strip and keyboard panning, preserving existing controls and browser zoom; see the [approved brief](VIEWER_TOUCH_PANNING_BEHAVIOUR_BRIEF.md). (Page-owned viewer integration accepted for bounded client scope October 6; full live/owner acceptance remains open, UI-10.) |
 | **Types** | Images, PDFs (each page separately) and standalone slides with their own size and background. |
 | **Operating** | The `editlayers` and `layers-admin` rights, rate limits, interface translations, light and dark themes, keyboard use, the `{{#layers_fields:}}` and Cargo functions, search of layer text. |
+| **Maintenance** | Existing maintenance commands retain their options and behavior; help and progress text use “layer set” and “layer text” (owner-approved October 29). |
 
 Changes the owner has approved (the only removals allowed):
 

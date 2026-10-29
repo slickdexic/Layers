@@ -90,7 +90,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertNotContains( $title->getPrefixedDBkey(), $this->search( 'zebraexisting' ) );
 		$this->overrideConfigValue( 'DisableSearchUpdate', false );
 		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
-		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		$this->expectOutputRegex( '/Indexed layer text for [1-9][0-9]* page/' );
 		( new \ReindexPageDrawings() )->execute();
 		$this->assertContains( $title->getPrefixedDBkey(), $this->search( 'zebraexisting' ) );
 	}
@@ -229,7 +229,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertNotContains( $key, $this->search( 'ReindexTarget' ) );
 		$this->overrideConfigValue( 'DisableSearchUpdate', false );
 		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
-		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		$this->expectOutputRegex( '/Indexed layer text for [1-9][0-9]* page/' );
 		( new \ReindexPageDrawings() )->execute();
 		$this->assertContains( $key, $this->search( 'ReindexTarget' ) );
 		$this->assertNotContains( $key, $this->search( 'zebrareindexlayername' ) );
@@ -296,7 +296,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->overrideConfigValue( 'DisableSearchUpdate', false );
 		$this->assertNotContains( 'File:' . $file, $this->search( 'zebrafileexisting' ) );
 		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
-		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		$this->expectOutputRegex( '/Indexed layer text for [1-9][0-9]* page/' );
 		( new \ReindexPageDrawings() )->execute();
 		$this->assertContains( 'File:' . $file, $this->search( 'zebrafileexisting' ) );
 	}
@@ -388,7 +388,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->overrideConfigValue( 'DisableSearchUpdate', false );
 		$this->assertNotContains( $article->getPrefixedDBkey(), $this->search( 'zebrashownexisting' ) );
 		require_once __DIR__ . '/../../../maintenance/reindexPageDrawings.php';
-		$this->expectOutputRegex( '/Indexed drawing text for [1-9][0-9]* page/' );
+		$this->expectOutputRegex( '/Indexed layer text for [1-9][0-9]* page/' );
 		( new \ReindexPageDrawings() )->execute();
 		$this->assertContains( $article->getPrefixedDBkey(), $this->search( 'zebrashownexisting' ) );
 	}

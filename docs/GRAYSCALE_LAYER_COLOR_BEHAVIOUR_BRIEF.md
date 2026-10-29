@@ -13,4 +13,4 @@ have this defect. The base image remains visually grayscale, and layer order,
 opacity, controls, export choices, permissions and save behavior remain
 unchanged. No new wording or controls are introduced.
 
-The owner approved this behavior on October 29, 2026. Grayscale and color bases, opaque and translucent layers, a large rotated layer, and a PDF conversion passed in the 1.45 native rendering/privacy group. Exact-commit CI and owner review of the synthetic comparison remain pending.
+The owner approved this behavior on October 29, 2026. Grayscale and color bases, opaque and translucent layers, a large rotated layer, and a PDF conversion passed in the 1.45 native rendering/privacy group. Exact-commit full, browser and 1.44 native CI passed; the 1.44 test wiki now runs the verified candidate. The owner reviewed the synthetic before-and-after comparison and confirmed the corrected result on October 29, 2026.
