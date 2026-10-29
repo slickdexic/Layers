@@ -187,10 +187,10 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Layer Manipulation', () => {
 		test.beforeEach( async () => {
 			await editorPage.openEditor();
-			
-			// Create a layer to manipulate
-			await editorPage.selectTool( 'rectangle' );
-			await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+			if ( ![ 'can undo layer creation', 'can redo undone action' ].includes( test.info().title ) ) {
+				await editorPage.selectTool( 'rectangle' );
+				await editorPage.drawOnCanvas( 100, 100, 200, 200 );
+			}
 		} );
 
 		test( 'can select layer by clicking', async () => {
@@ -221,10 +221,6 @@ describeEditor( 'Layers Editor', () => {
 		} );
 
 		test( 'can undo layer creation', async ( { page } ) => {
-			// This test opens a fresh editor to avoid undo history interference
-			// from beforeEach layer creation
-			await editorPage.openEditor();
-			
 			const initialCount = await editorPage.getLayerCount();
 			
 			// Create a layer
@@ -248,9 +244,6 @@ describeEditor( 'Layers Editor', () => {
 		} );
 
 		test( 'can redo undone action', async ( { page } ) => {
-			// This test opens a fresh editor to avoid undo history interference
-			await editorPage.openEditor();
-			
 			const initialCount = await editorPage.getLayerCount();
 			
 			// Create layer
@@ -350,6 +343,7 @@ describeEditor( 'Layers Editor', () => {
 		} );
 
 		test( 'Ctrl+A selects all layers', async () => {
+			const initialCount = await editorPage.getLayerCount();
 			await editorPage.selectTool( 'rectangle' );
 			await editorPage.drawOnCanvas( 50, 50, 100, 100 );
 			await editorPage.selectTool( 'rectangle' );
@@ -361,7 +355,7 @@ describeEditor( 'Layers Editor', () => {
 				const state = window.layersEditorInstance.stateManager;
 				return [ state.get( 'selectedLayerIds' ).length, state.get( 'layers' ).length ];
 			} );
-			expect( counts[ 1 ] ).toBeGreaterThanOrEqual( 3 );
+			expect( counts[ 1 ] ).toBe( initialCount + 2 );
 			expect( counts[ 0 ] ).toBe( counts[ 1 ] );
 		} );
 	} );
