@@ -181,7 +181,8 @@ class ThumbnailRendererRotationTest extends \MediaWikiIntegrationTestCase {
 		$base = "$dir/base.png";
 		$source = "$dir/source.png";
 		$output = "$dir/output.png";
-		$baseArgs = [ '/usr/bin/convert', '-size', '100x100', 'xc:gray(50%)' ];
+		$baseArgs = [ '/usr/bin/convert', '-size', '100x100',
+			$grayBase ? 'xc:gray(50%)' : 'xc:rgb(20%,40%,60%)' ];
 		if ( $grayBase ) {
 			$baseArgs = array_merge( $baseArgs, [ '-colorspace', 'Gray', $base ] );
 		} else {
@@ -206,13 +207,15 @@ class ThumbnailRendererRotationTest extends \MediaWikiIntegrationTestCase {
 				sprintf( '%%[fx:255*p{%d,%d}.%s]', $x, $y, $channel ), 'info:' )->execute();
 			return (float)$result->getStdout();
 		};
-		$before = $sample( $base, 0, 0, 'g' );
-		$this->assertEqualsWithDelta( $opacity * 255 + ( 1 - $opacity ) * $before,
+		$beforeRed = $sample( $base, 0, 0, 'r' );
+		$beforeGreen = $sample( $base, 0, 0, 'g' );
+		$this->assertEqualsWithDelta( $opacity * 255 + ( 1 - $opacity ) * $beforeRed,
 			$sample( $output, $largeRotated ? 50 : 30, $largeRotated ? 50 : 30, 'r' ), 2 );
-		$this->assertEqualsWithDelta( ( 1 - $opacity ) * $before,
+		$this->assertEqualsWithDelta( ( 1 - $opacity ) * $beforeGreen,
 			$sample( $output, $largeRotated ? 50 : 30, $largeRotated ? 50 : 30, 'g' ), 2 );
 		if ( !$largeRotated ) {
-			$this->assertEqualsWithDelta( $before, $sample( $output, 0, 0, 'g' ), 1 );
+			$this->assertEqualsWithDelta( $beforeRed, $sample( $output, 0, 0, 'r' ), 1 );
+			$this->assertEqualsWithDelta( $beforeGreen, $sample( $output, 0, 0, 'g' ), 1 );
 		}
 	}
 
