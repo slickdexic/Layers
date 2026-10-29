@@ -68,13 +68,14 @@ class ForeignIdentifierSchemaUpgradeTest extends \MediaWikiIntegrationTestCase {
 		}
 	}
 
-	public function testUpgradeKeepsIdentifiersAndAcceptsFullForeignFallback(): void {
+	/** @dataProvider provideIdentifierColumnTypes */
+	public function testUpgradeKeepsIdentifiersAndAcceptsFullForeignFallback( string $type ): void {
 		$db = $this->getDb();
 		if ( $db->getType() !== 'mysql' ) {
 			$this->markTestSkipped( 'MySQL-specific schema upgrade' );
 		}
 		$table = $db->tableName( 'layers_foreign_schema_test' );
-		$db->query( "CREATE TEMPORARY TABLE {$table} (ls_img_sha1 varchar(32) NOT NULL)" );
+		$db->query( "CREATE TEMPORARY TABLE {$table} (ls_img_sha1 {$type}(32) NOT NULL)" );
 		try {
 			$old = str_repeat( 'a', 31 );
 			$db->query( "INSERT INTO {$table} (ls_img_sha1) VALUES ('$old')" );
@@ -98,12 +99,16 @@ class ForeignIdentifierSchemaUpgradeTest extends \MediaWikiIntegrationTestCase {
 				$values[] = $row->ls_img_sha1;
 			}
 			$this->assertSame( [ $old, $foreign ], $values );
-			$db->query( "ALTER TABLE {$table} MODIFY COLUMN ls_img_sha1 varchar(64) NOT NULL" );
+			$db->query( "ALTER TABLE {$table} MODIFY COLUMN ls_img_sha1 {$type}(64) NOT NULL" );
 			$this->assertTrue( LayersSchemaManager::widenFileIdentifier( $updater ) );
 			$field = $db->query( "SHOW COLUMNS FROM {$table} LIKE 'ls_img_sha1'" )->fetchObject();
-			$this->assertSame( 'varchar(64)', $field->Type );
+			$this->assertSame( $type . '(64)', $field->Type );
 		} finally {
 			$db->query( "DROP TEMPORARY TABLE {$table}" );
 		}
+	}
+
+	public static function provideIdentifierColumnTypes(): array {
+		return [ 'text column' => [ 'varchar' ], 'binary column' => [ 'varbinary' ] ];
 	}
 }

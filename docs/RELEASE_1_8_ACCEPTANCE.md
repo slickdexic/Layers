@@ -42,8 +42,12 @@ archives as well as the custom package. See [release preparation](RELEASE_PREPAR
 
 **New review findings:** A strict MySQL temporary-table test confirms that the
 legacy foreign-file fallback exceeds its 32-character storage column. A local
-schema correction passed a focused native MySQL test; full updater and
-cross-version acceptance remain open. The editor
+schema correction passed a focused native MySQL test. On the maintained 1.44
+wiki, a read-only schema check subsequently found `VARBINARY(32)`, which the
+first correction failed to recognize. The corrected updater preserves the
+existing `VARBINARY` or `VARCHAR` type while widening it; both cases pass on
+native temporary tables, and the binary case failed before the fix. The actual
+wiki updater and cross-version acceptance remain open. The editor
 can alter some literal layer text before publication; native strict validation
 also refuses other text that server sanitization would change. An approved local
 literal-text correction has passed focused editor, publication and export tests;

@@ -433,12 +433,13 @@ class LayersSchemaManager {
 		if ( $field && preg_match( '/^(?:tiny|medium|long)?text$/i', $field->Type ) ) {
 			return true;
 		}
-		if ( !$field || !preg_match( '/^varchar\((\d+)\)$/i', $field->Type, $matches ) ) {
+		if ( !$field || !preg_match( '/^(varchar|varbinary)\((\d+)\)$/i', $field->Type, $matches ) ) {
 			throw new \RuntimeException( 'Cannot determine layer set file identifier column width' );
 		}
-		if ( (int)$matches[1] < 48 ) {
-			$dbw->query( "ALTER TABLE {$tableName} MODIFY COLUMN ls_img_sha1 varchar(48) NOT NULL", __METHOD__ );
-			$updater->output( "   Widened ls_img_sha1 to VARCHAR(48).\n" );
+		if ( (int)$matches[2] < 48 ) {
+			$type = strtolower( $matches[1] );
+			$dbw->query( "ALTER TABLE {$tableName} MODIFY COLUMN ls_img_sha1 {$type}(48) NOT NULL", __METHOD__ );
+			$updater->output( "   Widened ls_img_sha1 to " . strtoupper( $type ) . "(48).\n" );
 		}
 		return true;
 	}
