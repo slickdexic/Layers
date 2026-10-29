@@ -4,12 +4,12 @@ on:
   pull_request:
     branches: [ main ]
   push:
-    branches: [ main ]
+    branches: [ main, 'codex/l01-publication-admission' ]
 
 jobs:
   # Smoke tests run without MediaWiki - quick sanity check
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,29 +43,34 @@ jobs:
   # Full E2E tests with MediaWiki container
   # These tests require a working MediaWiki instance with database
   editor:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Track status separately from workflow pass/fail
     outputs:
       result: ${{ job.status }}
-    services:
-      mariadb:
-        image: mariadb:10.11
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: mediawiki
-          MYSQL_USER: mediawiki
-          MYSQL_PASSWORD: mediawiki
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mariadb-admin ping -h localhost -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Start disposable database with generated credentials
+        run: |
+          db_password=$(openssl rand -hex 24)
+          wiki_password=$(openssl rand -hex 24)
+          echo "::add-mask::$db_password"
+          echo "::add-mask::$wiki_password"
+          printf 'LAYERS_E2E_DB_PASSWORD=%s\n' "$db_password" >> "$GITHUB_ENV"
+          printf 'LAYERS_E2E_PASSWORD=%s\n' "$wiki_password" >> "$GITHUB_ENV"
+          export MYSQL_ROOT_PASSWORD="$db_password" MYSQL_PASSWORD="$db_password" MYSQL_PWD="$db_password"
+          docker run --name layers-ci-db --detach --publish 127.0.0.1:3306:3306 \
+            --env MYSQL_ROOT_PASSWORD --env MYSQL_DATABASE=mediawiki \
+            --env MYSQL_USER=mediawiki --env MYSQL_PASSWORD mariadb:10.11
+          for attempt in $(seq 1 60); do
+            if docker exec --env MYSQL_PWD layers-ci-db mariadb-admin ping -h 127.0.0.1 -u root --silent; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Disposable database did not become ready' >&2
+          exit 1
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -102,13 +107,16 @@ jobs:
           # Always reinstall - the database is fresh on each run (services don't cache)
           # Remove old LocalSettings.php if it exists from cache
           rm -f LocalSettings.php
+          umask 077
+          printf '%s' "$LAYERS_E2E_DB_PASSWORD" > "$RUNNER_TEMP/layers-db-password"
+          printf '%s' "$LAYERS_E2E_PASSWORD" > "$RUNNER_TEMP/layers-wiki-password"
           php maintenance/install.php \
             --dbtype=mysql \
             --dbserver=127.0.0.1 \
             --dbname=mediawiki \
             --dbuser=mediawiki \
-            --dbpass=mediawiki \
-            --pass=LayersE2E_Test_2025 \
+            --dbpassfile="$RUNNER_TEMP/layers-db-password" \
+            --passfile="$RUNNER_TEMP/layers-wiki-password" \
             --scriptpath="" \
             "Layers Test Wiki" \
             "Admin"
@@ -160,6 +168,11 @@ jobs:
         env:
           MW_SERVER: http://localhost:8080
 
+      - name: Complete page-history migration on the disposable wiki
+        run: |
+          cd ~/mediawiki
+          php extensions/Layers/maintenance/migrateLayersToPageHistory.php --commit
+
       - name: Upload test image via API (fallback)
         run: |
           cd ~/mediawiki
@@ -178,7 +191,7 @@ jobs:
             
             # Login
             curl -s -c cookies.txt -b cookies.txt -X POST "http://localhost:8080/api.php" \
-              -d "action=login&lgname=Admin&lgpassword=LayersE2E_Test_2025&lgtoken=$TOKEN&format=json" > /dev/null
+              -d "action=login&lgname=Admin&lgpassword=$LAYERS_E2E_PASSWORD&lgtoken=$TOKEN&format=json" > /dev/null
             
             # Get CSRF token
             CSRF=$(curl -s -c cookies.txt -b cookies.txt "http://localhost:8080/api.php?action=query&meta=tokens&format=json" | php -r 'echo json_decode(file_get_contents("php://stdin"))->query->tokens->csrftoken;')
@@ -218,6 +231,15 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Create the page-owned editor fixture
+        run: node tests/e2e/seed-page-owned-fixture.js
+        env:
+          CI: true
+          LAYERS_E2E_DISPOSABLE: '1'
+          MW_SERVER: http://localhost:8080
+          MW_USERNAME: Admin
+          MW_PASSWORD: ${{ env.LAYERS_E2E_PASSWORD }}
+
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
@@ -227,7 +249,8 @@ jobs:
           CI: true
           MW_SERVER: http://localhost:8080
           MW_USERNAME: Admin
-          MW_PASSWORD: LayersE2E_Test_2025
+          MW_PASSWORD: ${{ env.LAYERS_E2E_PASSWORD }}
+          LAYERS_E2E_DISPOSABLE: '1'
           TEST_FILE: Test_image.png
 
       - name: Upload Playwright results

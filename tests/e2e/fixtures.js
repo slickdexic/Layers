@@ -180,27 +180,10 @@ class LayersEditorPage {
 			'arrow', 'line'
 		] );
 
-		// Clean leftover drafts on any navigation to ensure test isolation
-		this.page.addInitScript( () => {
-			try {
-				const toRemove = [];
-				for ( let i = 0; i < window.localStorage.length; i++ ) {
-					const key = window.localStorage.key( i );
-					if ( key && ( key.startsWith( 'layers-' ) || key.startsWith( 'layers_page_' ) ) ) {
-						toRemove.push( key );
-					}
-				}
-				for ( const key of toRemove ) {
-					window.localStorage.removeItem( key );
-				}
-			} catch ( e ) {}
-		} ).catch( () => {} );
 	}
 
 	/**
-	 * Open Special:EditLayersPage for the owner page's drawing.
-	 * Follows the "Edit layer set" link if already visible,
-	 * or navigates directly to Special:EditLayersPage for the drawing.
+	 * Open the current page-owned layer set by its exact owner and surface.
 	 *
 	 * @param {string} [owner='Layers_browser_acceptance']
 	 * @param {string} [surface='presentation']
@@ -212,31 +195,7 @@ class LayersEditorPage {
 		const targetOwner = ( typeof owner === 'string' && ( owner.endsWith( '.png' ) || owner.endsWith( '.jpg' ) || owner.endsWith( '.pdf' ) ) ) ?
 			'Layers_browser_acceptance' : ( owner || 'Layers_browser_acceptance' );
 
-		// Clear any leftover local drafts to maintain test isolation
-		await this.page.evaluate( () => {
-			try {
-				const toRemove = [];
-				for ( let i = 0; i < window.localStorage.length; i++ ) {
-					const key = window.localStorage.key( i );
-					if ( key && ( key.startsWith( 'layers-' ) || key.startsWith( 'layers_page_' ) ) ) {
-						toRemove.push( key );
-					}
-				}
-				for ( const key of toRemove ) {
-					window.localStorage.removeItem( key );
-				}
-			} catch ( e ) {}
-		} ).catch( () => {} );
-
-		const editLink = this.page.locator( '.layers-page-edit-link' ).first();
-		if ( await editLink.isVisible().catch( () => false ) ) {
-			await Promise.all( [
-				this.page.waitForNavigation(),
-				editLink.click()
-			] );
-		} else {
-			await this.page.goto( `${ base }/index.php?title=Special:EditLayersPage&owner=${ encodeURIComponent( targetOwner ) }&surface=${ encodeURIComponent( surface ) }&revid=current` );
-		}
+		await this.page.goto( `${ base }/index.php?title=Special:EditLayersPage&owner=${ encodeURIComponent( targetOwner ) }&surface=${ encodeURIComponent( surface ) }&revid=current` );
 		await this.page.waitForSelector( this.selectors.canvas, { timeout: 15000 } );
 		await this.page.waitForSelector( this.selectors.saveButton, { timeout: 10000 } );
 
@@ -601,6 +560,10 @@ class LayersEditorPage {
 	 * @return {Promise<Object>}
 	 */
 	async restoreSnapshot( snapshot, baseRevId, owner = 'Layers_browser_acceptance' ) {
+		if ( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1' ||
+			owner !== 'Layers_browser_acceptance' ) {
+			throw new Error( 'Snapshot restoration requires the disposable CI fixture' );
+		}
 		const api = await this.getApiClient();
 		const history = await api.get( { action: 'query', prop: 'revisions', titles: owner, rvprop: 'ids' } );
 		const latestRev = history.query.pages[ 0 ].revisions[ 0 ].revid;
@@ -611,7 +574,7 @@ class LayersEditorPage {
 			owner,
 			baserevid: String( latestRev ),
 			data: JSON.stringify( snapshot ),
-			maintext: 'Dedicated automated Layers history acceptance page.',
+			maintext: 'Dedicated automated Layers history acceptance page.\n\n{{#Slide:Welcome Slide}}',
 			summary: 'Restore baseline snapshot via exact-base publication',
 			token: csrfToken
 		} );
