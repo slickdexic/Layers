@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="core-bootstrap.php" failOnWarning="true" failOnRisky="true">
+  <testsuites>
+    <testsuite name="Layers native page history CI">
+      <file>core/PageHistoryAccessTest.php</file>
+      <file>core/PagePublicationServiceTest.php</file>
+      <file>core/SlideBindingReadEfficiencyTest.php</file>
+    </testsuite>
+  </testsuites>
+  <extensions><extension class="MediaWikiTeardownPHPUnitExtension" /></extensions>
+</phpunit>

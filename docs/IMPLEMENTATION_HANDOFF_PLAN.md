@@ -76,7 +76,7 @@ Charter item 5 (links from layers) is designed in [LINKS_FROM_LAYERS_DESIGN.md](
 
 ### J106 — Authors never see a page ID (HIST-9) (**replaced by J113 on September 30**; do not start)
 
-**Advances:** HIST-9 (owner finding, September 30). The owner opened a migrated page and found `[[File:ImageTest02.jpg|layerset=8:002]]`. A page ID is machinery; an author must be able to read, type and copy `layerset=002` and `{{#Slide:name}}`. Bare names already work as input after the migration. The writers still produce the ID form: the migration (`PageCopyMigration` through `DirectEmbeddingRewriter::rewrite()`), rename (`renameReferences()`, called from `PagePublicationService`), copy (`PageDrawingCopy`) and pre-migration adoption.
+**Advances:** HIST-9 (owner finding, September 30). The owner opened a migrated page and found `[[File:Example.jpg|layerset=8:002]]`. A page ID is machinery; an author must be able to read, type and copy `layerset=002` and `{{#Slide:name}}`. Bare names already work as input after the migration. The writers still produce the ID form: the migration (`PageCopyMigration` through `DirectEmbeddingRewriter::rewrite()`), rename (`renameReferences()`, called from `PagePublicationService`), copy (`PageDrawingCopy`) and pre-migration adoption.
 
 **Rules (decided by the lead).**
 1. **After the migration is recorded** (`MigrationState`), every writer emits the bare name: `layerset=<name>` and `{{#Slide:<name>}}`. Add a `bool $bareNames` option to `rewrite()` and `renameReferences()` (the latter already has one for reading); callers pass whether the migration is recorded.
@@ -1397,7 +1397,7 @@ Lead B01 now specifies selected-page PDF adoption: copy only the explicitly sele
 
 ## Current direction: ordinary page-owned drawings — September 23, 2026
 
-**User acceptance exposed the missing integration:** editing File:ImageTest02.jpg on DeleteMe004 still uses shared Layers storage and creates no DeleteMe004 revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
+**User acceptance exposed the missing integration:** editing File:Example.jpg on local-test-page-b still uses shared Layers storage and creates no local-test-page-b revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
 
 The [page ownership implementation plan](PAGE_OWNED_BINDING_PLAN.md) defines identity, atomic adoption, move/copy behavior, source pinning, implementation order and acceptance gates. Ownership uses native PageID plus stable surface identity; names are labels. Adoption copies an exact shared revision and commits the embedding binding and complete snapshot in one native page revision. Existing shared sets are preserved. Proposed ownership=page syntax is not implemented or available for use yet.
 
@@ -1848,7 +1848,7 @@ Fresh verification:
   2. Visited ordinary page URL: verified `.layers-bound-slide` rendered painted canvas host (`canvas.layers-slide-canvas`), bootstrap configuration `wgLayersBoundSlides` contained exact revision and surface bundle, no legacy `.layers-slide-container` or edit/save controls appeared, and real HTML HTTP response headers included `Cache-Control: no-store`. Browser console monitored cleanly with credentials and drawing payloads strictly redacted.
   3. Published distinct second drawing: visited first revision with native `oldid` and verified exact initial drawing (`Alpha Drawing`) and revision; visited current page URL and verified second drawing (`Beta Revision Drawing`); reloaded both URLs verifying parser-cache isolation (first revision never received second drawing).
   4. Placed identical binding twice in page main text: verified two independent canvas hosts rendered simultaneously with distinct container elements; navigated away to native history and used `page.goBack()` back-forward navigation, verifying page restored without stale or duplicate canvas hosts.
-  5. In strict `finally` block, restored original main text and snapshot through fresh publication with explicit checked base revision; confirmed restored wikitext via `formatversion=2`. Zero manual owner pages (`Layers_history_test`, `DeleteMe004`), `Main Page`, files, or wiki configuration were modified.
+  5. In strict `finally` block, restored original main text and snapshot through fresh publication with explicit checked base revision; confirmed restored wikitext via `formatversion=2`. Zero manual owner pages (`Layers_history_test`, `local-test-page-b`), `Main Page`, files, or wiki configuration were modified.
 - Static & documentation checks:
   - ESLint: `npx eslint tests/e2e/page-owned-binding.spec.js` passed with **0 errors and 0 warnings**.
   - Jest suites: `tests/jest/PageOwnedRevisionBootstrap.test.js`, `PageOwnedRevisionView.test.js`, `PageOwnedRevisionRenderer.test.js` passed **3 suites / 128 tests**.

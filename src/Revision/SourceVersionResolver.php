@@ -35,6 +35,27 @@ class SourceVersionResolver {
 	 * @throws \DomainException On an unreadable snapshot or an unavailable or mismatched source
 	 */
 	public function resolve( LayersDocumentContent $content, Authority $authority, ?array $surfaceIds = null ): array {
+		return $this->resolveDocument( $content, $authority, $surfaceIds, false );
+	}
+
+	/**
+	 * Resolve selected surfaces independently, omitting unavailable sources.
+	 * The document is still validated and decoded only within this request.
+	 * @param LayersDocumentContent $content
+	 * @param Authority $authority
+	 * @param string[] $surfaceIds
+	 * @return File[] Resolved files keyed by surface ID
+	 * @throws \DomainException If the document itself is unreadable
+	 */
+	public function resolveIndividually( LayersDocumentContent $content, Authority $authority,
+		array $surfaceIds
+	): array {
+		return $this->resolveDocument( $content, $authority, $surfaceIds, true );
+	}
+
+	private function resolveDocument( LayersDocumentContent $content, Authority $authority, ?array $surfaceIds,
+		bool $omitUnavailable
+	): array {
 		if ( !$content->isReadable() ) {
 			throw new \DomainException( 'layers-source-unavailable' );
 		}
@@ -45,14 +66,26 @@ class SourceVersionResolver {
 				( $surfaceIds !== null && !in_array( $surface->id, $surfaceIds, true ) ) ) {
 				continue;
 			}
+			try {
+				$files[$surface->id] = $this->resolveSource( $surface, $authority );
+			} catch ( \DomainException $e ) {
+				if ( !$omitUnavailable ) {
+					throw $e;
+				}
+			}
+		}
+		return $files;
+	}
+
+	private function resolveSource( \stdClass $surface, Authority $authority ): File {
 			$source = $surface->source;
 			$title = $this->titleFactory->newFromText( $source->fileTitle );
 			// Store canonical namespace-independent File: titles with DB-key spelling.
-			if ( !$title || !$title->canExist() || $title->getNamespace() !== NS_FILE ||
+		if ( !$title || !$title->canExist() || $title->getNamespace() !== NS_FILE ||
 				$source->fileTitle !== 'File:' . $title->getDBkey() ||
 				!$authority->authorizeRead( 'read', $title ) ) {
-				throw new \DomainException( 'layers-source-unavailable' );
-			}
+			throw new \DomainException( 'layers-source-unavailable' );
+		}
 			$file = $this->repo->findFile( $title, [
 				'time' => $source->timestamp,
 				'ignoreRedirect' => true,
@@ -60,25 +93,23 @@ class SourceVersionResolver {
 			] );
 			// Do not request private versions, even for privileged publishers: ordinary
 			// rendering must never create public thumbnails of hidden file content.
-			if ( !$file || $file->getRepo() !== $this->repo || !$file->isVisible() ||
+		if ( !$file || $file->getRepo() !== $this->repo || !$file->isVisible() ||
 				$file->isDeleted( File::DELETED_FILE ) || $file->getName() !== $title->getDBkey() ||
 				$file->getTimestamp() !== $source->timestamp || $file->getSha1() !== $source->sha1 ) {
-				throw new \DomainException( 'layers-source-unavailable' );
-			}
-			$path = $file->getPath();
-			if ( !$path || !$this->repo->fileExists( $path ) ) {
-				throw new \DomainException( 'layers-source-unavailable' );
-			}
-			if ( $surface->kind === 'pdf' ) {
-				$pages = $file->getMimeType() === 'application/pdf' ? $file->pageCount() : false;
-				if ( !is_int( $pages ) || $pages < $source->page ) {
-					throw new \DomainException( 'layers-source-unavailable' );
-				}
-			} elseif ( !in_array( $file->getMediaType(), [ 'BITMAP', 'DRAWING' ], true ) ) {
-				throw new \DomainException( 'layers-source-unavailable' );
-			}
-			$files[$surface->id] = $file;
+			throw new \DomainException( 'layers-source-unavailable' );
 		}
-		return $files;
+			$path = $file->getPath();
+		if ( !$path || !$this->repo->fileExists( $path ) ) {
+			throw new \DomainException( 'layers-source-unavailable' );
+		}
+		if ( $surface->kind === 'pdf' ) {
+			$pages = $file->getMimeType() === 'application/pdf' ? $file->pageCount() : false;
+			if ( !is_int( $pages ) || $pages < $source->page ) {
+				throw new \DomainException( 'layers-source-unavailable' );
+			}
+		} elseif ( !in_array( $file->getMediaType(), [ 'BITMAP', 'DRAWING' ], true ) ) {
+			throw new \DomainException( 'layers-source-unavailable' );
+		}
+			return $file;
 	}
 }

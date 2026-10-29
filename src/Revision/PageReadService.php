@@ -76,13 +76,26 @@ class PageReadService {
 			return [];
 		}
 		$bundles = [];
-		foreach ( json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR )['surfaces'] as $surface ) {
+		$surfaces = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR )['surfaces'];
+		$fileIds = [];
+		foreach ( $surfaces as $surface ) {
+			if ( $surface['kind'] !== 'slide' && in_array( $surface['id'], $wanted, true ) ) {
+				$fileIds[] = $surface['id'];
+			}
+		}
+		try {
+			$files = $fileIds ? $this->sources->resolveIndividually( $content, $authority, $fileIds ) : [];
+		} catch ( \DomainException $e ) {
+			$files = [];
+		}
+		foreach ( $surfaces as $surface ) {
 			if ( !in_array( $surface['id'], $wanted, true ) ) {
 				continue;
 			}
+			if ( $surface['kind'] !== 'slide' && !isset( $files[$surface['id']] ) ) {
+				continue;
+			}
 			try {
-				// Each surface's source is checked on its own, so one unavailable file hides only its drawing.
-				$files = $this->sources->resolve( $content, $authority, [ $surface['id'] ] );
 				$source = isset( $files[$surface['id']] ) && $this->renditions ?
 					$this->renditions->forSurface( $files[$surface['id']], $surface ) : null;
 			} catch ( \DomainException $e ) {

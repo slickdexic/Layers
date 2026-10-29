@@ -4,7 +4,7 @@ CREATE TABLE /*_*/layer_sets (
     ls_img_name varchar(255) binary NOT NULL,
     ls_img_major_mime varchar(16) NOT NULL,
     ls_img_minor_mime varchar(100) NOT NULL,
-    ls_img_sha1 varchar(32) NOT NULL,
+    ls_img_sha1 varchar(48) NOT NULL,
     ls_json_blob mediumblob NOT NULL,
     ls_user_id int unsigned DEFAULT NULL,
     ls_timestamp binary(14) NOT NULL,

@@ -18,7 +18,8 @@ search, Cargo and link milestones do not delay this release.
   complete suite list with the preceding run. Temporary evidence must not make
   ordinary test discovery scan copied repositories.
 - Include the [portable native regression package](NATIVE_REGRESSION_TESTING.md)
-  and its maintained helper/media fixtures; native coverage is separate from CI.
+  and its maintained helper/media fixtures. The candidate CI job covers a
+  selected native slice; hosted verification and broader coverage remain open.
 - Run `npm run check:assets` on the final artifact; preserve the
   [asset inventory and individual notices](SHIPPED_ASSET_AUDIT.md) on updates.
 - Preserve maintained test fixtures, committed runtime assets, fonts, licenses
@@ -120,6 +121,11 @@ tests/release` to check its safety boundaries. Independently inspect the final
 archive and verify its assets and documentation; the builder's filename checks
 are not a complete privacy review. The source commit must contain the builder,
 and a trial package does not replace final version/tag acceptance.
+
+The builder resolves the Git repository root before creating an archive and
+refuses an empty result. A nested-checkout rehearsal previously produced an empty
+archive without an error; the corrected builder produced the same 2,883-file
+candidate and checksum from the nested location as from the repository root.
 
 **Distribution limitation:** Historical evidence has been removed from the current
 candidate tree, but remains in older public commits. Before creating a release,

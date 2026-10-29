@@ -39,6 +39,26 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		];
 	}
 
+	public function testInvalidTextCannotBeDroppedFromTextBearingLayers(): void {
+		$validator = $this->createValidator();
+		foreach ( [ 'textbox', 'callout' ] as $type ) {
+			$layer = [ 'id' => 'one', 'type' => $type, 'x' => 0, 'y' => 0,
+				'width' => 100, 'height' => 100, 'text' => '<script>bad</script>' ];
+			$this->assertFalse( $validator->validateLayer( $layer )->isValid(), $type );
+		}
+	}
+
+	public function testOrdinaryInternationalLiteralTextIsPreserved(): void {
+		$validator = $this->createValidator();
+		foreach ( [ 'condition=true', "👩‍💻", str_repeat( '中', 400 ) ] as $text ) {
+			$layer = $this->getValidTextLayer();
+			$layer['text'] = $text;
+			$result = $validator->validateLayer( $layer );
+			$this->assertTrue( $result->isValid(), $text );
+			$this->assertSame( $text, $result->getData()['text'] );
+		}
+	}
+
 	/**
 	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayers
 	 */
@@ -175,10 +195,11 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $result->isValid() );
 		$this->assertStringContainsString( 'Text layer must have text content', $result->getErrors()[0] );
 
-		// Empty or markup-only text still fails a text layer, but is kept on a text box
-		foreach ( [ '', '<b></b>' ] as $text ) {
-			$this->assertFalse( $validator->validateLayer( $layer + [ 'text' => $text ] )->isValid() );
-		}
+		// Empty text fails, while literal markup-looking characters are content.
+		$this->assertFalse( $validator->validateLayer( $layer + [ 'text' => '' ] )->isValid() );
+		$literal = $validator->validateLayer( $layer + [ 'text' => '<b></b>' ] );
+		$this->assertTrue( $literal->isValid() );
+		$this->assertSame( '<b></b>', $literal->getData()['text'] );
 		$textbox = $validator->validateLayer(
 			[ 'type' => 'textbox', 'x' => 1, 'y' => 1, 'width' => 9, 'height' => 9, 'text' => '' ]
 		);

@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\Layers\Tests\Unit\Api;
 
 use MediaWiki\Extension\Layers\Api\ApiLayersExport;
+use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -77,6 +78,139 @@ class ApiLayersExportTest extends TestCase {
 		// Assoc array with no 'layers' key and no numeric index 0.
 		$set = [ 'id' => 1, 'data' => [ 'revision' => 2, 'schema' => 1 ] ];
 		$this->assertSame( [], $this->invoke( $module, 'extractLayers', [ $set ] ) );
+	}
+
+	public function testFailedLayerCompositeDoesNotFallBackToPlainPage(): void {
+		$renderer = $this->createMock( ThumbnailRenderer::class );
+		$renderer->method( 'generateLayeredThumbnail' )->willReturn( null );
+		$renderer->method( 'getDroppedLayerTypes' )->willReturn( [] );
+		$module = $this->getMockBuilder( ApiLayersExport::class )->disableOriginalConstructor()
+			->onlyMethods( [ 'createThumbnailRenderer' ] )->getMock();
+		$module->method( 'createThumbnailRenderer' )->willReturn( $renderer );
+		$db = new class {
+			public function getLayerSetByName() {
+				return [ 'data' => [ 'layers' => [ [ 'type' => 'text', 'text' => 'hello' ] ] ] ];
+			}
+		};
+		$file = new class {
+			public bool $transformed = false;
+
+			public function transform() {
+				$this->transformed = true;
+				return null;
+			}
+		};
+		$this->assertNull( $this->invoke( $module, 'renderPageImage',
+			[ $file, $db, 'file.pdf', 'hash', 'Default', 1, 800, true ] ) );
+		$this->assertFalse( $file->transformed );
+	}
+
+	public function testMissingSavedLayerSetDoesNotFallBackToPlainPage(): void {
+		$module = $this->newModule();
+		$db = new class {
+			public function getLayerSetByName() {
+				return null;
+			}
+		};
+		$file = new class {
+			public bool $transformed = false;
+
+			public function transform() {
+				$this->transformed = true;
+				return null;
+			}
+		};
+		$this->assertNull( $this->invoke( $module, 'renderPageImage',
+			[ $file, $db, 'file.pdf', 'hash', 'Default', 1, 800, true ] ) );
+		$this->assertFalse( $file->transformed );
+	}
+
+	public function testPageWithoutLayersUsesItsPlainPage(): void {
+		$path = tempnam( sys_get_temp_dir(), 'layers-plain-page-' );
+		try {
+			$file = new class( $path ) {
+				private string $path;
+
+				public function __construct( string $path ) {
+					$this->path = $path;
+				}
+
+				public function transform() {
+					return new class( $this->path ) {
+						private string $path;
+
+						public function __construct( string $path ) {
+							$this->path = $path;
+						}
+
+						public function getLocalCopyPath(): string {
+							return $this->path;
+						}
+					};
+				}
+			};
+			$this->assertSame( $path, $this->invoke( $this->newModule(), 'renderPageImage',
+				[ $file, null, 'file.pdf', 'hash', 'Default', 1, 800, false ] ) );
+		} finally {
+			unlink( $path );
+		}
+	}
+
+	public function testFailedMiddlePageRefusesTheWholeExport(): void {
+		$module = $this->getMockBuilder( ApiLayersExport::class )->disableOriginalConstructor()
+			->onlyMethods( [ 'renderPageImage' ] )->getMock();
+		$module->expects( $this->exactly( 2 ) )->method( 'renderPageImage' )
+			->willReturnOnConsecutiveCalls( '/page-one.png', null );
+		$this->assertNull( $this->invoke( $module, 'renderAllPages',
+			[ null, null, 'file.pdf', 'hash', 'Default', 800, [ 1 => 'none', 2 => 'set', 3 => 'none' ] ] ) );
+	}
+
+	public function testCompletePagesKeepTheirOrder(): void {
+		$module = $this->getMockBuilder( ApiLayersExport::class )->disableOriginalConstructor()
+			->onlyMethods( [ 'renderPageImage' ] )->getMock();
+		$module->expects( $this->exactly( 3 ) )->method( 'renderPageImage' )
+			->willReturnOnConsecutiveCalls( '/one.png', '/two.png', '/three.png' );
+		$this->assertSame( [ '/one.png', '/two.png', '/three.png' ], $this->invoke( $module, 'renderAllPages',
+			[ null, null, 'file.pdf', 'hash', 'Default', 800, [ 1 => 'none', 2 => 'set', 3 => 'none' ] ] ) );
+	}
+
+	public function testDroppedLayersRefuseEveryFreshRender(): void {
+		$root = sys_get_temp_dir() . '/layers-export-test-' . bin2hex( random_bytes( 8 ) );
+		mkdir( $root . '/thumb/layers', 0777, true );
+		$path = $root . '/thumb/layers/composite.png';
+		file_put_contents( $path, 'test' );
+		try {
+			$config = $this->createMock( \MediaWiki\Config\Config::class );
+			$config->method( 'get' )->with( 'UploadDirectory' )->willReturn( $root );
+			$renderer = $this->createMock( ThumbnailRenderer::class );
+			$nonces = [];
+			$renderer->method( 'generateLayeredThumbnail' )->willReturnCallback(
+				static function ( $file, $params ) use ( &$nonces, $path ) {
+					$nonces[] = $params['layersExportNonce'];
+					return $path;
+				}
+			);
+			$renderer->method( 'getDroppedLayerTypes' )->willReturn( [ 'image' ] );
+			$module = $this->getMockBuilder( ApiLayersExport::class )->disableOriginalConstructor()
+				->onlyMethods( [ 'createThumbnailRenderer', 'getConfig' ] )->getMock();
+			$module->method( 'createThumbnailRenderer' )->willReturn( $renderer );
+			$module->method( 'getConfig' )->willReturn( $config );
+			$db = new class {
+				public function getLayerSetByName() {
+					return [ 'data' => [ 'layers' => [ [ 'type' => 'image' ] ] ] ];
+				}
+			};
+			foreach ( [ 1, 2 ] as $attempt ) {
+				$this->assertNull( $this->invoke( $module, 'renderPageImage',
+					[ null, $db, 'file.pdf', 'hash', 'Default', 1, 800, true ] ), (string)$attempt );
+			}
+			$this->assertCount( 2, array_unique( $nonces ) );
+		} finally {
+			unlink( $path );
+			rmdir( $root . '/thumb/layers' );
+			rmdir( $root . '/thumb' );
+			rmdir( $root );
+		}
 	}
 
 	public function testIsReadModeTrueAndWriteModeFalse(): void {

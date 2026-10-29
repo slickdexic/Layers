@@ -281,6 +281,26 @@ describe( 'Toolbar', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 		} );
 
+		it.each( [ 'text', 'textbox', 'callout', 'marker', 'dimension', 'angleDimension',
+			'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'arrow', 'line', 'pen' ] )(
+			'clears existing selection before switching to the %s creation tool', function ( tool ) {
+				mockEditor.canvasManager.getSelectedLayerIds = jest.fn( () => [ 'text-1', 'text-2' ] );
+				mockEditor.canvasManager.deselectAll = jest.fn();
+				toolbar.updateToolOptions = jest.fn();
+				toolbar.selectTool( tool );
+				expect( mockEditor.canvasManager.deselectAll ).toHaveBeenCalledTimes( 1 );
+				expect( mockEditor.canvasManager.deselectAll.mock.invocationCallOrder[ 0 ] )
+					.toBeLessThan( toolbar.updateToolOptions.mock.invocationCallOrder[ 0 ] );
+			}
+		);
+
+		it( 'keeps a selection when switching to the pointer', function () {
+			mockEditor.canvasManager.getSelectedLayerIds = jest.fn( () => [ 'text-1' ] );
+			mockEditor.canvasManager.deselectAll = jest.fn();
+			toolbar.selectTool( 'pointer' );
+			expect( mockEditor.canvasManager.deselectAll ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should update currentTool when selecting', function () {
 			toolbar.selectTool( 'rectangle' );
 

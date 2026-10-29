@@ -61,6 +61,11 @@ command-line alternative is `php maintenance/run.php update`; use either route
 for schema updates, not both as a mandatory sequence. Both use extension schema
 hooks. See MediaWiki's [updater instructions](https://www.mediawiki.org/wiki/Manual:Update.php).
 
+The schema updater also widens the MySQL legacy layer-set file-identifier
+column when needed, retaining existing identifiers. This accommodates the
+complete fallback identifier for foreign files. SQLite already uses unrestricted
+text for this column.
+
 Layers then requires separate **link discovery and page-history migration**:
 
 1. Refresh links and process jobs while legacy shared-set discovery is active.
@@ -258,6 +263,10 @@ If a full rollback is needed, preserve any newer work first, stop editing and
 restore the consistent backup with its matching code/configuration/uploads.
 Rolling back only the extension files does not reverse migrated page revisions
 or database changes. Rehearse recovery on the copy before using it on the wiki.
+The updated editor may compact a large browser recovery draft after a storage
+quota refusal. Older editor code cannot read that compact format: recover or
+save those drafts with the updated editor before rolling back. Existing
+uncompacted drafts remain supported.
 
 Search, Cargo and layer-object links remain later milestones. If separately
 validating an existing search index, the native `reindexPageDrawings.php`

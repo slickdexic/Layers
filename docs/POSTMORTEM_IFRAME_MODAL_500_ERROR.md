@@ -66,7 +66,7 @@ if ( $isModalMode ) {
 ### Symptom 2: Console Error Message Was Misleading
 
 ```
-GET http://192.168.77.33:8080/index.php/File:ImageTest02.jpg?action=editlayers&setname=005&modal=1 
+GET http://example.invalid:8080/index.php/File:Example.jpg?action=editlayers&setname=005&modal=1
 net::ERR_CONTENT_LENGTH_MISMATCH 500 (Internal Server Error)
 ```
 

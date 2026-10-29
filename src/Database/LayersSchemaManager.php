@@ -123,6 +123,11 @@ class LayersSchemaManager {
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyLayerCountTypePatch'
 			] );
 
+			// Preserve the complete deterministic foreign-file fallback identifier.
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::widenFileIdentifier'
+			] );
+
 			// P1-012: Make ls_name NOT NULL DEFAULT 'default' (uses MODIFY COLUMN — MySQL only)
 			$updater->addExtensionUpdate( [
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyLsNameNotNullPatch'
@@ -407,6 +412,34 @@ class LayersSchemaManager {
 		);
 		$updater->output( "   Widened ls_layer_count to SMALLINT.\n" );
 
+		return true;
+	}
+
+	/**
+	 * Widen older MySQL columns without altering stored identifiers or shrinking custom schemas.
+	 * SQLite stores identifiers as unrestricted TEXT.
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function widenFileIdentifier( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+		if ( $dbw->getType() === 'sqlite' ) {
+			return true;
+		}
+		$tableName = $dbw->tableName( 'layer_sets' );
+		$result = $dbw->query( "SHOW COLUMNS FROM {$tableName} WHERE Field = 'ls_img_sha1'", __METHOD__ );
+		$field = $result->fetchObject();
+		if ( $field && preg_match( '/^(?:tiny|medium|long)?text$/i', $field->Type ) ) {
+			return true;
+		}
+		if ( !$field || !preg_match( '/^varchar\((\d+)\)$/i', $field->Type, $matches ) ) {
+			throw new \RuntimeException( 'Cannot determine layer set file identifier column width' );
+		}
+		if ( (int)$matches[1] < 48 ) {
+			$dbw->query( "ALTER TABLE {$tableName} MODIFY COLUMN ls_img_sha1 varchar(48) NOT NULL", __METHOD__ );
+			$updater->output( "   Widened ls_img_sha1 to VARCHAR(48).\n" );
+		}
 		return true;
 	}
 

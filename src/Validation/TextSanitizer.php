@@ -79,6 +79,42 @@ class TextSanitizer {
 	}
 
 	/**
+	 * Check literal layer text without rewriting the user's content.
+	 * Dangerous input is refused by the caller; HTML output must still escape text.
+	 *
+	 * @param string $text Raw layer or rich-text content
+	 * @return bool Whether it can be accepted without loss
+	 */
+	public function isSafeLiteralLayerText( string $text ): bool {
+		if ( !mb_check_encoding( $text, 'UTF-8' ) || !$this->isValidLength( $text ) ||
+			preg_match( '/[\x{200B}\x{200E}-\x{200F}\x{202A}-\x{202E}\x{FEFF}]/u', $text ) ||
+			str_starts_with( $text, '@' )
+		) {
+			return false;
+		}
+		// Inspect decoded variants without changing the stored literal text.
+		$check = $text;
+		for ( $i = 0; $i < 8; $i++ ) {
+			$activeTags = '/<\s*\/?\s*(?:script|style|iframe|object|embed|form|input|textarea|' .
+				'select|link|meta|base|img|svg|math)\b/i';
+			$unsafeProtocols = '/(?:javascript|vbscript|data|about|chrome(?:-extension)?|' .
+				'ms-its|mhtml|file)\s*:/i';
+			if ( preg_match( $activeTags, $check ) ||
+				preg_match( '/\bon\w+\s*=/i', $check ) ||
+				preg_match( $unsafeProtocols, $check )
+			) {
+				return false;
+			}
+			$decoded = html_entity_decode( $check, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+			if ( $decoded === $check ) {
+				return true;
+			}
+			$check = $decoded;
+		}
+		return false;
+	}
+
+	/**
 	 * Sanitize identifier strings (IDs, type names, etc.)
 	 *
 	 * @param string $identifier Raw identifier

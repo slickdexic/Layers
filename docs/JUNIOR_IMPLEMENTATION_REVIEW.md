@@ -559,7 +559,7 @@ Junior completed the J99 upgrade guide rehearsal following `docs/UPGRADING.md`:
   - Ran `php maintenance/run.php refreshLinks` (165 pages estimated, 0 illegal links deleted).
   - Ran `php maintenance/run.php runJobs` (all queue jobs processed cleanly).
   - Dry run output:
-    - Step 1: 7 `File:` pages (`File:FT-Image-149-000001.jpg`, `File:FT-Image-149-000002.jpg`, `File:ImageTest02.jpg`, `File:ImageTest03.png`, `File:Layers migration fixture A.png`, `File:Layers migration fixture B.pdf`, `File:Somepdf.pdf`).
+    - Step 1: 7 `File:` pages (`File:FT-Image-149-000001.jpg`, `File:FT-Image-149-000002.jpg`, `File:Example.jpg`, `File:ImageTest03.png`, `File:Layers migration fixture A.png`, `File:Layers migration fixture B.pdf`, `File:Somepdf.pdf`).
     - Step 2: 12 pages with copies (`DeleteMe001`–`DeleteMe007`, `Layers migration fixture/Template`, `Layers migration fixture/Taken`, `Layers migration fixture/Direct`, `Layers migration fixture/Slides 1`, `Layers migration fixture/Slides 2`).
     - Step 3: 5 `Slide:` pages to create (`Slide:LayersAdoptionAcceptance`, `Slide:LayersAdoptionJ64Slide`, `Slide:LayersAdoptionJ64Unrenderable`, `Slide:LayersAdoptionUnrenderable`, `Slide:Layers migration fixture slide two`).
     - Comparison with first migration (16 edits and 4 `Slide:` pages): The 3 additional edits and 1 additional `Slide:` page are the migration fixture pages (`File:Layers migration fixture A.png`, `File:Layers migration fixture B.pdf`, `Layers migration fixture/*`, and `Slide:Layers migration fixture slide two`), which were introduced in J95/J96 after the original baseline wiki migration.
@@ -2322,7 +2322,7 @@ Lead B01 now specifies selected-page PDF adoption: copy only the explicitly sele
 
 ## Current direction: ordinary page-owned drawings — September 23, 2026
 
-**User acceptance exposed the missing integration:** editing File:ImageTest02.jpg on DeleteMe004 still uses shared Layers storage and creates no DeleteMe004 revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
+**User acceptance exposed the missing integration:** editing File:Example.jpg on local-test-page-b still uses shared Layers storage and creates no local-test-page-b revision. The slide pilot is not completion of the requested feature. The approved next milestone is explicit PageID-backed ownership, safe adoption of existing annotations and the normal embedding/edit/save/old-revision workflow for images, PDFs and general-purpose slides.
 
 The [page ownership implementation plan](PAGE_OWNED_BINDING_PLAN.md) defines identity, atomic adoption, move/copy behavior, source pinning, implementation order and acceptance gates. Ownership uses native PageID plus stable surface identity; names are labels. Adoption copies an exact shared revision and commits the embedding binding and complete snapshot in one native page revision. Existing shared sets are preserved. Proposed ownership=page syntax is not implemented or available for use yet.
 
@@ -2443,7 +2443,7 @@ Implemented end-to-end browser acceptance suite `tests/e2e/page-owned-binding.sp
 - **Environment & safety verification**:
   - Validated target root strictly matches `http://localhost:8080` (or loopback equivalent) and stops immediately if configured to a disposable wiki.
   - QA credentials read securely from `$env:TEMP\layers-original-session.json`.
-  - Automated tests strictly target `Layers_browser_acceptance`, leaving manual testing pages (`Layers_history_test`, `DeleteMe004`), `Main Page`, files, and wiki settings untouched.
+  - Automated tests strictly target `Layers_browser_acceptance`, leaving manual testing pages (`Layers_history_test`, `local-test-page-b`), `Main Page`, files, and wiki settings untouched.
 - **Ordered verification sequence**:
   1. *Authentication, base capture & initial publication*:
      - Authenticated as QA actor; captured initial main wikitext and initial snapshot via native API.

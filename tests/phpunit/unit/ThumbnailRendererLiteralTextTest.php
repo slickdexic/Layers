@@ -50,6 +50,7 @@ namespace MediaWiki\Extension\Layers\Tests {
 				$cases[$type . ' expression'] = [ $type, '%[fx:6*7]', '%%[fx:6*7]' ];
 				$cases[$type . ' property and percentage'] = [ $type, '50% / %n / %%', '50%% / %%n / %%%%' ];
 				$cases[$type . ' plain'] = [ $type, 'Plain note', 'Plain note' ];
+				$cases[$type . ' literal markup'] = [ $type, 'a<b>c <button>', 'a<b>c <button>' ];
 			}
 			return $cases;
 		}

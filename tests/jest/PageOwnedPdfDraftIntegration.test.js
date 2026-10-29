@@ -73,7 +73,7 @@ describe( 'Complete PDF drafts through actual storage and lifecycle', () => {
 			expect( work.api.postWithToken ).not.toHaveBeenCalled();
 		} finally { drafts.dispose(); work.close(); }
 	} );
-	it( 'retires every owned base after a clean complete save and does not recreate it on disposal', async () => {
+	it( 'retires a superseded base after Save and the final backup on clean close', async () => {
 		const work = await fixture(), drafts = new Lifecycle( work.bridge, controller( work, 'b' ), ui( true ) );
 		try {
 			await drafts.initialize();
@@ -83,7 +83,7 @@ describe( 'Complete PDF drafts through actual storage and lifecycle', () => {
 			const result = await drafts.save( 'One complete save' );
 			expect( result ).toMatchObject( { revisionId: 13, dirty: false, draftPersisted: true } );
 			expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
-			expect( Object.keys( stored() ) ).toHaveLength( 2 );
+			expect( Object.keys( stored() ) ).toHaveLength( 1 );
 			expect( drafts.finalizeClose() ).toBe( true );
 			drafts.dispose();
 			expect( stored() ).toStrictEqual( {} );

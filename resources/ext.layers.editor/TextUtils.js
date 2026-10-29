@@ -78,29 +78,28 @@
 		 *
 		 * @param {Object} layer - The text layer object
 		 * @param {CanvasRenderingContext2D} ctx - Canvas context for measuring
-		 * @param {number} canvasWidth - Canvas width for max line width calculation
 		 * @return {Object|null} Text metrics object or null if invalid
 		 */
-		static measureTextLayer( layer, ctx, canvasWidth ) {
+		static measureTextLayer( layer, ctx ) {
 			if ( !layer ) {
 				return null;
 			}
 
 			const fontSize = layer.fontSize || 16;
 			const fontFamily = layer.fontFamily || 'Arial';
-			const sanitizedText = TextUtils.sanitizeTextContent( layer.text || '' );
+			// Plain text is painted literally on one line by TextRenderer. Measure
+			// the same string rather than wrapping or stripping visible characters.
+			const text = layer.text || '';
 			const lineHeight = fontSize * 1.2;
-			const maxLineWidth = layer.maxWidth ||
-				( canvasWidth ? canvasWidth * 0.8 : fontSize * Math.max( sanitizedText.length, 1 ) );
 
 			// Fallback for headless/test environments without context
 			if ( !ctx ) {
 				return {
-					lines: [ sanitizedText ],
+					lines: [ text ],
 					fontSize: fontSize,
 					fontFamily: fontFamily,
 					lineHeight: lineHeight,
-					width: Math.max( sanitizedText.length * fontSize * 0.6, fontSize ),
+					width: Math.max( text.length * fontSize * 0.6, fontSize ),
 					height: lineHeight,
 					originX: layer.x || 0,
 					originY: ( layer.y || 0 ) - fontSize,
@@ -113,25 +112,9 @@
 
 			ctx.save();
 			ctx.font = fontSize + 'px ' + fontFamily;
-			let lines = TextUtils.wrapText( sanitizedText, maxLineWidth, ctx );
-			if ( !lines.length ) {
-				lines = [ '' ];
-			}
-
-			let totalTextWidth = 0;
-			let metricsForLongest = null;
-			for ( let i = 0; i < lines.length; i++ ) {
-				const lineMetrics = ctx.measureText( lines[ i ] || ' ' );
-				if ( lineMetrics.width > totalTextWidth ) {
-					totalTextWidth = lineMetrics.width;
-					metricsForLongest = lineMetrics;
-				}
-			}
-			if ( totalTextWidth === 0 ) {
-				const fallbackMetrics = ctx.measureText( sanitizedText || ' ' );
-				totalTextWidth = fallbackMetrics.width;
-				metricsForLongest = fallbackMetrics;
-			}
+			const lines = [ text ];
+			const metricsForLongest = ctx.measureText( text || ' ' );
+			const totalTextWidth = metricsForLongest.width;
 
 			ctx.restore();
 
@@ -141,10 +124,7 @@
 			const descent = metricsForLongest &&
 				typeof metricsForLongest.actualBoundingBoxDescent === 'number' ?
 				metricsForLongest.actualBoundingBoxDescent : fontSize * 0.2;
-			let totalHeight = ascent + descent;
-			if ( lines.length > 1 ) {
-				totalHeight = ascent + descent + ( lines.length - 1 ) * lineHeight;
-			}
+			const totalHeight = ascent + descent;
 
 			const textAlign = layer.textAlign || 'left';
 			let alignOffset = 0;
@@ -160,8 +140,22 @@
 					alignOffset = 0;
 			}
 
-			const originX = ( layer.x || 0 ) - alignOffset;
-			const originY = ( layer.y || 0 ) - ascent;
+			let originX = ( layer.x || 0 ) - alignOffset;
+			let originY = ( layer.y || 0 ) - ascent;
+
+			// TextRenderer rotates about the baseline-derived text center, which
+			// is not necessarily the center of the glyph bounds. Move the bounds
+			// to the same rotated center before selection handles rotate them.
+			if ( layer.rotation ) {
+				const pivotX = textAlign === 'center' ? ( layer.x || 0 ) :
+					( layer.x || 0 ) + ( textAlign === 'right' ? -totalTextWidth / 2 : totalTextWidth / 2 );
+				const pivotY = ( layer.y || 0 ) - fontSize / 4;
+				const dx = originX + totalTextWidth / 2 - pivotX;
+				const dy = originY + totalHeight / 2 - pivotY;
+				const radians = layer.rotation * Math.PI / 180;
+				originX += ( Math.cos( radians ) - 1 ) * dx - Math.sin( radians ) * dy;
+				originY += Math.sin( radians ) * dx + ( Math.cos( radians ) - 1 ) * dy;
+			}
 
 			return {
 				lines: lines,

@@ -35,11 +35,13 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\Extension\Layers\Utility\AtomicPdfCache;
 use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
+use Wikimedia\AtEase\AtEase;
 use Wikimedia\ParamValidator\ParamValidator;
 
 class ApiLayersExport extends ApiBase {
@@ -64,6 +66,8 @@ class ApiLayersExport extends ApiBase {
 	 * @var array
 	 */
 	private array $pageImageRefs = [];
+	/** @var string[] Fresh private rendered page paths owned by this export */
+	private array $exportPageImages = [];
 
 	/**
 	 * @param ApiMain $main
@@ -129,14 +133,6 @@ class ApiLayersExport extends ApiBase {
 		$sha1 = $this->getFileSha1( $file, $imgName );
 		$pageCount = $this->getPageCount( $file );
 
-		// Set names are user-defined, so an unnamed request resolves to whatever
-		// this document's most recent set is called rather than to a fixed name.
-		// Resolution spans every page: sets are stored per page, so anchoring on
-		// page 1 exported an unannotated PDF whenever the cover page had no layers.
-		$setName = (string)( SetNameResolver::resolveAcrossPages(
-			$db, $imgName, $sha1, $params['setname'] ?? null, $pageCount
-		) ?? '' );
-
 		$maxPages = (int)$this->getConfig()->get( 'LayersPdfExportMaxPages' );
 		if ( $maxPages > 0 && $pageCount > $maxPages ) {
 			$this->dieWithError(
@@ -144,6 +140,14 @@ class ApiLayersExport extends ApiBase {
 				'toomanypages'
 			);
 		}
+
+		// Set names are user-defined, so an unnamed request resolves to whatever
+		// this document's most recent set is called rather than to a fixed name.
+		// Resolution spans every page: sets are stored per page, so anchoring on
+		// page 1 exported an unannotated PDF whenever the cover page had no layers.
+		$setName = (string)( SetNameResolver::resolveAcrossPages(
+			$db, $imgName, $sha1, $params['setname'] ?? null, $pageCount
+		) ?? '' );
 
 		$width = (int)$this->getConfig()->get( 'LayersPdfExportWidth' );
 		if ( isset( $params['width'] ) && (int)$params['width'] > 0 ) {
@@ -167,7 +171,7 @@ class ApiLayersExport extends ApiBase {
 		}
 
 		$cacheKey = md5( implode( '|', [
-			$sha1, $setName, (string)$width, (string)$pageCount, implode( ',', $pageMeta ),
+			'complete-pdf-v2', $sha1, $setName, (string)$width, (string)$pageCount, implode( ',', $pageMeta ),
 			(string)ThumbnailRenderer::CACHE_VERSION,
 		] ) );
 
@@ -182,26 +186,22 @@ class ApiLayersExport extends ApiBase {
 			$cached = true;
 		} else {
 			$pageImages = [];
-			for ( $page = 1; $page <= $pageCount; $page++ ) {
-				$imgPath = $this->renderPageImage(
-					$file, $db, $imgName, $sha1, $setName, $page, $width, ( $pageMeta[$page] !== 'none' )
-				);
-				if ( $imgPath === null ) {
-					continue;
+			try {
+				$pageImages = $this->renderAllPages( $file, $db, $imgName, $sha1, $setName, $width, $pageMeta );
+				if ( !$pageImages || !AtomicPdfCache::publish( $outputPath,
+					fn ( string $temporary ) => $this->stitchPdf( $pageImages, $temporary )
+				) ) {
+					$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 				}
-				$pageImages[] = $imgPath;
+			} finally {
+				foreach ( $this->exportPageImages as $path ) {
+					if ( is_file( $path ) ) {
+						AtEase::quietCall( 'unlink', $path );
+					}
+				}
+				$this->exportPageImages = [];
+				$this->pageImageRefs = [];
 			}
-
-			if ( count( $pageImages ) === 0 ) {
-				$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
-			}
-
-			if ( !$this->stitchPdf( $pageImages, $outputPath ) ) {
-				$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
-			}
-
-			// The PDF is written; the page rasters can go now.
-			$this->pageImageRefs = [];
 		}
 
 		$url = $this->getExportUrl( $title, $cacheKey );
@@ -214,22 +214,35 @@ class ApiLayersExport extends ApiBase {
 			'cached' => $cached ? 1 : 0,
 		];
 
-		// The ImageMagick compositor has no primitive for several layer types
-		// (see ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE). Say so instead of
-		// handing back a PDF that silently omits the user's annotations. Not
-		// reported for a cache hit, because nothing was rendered on this request.
-		if ( !$cached && $this->droppedTypes ) {
-			$dropped = array_keys( $this->droppedTypes );
-			sort( $dropped );
-			$payload['incomplete'] = 1;
-			$payload['droppedtypes'] = $dropped;
-			ApiResult::setIndexedTagName( $payload['droppedtypes'], 'type' );
-			$this->addWarning( [ 'layers-export-incomplete', implode( ', ', $dropped ) ] );
-		}
-
 		$this->getResult()->addValue(
 			null, $this->getModuleName(), $payload, ApiResult::NO_SIZE_CHECK
 		);
+	}
+
+	/**
+	 * Render every required page, refusing the whole export if any page fails.
+	 *
+	 * @param mixed $file
+	 * @param mixed $db
+	 * @param string $imgName
+	 * @param string $sha1
+	 * @param string $setName
+	 * @param int $width
+	 * @param array $pageMeta
+	 * @return string[]|null
+	 */
+	private function renderAllPages( $file, $db, string $imgName, string $sha1, string $setName,
+		int $width, array $pageMeta
+	): ?array {
+		$images = [];
+		foreach ( $pageMeta as $page => $meta ) {
+			$path = $this->renderPageImage( $file, $db, $imgName, $sha1, $setName, $page, $width, $meta !== 'none' );
+			if ( $path === null ) {
+				return null;
+			}
+			$images[] = $path;
+		}
+		return $images;
 	}
 
 	/**
@@ -246,11 +259,20 @@ class ApiLayersExport extends ApiBase {
 	 * @param bool $hasLayers Whether a layer set exists for this page
 	 * @return string|null Filesystem path to the page image, or null on failure
 	 */
-	private function renderPageImage(
+	protected function renderPageImage(
 		$file, $db, string $imgName, string $sha1, string $setName, int $page, int $width, bool $hasLayers
 	): ?string {
 		if ( $hasLayers ) {
 			$set = $db->getLayerSetByName( $imgName, $sha1, $setName, $page );
+			if ( !$set || !isset( $set['data'] ) || !is_array( $set['data'] ) ) {
+				return null;
+			}
+			$data = $set['data'];
+			if ( ( array_key_exists( 'layers', $data ) && !is_array( $data['layers'] ) ) ||
+				( !array_key_exists( 'layers', $data ) && $data !== [] && !array_is_list( $data ) )
+			) {
+				return null;
+			}
 			$layers = $this->extractLayers( $set );
 			if ( $layers ) {
 				$renderer = $this->createThumbnailRenderer();
@@ -259,17 +281,27 @@ class ApiLayersExport extends ApiBase {
 					'page' => $page,
 					'layers' => true,
 					'layerData' => $layers,
+					'layersExportNonce' => bin2hex( random_bytes( 16 ) ),
 				] );
 				foreach ( $renderer->getDroppedLayerTypes() as $type ) {
 					$this->droppedTypes[$type] = true;
 				}
-				if ( $path && file_exists( $path ) ) {
+				if ( !$path || !is_file( $path ) ) {
+					return null;
+				}
+				$thumbDir = realpath( RenderCache::getThumbDir( $this->getConfig() ) );
+				$actual = realpath( $path );
+				if ( $actual && $thumbDir && dirname( $actual ) === $thumbDir ) {
+					$this->exportPageImages[] = $actual;
+				}
+				if ( $actual && $thumbDir && dirname( $actual ) === $thumbDir && !$this->droppedTypes ) {
 					return $path;
 				}
+				return null;
 			}
 		}
 
-		// No layers (or compositing failed): use the plain rasterised page.
+		// A page without layers uses the plain rasterised page.
 		return $this->basePageImage( $file, $width, $page );
 	}
 
@@ -346,8 +378,8 @@ class ApiLayersExport extends ApiBase {
 			return false;
 		}
 
-		// convert page1 page2 ... -density 150 output.pdf
-		$args = array_merge( [ $convert ], $pageImages, [ '-density', '150', $outputPath ] );
+		// Force PDF format for the uniquely named temporary output.
+		$args = array_merge( [ $convert ], $pageImages, [ '-density', '150', 'pdf:' . $outputPath ] );
 
 		$limits = [ 'time' => 60 ];
 		try {

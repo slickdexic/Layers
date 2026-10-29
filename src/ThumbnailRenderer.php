@@ -104,6 +104,9 @@ class ThumbnailRenderer {
 			return null;
 		}
 
+		$outputPath = null;
+		$generated = false;
+		$exportFresh = isset( $params['layersExportNonce'] );
 		try {
 			$layers = $params['layerData'];
 			if ( empty( $layers ) ) {
@@ -112,7 +115,8 @@ class ThumbnailRenderer {
 
 			// Produce the base thumbnail first
 			$baseParams = $params;
-			unset( $baseParams['layers'], $baseParams['layerSetId'], $baseParams['layerData'] );
+			unset( $baseParams['layers'], $baseParams['layerSetId'], $baseParams['layerData'],
+				$baseParams['layersExportNonce'] );
 			$baseThumb = $file->transform( $baseParams );
 			if ( !$baseThumb || ( method_exists( $baseThumb, 'isError' ) && $baseThumb->isError() ) ) {
 				if ( $this->logger ) {
@@ -133,6 +137,10 @@ class ThumbnailRenderer {
 				RenderCache::artefactKey( ForeignFileHelper::getFileSha1( $file ) ) . '_' .
 				md5( self::CACHE_VERSION . ':' . json_encode( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
+				if ( $exportFresh ) {
+					$outputPath = null;
+					return null;
+				}
 				return $outputPath;
 			}
 
@@ -164,6 +172,7 @@ class ThumbnailRenderer {
 			$scaleY = $origH > 0 ? ( $targetH / $origH ) : $scaleX;
 
 			if ( $this->overlayLayers( $basePath, $layers, $outputPath, $scaleX, $scaleY, $targetW, $targetH ) ) {
+				$generated = true;
 				return $outputPath;
 			}
 		} catch ( \Throwable $e ) {
@@ -172,6 +181,10 @@ class ThumbnailRenderer {
 					'Layers: thumbnail generation failed: {message}',
 					[ 'exception' => $e, 'message' => $e->getMessage() ]
 				);
+			}
+		} finally {
+			if ( $exportFresh && !$generated && $outputPath && is_file( $outputPath ) ) {
+				AtEase::quietCall( 'unlink', $outputPath );
 			}
 		}
 

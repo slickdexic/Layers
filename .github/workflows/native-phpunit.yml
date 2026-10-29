@@ -1,0 +1,53 @@
+name: Native MediaWiki tests
+
+on:
+  push:
+    branches: [ main, "**" ]
+  pull_request:
+    branches: [ main, REL1_43, REL1_39 ]
+
+permissions:
+  contents: read
+
+jobs:
+  page-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Layers
+        uses: actions/checkout@v4
+        with:
+          path: layers
+
+      - name: Checkout MediaWiki 1.44
+        uses: actions/checkout@v4
+        with:
+          repository: wikimedia/mediawiki
+          ref: REL1_44
+          path: mediawiki
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, sqlite3, pdo_sqlite, gd, xml
+          tools: composer
+          coverage: none
+
+      - name: Install MediaWiki dependencies and test harness
+        working-directory: mediawiki
+        run: composer update --no-interaction --no-progress --prefer-dist
+
+      - name: Install disposable wiki and Layers
+        working-directory: mediawiki
+        run: |
+          composer mw-install:sqlite
+          ln -s "$GITHUB_WORKSPACE/layers" extensions/Layers
+          printf '\n%s\n' "wfLoadExtension( 'Layers' );" >> LocalSettings.php
+          php maintenance/run.php update --quick
+
+      - name: Run native page-history regressions
+        working-directory: mediawiki
+        env:
+          MW_INSTALL_PATH: ${{ github.workspace }}/mediawiki
+        run: vendor/bin/phpunit --do-not-cache-result -c extensions/Layers/tests/phpunit/ci-native.xml

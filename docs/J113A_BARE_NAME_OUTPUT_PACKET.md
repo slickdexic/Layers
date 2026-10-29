@@ -117,7 +117,7 @@ Record the exact temporary change, test name, expected failure and observed fail
 
 ## Commands and scheduling
 
-Run from `F:\Docker\mediawiki\extensions\Layers`. The native command uses isolated core test tables in the existing `mediawiki-145` test container. This assignment authorizes the native group below once you verify that no other native suite, browser acceptance or migration command is active. Run it serially. If the environment is occupied or you cannot establish that it is idle, continue independent code/standalone work and report the test window needed; do not start a competing run. Docker is test infrastructure only.
+Run from `the extension checkout`. The native command uses isolated core test tables in the existing `mediawiki-145` test container. This assignment authorizes the native group below once you verify that no other native suite, browser acceptance or migration command is active. Run it serially. If the environment is occupied or you cannot establish that it is idle, continue independent code/standalone work and report the test window needed; do not start a competing run. Docker is test infrastructure only.
 
 ```powershell
 php vendor/bin/phpunit --no-coverage -c phpunit.xml --filter DirectEmbeddingRewriterTest

@@ -186,7 +186,7 @@ class WikitextHooks {
 
 	/**
 	 * Queue of set names per filename detected from wikitext (in order of appearance)
-	 * e.g. ['ImageTest02.jpg' => ['Paul', 'default', 'anatomy']]
+	 * e.g. ['Example.jpg' => ['example', 'default', 'anatomy']]
 	 * This allows multiple instances of the same image with different layer sets
 	 * @var array<string, array<string>>
 	 */
@@ -248,7 +248,7 @@ class WikitextHooks {
 
 	/**
 	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
-	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
+	 * e.g. ['Example.jpg' => ['editor', null, 'viewer']]
 	 * @var array<string, array<string|null>>
 	 */
 	private static $fileLinkTypes = [];
@@ -791,7 +791,7 @@ class WikitextHooks {
 
 	/**
 	 * Render a file with layers
-	 * Usage: {{#layeredfile:ImageTest02.jpg|500px|layerset=on|caption}}
+	 * Usage: {{#layeredfile:Example.jpg|500px|layerset=on|caption}}
 	 *
 	 * @param mixed $parser The parser object
 	 * @param mixed $frame The frame object

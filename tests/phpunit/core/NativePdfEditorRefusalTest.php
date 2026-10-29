@@ -182,6 +182,18 @@ class NativePdfEditorRefusalTest extends RealAssetTestCase {
 		$this->assertSame( $before, $this->witness( $owner, 'restored-after' ) );
 	}
 
+	public function testIndependentResolutionKeepsAvailableImageWhenPdfIsUnavailable(): void {
+		[ $owner, , $actor, $controlled ] = $this->fixture();
+		$document = new LayersDocumentContent( $this->witness( $owner, 'mixed-resolution' )['layers'] );
+		$this->nativeCount = 0;
+		TestingAccessWrapper::newFromObject( $controlled )->pageCount = null;
+		$files = $this->resolver->resolveIndividually( $document, $actor, [ 'anchor', 'image' ] );
+		$this->assertArrayHasKey( 'image', $files );
+		$this->assertArrayNotHasKey( 'anchor', $files );
+		$this->expectException( \DomainException::class );
+		$this->resolver->resolve( $document, $actor, [ 'anchor', 'image' ] );
+	}
+
 	public static function provideUnavailableCounts(): array {
 		return [ 'false native metadata count' => [ false ], 'non-integer native metadata count' => [ '2' ] ];
 	}

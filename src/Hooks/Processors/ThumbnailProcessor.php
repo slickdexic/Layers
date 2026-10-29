@@ -331,13 +331,7 @@ class ThumbnailProcessor {
 			}
 
 			$filename = $file->getName();
-			$sha1 = $file->getSha1();
-
-			// For foreign files without SHA1, use fallback identifier
-			if ( empty( $sha1 ) && ForeignFileHelper::isForeignFile( $file ) ) {
-				$sha1 = 'foreign_' . sha1( $filename );
-				$this->log( "Using fallback SHA1 for foreign file: $filename" );
-			}
+			$sha1 = ForeignFileHelper::getFileSha1( $file, $filename );
 
 			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
 			$this->log( sprintf(

@@ -1627,6 +1627,7 @@ class PageOwnedPilotTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		$this->assertSame( 'presentation', $oldData['surface']['id'] );
 
 		// Case B: Anonymous reader when page read is allowed
+		$this->overrideConfigValue( 'GroupPermissions', [ '*' => [ 'read' => true ] ] );
 		$anonUser = $this->getServiceContainer()->getUserFactory()->newAnonymous();
 		$anonData = $pilot->prepareViewer( $title->getPrefixedText(), $firstId, 'presentation', $anonUser );
 		$this->assertSame( $firstId, $anonData['revisionId'] );

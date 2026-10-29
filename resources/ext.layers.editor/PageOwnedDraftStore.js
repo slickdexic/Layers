@@ -7,7 +7,55 @@
 	'use strict';
 
 	const STORAGE_KEY_PREFIX = 'layers-page-owned-draft-v1:';
+	const PACKED_PREFIX = 'layers-packed-draft-v1:';
 	const earlierCreationRecords = new WeakMap();
+
+	// Repeated image data can make an otherwise valid Undo backup exceed browser quota.
+	// Pack only after quota refusal; decoding restores the exact original JSON string.
+	function packDraft( raw, parsed ) {
+		const counts = new Map(), stack = [ parsed ];
+		while ( stack.length ) {
+			const value = stack.pop();
+			if ( typeof value === 'string' && value.length >= 4096 ) {
+				counts.set( value, ( counts.get( value ) || 0 ) + 1 );
+			} else if ( value && typeof value === 'object' ) {
+				for ( const child of Object.values( value ) ) { stack.push( child ); }
+			}
+		}
+		const candidates = Array.from( counts ).filter( entry => entry[ 1 ] > 1 )
+			.sort( ( a, b ) => b[ 0 ].length * ( b[ 1 ] - 1 ) - a[ 0 ].length * ( a[ 1 ] - 1 ) ).slice( 0, 32 );
+		let index = 0, marker = '~layers-draft-0_';
+		while ( raw.includes( marker ) ) { marker = '~layers-draft-' + ++index + '_'; }
+		let data = raw;
+		const literals = [];
+		for ( const [ value ] of candidates ) {
+			const literal = JSON.stringify( value ), pieces = data.split( literal );
+			if ( pieces.length < 3 ) { continue; }
+			data = pieces.join( marker + literals.length + '~' );
+			literals.push( literal );
+		}
+		if ( !literals.length ) { return null; }
+		const packed = PACKED_PREFIX + JSON.stringify( [ marker, literals, data ] );
+		return packed.length < raw.length && unpackDraft( packed ) === raw ? packed : null;
+	}
+
+	function unpackDraft( raw ) {
+		if ( !raw.startsWith( PACKED_PREFIX ) ) { return raw; }
+		const packed = JSON.parse( raw.slice( PACKED_PREFIX.length ) );
+		if ( !Array.isArray( packed ) || packed.length !== 3 || typeof packed[ 0 ] !== 'string' ||
+			!/^~layers-draft-\d+_$/.test( packed[ 0 ] ) || !Array.isArray( packed[ 1 ] ) ||
+			packed[ 1 ].length > 32 || typeof packed[ 2 ] !== 'string' ) { throw new Error(); }
+		let data = packed[ 2 ];
+		packed[ 1 ].forEach( ( literal, index ) => {
+			if ( typeof literal !== 'string' || literal.length < 2 ) { throw new Error(); }
+			const parts = data.split( packed[ 0 ] + index + '~' );
+			if ( parts.length < 2 || data.length + ( parts.length - 1 ) * literal.length > 128 * 1024 * 1024 ) {
+				throw new Error();
+			}
+			data = parts.join( literal );
+		} );
+		return data;
+	}
 
 	/**
 	 * Create a safe error with no diagnostic leakage.
@@ -46,7 +94,7 @@
 					} catch ( error ) { continue; }
 					const raw = this._read( key );
 					try {
-						const envelope = typeof raw === 'string' ? JSON.parse( raw ) : null;
+						const envelope = typeof raw === 'string' ? JSON.parse( unpackDraft( raw ) ) : null;
 						if ( !envelope || envelope.version !== 1 || !envelope.scope || Object.keys( envelope.scope ).length !== 5 ||
 							Object.keys( candidateScope ).some( name => envelope.scope[ name ] !== candidateScope[ name ] ) ) { continue; }
 						if ( pdf ) {
@@ -74,7 +122,7 @@
 				const record = earlierCreationRecords.get( this ) && earlierCreationRecords.get( this ).get( handle );
 				if ( !record || this._storage !== record.storage || this._read !== record.read || this._writerId !== record.writer ||
 					this._read( record.key ) !== record.raw ) { throw new Error(); }
-				return { scope: { ...record.scope }, writerId: record.writerId, raw: record.raw };
+				return { scope: { ...record.scope }, writerId: record.writerId, raw: unpackDraft( record.raw ) };
 			} catch ( error ) { throw failure( 'layers-draft-storage-failed' ); }
 		}
 
@@ -130,18 +178,52 @@
 			try {
 				const recordKey = this._recordKey( key, this._writerId );
 				const previous = this._ownedRecords.get( recordKey );
+				const before = this._read( recordKey );
 				if ( previous !== undefined ) {
-					const current = this._read( recordKey );
-					if ( current !== null && current !== undefined && current !== previous ) {
+					if ( before !== null && before !== undefined && before !== previous ) {
 						throw new Error();
 					}
 				}
-				this._write( recordKey, draftJson );
+				let stored = draftJson;
+				try {
+					this._write( recordKey, stored );
+				} catch ( error ) {
+					if ( !error || ( error.name !== 'QuotaExceededError' && error.name !== 'NS_ERROR_DOM_QUOTA_REACHED' ) ||
+						this._read( recordKey ) !== before ) { throw error; }
+					stored = packDraft( draftJson, parsed );
+					if ( stored === null ) { throw error; }
+					this._write( recordKey, stored );
+				}
 				if ( this._writerId !== undefined ) {
-					this._ownedRecords.set( recordKey, draftJson );
+					this._ownedRecords.set( recordKey, stored );
 				}
 			} catch ( e ) {
 				throw failure( 'layers-draft-storage-failed' );
+			}
+		}
+
+		/** Remove only an owned old base after its replacement has been verified. */
+		retireConfirmed( previous, current ) {
+			const oldKey = this._recordKey( this._validateAndBuildKey( previous ), this._writerId );
+			const newKey = this._recordKey( this._validateAndBuildKey( current ), this._writerId );
+			if ( this._writerId === undefined || oldKey === newKey ||
+				[ 'wiki', 'user', 'owner', 'surfaceId' ].some( key => previous[ key ] !== current[ key ] ) ||
+				current.baseRevisionId <= previous.baseRevisionId ) { return false; }
+			const old = this._ownedRecords.get( oldKey ), replacement = this._ownedRecords.get( newKey );
+			if ( old === undefined || replacement === undefined ) { return false; }
+			try {
+				const envelope = JSON.parse( unpackDraft( old ) );
+				if ( Object.hasOwn( envelope, 'creationOrigin' ) || Object.hasOwn( envelope, 'pdfCreation' ) ) {
+					return false;
+				}
+				if ( this._read( newKey ) !== replacement || this._read( oldKey ) !== old ||
+					typeof this._storage.removeItem !== 'function' || this._read( newKey ) !== replacement ) { return false; }
+				this._storage.removeItem( oldKey );
+				if ( this._read( oldKey ) !== null ) { return false; }
+				this._ownedRecords.delete( oldKey );
+				return true;
+			} catch ( error ) {
+				return false;
 			}
 		}
 
@@ -219,6 +301,7 @@
 
 			let parsed;
 			try {
+				raw = unpackDraft( raw );
 				parsed = JSON.parse( raw );
 			} catch ( e ) {
 				throw failure( 'layers-draft-storage-failed' );

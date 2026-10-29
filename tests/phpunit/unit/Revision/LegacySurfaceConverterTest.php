@@ -6,6 +6,17 @@ use MediaWiki\Extension\Layers\Revision\LegacySurfaceConverter;
 
 /** @covers \MediaWiki\Extension\Layers\Revision\LegacySurfaceConverter */
 class LegacySurfaceConverterTest extends \MediaWikiUnitTestCase {
+	public function testLiteralLayerTextSurvivesLegacyConversion(): void {
+		[ $record, $media ] = self::provideFixtures()['image-text-callout.json:0'];
+		$data = json_decode( $record['json'] );
+		$data->layers[0]->text = 'a<b>c <button>';
+		$data->layers[0]->richText = [ (object)[ 'text' => '  <button>  ' ] ];
+		$record['json'] = json_encode( $data );
+		$surface = json_decode( ( new LegacySurfaceConverter() )->convert( $record, 'A', $media ) )->surfaces[0];
+		$this->assertSame( 'a<b>c <button>', $surface->layers[0]->text );
+		$this->assertSame( '  <button>  ', $surface->layers[0]->richText[0]->text );
+	}
+
 	public function testFileVersionTimeDoesNotComeFromAnnotationTime(): void {
 		[ $record, $media ] = self::provideFixtures()['image-text-callout.json:0'];
 		$media['source']['timestamp'] = '20200101000000';

@@ -104,7 +104,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			'revid' => $id, 'binding' => $binding ], null, false, $user );
 	}
 
-	public function testAnonymousReadOfCurrentDrawingsIsBrieflyCacheable(): void {
+	public function testAnonymousBindingReadsRemainPrivateAfterRevisionChanges(): void {
 		$this->setGroupPermissions( '*', 'read', true );
 		[ $title, $id, $user ] = $this->publish();
 		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
@@ -119,8 +119,8 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			$control = TestingAccessWrapper::newFromObject( $this->apiMain )->mCacheControl;
 			return [ array_keys( $result['bindings'] ), $this->apiMain->getCacheMode(), $control ];
 		};
-		// A client-chosen age does not apply; the module's does.
-		$this->assertSame( [ [ $binding ], 'anon-public-user-private', [ 'max-age' => 300, 's-maxage' => 300 ] ],
+		// Neither a client-chosen age nor the legacy setting can make the response public.
+		$this->assertSame( [ [ $binding ], 'private', [ 'max-age' => 0, 's-maxage' => 0 ] ],
 			$read( $id, [ 'maxage' => 3600, 'smaxage' => 3600 ] ) );
 
 		// Once the revision is no longer current it can be hidden, so reads of it stay private.
@@ -128,7 +128,7 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Later snapshot',
 			new WikitextContent( 'Later text' ) );
 		$this->assertSame( [ [ $binding ], 'private', [ 'max-age' => 0, 's-maxage' => 0 ] ], $read( $id ) );
-		$this->assertSame( 'anon-public-user-private', $read( $newId )[1] );
+		$this->assertSame( 'private', $read( $newId )[1] );
 		$this->bindingMaxAge = 0;
 		$this->assertSame( 'private', $read( $newId )[1] );
 	}

@@ -32,6 +32,9 @@ def make_package(commit, output):
     resolved = subprocess.check_output(
         ['git', '-c', 'core.fsmonitor=false', 'rev-parse', '--verify', commit + '^{commit}'],
         cwd=ROOT, text=True, stderr=subprocess.PIPE).strip()
+    git_root = subprocess.check_output(
+        ['git', '-c', 'core.fsmonitor=false', 'rev-parse', '--show-toplevel'],
+        cwd=ROOT, text=True, stderr=subprocess.PIPE).strip()
     output = Path(output).resolve()
     fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
     process = None
@@ -39,7 +42,7 @@ def make_package(commit, output):
     try:
         process = subprocess.Popen(
             ['git', '-c', 'core.fsmonitor=false', 'archive', '--format=tar', '--prefix=Layers/', resolved],
-            cwd=ROOT, stdout=subprocess.PIPE)
+            cwd=git_root, stdout=subprocess.PIPE)
         with os.fdopen(fd, 'wb') as destination:
             fd = None
             with tarfile.open(fileobj=process.stdout, mode='r|') as source, \
@@ -78,6 +81,8 @@ def make_package(commit, output):
         process.stdout.close()
         if process.wait() != 0:
             raise RuntimeError('git archive failed')
+        if included == 0:
+            raise ValueError('Refusing to publish an empty source package')
     except BaseException:
         if fd is not None:
             os.close(fd)

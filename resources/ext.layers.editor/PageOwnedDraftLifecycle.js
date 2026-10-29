@@ -310,6 +310,7 @@
 			if ( !this.ready || this.disposed || this.checking || this.saving ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
+			const previous = typeof this.controller._scope === 'function' ? this.controller._scope() : null;
 			this.saving = true;
 			let result;
 			try {
@@ -325,6 +326,17 @@
 				const persisted = this.flush();
 				if ( result ) {
 					result.draftPersisted = persisted;
+					if ( persisted && result.editorStateValid === true && previous &&
+						this.controller.store && typeof this.controller.store.retireConfirmed === 'function' ) {
+						try {
+							const current = this.controller._scope();
+							if ( current.baseRevisionId === result.revisionId ) {
+								this.controller.store.retireConfirmed( previous, current );
+							}
+						} catch ( error ) {
+							// A failed cleanup leaves the confirmed replacement in place.
+						}
+					}
 				}
 			}
 			return result;

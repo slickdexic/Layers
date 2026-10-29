@@ -100,8 +100,17 @@ explicit dedicated directory is supplied; they are not required for assertions.
 Record the exact source commit, MediaWiki/PHP versions, selected classes, result
 counts and fixture isolation with each run. A native response-object pass does
 not establish final web-server headers, physical Print behavior, a concurrency
-stress test or every supported MediaWiki/device combination. The repository's
-current CI runs standalone PHPUnit; native results must be recorded separately.
+stress test or every supported MediaWiki/device combination.
+
+The candidate [native CI workflow](../.github/workflows/native-phpunit.yml)
+uses MediaWiki 1.44 and a disposable SQLite wiki to run the selected
+`tests/phpunit/ci-native.xml` history-access, publication and batched-read
+classes on pushes and pull requests. The same test selection passed locally
+on MediaWiki 1.44 / MySQL (47 tests / 132 assertions), using the installed
+candidate with the current reader and source-resolver files preloaded. The
+GitHub-hosted setup and SQLite execution await their first successful CI run;
+they are not qualified by the local MySQL result. The full native suite,
+other supported versions, HTTP and browser journeys remain separate checks.
 
 ## Recorded package qualification — October 25, 2026
 

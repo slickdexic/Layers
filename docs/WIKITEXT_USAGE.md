@@ -10,7 +10,7 @@ override the page-owned selection and history rules in the maintained guide.
 The Layers extension supports controlling which layers are displayed using the `layerset=` parameter in standard MediaWiki file syntax:
 
 ```text
-[[File:ImageTest02.jpg|500px|layerset=on|Your caption]]
+[[File:Example.jpg|500px|layerset=on|Your caption]]
 ```
 
 > **Note:** `layers=` is also supported for backwards compatibility. Both parameters work identically; `layerset=` is preferred as it's more descriptive.

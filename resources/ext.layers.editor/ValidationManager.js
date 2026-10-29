@@ -18,38 +18,36 @@ class ValidationManager {
 	}
 
 	/**
-	 * Sanitize layer data before processing
-	 * Recursively sanitizes all string properties to remove dangerous content
+	 * Preserve layer text and sanitize other properties recursively.
 	 *
 	 * @param {Object|Array|*} layerData - Layer data to sanitize
+	 * @param {boolean} literalText Whether this object may contain layer text
 	 * @return {Object|Array|*} Sanitized layer data
 	 */
-	sanitizeLayerData( layerData ) {
+	sanitizeLayerData( layerData, literalText = true ) {
 		if ( !layerData || typeof layerData !== 'object' ) {
 			return layerData;
 		}
 
-		// Handle arrays separately to preserve array type
 		if ( Array.isArray( layerData ) ) {
-			return layerData.map( item => this.sanitizeLayerData( item ) );
+			return layerData.map( item => this.sanitizeLayerData( item, literalText ) );
 		}
 
 		const sanitized = {};
 		for ( const key in layerData ) {
 			if ( Object.prototype.hasOwnProperty.call( layerData, key ) ) {
 				if ( typeof layerData[ key ] === 'string' ) {
-					// SVG strings need special handling - they contain valid < and > characters
-					// Security is handled server-side in ServerSideLayerValidator::validateSvgString()
-					if ( key === 'svg' ) {
+					if ( key === 'text' && literalText ) {
+						sanitized[ key ] = layerData[ key ];
+					} else if ( key === 'svg' ) {
 						sanitized[ key ] = this.sanitizeSvgString( layerData[ key ] );
 					} else {
 						sanitized[ key ] = this.sanitizeString( layerData[ key ] );
 					}
 				} else if ( Array.isArray( layerData[ key ] ) ) {
-					// Preserve array type (important for points array in path layers)
-					sanitized[ key ] = layerData[ key ].map( item => this.sanitizeLayerData( item ) );
+					sanitized[ key ] = layerData[ key ].map( item => this.sanitizeLayerData( item, key === 'richText' ) );
 				} else if ( typeof layerData[ key ] === 'object' && layerData[ key ] !== null ) {
-					sanitized[ key ] = this.sanitizeLayerData( layerData[ key ] );
+					sanitized[ key ] = this.sanitizeLayerData( layerData[ key ], false );
 				} else {
 					sanitized[ key ] = layerData[ key ];
 				}

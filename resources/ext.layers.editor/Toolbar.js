@@ -1887,17 +1887,18 @@
 	}
 
 	selectTool( toolId ) {
-		// Update UI - clear active state from all standalone tool buttons
+		if ( toolId !== 'pointer' && this.editor.canvasManager &&
+			this.editor.canvasManager.getSelectedLayerIds && this.editor.canvasManager.getSelectedLayerIds().length ) {
+			this.editor.canvasManager.deselectAll();
+		}
 		this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ).forEach( ( button ) => {
 			button.classList.remove( 'active' );
 			button.setAttribute( 'aria-pressed', 'false' );
 		} );
 
-		// Update dropdown active states
 		if ( this.toolDropdowns && this.toolDropdowns.length > 0 ) {
 			this.toolDropdowns.forEach( ( dropdown ) => {
 				if ( dropdown.hasTool( toolId ) ) {
-					// This dropdown contains the tool - activate it and update MRU
 					dropdown.setActive( true );
 					// skipCallback=true to prevent recursive call back to selectTool
 					dropdown.selectTool( toolId, true, true );
@@ -1907,7 +1908,6 @@
 			} );
 		}
 
-		// For standalone buttons, set active state directly
 		const selectedButton = this.container.querySelector( '.tool-button:not(.tool-dropdown-trigger)[data-tool="' + toolId + '"]' );
 		if ( selectedButton ) {
 			selectedButton.classList.add( 'active' );

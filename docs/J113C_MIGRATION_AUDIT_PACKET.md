@@ -103,7 +103,7 @@ was used. These are examples of retained evidence, not a wiki-wide audit.
 | --- | --- | --- |
 | `File:Somepdf.pdf` | 2527 | Six retained source-page matches, all legacy name `001`; stored names are `001`, `001 (page 2)` through `001 (page 6)`. Reports one evidence group with `split-current-names`. |
 | `File:Layers_migration_fixture_B.pdf` | 2526 | Two retained matches (pages 1 and 3), both legacy name `notes`; reports the existing split `notes` / `notes (page 3)`. No page-2 member is invented. |
-| `File:ImageTest02.jpg` | 2523 | Eight retained matches in eight distinct name groups, with no reported group issue. This does not establish payload equality or readiness to rewrite. |
+| `File:Example.jpg` | 2523 | Eight retained matches in eight distinct name groups, with no reported group issue. This does not establish payload equality or readiness to rewrite. |
 
 Exact JSON reports are in `tmp/j113c-audit-somepdf-2527.json`,
 `tmp/j113c-audit-fixture-pdf-2526.json` and

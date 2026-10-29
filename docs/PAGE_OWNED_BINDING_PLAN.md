@@ -62,7 +62,7 @@ The server-derived PageID recently added to the existing pilot editor protects p
 
 ## Outcome and acceptance target
 
-On the original localhost:8080 wiki, an author explicitly makes the annotations on File:ImageTest02.jpg embedded in DeleteMe004 owned by DeleteMe004. Editing through that page's ordinary overlay and saving creates a native DeleteMe004 revision. Viewing the previous revision displays the previous annotations against the recorded media version. The same source file on another page remains unchanged. Use separate native test pages for automation; do not overwrite the user's drawing to manufacture a passing demonstration.
+On the original localhost:8080 wiki, an author explicitly makes the annotations on File:Example.jpg embedded in local-test-page-b owned by local-test-page-b. Editing through that page's ordinary overlay and saving creates a native local-test-page-b revision. Viewing the previous revision displays the previous annotations against the recorded media version. The same source file on another page remains unchanged. Use separate native test pages for automation; do not overwrite the user's drawing to manufacture a passing demonstration.
 
 This is the first vertical acceptance target, followed by the same workflow for general-purpose slides and PDF annotations. The slide-only demonstration is infrastructure evidence, not completion. Searchable textbox/callout data follows history, then Cargo text integration.
 

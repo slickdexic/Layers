@@ -264,7 +264,7 @@ describe( 'TextUtils', () => {
 			expect( result.alignOffset ).toBe( 0 );
 		} );
 
-		it( 'should use layer maxWidth when provided', () => {
+		it( 'measures plain text on one line even when maxWidth is provided', () => {
 			const layer = {
 				text: 'This is a longer text that should wrap',
 				x: 100,
@@ -274,7 +274,8 @@ describe( 'TextUtils', () => {
 
 			const result = TextUtils.measureTextLayer( layer, mockCtx, 800 );
 
-			expect( result.lines.length ).toBeGreaterThan( 1 );
+			expect( result.lines ).toEqual( [ layer.text ] );
+			expect( result.width ).toBe( layer.text.length * 10 );
 		} );
 
 		it( 'should calculate fallback maxWidth from fontSize when no canvasWidth', () => {
@@ -291,7 +292,7 @@ describe( 'TextUtils', () => {
 			expect( result ).not.toBeNull();
 		} );
 
-		it( 'should handle multi-line text height calculation', () => {
+		it( 'does not wrap plain text when it exceeds the canvas width', () => {
 			const layer = {
 				text: 'Line one Line two Line three',
 				x: 100,
@@ -299,13 +300,26 @@ describe( 'TextUtils', () => {
 				maxWidth: 80
 			};
 
-			const result = TextUtils.measureTextLayer( layer, mockCtx, 800 );
+			const result = TextUtils.measureTextLayer( layer, mockCtx, 100 );
+			expect( result.lines ).toEqual( [ layer.text ] );
+			expect( result.width ).toBe( layer.text.length * 10 );
+			expect( result.height ).toBe( result.ascent + result.descent );
+		} );
 
-			if ( result.lines.length > 1 ) {
-				const expectedHeight = result.ascent + result.descent +
-					( result.lines.length - 1 ) * result.lineHeight;
-				expect( result.height ).toBe( expectedHeight );
-			}
+		it( 'measures literal tags and supplementary Unicode as rendered', () => {
+			const text = '<button> 😀';
+			const result = TextUtils.measureTextLayer( { text, textAlign: 'center', x: 100 }, mockCtx, 40 );
+			expect( result.lines ).toEqual( [ text ] );
+			expect( result.width ).toBe( text.length * 10 );
+			expect( result.originX ).toBe( 100 - result.width / 2 );
+		} );
+
+		it( 'positions rotated text bounds around the renderer pivot', () => {
+			const layer = { text: 'Long text', x: 100, y: 200, fontSize: 20, rotation: 90 };
+			const result = TextUtils.measureTextLayer( layer, mockCtx, 100 );
+			// Glyph center is (145, 195.5); renderer pivot is (145, 195).
+			expect( result.originX + result.width / 2 ).toBeCloseTo( 144.5 );
+			expect( result.originY + result.height / 2 ).toBeCloseTo( 195 );
 		} );
 
 		it( 'should use actual bounding box metrics when available', () => {

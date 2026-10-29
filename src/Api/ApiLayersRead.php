@@ -12,7 +12,6 @@ use MediaWiki\Extension\Layers\Revision\PageReadService;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
-use Wikimedia\Rdbms\IDBAccessObject;
 
 /** Experimental exact-revision read API; registered but disabled by default. */
 class ApiLayersRead extends ApiBase {
@@ -25,7 +24,6 @@ class ApiLayersRead extends ApiBase {
 	private $viewerReader;
 	/** @var callable|null Exact PDF editor page preparation */
 	private $pdfEditorReader;
-	private int $bindingMaxAge;
 
 	/**
 	 * @param ApiMain $main
@@ -34,7 +32,7 @@ class ApiLayersRead extends ApiBase {
 	 * @param TitleFactory $titles
 	 * @param PageOwnedScope|null $scope Pages taking part; null permits none
 	 * @param callable|null $boundReader Pilot binding reader; binding requests fail without it
-	 * @param int $bindingMaxAge Seconds anonymous binding reads of a current revision may be cached; 0 never
+	 * @param int $bindingMaxAge Retained constructor parameter; binding reads are private
 	 * @param callable|null $viewerReader Exact owner/revision/anchor viewer composition
 	 * @param callable|null $pdfEditorReader Exact owner/revision/anchor/target editor preparation
 	 */
@@ -51,7 +49,6 @@ class ApiLayersRead extends ApiBase {
 		$this->titles = $titles;
 		$this->scope = $scope;
 		$this->boundReader = $boundReader;
-		$this->bindingMaxAge = max( 0, $bindingMaxAge );
 		$this->viewerReader = $viewerReader;
 		$this->pdfEditorReader = $pdfEditorReader;
 	}
@@ -110,14 +107,8 @@ class ApiLayersRead extends ApiBase {
 					$this->getAuthority(), $params['controls'] );
 				$bindings[ApiResult::META_TYPE] = 'assoc';
 				$this->getResult()->addValue( null, $this->getModuleName(), [ 'bindings' => $bindings ] );
-				// Page views read the current revision, which cannot be hidden while it is current, and every
-				// anonymous reader has the same rights. Older revisions can be hidden later, so they stay private.
-				if ( !$params['controls'] && $this->bindingMaxAge > 0 &&
-					$params['revid'] === $owner->getLatestRevID( IDBAccessObject::READ_LATEST )
-				) {
-					$this->getMain()->setCacheMode( 'anon-public-user-private' );
-					$this->getMain()->setCacheMaxAge( $this->bindingMaxAge );
-				}
+				// The current revision may later be hidden or lose read access.
+				// Keep this response private so every request rechecks access.
 				return;
 			}
 			$bundle = $this->reader->read( $owner, $params['revid'], $this->getAuthority() );

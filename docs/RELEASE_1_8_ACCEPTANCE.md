@@ -41,11 +41,114 @@ files while their local copies and public Git history remain. Verify final sourc
 archives as well as the custom package. See [release preparation](RELEASE_PREPARATION.md).
 
 **New review findings:** A strict MySQL temporary-table test confirms that the
-legacy foreign-file fallback exceeds its 32-character storage column. The editor
+legacy foreign-file fallback exceeds its 32-character storage column. A local
+schema correction passed a focused native MySQL test; full updater and
+cross-version acceptance remain open. The editor
 can alter some literal layer text before publication; native strict validation
-also refuses other text that server sanitization would change. Compatibility,
-security and affected save/upgrade paths require
-review before these are resolved. See [Gemini review triage](GEMINI_REVIEW_TRIAGE.md).
+also refuses other text that server sanitization would change. An approved local
+literal-text correction has passed focused editor, publication and export tests;
+its broader compatibility, output-context and screen acceptance remain open.
+See [Gemini review triage](GEMINI_REVIEW_TRIAGE.md).
+
+**Affected native checks, October 28:** On MediaWiki 1.44, the combined
+publication, migration and identifier-upgrade slice ran 80 tests / 812
+assertions with one historical-reader error. That error reproduced with the
+installed baseline: the test assumed anonymous read access without enabling it.
+The corrected fixture explicitly enables anonymous reading for that case and
+passes its isolated replay (1 test / 12 assertions). The full combined slice
+subsequently passed 80 tests / 819 assertions on 1.44 / MySQL using the
+installed candidate, the corrected test fixture and the selected current
+reader, validator and schema-manager files preloaded. A first follow-up ran
+all 80 tests but had three errors because its temporary test directory lacked
+adoption fixtures; after adding those public fixtures, the full rerun passed.
+This is not a final installed-release artifact or full updater qualification.
+Separately, the native
+literal-text publication/history test passes (2 tests / 7 assertions); legacy
+conversion and affected standalone PHP tests pass (193 tests / 447 assertions).
+These results do not establish full updater, browser or owner acceptance.
+
+**Owner-reported slide Save failure:** On the 1.45 test wiki the owner added
+arrows to a slide; the Save button appeared unresponsive and the work remained
+unsaved. After reopening, Ctrl+S and the on-screen Save button each saved an
+arrow in a new revision. The initial failure is not yet explained and remains
+open. In a separate
+1.44 browser session, the same saved slide snapshot and an added arrow reached
+an intercepted Save request. Nearly full browser storage also reproduced a
+pre-request refusal with draft-storage notifications, but has not been shown
+to be the cause in the owner's session. Do not declare release acceptance on
+the strength of the later successful attempt alone.
+
+**Large-image Save failure and candidate correction:** A later owner test
+confirmed that an image's Undo backup exceeded browser storage quota. The
+candidate losslessly compacts repeated data only when a normal draft write is
+refused for quota, leaving existing records intact. A synthetic browser test
+reproduced the refusal and exercised the in-session correction without wiki
+writes; the owner then applied it to the open editor and confirmed Save. A
+read-only check verified the resulting page revision contains the changed layer
+set. Full client tests passed 19,050 tests; broader browser/recovery acceptance
+and the earlier intermittent slide failure remain open.
+
+**Large-draft recovery follow-up:** A fresh client-side store and controller,
+with a new writer identity, discover and decode the previous session's compact
+backup without changing any stored records. This verifies the cross-session
+storage boundary in an integration test; actual browser restart and Restore
+remain unqualified.
+
+**Text selection correction:** The owner reported and approved correcting a
+plain-text selection box that wrapped its measurement while rendering one
+line. The affected layer's browser measurement now matches the rendered width;
+the editor view, including rotation, was shown and the owner confirmed it
+looked good. The full client suite passed 19,052 tests in 325 suites. This
+does not qualify the remaining release gates.
+
+**Reader efficiency correction:** Selected file sources are now resolved in one
+snapshot pass, with per-surface authorization and failure isolation retained.
+Affected 1.44 native reader and source-refusal tests passed 31 tests / 187
+assertions; standalone PHP passed 1,697 tests / 4,217 assertions with one skip.
+This is a bounded reduction in repeated work; representative timing and the
+remaining reader performance checks are still open.
+
+**Native CI candidate:** A new workflow provisions MediaWiki 1.44 and a
+disposable SQLite wiki to run selected native history-access, publication and
+batched-read tests. Its exact test selection passed locally on 1.44 / MySQL:
+47 tests / 132 assertions, with the current reader files preloaded into the
+installed test candidate. GitHub-hosted execution and SQLite compatibility are
+not yet verified; exact-commit CI acceptance remains pending.
+
+**Shipped dependency check:** A synthetic local advisory now verifies that the
+real production `npm audit` command rejects a high-severity finding for the
+shipped PDF library, while a clean response passes. All eight release-package
+tests and the 225-reference shipped-asset check pass. A fresh production audit
+found zero vulnerabilities after using the system certificate store; its first
+attempt failed certificate verification. Recheck at the release cut.
+
+**Concurrent PDF cache check:** Two independent PHP processes exercised the
+actual cache publication helper against the same temporary target. Controlled
+overlapping partial renders stayed private; a failed render did not replace a
+completed result, and overlapping successes exposed only completed test bytes.
+Both checks passed on Windows and in the existing 1.44 Linux test environment;
+the ten release-package tests passed on Windows. This does not establish
+real-converter concurrency stress, full PDF validity or browser export
+acceptance.
+
+**Creation tool presets:** The owner approved clearing the previous selection
+when choosing a creation tool. A 1.44 test-editor session using the current
+toolbar source selected an Arrow preset after a text selection; the text and
+existing Undo history stayed unchanged, and a new arrow used the selected
+non-default preset. The new arrow remained selected for editing. Owner screen
+review and final-artifact/browser qualification remain open. Keyboard selection
+of Rectangle also cleared a multi-selection in that test session. The full
+client suite passed 19,067 tests across 325 suites; the editor bundle remains
+within its existing size limit.
+
+**Public candidate reconciliation:** The public branch and the remote both
+pointed to `4122f6d8` at this check. A preliminary comparison of 41 selected
+audit/editor source and test files against that branch found 21 changed, 18
+new and two unchanged files. It compares actual working-file Git hashes, not
+the private checkout's index: some files present and Git-blob-equivalent to the
+public branch appear as deletions in an ordinary cross-branch working-tree
+diff. This is a scoped inventory, not a complete publication list or privacy
+review. Final dependency, documentation, artifact and exact-commit checks remain.
 
 | Check | Current evidence/state | Work before the 1.8 release |
 | --- | --- | --- |

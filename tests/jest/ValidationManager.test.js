@@ -130,14 +130,19 @@ describe( 'ValidationManager', () => {
 			expect( manager.sanitizeLayerData( 'string' ) ).toBe( 'string' );
 		} );
 
-		test( 'should sanitize string properties', () => {
+		test( 'preserves literal layer text while sanitizing other string properties', () => {
 			const input = {
 				text: '<script>evil()</script>',
 				name: 'onclick=hack()'
 			};
 			const result = manager.sanitizeLayerData( input );
-			expect( result.text ).not.toContain( '<script>' );
+			expect( result.text ).toBe( input.text );
 			expect( result.name ).not.toMatch( /on\w+=/i );
+		} );
+
+		test( 'preserves literal plain and rich text exactly', () => {
+			const input = { text: 'a<b>c <button>', richText: [ { text: ' <button> ', style: { fontWeight: 'bold' } } ] };
+			expect( manager.sanitizeLayerData( input ) ).toEqual( input );
 		} );
 
 		test( 'should preserve non-string properties', () => {
@@ -757,7 +762,7 @@ describe( 'ValidationManager', () => {
 	} );
 
 	describe( 'integration tests', () => {
-		test( 'should sanitize and validate layer data', () => {
+		test( 'retains potentially unsafe text for server refusal without changing non-text validation', () => {
 			const unsafeLayer = {
 				id: 'layer-1',
 				type: 'text',
@@ -768,7 +773,7 @@ describe( 'ValidationManager', () => {
 			};
 
 			const sanitized = manager.sanitizeLayerData( unsafeLayer );
-			expect( sanitized.text ).not.toContain( '<' );
+			expect( sanitized.text ).toBe( unsafeLayer.text );
 
 			const validation = manager.validateLayer( sanitized );
 			expect( validation.isValid ).toBe( true );
@@ -814,7 +819,7 @@ describe( 'ValidationManager', () => {
 			const result = manager.sanitizeLayerData( input );
 			expect( Array.isArray( result ) ).toBe( true );
 			expect( result ).toHaveLength( 2 );
-			expect( result[ 0 ].text ).not.toContain( '<' );
+			expect( result[ 0 ].text ).toBe( input[ 0 ].text );
 		} );
 
 		test( 'should sanitize svg property specially in sanitizeLayerData', () => {

@@ -27,7 +27,7 @@ in [J112B](J112B_PDF_PAGE_ROUTING_PACKET.md), and the
 [J113A packet](J113A_BARE_NAME_OUTPUT_PACKET.md).
 
 Work from the actual current tree in
-`F:\Docker\mediawiki\extensions\Layers`, including accepted uncommitted J112,
+`the extension checkout`, including accepted uncommitted J112,
 J113A and the lead's terminology-fixture corrections. Checkpoint `364fb385` alone
 is insufficient. Preserve unrelated edits; do not reset, stash or replace them.
 
@@ -96,7 +96,7 @@ The relevant existing paths are:
 | `src/Revision/PageOwnedPilot.php`, `newDrawingCopy()` | Already injects the same effective-page callback into the accepted interactive copy path. Follow this integration pattern. |
 | `src/Migration/PageCopyMigration.php`, `fileSource()` | Resolves the legacy set for that file/version/page, then locates its exact deterministic migration surface ID in the file-page document or pending step-1 document. Preserve this exact-source lookup. |
 | `tests/phpunit/core/PdfPageRoutingTest.php` | Existing native parser proof for duplicate/invalid options, English and German aliases, captions and out-of-range page handling. Use its assertions as a reference, not as a replacement for migration tests. |
-| `F:\Docker\mediawiki\extensions\PdfHandler\includes\PdfHandler.php` | Read-only native dependency: `getParamMap()` maps `img_page` to `page`; `validateParam()` rejects noncanonical integers and nonpositive values. The parser's effective page and transform output remain the integration oracle. Do not edit PdfHandler. |
+| `PdfHandler/includes/PdfHandler.php` | Read-only native dependency: `getParamMap()` maps `img_page` to `page`; `validateParam()` rejects noncanonical integers and nonpositive values. The parser's effective page and transform output remain the integration oracle. Do not edit PdfHandler. |
 
 Use the native factory and MediaWiki services in the new tests. A test-only
 callback that always returns the desired page does not prove the production
@@ -191,7 +191,7 @@ active before starting, and run all native checks serially. If the environment
 is occupied, continue independent implementation work and report the needed
 test window; do not start a competing run. Docker is test infrastructure only.
 
-Run from `F:\Docker\mediawiki\extensions\Layers`:
+Run from `the extension checkout`:
 
 ```powershell
 php vendor/bin/phpunit --no-coverage -c phpunit.xml

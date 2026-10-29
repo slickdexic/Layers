@@ -88,6 +88,11 @@ class ReleasePackageTest(unittest.TestCase):
             self.build([('Layers/extension.json', b'{}')], code=1)
         self.assertFalse(self.output.exists())
 
+    def test_empty_source_does_not_leave_an_archive(self):
+        with self.assertRaises(ValueError):
+            self.build([])
+        self.assertFalse(self.output.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -70,6 +70,40 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		$this->assertNotEmpty( $schema->canonicalize( json_encode( $doc ) ) );
 	}
 
+	public function testLiteralLayerAndRichTextRoundTripWithoutChanges(): void {
+		$schema = new DocumentSchema();
+		foreach ( [ 'a<b>c', '<button>', '  &lt;b&gt; literal  ' ] as $text ) {
+			$doc = self::fixture();
+			$doc->surfaces[0]->layers[0]->text = $text;
+			$doc->surfaces[0]->layers[0]->richText = [ (object)[ 'text' => $text ] ];
+			$this->assertEquals( $doc, json_decode( $schema->canonicalize( json_encode( $doc ) ) ) );
+		}
+	}
+
+	public function testUnsafeLiteralTextIsRefusedWithoutRewriting(): void {
+		$schema = new DocumentSchema();
+		foreach ( [ '<script>alert(1)</script>', '&lt;script&gt;bad&lt;/script&gt;',
+			'&amp;lt;script&amp;gt;bad&amp;lt;/script&amp;gt;', '<img src=x onerror=alert(1)>',
+			'javascript:alert(1)', 'javajavascript:script:alert(1)', 'file:/private',
+			"hidden\u{202E}text", '@private-file' ] as $text ) {
+			$doc = self::fixture();
+			$doc->surfaces[0]->layers[0]->text = $text;
+			try {
+				$schema->canonicalize( json_encode( $doc ) );
+				$this->fail( 'Unsafe literal text must be refused: ' . $text );
+			} catch ( \InvalidArgumentException $e ) {
+				$this->assertSame( 'invalid-or-lossy-layer-data', $e->getMessage() );
+			}
+		}
+	}
+
+	public function testUnsafeRichTextIsRefusedWithoutRewriting(): void {
+		$doc = self::fixture();
+		$doc->surfaces[0]->layers[0]->richText = [ (object)[ 'text' => '<script>bad</script>' ] ];
+		$this->expectExceptionMessage( 'invalid-or-lossy-layer-data' );
+		( new DocumentSchema() )->canonicalize( json_encode( $doc ) );
+	}
+
 	/**
 	 * @dataProvider provideInvalidDocuments
 	 * @param string $json

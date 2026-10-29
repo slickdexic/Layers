@@ -581,15 +581,19 @@ class ServerSideLayerValidator {
 			return $this->validateSvgPath( $value );
 		}
 
-		// Length check for regular strings (1000 chars)
-		// Note: svg and path have their own length limits above
+		if ( $property === 'text' ) {
+			return $this->textSanitizer->isSafeLiteralLayerText( $value ) ?
+				[ 'valid' => true, 'value' => $value ] :
+				[ 'valid' => false, 'error' => 'Unsafe or invalid literal text' ];
+		}
+
+		// Non-text string properties keep their existing byte limit.
 		if ( strlen( $value ) > 1000 ) {
 			return [ 'valid' => false, 'error' => 'String too long' ];
 		}
 
 		// Handle different string types
-		if ( in_array( $property, [ 'text', 'name' ], true ) ) {
-			// Empty text is a valid state for text boxes, callouts and dimensions; text layers are checked below.
+		if ( $property === 'name' ) {
 			return [ 'valid' => true, 'value' => $this->textSanitizer->sanitizeText( $value ) ];
 		}
 
@@ -952,6 +956,7 @@ class ServerSideLayerValidator {
 	 */
 	private const STRICT_PROPERTIES = [
 		'link',
+		'text',
 		'richText',
 		'gradient',
 		'points',
@@ -1208,10 +1213,10 @@ class ServerSideLayerValidator {
 				return [ 'valid' => false, 'error' => 'Total rich text length exceeds limit' ];
 			}
 
-			// Sanitize the text content (preserve whitespace for rich text runs)
-			$sanitizedText = $this->textSanitizer->sanitizeRichTextRun( $text );
-
-			$validRun = [ 'text' => $sanitizedText ];
+			if ( !$this->textSanitizer->isSafeLiteralLayerText( $text ) ) {
+				return [ 'valid' => false, 'error' => 'Unsafe or invalid literal text' ];
+			}
+			$validRun = [ 'text' => $text ];
 
 			// Validate optional style overrides
 			if ( isset( $run['style'] ) && is_array( $run['style'] ) ) {
