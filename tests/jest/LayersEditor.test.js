@@ -1627,7 +1627,7 @@ describe('LayersEditor save error paths', () => {
         // Should show validation error notification (with error details appended)
         expect(mockNotify).toHaveBeenCalledWith(
             expect.stringContaining('Invalid layer data'),
-            { type: 'error' }
+            { type: 'error', classes: 'layers-save-error' }
         );
         
         delete window.layersMessages;

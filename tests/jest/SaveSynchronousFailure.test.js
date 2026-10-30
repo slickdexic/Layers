@@ -41,4 +41,14 @@ describe( 'synchronous Save failure feedback', () => {
 		expect( editor.apiManager.saveLayers ).toHaveBeenCalledTimes( 1 );
 		expect( layers ).toEqual( [ { id: 'unsaved', type: 'rectangle', x: 7 } ] );
 	} );
+
+	test( 'marks a legacy Save validation error for visibility without publishing', async () => {
+		editor.config = {};
+		editor.validationManager = { validateLayers: () => ( { isValid: false, errors: [ 'Invalid layer' ] } ) };
+		await expect( editor.saveCurrentPage() ).resolves.toBe( false );
+		expect( notify ).toHaveBeenCalledWith( 'Saving: Invalid layer',
+			{ type: 'error', classes: 'layers-save-error' } );
+		expect( editor.apiManager.saveLayers ).not.toHaveBeenCalled();
+		expect( layers ).toEqual( [ { id: 'unsaved', type: 'rectangle', x: 7 } ] );
+	} );
 } );

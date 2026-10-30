@@ -1347,6 +1347,15 @@ describe( 'LayersValidator', () => {
 			validator.showValidationErrors( [ 'Error 1', 'Error 2' ] );
 			expect( global.mw.notify ).toHaveBeenCalled();
 		} );
+
+		it( 'marks Save validation errors for visibility without changing other contexts', () => {
+			validator.showValidationErrors( [ 'Invalid layer' ], 'save' );
+			expect( global.mw.notify ).toHaveBeenLastCalledWith( expect.stringContaining( 'Invalid layer' ),
+				{ type: 'error', autoHide: false, classes: 'layers-save-error' } );
+			validator.showValidationErrors( [ 'Other validation' ] );
+			expect( global.mw.notify ).toHaveBeenLastCalledWith( expect.stringContaining( 'Other validation' ),
+				{ type: 'error', autoHide: false } );
+		} );
 	} );
 
 	// ============================================

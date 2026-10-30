@@ -2179,7 +2179,8 @@ class LayersEditor {
 			const validationMsg = window.layersMessages ?
 				window.layersMessages.get( 'layers-save-validation-error', 'Layer validation failed' ) :
 				'Layer validation failed';
-			mw.notify( validationMsg + ': ' + ( validationResult.errors || [] ).join( '; ' ), { type: 'error' } );
+			mw.notify( validationMsg + ': ' + ( validationResult.errors || [] ).join( '; ' ),
+				{ type: 'error', classes: 'layers-save-error' } );
 			return Promise.resolve( false );
 		}
 

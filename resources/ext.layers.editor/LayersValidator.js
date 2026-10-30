@@ -805,7 +805,7 @@
 		 * @param {Array<string>} errors Array of error messages
 		 * @param {Object} [_context] Context information (unused)
 		 */
-		showValidationErrors( errors, _context ) {
+		showValidationErrors( errors, context ) {
 			if ( !errors || errors.length === 0 ) {
 				return;
 			}
@@ -814,7 +814,9 @@
 
 			// Use MediaWiki notification if available
 			if ( window.mw && window.mw.notify ) {
-				mw.notify( message, { type: 'error', autoHide: false } );
+				mw.notify( message, context === 'save' ?
+					{ type: 'error', autoHide: false, classes: 'layers-save-error' } :
+					{ type: 'error', autoHide: false } );
 			} else if ( window.mw && window.mw.log ) {
 				// Use MediaWiki logging as fallback
 				mw.log.error( 'Layers validation errors:', errors );
