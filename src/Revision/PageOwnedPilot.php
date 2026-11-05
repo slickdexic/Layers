@@ -1780,6 +1780,59 @@ class PageOwnedPilot {
 	}
 
 	/**
+	 * List current-revision layer sets that changed from their actual parent.
+	 * The returned links identify saved sets only; removed sets have no current view.
+	 * @param \MediaWiki\Title\Title $owner
+	 * @param int $revisionId
+	 * @param Authority $authority
+	 * @return array[]
+	 */
+	public function getChangedHistorySurfaces( \MediaWiki\Title\Title $owner, int $revisionId,
+		Authority $authority
+	): array {
+		if ( !$this->scope->includes( $owner ) || $owner->hasFragment() ||
+			$revisionId < 1 || $revisionId > 2147483647 ) {
+			return [];
+		}
+		$lookup = $this->services->getRevisionLookup();
+		$current = $lookup->getRevisionById( $revisionId, IDBAccessObject::READ_LATEST );
+		$ownerId = $owner->getArticleID( IDBAccessObject::READ_LATEST );
+		if ( !$current || !$ownerId || $current->getPageId() !== $ownerId ||
+			!$current->hasSlot( PageRevisionWriter::SLOT ) ) {
+			return [];
+		}
+		$parent = null;
+		if ( $current->getParentId() ) {
+			$parent = $lookup->getRevisionById( $current->getParentId(), IDBAccessObject::READ_LATEST );
+			if ( !$parent || $parent->getPageId() !== $ownerId ||
+				!RevisionRecord::userCanBitfield( $parent->getVisibility(), RevisionRecord::DELETED_TEXT,
+					$authority, $parent->getPage() ) ) {
+				return [];
+			}
+			if ( $parent->hasSlot( PageRevisionWriter::SLOT ) &&
+				$parent->getSlot( PageRevisionWriter::SLOT )->getSha1() ===
+				$current->getSlot( PageRevisionWriter::SLOT )->getSha1() ) {
+				return [];
+			}
+		}
+		$changed = ( new PageDrawingDiff( new PageHistoryAccess( $lookup ) ) )
+			->changedPresentSurfaces( $owner, $parent, $current, $authority );
+		$surfaces = [];
+		$pdfGroups = [];
+		foreach ( $changed as $surface ) {
+			if ( $surface->kind === 'pdf' ) {
+				$key = LayerSetIdentity::key( $surface );
+				if ( isset( $pdfGroups[$key] ) ) {
+					continue;
+				}
+				$pdfGroups[$key] = true;
+			}
+			$surfaces[] = [ 'id' => $surface->id, 'label' => $surface->label, 'kind' => $surface->kind ];
+		}
+		return $surfaces;
+	}
+
+	/**
 	 * List stored file/page selectors after an exact authorized read, for internal file selection.
 	 * Sources are not resolved here; the selected surface is checked when it is opened.
 	 * @param \MediaWiki\Title\Title $owner

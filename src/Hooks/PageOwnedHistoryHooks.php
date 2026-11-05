@@ -82,7 +82,8 @@ class PageOwnedHistoryHooks implements PageHistoryLineEndingHook, HistoryToolsHo
 		try {
 			$owner = $historyAction->getTitle();
 			$revisionId = (int)$row->rev_id;
-			$surfaces = $this->pilot->getHistorySurfaces( $owner, $revisionId, $historyAction->getAuthority() );
+			$surfaces = $this->pilot->getChangedHistorySurfaces( $owner, $revisionId,
+				$historyAction->getAuthority() );
 			$extra = '';
 			foreach ( $surfaces as $surface ) {
 				$label = $historyAction->msg( 'layers-page-history-link', $surface['label'] )->text();

@@ -15,7 +15,7 @@ class PageOwnedHistoryHooksTest extends \MediaWikiIntegrationTestCase {
 		$title = $this->getServiceContainer()->getTitleFactory()->newFromText( 'History Owner' );
 		$context->setTitle( $title );
 		$pilot = $this->createMock( PageOwnedPilot::class );
-		$pilot->expects( $this->once() )->method( 'getHistorySurfaces' )
+		$pilot->expects( $this->once() )->method( 'getChangedHistorySurfaces' )
 			->with( $title, 123, $this->identicalTo( $context->getAuthority() ) )
 			->willReturn( [ [ 'id' => 'surface & one', 'label' => '<img src=x onerror=alert(1)>' ] ] );
 		$hook = new PageOwnedHistoryHooks( $pilot, $this->getServiceContainer()->getLinkRenderer() );
@@ -37,7 +37,7 @@ class PageOwnedHistoryHooksTest extends \MediaWikiIntegrationTestCase {
 		$context = new RequestContext();
 		$context->setTitle( $this->getServiceContainer()->getTitleFactory()->newFromText( 'History Owner' ) );
 		$pilot = $this->createMock( PageOwnedPilot::class );
-		$pilot->method( 'getHistorySurfaces' )->willThrowException( new \DomainException( 'private' ) );
+		$pilot->method( 'getChangedHistorySurfaces' )->willThrowException( new \DomainException( 'private' ) );
 		$hook = new PageOwnedHistoryHooks( $pilot, $this->getServiceContainer()->getLinkRenderer() );
 		$row = (object)[ 'rev_id' => 123 ];
 		$html = 'Existing history';

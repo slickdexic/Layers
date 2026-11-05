@@ -21,21 +21,19 @@ final class PageDrawingDiff {
 
 	/**
 	 * @param Title $owner
-	 * @param RevisionRecord $old
+	 * @param RevisionRecord|null $old Null for a page's first revision
 	 * @param RevisionRecord $new
 	 * @param Authority $authority
 	 * @return array[] id, label, and whether the drawing exists in the old and new revision; one entry per
 	 *  drawing that was added, removed or changed
 	 * @throws \DomainException When either side's drawings are hidden from this reader
 	 */
-	public function changes( Title $owner, RevisionRecord $old, RevisionRecord $new, Authority $authority ): array {
-		$before = $this->surfaces( $owner, $old, $authority );
+	public function changes( Title $owner, ?RevisionRecord $old, RevisionRecord $new, Authority $authority ): array {
+		$before = $old ? $this->surfaces( $owner, $old, $authority ) : [];
 		$after = $this->surfaces( $owner, $new, $authority );
 		$changes = [];
 		foreach ( $after as $id => $surface ) {
-			if ( !isset( $before[$id] ) ||
-				JsonSnapshotCodec::encode( $before[$id] ) !== JsonSnapshotCodec::encode( $surface )
-			) {
+			if ( self::changed( $before, $id, $surface ) ) {
 				$changes[] = [ 'id' => (string)$id, 'label' => (string)( $surface->label ?? $id ),
 					'old' => isset( $before[$id] ), 'new' => true ];
 			}
@@ -47,6 +45,39 @@ final class PageDrawingDiff {
 			}
 		}
 		return $changes;
+	}
+
+	/**
+	 * Return changed surfaces that exist in the new revision, after checking both revisions.
+	 * @param Title $owner
+	 * @param RevisionRecord|null $old
+	 * @param RevisionRecord $new
+	 * @param Authority $authority
+	 * @return \stdClass[]
+	 */
+	public function changedPresentSurfaces( Title $owner, ?RevisionRecord $old, RevisionRecord $new,
+		Authority $authority
+	): array {
+		$before = $old ? $this->surfaces( $owner, $old, $authority ) : [];
+		$after = $this->surfaces( $owner, $new, $authority );
+		$result = [];
+		foreach ( $after as $id => $surface ) {
+			if ( self::changed( $before, $id, $surface ) ) {
+				$result[] = $surface;
+			}
+		}
+		return $result;
+	}
+
+	/**
+	 * @param \stdClass[] $before
+	 * @param string|int $id
+	 * @param \stdClass $surface
+	 * @return bool
+	 */
+	private static function changed( array $before, $id, \stdClass $surface ): bool {
+		return !isset( $before[$id] ) ||
+			JsonSnapshotCodec::encode( $before[$id] ) !== JsonSnapshotCodec::encode( $surface );
 	}
 
 	/**
