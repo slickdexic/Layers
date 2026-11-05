@@ -28,6 +28,7 @@ const budgets = JSON.parse( fs.readFileSync( path.join( projectRoot, 'bundlesize
 
 const KB = 1024;
 const FILE_KEYS = [ 'scripts', 'styles', 'packageFiles' ];
+const READER_ENTRIES = [ 'ext.layers', 'ext.layers.history' ];
 
 /**
  * Parse a "123 KB" / "1.4 MB" budget string into bytes.
@@ -90,6 +91,28 @@ function main() {
 	const reportOnly = process.argv.includes( '--report' );
 	const failures = [];
 	const rows = [];
+	const budgetedModules = new Set( budgets.map( budget => budget.resourceModule ).filter( Boolean ) );
+	const visited = new Set();
+	const inspectReaderModule = ( name ) => {
+		if ( visited.has( name ) ) {
+			return;
+		}
+		visited.add( name );
+		const module = extension.ResourceModules[ name ];
+		if ( !module ) {
+			failures.push( 'Reader references an unknown Layers module: ' + name );
+			return;
+		}
+		if ( !budgetedModules.has( name ) ) {
+			failures.push( 'Reader module has no size budget: ' + name );
+		}
+		for ( const dependency of module.dependencies || [] ) {
+			if ( dependency === 'ext.layers' || dependency.startsWith( 'ext.layers.' ) ) {
+				inspectReaderModule( dependency );
+			}
+		}
+	};
+	READER_ENTRIES.forEach( inspectReaderModule );
 
 	for ( const budget of budgets ) {
 		let files;

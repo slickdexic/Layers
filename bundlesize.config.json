@@ -30,6 +30,11 @@
 		"note": "Viewer core, raw source bytes; loaded as a dependency of the page-owned reader."
 	},
 	{
+		"resourceModule": "ext.layers.modal",
+		"maxSize": "14 KB",
+		"note": "Modal dependency of the layered-page viewer, raw source bytes."
+	},
+	{
 		"name": "pdf.js (static)",
 		"files": [
 			"resources/lib/pdfjs/pdf.min.js",
