@@ -12,7 +12,7 @@ use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive native Import read/first-Save boundary for a separately admitted missing member. */
+/** Native Import read/first-Save boundary for a separately admitted missing member. */
 class PageWorkingCopyImportCreationService {
 
 	private PageWorkingCopyImportCreationTarget $creation;

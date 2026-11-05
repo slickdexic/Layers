@@ -12,7 +12,7 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive, read-only preparation of one missing PDF layer set. Never a publication token. */
+/** Read-only preparation of one missing PDF layer set. Never a publication token. */
 class PageMissingPdfSetPreparation {
 
 	public function __construct(

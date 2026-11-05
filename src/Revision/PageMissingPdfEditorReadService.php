@@ -12,7 +12,7 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive requested-page admission for a still-missing PDF layer set. Never authorizes Save. */
+/** Requested-page admission for a still-missing PDF layer set. Never authorizes Save. */
 class PageMissingPdfEditorReadService {
 
 	public function __construct(

@@ -14,7 +14,7 @@ use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Unregistered first Save for one completely absent PDF Import target. */
+/** First Save for one completely absent PDF Import target. */
 class PageMissingPdfImportPublicationService {
 
 	public function __construct(
@@ -32,7 +32,7 @@ class PageMissingPdfImportPublicationService {
 
 	/**
 	 * Publish all admitted pages against the genuine original base, without retry.
-	 * This inactive boundary retains the saved embedding name and current-base IDs.
+	 * This boundary retains the saved embedding name and current-base IDs.
 	 * Pending renames, historical temporary IDs and request/UI integration are separate.
 	 *
 	 * @param int $pageId Existing target owner

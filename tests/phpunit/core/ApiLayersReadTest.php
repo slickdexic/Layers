@@ -182,6 +182,31 @@ class ApiLayersReadTest extends \MediaWiki\Tests\Api\ApiTestCase {
 		}
 	}
 
+	public function testInlineControlsRespectReaderPermissionsAndHistoricalRevisions(): void {
+		$this->setGroupPermissions( '*', 'read', true );
+		[ $title, $id, $user ] = $this->publish();
+		$pilot = new PageOwnedPilot( $this->getServiceContainer(), $this->ownerKeys );
+		$this->boundReader = [ $pilot, 'prepareBoundViewers' ];
+		$binding = 'v1:' . $title->getArticleID() . ':presentation';
+		$request = [ 'action' => 'layersread', 'owner' => $title->getPrefixedText(),
+			'revid' => $id, 'binding' => $binding, 'controls' => true ];
+		$read = fn ( $actor, array $params ) =>
+			$this->doApiRequest( $params, null, false, $actor )[0]['layersread']['bindings'][$binding];
+		$this->assertNotEmpty( $read( $user, $request )['editUrl'] );
+		$this->overrideUserPermissions( $user, [ 'read' ] );
+		$this->assertNull( $read( $user, $request )['editUrl'] );
+		$anon = $this->getServiceContainer()->getUserFactory()->newAnonymous();
+		$this->assertNull( $read( $anon, $request )['editUrl'] );
+		$this->overrideUserPermissions( $user, [ 'read', 'edit', 'editlayers', 'createpage' ] );
+		$newId = TestingAdmissionRegistration::install( $this )['publisher']->publish( $title, $user, $id,
+			file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ), 'Later snapshot',
+			new WikitextContent( 'Later text' ) );
+		$this->assertNull( $read( $user, $request )['editUrl'] );
+		$request['revid'] = $newId;
+		$this->assertNotEmpty( $read( $user, $request )['editUrl'] );
+		$this->assertSame( 'private', $this->apiMain->getCacheMode() );
+	}
+
 	public function testEditPreparationCannotReturnViewerDataAfterReadRevocation(): void {
 		[ $title, $id, $user ] = $this->publish();
 		$pilot = new class( $this->getServiceContainer(), $this->ownerKeys ) extends PageOwnedPilot {

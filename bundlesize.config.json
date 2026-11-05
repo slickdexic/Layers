@@ -15,6 +15,21 @@
 		"note": "Shared renderers, raw source bytes. Loaded by both viewer and editor, so growth here is paid for twice."
 	},
 	{
+		"resourceModule": "ext.layers.history.read",
+		"maxSize": "3 KB",
+		"note": "Early page-owned reader, raw source bytes; part of the ordinary layered-page startup path."
+	},
+	{
+		"resourceModule": "ext.layers.history",
+		"maxSize": "80 KB",
+		"note": "Page-owned reader and history, raw source bytes; protects the inline reader from unnoticed growth."
+	},
+	{
+		"resourceModule": "ext.layers.viewer.core",
+		"maxSize": "198 KB",
+		"note": "Viewer core, raw source bytes; loaded as a dependency of the page-owned reader."
+	},
+	{
 		"name": "pdf.js (static)",
 		"files": [
 			"resources/lib/pdfjs/pdf.min.js",

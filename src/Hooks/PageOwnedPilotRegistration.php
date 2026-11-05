@@ -25,7 +25,7 @@ use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Hook\MediaWikiServicesHook;
 use MediaWiki\MediaWikiServices;
 
-/** Native bootstrap for drawings kept in page history; always installed (D2). */
+/** Native bootstrap for layer sets kept in page history; always installed (D2). */
 class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 	/**
 	 * Extension registration callback. Runs before service initialization.
@@ -88,7 +88,7 @@ class PageOwnedPilotRegistration implements MediaWikiServicesHook {
 
 	/**
 	 * Module definitions to install alongside the service hook, before container initialization.
-	 * Core merge behavior is retained through the adapter; pilot read/write remain default-off.
+	 * Core merge behavior is retained through the adapter.
 	 *
 	 * @return array
 	 */

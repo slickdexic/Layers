@@ -10,7 +10,7 @@ use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive missing-target preparation. Neither a snapshot nor an admission grants write authority. */
+/** Missing-target preparation. Neither a snapshot nor an admission grants write authority. */
 class PageWorkingCopyImportCreationTarget {
 
 	private PageOwnedPilot $pilot;

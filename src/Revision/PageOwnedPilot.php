@@ -258,7 +258,7 @@ class PageOwnedPilot {
 
 	/**
 	 * Derive historical embed context for an earlier creation draft without trusting its label or payload.
-	 * This inactive helper returns the existing re-admission contract, never application/write authority.
+	 * This helper returns the existing re-admission contract, never application/write authority.
 	 * A caller must also retain and compare the original native empty member, source pin and local work.
 	 * Ambiguous historical occurrences refuse; the explicit-selection route remains unchanged.
 	 *

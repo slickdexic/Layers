@@ -6,7 +6,7 @@ namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Permissions\Authority;
 
-/** Inactive native preparation; never adds admitted pages to the saved revision. */
+/** Native preparation; never adds admitted pages to the saved revision. */
 class PageMissingPdfImportPreparation {
 
 	public function __construct(

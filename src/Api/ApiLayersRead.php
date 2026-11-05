@@ -13,7 +13,7 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
 
-/** Experimental exact-revision read API; registered but disabled by default. */
+/** Exact-revision read API with private, authority-specific responses. */
 class ApiLayersRead extends ApiBase {
 	private PageReadService $reader;
 	private TitleFactory $titles;

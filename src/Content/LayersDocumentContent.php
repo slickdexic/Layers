@@ -7,7 +7,7 @@ namespace MediaWiki\Extension\Layers\Content;
 use MediaWiki\Content\JsonContent;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 
-/** Revision snapshot content. Registration remains test-only until H3 is ready. */
+/** Content model for page-owned revision snapshots. */
 class LayersDocumentContent extends JsonContent {
 	public const MODEL = 'layers-document';
 

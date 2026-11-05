@@ -4,7 +4,7 @@
  *
  * Never fetches data, chooses a revision, renders individual layer types, or edits content.
  *
- * Unregistered presentation component.
+ * Loaded by the page-owned history module.
  */
 'use strict';
 

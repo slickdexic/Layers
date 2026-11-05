@@ -11,7 +11,7 @@ use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive native first-Save provenance boundary; descriptors grant no publication authority. */
+/** Native first-Save provenance boundary; descriptors grant no publication authority. */
 class PageWorkingCopyImportPublicationService {
 
 	private PageWorkingCopyImportReadService $reader;

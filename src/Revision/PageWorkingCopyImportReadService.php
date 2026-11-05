@@ -9,7 +9,7 @@ use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Inactive exact native read preflight. Its result is not application or publication authority. */
+/** Exact native read preflight. Its result is not application or publication authority. */
 class PageWorkingCopyImportReadService {
 
 	private PageOwnedIdentityResolver $identities;
