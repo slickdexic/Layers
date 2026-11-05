@@ -11,7 +11,7 @@ use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Detached native PDF Import preparation. Unregistered; never applies layers or publishes. */
+/** Detached native PDF Import preparation. Never applies layers or publishes. */
 class PageWorkingCopyPdfImportReadService {
 
 	public function __construct(

@@ -14,7 +14,7 @@ use MediaWiki\Status\Status;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Exact-revision read-only viewer entry, with a restore action for editors; the pilot is disabled by default. */
+/** Exact-revision read-only viewer entry, with a restore action for editors. */
 class SpecialViewLayersPage extends SpecialPage {
 	private const RESTORE_ERRORS = [
 		'layers-edit-conflict' => 'layers-page-restore-conflict',

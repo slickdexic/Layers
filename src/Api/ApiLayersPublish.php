@@ -17,7 +17,7 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Experimental page revision publication API; disabled by default. */
+/** Page revision publication API with native admission checks. */
 class ApiLayersPublish extends ApiBase {
 	private PagePublicationService $publisher;
 	private TitleFactory $titles;

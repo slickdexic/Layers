@@ -12,7 +12,7 @@ use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Unregistered whole-PDF first-Save boundary. Client descriptors grant no authority. */
+/** Whole-PDF first-Save boundary. Client descriptors grant no authority. */
 class PageWorkingCopyPdfImportPublicationService {
 
 	public function __construct(

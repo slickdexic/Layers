@@ -9,7 +9,7 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\SpecialPage\SpecialPage;
 use MediaWiki\Title\Title;
 
-/** Protected page-owned editor entry; the shared pilot is disabled by default. */
+/** Protected page-owned editor entry. */
 class SpecialEditLayersPage extends SpecialPage {
 	private PageOwnedPilot $pilot;
 
