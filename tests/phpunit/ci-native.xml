@@ -6,6 +6,8 @@
       <file>core/PagePublicationServiceTest.php</file>
       <file>core/SlideBindingReadEfficiencyTest.php</file>
       <file>core/ApiLayersReadTest.php</file>
+      <file>core/PageOwnedPilotTest.php</file>
+      <file>core/PagePdfEditorReadServiceTest.php</file>
       <file>core/LegacyImageLiteralTextSaveTest.php</file>
       <file>core/ThumbnailRendererPrivacyTest.php</file>
       <file>core/ApiLayersExportPrivacyTest.php</file>

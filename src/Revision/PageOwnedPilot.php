@@ -581,11 +581,16 @@ class PageOwnedPilot {
 
 	/** @param array $snapshot @param array $selected @return bool */
 	private function isWholePdfGroup( array $snapshot, array $selected ): bool {
-		$document = json_decode( JsonSnapshotCodec::encode( $snapshot ) );
-		$anchor = json_decode( JsonSnapshotCodec::encode( $selected ) );
+		// Identity needs only surface and source fields, not a re-encoding of every layer payload.
+		$anchor = (object)$selected;
+		$anchor->source = (object)$selected['source'];
 		$key = LayerSetIdentity::key( $anchor );
 		$pages = [];
-		foreach ( $document->surfaces as $member ) {
+		foreach ( $snapshot['surfaces'] as $surface ) {
+			$member = (object)$surface;
+			if ( $member->kind !== 'slide' ) {
+				$member->source = (object)$surface['source'];
+			}
 			if ( LayerSetIdentity::key( $member ) !== $key ) {
 				continue;
 			}
