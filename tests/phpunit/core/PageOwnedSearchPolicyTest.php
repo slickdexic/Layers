@@ -30,6 +30,8 @@ class PageOwnedSearchPolicyTest extends RealAssetTestCase {
 		parent::setUp();
 		$this->assertSame( 'unittest_', $this->getDb()->tablePrefix(), 'Only isolated test tables are allowed.' );
 		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
+		$this->overrideConfigValue( 'GroupPermissions', array_replace_recursive(
+			$this->getServiceContainer()->getMainConfig()->get( 'GroupPermissions' ), [ '*' => [ 'read' => true ] ] ) );
 		$repo = $this->createMock( RepoGroup::class );
 		$repo->method( 'getLocalRepo' )->willReturn( $this->repo );
 		$repo->method( 'findFile' )->willReturnCallback( fn ( $title, $options = [] ) =>

@@ -5,7 +5,7 @@
 **Next release:** Page ownership and native revision history, working target **Layers 1.8**.
 **Broader finish line:** Layers 2.0, after the remaining ordered milestones and
 applicable charter criteria. Owner direction November 7: deliver a v1.8 testing
-candidate. The candidate manifest is **1.8.0-rc.2**; final acceptance remains open.
+candidate. The candidate manifest is **1.8.0-rc.3**; final acceptance remains open.
 **Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
 set the current work order and commit/push targets. They supersede earlier work
 orders and estimates; dated evidence remains a record of what was proved then.

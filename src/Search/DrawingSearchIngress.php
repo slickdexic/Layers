@@ -7,11 +7,11 @@ namespace MediaWiki\Extension\Layers\Search;
 use MediaWiki\DomainEvent\DomainEventIngress;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Page\Event\PageLatestRevisionChangedEvent;
-use MediaWiki\Page\Event\PageLatestRevisionChangedListener;
+use MediaWiki\Page\Event\PageRevisionUpdatedEvent;
 use MediaWiki\Revision\SlotRecord;
 
 /** Keeps layer-set text in the search index; registered after core's ingress, so its update is the one that stays. */
-class DrawingSearchIngress extends DomainEventIngress implements PageLatestRevisionChangedListener {
+class DrawingSearchIngress extends DomainEventIngress {
 	private DrawingSearchText $text;
 
 	/**
@@ -25,9 +25,23 @@ class DrawingSearchIngress extends DomainEventIngress implements PageLatestRevis
 	 * @param PageLatestRevisionChangedEvent $event
 	 */
 	public function handlePageLatestRevisionChangedEvent( PageLatestRevisionChangedEvent $event ): void {
+		$this->indexRevisionChange( $event );
+	}
+
+	/**
+	 * MediaWiki 1.44 uses the earlier event name. DomainEventIngress registers
+	 * listener methods without requiring the version-specific listener interface.
+	 * @param PageRevisionUpdatedEvent $event
+	 */
+	public function handlePageRevisionUpdatedEvent( PageRevisionUpdatedEvent $event ): void {
+		$this->indexRevisionChange( $event );
+	}
+
+	/** @param PageLatestRevisionChangedEvent|PageRevisionUpdatedEvent $event */
+	private function indexRevisionChange( PageLatestRevisionChangedEvent|PageRevisionUpdatedEvent $event ): void {
 		$drawingChanged = $event->isModifiedSlot( PageRevisionWriter::SLOT );
 		if ( !( $drawingChanged || $event->isModifiedSlot( SlotRecord::MAIN ) ||
-			$event->hasCause( PageLatestRevisionChangedEvent::CAUSE_MOVE ) || $event->isReconciliationRequest() )
+			$event->hasCause( $event::CAUSE_MOVE ) || $event->isReconciliationRequest() )
 		) {
 			return;
 		}

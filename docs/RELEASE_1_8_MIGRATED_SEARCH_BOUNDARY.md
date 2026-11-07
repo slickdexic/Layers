@@ -21,6 +21,12 @@ are preserved. Cleanup refuses disabled search updates and propagates write
 failures. The expanded affected native 1.45 run passes **59 tests / 544 assertions**;
 PHP style passes. Installed 1.44 qualification is not yet claimed.
 
+The subsequent rc.2 installed 1.44 run exposed an older-core event mismatch and
+test scenarios inheriting private-wiki read denial. Rc.3 handles both native
+revision-event names and makes public-read fixtures explicit. The corrected
+1.45 run passes 59 tests / 543 assertions. Use the rc.3 build receipt for the
+installed 1.44 result; the rc.2 failure remains recorded in release acceptance.
+
 ## Approved release and upgrade behavior
 
 Readers retain ordinary MediaWiki search. Current page-owned layer text remains

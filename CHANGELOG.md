@@ -2,6 +2,14 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.8.0-rc.3] - 2026-11-07
+
+Correct automatic search indexing on MediaWiki 1.44, whose native revision
+event has a different name from 1.45. Both versions now dispatch to the same
+guarded indexing path. Retains rc.2's migration cleanup and Import guidance.
+Rc.2's installed 1.44 qualification failed; it is superseded by this candidate.
+The production release gates and required upgrade sequence remain unchanged.
+
 ## [1.8.0-rc.2] - 2026-11-07
 
 Testing candidate with the approved migration/search boundary. Completed

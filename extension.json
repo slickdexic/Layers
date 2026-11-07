@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.8.0-rc.2",
+	"version": "1.8.0-rc.3",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -222,7 +222,7 @@
 	},
 	"DomainEventIngresses": [
 		{
-			"events": [ "PageLatestRevisionChanged" ],
+			"events": [ "PageLatestRevisionChanged", "PageRevisionUpdated" ],
 			"class": "MediaWiki\\Extension\\Layers\\Search\\DrawingSearchIngress",
 			"services": [ "LayersDrawingSearchText" ]
 		}

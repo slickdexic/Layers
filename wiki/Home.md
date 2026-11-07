@@ -13,7 +13,7 @@ package's `docs/V1_8_CANDIDATE_TESTING.md`. Search, Cargo and layer links follow
 
 | Current manifest and tagged baseline | Value |
 | --- | --- |
-| **Manifest version** | 1.8.0-rc.2 |
+| **Manifest version** | 1.8.0-rc.3 |
 | **Release date for this version** | November 7, 2026 |
 
 ## What the candidate does

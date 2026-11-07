@@ -1,5 +1,20 @@
 # Layers 1.8 release acceptance
 
+## 1.44 search compatibility correction — November 7, 2026
+
+Rc.2 (`1f2eba885494be2cbc3be7dddba2a3aa3269deca`) failed its installed 1.44
+search selection: 59 tests / 283 assertions, 10 errors and 15 failures. The
+search ingress required a listener interface/event introduced after 1.44;
+automatic layer-text indexing was not dispatched there. Public-search tests
+also inherited the private test wiki's read denial. No failure is waived.
+
+Rc.3 registers both core revision-event names with one guarded indexing path,
+without requiring the version-specific listener interface. The affected tests
+explicitly configure their public-read scenario; the private-read denial case
+remains. The corrected 1.45 selection passes 59 tests / 543 assertions; PHP
+style passes. Rc.3 installed 1.44 qualification is recorded in its build receipt
+after installation. No live wiki permissions were changed by test setup.
+
 ## Post-migration search correction — November 7, 2026
 
 Local source now stops legacy recovery rows supplying post-migration search and

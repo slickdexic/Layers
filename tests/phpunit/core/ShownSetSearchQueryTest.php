@@ -28,6 +28,8 @@ class ShownSetSearchQueryTest extends \MediaWikiIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		$this->overrideConfigValue( 'GroupPermissions', array_replace_recursive(
+			$this->getServiceContainer()->getMainConfig()->get( 'GroupPermissions' ), [ '*' => [ 'read' => true ] ] ) );
 		$this->setUpMigration();
 	}
 

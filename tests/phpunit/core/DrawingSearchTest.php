@@ -31,6 +31,12 @@ require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 	use IsolatedLocalRepoFixture;
 
+	protected function setUp(): void {
+		parent::setUp();
+		$this->overrideConfigValue( 'GroupPermissions', array_replace_recursive(
+			$this->getServiceContainer()->getMainConfig()->get( 'GroupPermissions' ), [ '*' => [ 'read' => true ] ] ) );
+	}
+
 	private function document( string $word, array $extra = [] ): string {
 		$document = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
 		$document->surfaces[0]->layers[0]->text = "Checklist $word";

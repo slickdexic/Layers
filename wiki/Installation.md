@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-The page-history candidate targets an independent **Layers 1.8** release. Its manifest still says **1.8.0-rc.2**; 1.8 has not yet been accepted or tagged. Select a reviewed commit with passing CI and check the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md).
+The page-history candidate targets an independent **Layers 1.8** release. Its manifest still says **1.8.0-rc.3**; 1.8 has not yet been accepted or tagged. Select a reviewed commit with passing CI and check the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md).
 
 ## Requirements and branches
 

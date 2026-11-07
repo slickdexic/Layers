@@ -30,6 +30,8 @@ class MigratedSearchIsolationTest extends \MediaWikiIntegrationTestCase {
 		parent::setUp();
 		$this->assertSame( 'unittest_', $this->getDb()->tablePrefix() );
 		$this->overrideConfigValues( [ 'DisableSearchUpdate' => false, 'SearchType' => null ] );
+		$this->overrideConfigValue( 'GroupPermissions', array_replace_recursive(
+			$this->getServiceContainer()->getMainConfig()->get( 'GroupPermissions' ), [ '*' => [ 'read' => true ] ] ) );
 		$this->setUpMigration();
 		MigrationState::clear( $this->getDb() );
 	}
