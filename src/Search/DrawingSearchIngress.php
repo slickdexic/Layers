@@ -36,7 +36,7 @@ class DrawingSearchIngress extends DomainEventIngress implements PageLatestRevis
 		$drawingText = $this->text->get( $page, $revision );
 		// Core has indexed the page text alone. Add layer-set words, or drop those a changed layer set no longer has.
 		if ( $drawingText !== '' || $drawingChanged ) {
-			$this->text->index( $event->getPageId(), $page, $revision, $drawingText );
+			$this->text->indexWithFence( $event->getPageId(), $page, $revision, $drawingText );
 		}
 	}
 }

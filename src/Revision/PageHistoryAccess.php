@@ -18,10 +18,15 @@ class PageHistoryAccess {
 
 	/** @var RevisionLookup */
 	private $revisionLookup;
+	private ?LayersDocumentContent $lastReadableContent = null;
+	private int $lastReadableOwner = 0;
+	private int $lastReadableRevision = 0;
+	private bool $reuseReadableContent;
 
-	/** @param RevisionLookup $revisionLookup */
-	public function __construct( RevisionLookup $revisionLookup ) {
+	/** @param RevisionLookup $revisionLookup @param bool $reuseReadableContent Reader-only reuse */
+	public function __construct( RevisionLookup $revisionLookup, bool $reuseReadableContent = false ) {
 		$this->revisionLookup = $revisionLookup;
+		$this->reuseReadableContent = $reuseReadableContent;
 	}
 
 	/**
@@ -96,8 +101,23 @@ class PageHistoryAccess {
 			throw new \DomainException( 'layers-revision-unavailable' );
 		}
 		$content = $revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::FOR_THIS_USER, $authority );
-		if ( !$content instanceof LayersDocumentContent || !$content->isReadable() ) {
+		if ( !$content instanceof LayersDocumentContent ) {
 			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+		// Only reuse immutable core content after all current owner/revision checks above have passed.
+		if ( $this->reuseReadableContent && get_class( $content ) === LayersDocumentContent::class &&
+			$this->lastReadableContent &&
+			$this->lastReadableOwner === $ownerId && $this->lastReadableRevision === $revisionId &&
+			$this->lastReadableContent->getText() === $content->getText() ) {
+			return $this->lastReadableContent;
+		}
+		if ( !$content->isReadable() ) {
+			throw new \DomainException( 'layers-revision-unavailable' );
+		}
+		if ( $this->reuseReadableContent && get_class( $content ) === LayersDocumentContent::class ) {
+			$this->lastReadableContent = $content;
+			$this->lastReadableOwner = $ownerId;
+			$this->lastReadableRevision = $revisionId;
 		}
 		return $content;
 	}

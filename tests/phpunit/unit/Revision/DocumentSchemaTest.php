@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Revision;
 use MediaWiki\Extension\Layers\Revision\DocumentSchema;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\LossyLayerException;
+use MediaWiki\Extension\Layers\Validation\LayerLinkValidator;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Revision\DocumentSchema
@@ -364,7 +365,8 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 	}
 
 	public function testDocumentWithGoodLinksCanonicalizesUnchanged(): void {
-		$schema = new DocumentSchema();
+		$schema = new DocumentSchema( new LayerLinkValidator( 'https?:\/\/|ftp:\/\/|mailto:|\/\/',
+			static fn ( string $text ) => LayerLinkValidator::fallbackTitleCheck( $text ) ) );
 		$doc = self::fixture();
 		$goodInternal = 'Operations/Intake#Procedure';
 		$goodExternal = 'https://example.org/a?b=c#d';

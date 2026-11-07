@@ -15,3 +15,9 @@
 
 # Preserve fixture byte offsets and hashes; PDF xref lines contain significant spaces.
 tests/fixtures/assets/*.pdf binary
+
+# Private acceptance PDFs retain exact byte offsets, significant spaces and hashes.
+acceptance/**/*.pdf binary
+
+# Private acceptance PDFs retain exact byte offsets, significant spaces and hashes.
+acceptance/**/*.pdf binary

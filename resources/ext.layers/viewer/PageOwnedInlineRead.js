@@ -23,17 +23,19 @@
 		} );
 		if ( !bindings.length ) { return; }
 		try {
-			const api = new mw.Api(), requests = [];
+			const api = new mw.Api(), requests = [], batches = [];
 			for ( let i = 0; i < bindings.length; i += 50 ) {
+				const selected = bindings.slice( i, i + 50 );
 				try {
 					requests.push( Promise.resolve( api.get( { action: 'layersread', formatversion: 2, owner,
-						revid: revisionId, binding: bindings.slice( i, i + 50 ), controls: 1 } ) )
+						revid: revisionId, binding: selected, controls: 1 } ) )
 						.then( response => ( response && response.layersread && response.layersread.bindings ) || {} )
 						.catch( () => ( {} ) ) );
 				} catch ( error ) { requests.push( Promise.resolve( {} ) ); }
+				batches.push( { bindings: selected, pending: requests[ requests.length - 1 ] } );
 			}
 			record = { root: document, owner, revisionId, bindings,
-				pending: Promise.all( requests ).then( parts => Object.assign( {}, ...parts ) ) };
+				pending: Promise.all( requests ).then( parts => Object.assign( {}, ...parts ) ), batches };
 		} catch ( error ) { /* The existing bootstrap remains the fallback if preparation is unavailable. */ }
 	}
 	const reader = {
@@ -42,7 +44,8 @@
 			const captured = record; record = null;
 			return !closed && captured.owner === owner && captured.revisionId === revisionId &&
 				captured.bindings.length === bindings.length &&
-				bindings.every( ( binding, index ) => captured.bindings[ index ] === binding ) ? captured.pending : null;
+				bindings.every( ( binding, index ) => captured.bindings[ index ] === binding ) ?
+				( captured.batches.length > 1 ? { batches: captured.batches } : captured.pending ) : null;
 		}
 	};
 	window.Layers = window.Layers || {};

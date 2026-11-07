@@ -15,6 +15,42 @@ class LayerLinkValidatorTest extends \MediaWikiUnitTestCase {
 
 	private const TEST_PROTOCOLS = 'https?:\/\/|ftp:\/\/|mailto:|\/\/';
 
+	public function testUnavailableProtocolPolicyDoesNotFallBackToHardcodedUrls(): void {
+		if ( class_exists( \MediaWiki\MediaWikiServices::class ) ) {
+			$this->markTestSkipped( 'This case exercises the standalone missing-service boundary.' );
+		}
+		$validator = new LayerLinkValidator( null, static fn ( string $text ) => true );
+		$this->assertFalse( $validator->validate( 'https://example.org' )['valid'] );
+		$this->assertFalse( $validator->validate( 'Main Page' )['valid'] );
+	}
+
+	public function testThrowingTitlePolicyRefusesTheLink(): void {
+		$validator = $this->createValidator( self::TEST_PROTOCOLS, static function ( string $text ) {
+			throw new \RuntimeException( 'Synthetic unavailable title service' );
+		} );
+		$this->assertFalse( $validator->validate( 'Main Page' )['valid'] );
+	}
+
+	public function testDisallowedUrlCannotBeReinterpretedAsATitle(): void {
+		$validator = $this->createValidator( 'https:\/\/' );
+		$this->assertTrue( $validator->validate( 'https://example.org' )['valid'] );
+		$this->assertFalse( $validator->validate( 'http://example.org' )['valid'] );
+		$this->assertFalse( $validator->validate( 'mailto:person@example.org' )['valid'] );
+		$this->assertFalse( $validator->validate( '//example.org' )['valid'] );
+		$this->assertTrue( $validator->validate( 'File:Example.png' )['valid'] );
+	}
+
+	public function testMalformedProtocolPolicyFailsClosed(): void {
+		$validator = $this->createValidator( '[' );
+		set_error_handler( static fn () => true, E_WARNING );
+		try {
+			$this->assertFalse( $validator->validate( 'https://example.org' )['valid'] );
+			$this->assertFalse( $validator->validate( 'Main Page' )['valid'] );
+		} finally {
+			restore_error_handler();
+		}
+	}
+
 	/**
 	 * Create validator with a mock title validator for standalone tests.
 	 *

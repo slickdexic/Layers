@@ -226,13 +226,16 @@
 		} );
 		return () => disposers.forEach( ( dispose ) => dispose() );
 	}
-	function mountInline( root, bundles, fields, api ) {
+	function mountInline( root, bundles, fields, api, selected ) {
 		const disposers = [];
 		root.querySelectorAll( HOSTS ).forEach( ( container ) => {
 			if ( mounted.has( container ) ) {
 				return;
 			}
 			const binding = container.getAttribute( 'data-layers-binding' );
+			if ( selected && !selected.has( binding ) ) {
+				return;
+			}
 			const unavailable = () => {
 				if ( container.classList.contains( 'layers-bound-slide' ) &&
 					container.hasAttribute( 'data-layers-unavailable' ) ) {
@@ -306,16 +309,7 @@
 		} );
 		return () => disposers.forEach( ( dispose ) => dispose() );
 	}
-	/**
-	 * Fetch this reader's authorized drawings for the displayed revision, then mount them.
-	 * Page HTML holds only binding identities, so it stays cacheable for every reader.
-	 * @param {Document|Element} root
-	 * @param {Object} api mw.Api-compatible client
-	 * @param {string} owner Displayed page name
-	 * @param {number} revisionId Displayed revision; placeholders from other revisions stay unavailable
-	 * @param {Object} [fields] Page-supplied field values by drawing ID
-	 * @return {Promise<Function>} Disposer
-	 */
+	/** Load layer sets for the exact displayed revision. @return {Promise<Function>} Disposer */
 	function loadInline( root, api, owner, revisionId, fields ) {
 		const creationDispose = mountCreation( root, revisionId, api );
 		const bindings = [];
@@ -332,23 +326,48 @@
 		}
 		const reader = window.Layers && window.Layers.InlineRead;
 		const early = reader && typeof reader.take === 'function' ? reader.take( root, owner, revisionId, bindings ) : null;
-		if ( early ) {
+		if ( early && !early.batches ) {
 			return Promise.resolve( early ).catch( () => ( {} ) ).then( bundles => {
 				const inlineDispose = mountInline( root, bundles, fields, api );
 				return () => { creationDispose(); inlineDispose(); };
 			} );
 		}
-		const requests = [];
-		for ( let i = 0; i < bindings.length; i += 50 ) {
-			requests.push( Promise.resolve().then( () => api.get( { action: 'layersread', formatversion: 2, owner,
-				revid: revisionId, binding: bindings.slice( i, i + 50 ), controls: 1 } ) )
-				.then( ( response ) => ( response && response.layersread && response.layersread.bindings ) || {} )
-				.catch( () => ( {} ) ) );
+		const batches = early ? early.batches : [];
+		if ( !early ) {
+			for ( let i = 0; i < bindings.length; i += 50 ) {
+				const selected = bindings.slice( i, i + 50 );
+				const pending = Promise.resolve().then( () => api.get( { action: 'layersread', formatversion: 2, owner,
+					revid: revisionId, binding: selected, controls: 1 } ) ).then( response =>
+					( response && response.layersread && response.layersread.bindings ) || {} ).catch( () => ( {} ) );
+				batches.push( { bindings: selected, pending } );
+			}
 		}
-		return Promise.all( requests ).then( ( parts ) => {
-			const inlineDispose = mountInline( root, Object.assign( {}, ...parts ), fields, api );
-			return () => { creationDispose(); inlineDispose(); };
-		} );
+		if ( batches.length === 1 ) {
+			return batches[ 0 ].pending.then( bundles => {
+				const release = mountInline( root, bundles, fields, api );
+				return () => { creationDispose(); release(); };
+			} );
+		}
+		let stopped = false;
+		const disposers = [ creationDispose ];
+		const dispose = () => {
+			if ( stopped ) { return; }
+			stopped = true;
+			window.removeEventListener( 'pagehide', dispose );
+			disposers.forEach( release => release() );
+		};
+		window.addEventListener( 'pagehide', dispose, { once: true } );
+		const current = () => root !== document || ( mw.config.get( 'wgPageName' ) === owner &&
+			mw.config.get( 'wgRevisionId' ) === revisionId );
+		return Promise.all( batches.map( batch => Promise.resolve( batch.pending ).catch( () => ( {} ) )
+			.then( bundles => {
+				if ( !stopped && current() ) {
+					disposers.push( mountInline( root, bundles, fields, api, new Set( batch.bindings ) ) );
+				}
+			} ) ) ).then( () => {
+				if ( !stopped && current() ) { mountInline( root, {}, fields, api ); }
+				return dispose;
+			} );
 	}
 	/**
 	 * Fetch and mount each comparison host's drawing at its own revision.

@@ -4,7 +4,8 @@
 **Applies to:** all lead and junior work on `main`.
 **Next release:** Page ownership and native revision history, working target **Layers 1.8**.
 **Broader finish line:** Layers 2.0, after the remaining ordered milestones and
-applicable charter criteria. The manifest stays at 1.5.95 until the release cut.
+applicable charter criteria. Owner direction November 7: deliver a v1.8 testing
+candidate. The candidate manifest is **1.8.0-rc.1**; final acceptance remains open.
 **Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
 set the current work order and commit/push targets. They supersede earlier work
 orders and estimates; dated evidence remains a record of what was proved then.
@@ -60,6 +61,7 @@ Changes the owner has approved (the only removals allowed):
 
 | Date | Change | Where decided |
 | --- | --- | --- |
+| November 6, 2026 | Page-owned layer text remains searchable while its owning page/revision is readable, even when its referenced file is suppressed. Media delivery and legacy shared-set privacy retain their checks. This replaces the November 5 source-dependent discovery rule only for page-owned text. | Owner approved option A in the [search decision brief](RELEASE_1_8_SEARCH_DECISION.md); [active search policy](SEARCH_SOURCE_VISIBILITY_BEHAVIOUR_BRIEF.md). Verification remains open. |
 | September 30, 2026 | The box of links above a page ("Drawings on this page") goes; hover overlays replace it. | UI-10 |
 | September 30, 2026 | The **Edit Layers** tab on `File:` pages goes. Layers are edited on the page that owns them. | UI-10, behaviour brief |
 | September 29–30, 2026 | After the migration, old shared layer sets are read-only; "Adopt" is retired. | D3, behaviour brief |
@@ -79,6 +81,15 @@ Changes the owner has approved (the only removals allowed):
 | October 28, 2026 | Refuse server PDF export when a required page or its saved layers cannot be rendered; retain complete exports, source checks and existing failure messaging. | [PDF completeness brief](PDF_EXPORT_COMPLETENESS_BEHAVIOUR_BRIEF.md); project owner: “Approve the proposed correction”. Implementation and screen review remain in progress. |
 | October 28, 2026 | Correct plain text selection bounds to follow the text as rendered, retaining text-box wrapping, controls and saved content. | [Text selection bounds brief](TEXT_SELECTION_BOUNDS_BEHAVIOUR_BRIEF.md); project owner approved the correction and confirmed the editor view looked good. |
 | October 28, 2026 | Choosing a creation tool clears the current layer selection and makes presets apply to that tool's next layer; Pointer selection continues to support editing existing layers. | [Tool preset selection brief](TOOL_PRESET_SELECTION_BEHAVIOUR_BRIEF.md); project owner requested and approved the change. Owner screen review remains pending. |
+
+Owner clarification, November 6: page ownership governs access to saved page
+revisions and their Layers slots. Suppressing a file revision does not, by
+itself, hide an otherwise readable page revision; restricting its layer text
+requires restricting the page revision separately. The owner subsequently
+approved option A: page-owned search follows this same page/revision boundary.
+Legacy shared-set privacy and refusal of unavailable media remain separate
+requirements. See the
+[search visibility brief](SEARCH_SOURCE_VISIBILITY_BEHAVIOUR_BRIEF.md).
 
 Not yet decided (owner questions, do not act on them): whether to delete the old shared-set editor and its APIs in 2.0.
 

@@ -7,9 +7,9 @@
 
 Add layers to **images and PDF pages**, or build **standalone slides** without a background file. In the page-history candidate, a layer set belongs to its wiki page and file or slide. Saving creates a native revision of the owning page; uploaded originals remain separate.
 
-> **Version:** 1.5.95 (September 2, 2026) — latest tagged release; manifest remains at this version.
+> **Version:** 1.8.0-rc.1 (November 7, 2026) — testing candidate; not a production release.
 
-**Release scope updated: October 25, 2026.** The page-history candidate targets an independent **Layers 1.8** release (working version). Later search, Cargo and layer-link milestones continue toward 2.0. Version/tag assignment follows release acceptance. See the [Milestone 1 release checklist](docs/MILESTONE_1_RELEASE_CHECKLIST.md) and choose a reviewed commit with passing CI. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release. Use a currently supported core release.
+**Testing candidate cut: November 7, 2026.** This candidate delivers page ownership and native revision history for testing toward **Layers 1.8**. See the [candidate instructions and known limitations](docs/V1_8_CANDIDATE_TESTING.md). Final release acceptance remains open; later search, Cargo and layer-link milestones continue toward 2.0. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release.
 
 > **Upgrade prerequisite:** Page-owned embed selection starts after the documented migration records completion, including on a fresh wiki with no legacy layer sets. Until then, legacy lookup remains active. Follow the [upgrade guide](docs/UPGRADING.md); do not delete retained legacy data or change completion records manually.
 

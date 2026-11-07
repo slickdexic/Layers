@@ -6,6 +6,98 @@ history will ship independently, with **1.8** as the working version. The
 is authoritative. Final version/tag assignment follows acceptance; the manifest
 remains unchanged by this document.
 
+**November 6 lead closeout review:** Use the
+[release critical path](RELEASE_1_8_CRITICAL_PATH.md) for remaining assignments.
+The owner's page-revision access clarification means source-suppressed text in
+an independently readable Layers slot is not itself confidential page data.
+The owner **approved option A on November 6** in the
+[search decision brief](RELEASE_1_8_SEARCH_DECISION.md). Page-owned search follows
+page/revision access; its former file-source discovery requirement is superseded.
+Legacy shared rows and restricted owning pages retain independent privacy
+qualification. R1a–R1c in the critical path specify the remaining tests.
+No release gate is waived, no search feature is paused and no runtime changes
+are made by this review. Native CI selection now includes 18 files; its reported
+232 / 1,836 pass is on 1.45, with exact-public-candidate 1.44 verification pending.
+
+**November 6 approved-A verification:** a fresh, separate
+`PageOwnedSearchPolicyTest` run on maintained 1.45.3 / PHP 8.3.31 passes
+**3 tests / 65 assertions** (including core teardown). Active list/generator
+search retains page-owned terms through archived-image suppression/restoration;
+the image resolver refuses the suppressed source. Native old-page-revision
+suppression protects anonymous slot reads, authorized review remains available,
+obsolete terms are absent from current search, and both API search modes refuse
+a reader without wiki read permission. Default temporary `unittest_` tables and
+temporary fixture media were used; ordinary wiki content/settings and runtime
+code were unchanged. This count is not added to the earlier CI selection count.
+R1 remains open for PDF, Special:Search, page-specific permissions, owner
+deletion/restore, active legacy confidentiality and installed 1.44. See the
+critical path for the exact remaining assignments and initial fixture failures.
+
+**November 5 audit follow-up (historical; page-owned search policy amended above):** Release qualification remains open for the
+search/source visibility investigation, exact-candidate native and browser
+coverage, common reader latency and final artifact identity. A local native
+probe confirms that after suppressing a synthetic image and running the Layers
+deletion hook, search still matches its layer-text marker and regenerates a
+snippet. This does not demonstrate a disclosure of real private data. The
+then-approved visibility policy required source-dependent index invalidation;
+that requirement now applies to legacy shared sets, not readable page-owned
+text. The PR growth check has a locally verified repair,
+but its exact-candidate and remote workflow checks remain pending. See the
+[handoff](IMPLEMENTATION_HANDOFF_PLAN.md#updated-audit-follow-up--november-5-2026)
+and [growth policy](CODE_GROWTH_POLICY.md).
+
+The maintenance search reindexer also has a local, native-tested correction for
+stale terms when a still-associated page has an empty layer-text projection.
+Discovery of pages that lost all associations and bounded-memory qualification
+remain open; no ordinary wiki reindex was run.
+
+**November 4 candidate:** Public commit `18f0ed7` adds coverage enforcement,
+reader-module size budgets, an inline-control permission regression and
+current activation comments. Local full coverage passed 19,087 tests; exact
+candidate [full CI](https://github.com/slickdexic/Layers/actions/runs/41954669366),
+[native CI](https://github.com/slickdexic/Layers/actions/runs/41954669232) and
+[browser CI](https://github.com/slickdexic/Layers/actions/runs/41954669209)
+passed. The 1.44 installation then used `1181894`; the later update is below.
+No release or final-candidate acceptance is implied.
+
+**Reader check follow-up:** Public candidate `1b84ac0` adds the reader API
+suite to native CI; its 1.44 run passed 141 tests / 1,073 assertions, and its
+full and browser CI also passed. The later
+candidate `1b44dca` also guards the reader's transitive Layers dependencies.
+Its four focused guard tests and copied-source failure controls passed locally;
+its [full CI](https://github.com/slickdexic/Layers/actions/runs/41959960070),
+[native CI](https://github.com/slickdexic/Layers/actions/runs/41959960056) and
+[browser CI](https://github.com/slickdexic/Layers/actions/runs/41959960061)
+passed.
+
+**PDF group calculation:** Candidate `6339130` avoids re-encoding unrelated
+layer payloads when identifying a PDF group. The local 1.45 affected native
+suite passed 87 tests / 724 assertions, and 11 identity cases passed before and
+after the change. Synthetic timing shows less calculation work, not a measured
+page-load improvement. The expanded [1.44 native CI](https://github.com/slickdexic/Layers/actions/runs/41961943078)
+passed 207 tests / 1,706 assertions; [full CI](https://github.com/slickdexic/Layers/actions/runs/41961943125)
+and [browser CI](https://github.com/slickdexic/Layers/actions/runs/41961943131)
+also passed. The verified 2,902-file candidate was installed on the existing 1.44
+test wiki, with the same service configuration and other services unchanged.
+Read-only browser checks opened and closed an image, slide and PDF page 2 at the
+expected identities with no owner-content changes. This is not full acceptance.
+
+**Changed layer sets in history:** Owner-approved candidate `5d13e58` limits
+history View links to sets added or changed in each revision, grouping PDF
+pages by their file and layer-set identity. The affected 1.45 native history
+suite passed 13 tests / 47 assertions; the 1.44 native CI passed 220 tests /
+1,753 assertions. Exact-candidate [full CI](https://github.com/slickdexic/Layers/actions/runs/41964224556),
+[native CI](https://github.com/slickdexic/Layers/actions/runs/41964224555) and
+[browser CI](https://github.com/slickdexic/Layers/actions/runs/41964224548)
+passed. On 8080, the owner's example revision now shows only `View Layers: 005`.
+The verified 2,903-file candidate is installed on the existing 1.44 wiki; a
+read-only history comparison passed for both revisions of its test page. An
+initial browser observer incorrectly counted nested revision links as rows; the
+corrected row-only check passed. No wiki content was changed by these checks.
+The owner subsequently confirmed the changed-set history presentation and one
+Undo/restore journey on 8080. This is one owner-tested journey, not complete
+Milestone 1 acceptance.
+
 This is the release closeout ledger, consolidating existing requirements and
 retained evidence. It introduces no new feature or quality target. Runtime
 baseline: reviewed code at `b04679d`, with passing exact-commit CI. The
@@ -32,15 +124,15 @@ the changed source passed 5 tests and 77 assertions in isolated test tables.
 At that checkpoint the installed 1.44 candidate had not yet been updated; the
 later installed-candidate result is recorded below.
 
-**Save error feedback follow-up:** The owner approved making existing synchronous, asynchronous and validation Save errors visible above the editor, retaining work and without automatic retry. Synthetic cases failed before correction; the affected Save, validation, editor/API/draft/history group passed 1,557 tests. Read-only browser probes confirmed the notifications are visible and retained work without wiki writes. The earlier intermittent slide failure has not been attributed to these synthetic cases. Public candidate `0af5550` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40976599621), [browser CI](https://github.com/slickdexic/Layers/actions/runs/40976599790) and [expanded 1.44 native CI](https://github.com/slickdexic/Layers/actions/runs/40976599884) with 120 tests / 1,000 assertions. The subsequent validation correction requires exact-commit CI and installed-candidate acceptance.
+**Save notification follow-up:** The owner approved making the existing synchronous, asynchronous and validation Save errors visible above the editor without retrying or losing work. Affected Save, validation, draft, API and history tests passed 1,557 cases. Read-only synthetic browser checks confirmed each notification is visible and work is retained. The earlier intermittent slide report remains unexplained. Public candidate `0af5550` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40976599621), [browser CI](https://github.com/slickdexic/Layers/actions/runs/40976599790) and [expanded 1.44 native CI](https://github.com/slickdexic/Layers/actions/runs/40976599884) with 120 tests / 1,000 assertions. Public candidate `1181894` includes the validation visibility correction. Its [1.44 native CI](https://github.com/slickdexic/Layers/actions/runs/41008034304), [browser CI](https://github.com/slickdexic/Layers/actions/runs/41008034438) and [full CI](https://github.com/slickdexic/Layers/actions/runs/41008034382) passed. All 2,900 public package files were verified in the prepared test image, which was installed on the existing 1.44 wiki with its service configuration and other services unchanged. Read-only browser checks opened and closed an image, slide and PDF page 2 at the expected owner, revision and layer identities; owner content stayed exact. A synthetic validation failure in the installed editor displayed the message above the editor and retained work, with no wiki writes. This is bounded desktop verification, not full release acceptance.
 
-**Installed 1.44 candidate:** `29afad087d95fb2fd5509aa823c0c5a44147c403` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40972936151), [native 1.44 CI](https://github.com/slickdexic/Layers/actions/runs/40972936149) and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40972936139). Native CI passed 86 tests / 400 assertions with no skips. Its 2,895 public files were verified in the package and test image; the existing 1.44 wiki on 8082 now runs that image with unchanged service configuration and the other test services unchanged. A direct installed-renderer CLI probe was refused by the existing isolated-wiki settings guard; no bypass was attempted. The independent 1.45 native group and 1.44 CI cover the correction. A read-only installed 1.44 browser check opened one image, slide and PDF editor at their expected owner, revision and saved layers; the PDF selected page 2, all three closed back to the owner, and the witnessed pages stayed exact. This is one desktop opening per type, not comprehensive device acceptance. The owner confirmed the synthetic grayscale comparison; broader release acceptance remains pending.
+**Installed 1.44 candidate:** `29afad087d95fb2fd5509aa823c0c5a44147c403` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40972936151), [native 1.44 CI](https://github.com/slickdexic/Layers/actions/runs/40972936149) and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40972936139). Native CI passed 86 tests / 400 assertions with no skips. Its 2,895 public files were verified in the package and test image; the existing 1.44 wiki on 8082 then ran that image with unchanged service configuration and the other test services unchanged. A direct installed-renderer CLI probe was refused by the existing isolated-wiki settings guard; no bypass was attempted. The independent 1.45 native group and 1.44 CI cover the correction. A read-only installed 1.44 browser check opened one image, slide and PDF editor at their expected owner, revision and saved layers; the PDF selected page 2, all three closed back to the owner, and the witnessed pages stayed exact. This is one desktop opening per type, not comprehensive device acceptance. The owner confirmed the synthetic grayscale comparison; broader release acceptance remains pending.
 
 **Grayscale PDF export correction:** The owner approved preserving imported-image color over a grayscale base in server PDF output. Three synthetic cases failed before the local fix and passed after it; the affected 1.45 rendering/privacy group passed 37 tests / 260 assertions, including grayscale and color backgrounds, opacity, large rotation and PDF conversion. Exact-commit CI and installation passed; the owner confirmed the synthetic grayscale comparison. Broader release acceptance remains pending.
 
-**Large rotated image follow-up:** A synthetic 10,000 × 10,000 rotated image failed with the 1.45 test wiki's conversion limits. Public candidate `58827e3ff355296cf69d6a0a24461d8c3ff8606e` renders oversized rotated layers into the visible viewport; the affected 1.45 renderer/privacy group passed 32 tests / 227 assertions, and the unrotated RGB probe passed. Its [full CI](https://github.com/slickdexic/Layers/actions/runs/40971152333), [native 1.44](https://github.com/slickdexic/Layers/actions/runs/40971152083), and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40971152140) passed. The verified 2,894-file candidate is now installed on the existing 1.44 wiki. Its read-only reader recheck preserved identity and pixels but missed the 300 ms target in three of five samples; other installed-candidate and owner acceptance remain pending.
+**Large rotated image follow-up:** A synthetic 10,000 × 10,000 rotated image failed with the 1.45 test wiki's conversion limits. Public candidate `58827e3ff355296cf69d6a0a24461d8c3ff8606e` renders oversized rotated layers into the visible viewport; the affected 1.45 renderer/privacy group passed 32 tests / 227 assertions, and the unrotated RGB probe passed. Its [full CI](https://github.com/slickdexic/Layers/actions/runs/40971152333), [native 1.44](https://github.com/slickdexic/Layers/actions/runs/40971152083), and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40971152140) passed. The verified 2,894-file candidate was installed on the existing 1.44 wiki at that checkpoint. Its read-only reader recheck preserved identity and pixels but missed the 300 ms target in three of five samples; other installed-candidate and owner acceptance remain pending.
 
-**Latest verified candidate:** Public commit `bc971cfc018b0fe619610d196e05facf506b19b5` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40941897001), [native 1.44 tests](https://github.com/slickdexic/Layers/actions/runs/40941896936) and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40941896995). The 1.45 native renderer/privacy group passed 26 tests / 195 assertions, including the rotated-shadow correction. Its 2,894-file public archive matches the commit. The 1.44 wiki still has the earlier installed build; the new candidate is not a released 1.8 package.
+**Earlier verified candidate:** Public commit `bc971cfc018b0fe619610d196e05facf506b19b5` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40941897001), [native 1.44 tests](https://github.com/slickdexic/Layers/actions/runs/40941896936) and [browser CI](https://github.com/slickdexic/Layers/actions/runs/40941896995). The 1.45 native renderer/privacy group passed 26 tests / 195 assertions, including the rotated-shadow correction. Its 2,894-file public archive matches the commit. The 1.44 wiki still has the earlier installed build; the new candidate is not a released 1.8 package.
 
 **Previous October 29 candidate:** Public commit `43d10d7691ea487f18055f9b1f1174af67a86c12` passed [full CI](https://github.com/slickdexic/Layers/actions/runs/40922719436), [native 1.44 tests](https://github.com/slickdexic/Layers/actions/runs/40922719502) and the repaired [browser workflow](https://github.com/slickdexic/Layers/actions/runs/40922719429). The complete client suite passed 19,080 tests. The package was verified against all 2,894 committed files. It includes the approved legacy recovery and server rotation corrections; real pre-migration editor and owner acceptance remain open. The later installed-candidate update is recorded above. The subsequent rotated-shadow correction is recorded above. The candidate is not a 1.8 release.
 
@@ -191,7 +283,7 @@ review. Final dependency, documentation, artifact and exact-commit checks remain
 | Supported UI, touch and accessibility | **Partial:** [phone-viewer panning](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification), the owner-approved [bounded toolbar](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) and [revision-check bar](REVISION_CHECK_BAR.md) pass their recorded browser scopes. The bar retains its action and fits image/slide/PDF editors in tested light/dark desktop, tablet and narrow layouts. | Finish remaining tablet-touch editing, physical-device and manual accessibility acceptance. Browser emulation is not physical-device sign-off. Phone editing is not required. |
 | Security, privacy and data integrity | **Recorded engineering review:** [HTTP roles/visibility/lifecycle and native Save admission](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md); the [candidate review](PAGE_HISTORY_SECURITY_REVIEW.md) now covers request/access/admission, validation/output, bounds, I/O, configuration/logging and dependencies. Import quotas, renderer text interpretation and SVG resource lookup are corrected; locked npm and PHP audits are clear at this checkpoint. | Reconcile final source/artifact consistency and recheck dated dependency results at the release cut. Reopen affected checks after changes and fix/retest release-blocking findings. No open high/critical finding or known data-loss defect may ship; this is not independent penetration-test or owner acceptance. |
 | Performance | **Recorded installed-desktop passes / reader misses retained:** [asset and editor-entry checks](PAGE_HISTORY_PERFORMANCE.md#installed-asset-and-editor-entry-checks--october-27-2026) measure 102,129 gzip bytes of Layers modules, none on the plain page, and all fifteen warm image/slide/PDF editor openings at 800–930 ms, below three seconds. The latest [installed 1.44 reader recheck](PAGE_HISTORY_PERFORMANCE.md#installed-144-candidate-recheck--large-image-correction) measured 295.1–335.4 ms; three of five visits exceeded the 300 ms target. Earlier observations and withdrawn experiments remain retained. | Investigate the reader misses and applicable cold-server/reference-device/media checks without changing controls or weakening read admission. These are representative desktop observations, not physical-device or blanket PDF acceptance. Source/assets are local; retained private data/configuration storage and reference hardware remain explicit limits. Keep environment costs distinct from product defects and obtain owner disposition of unproved limits. |
-| Package and documentation | **Recorded candidate package pass / final cut pending:** the independently verified `29afad0` archive contains 2,895 exact public files and is installed on the 1.44 wiki. Primary guides, upgrade instructions and [draft release notes](RELEASE_NOTES_1_8.md) are refreshed. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. The candidate still reports manifest 1.5.95; it is not a released 1.8 build. Private captures, credentials, configuration and database exports stay local. |
+| Package and documentation | **Recorded candidate package pass / final cut pending:** the independently verified `5d13e58` archive contains 2,903 exact public files and is installed on the 1.44 wiki. Primary guides, upgrade instructions and [draft release notes](RELEASE_NOTES_1_8.md) are refreshed. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. The candidate still reports manifest 1.5.95; it is not a released 1.8 build. Private captures, credentials, configuration and database exports stay local. |
 | Owner acceptance | **Pending.** | Complete the Milestone 1 portions of charter scenarios S1–S7 on the intended wiki. Search, Cargo and new link portions belong to their later milestones. Record acceptance of the release scope and remaining disclosed limits. |
 | Final release cut | **Pending.** | Freeze the reviewed artifact, run required gates and exact-commit CI, confirm version/tag with the owner and publish the independent release. Preserve a consistent upgrade/rollback reference. |
 

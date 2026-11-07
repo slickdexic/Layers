@@ -14,8 +14,31 @@ final class PageDrawingSearchText {
 	 *   one per line; empty when unreadable
 	 */
 	public static function extract( Content $content ): string {
+		return self::extractSurfaces( self::surfaces( $content ) );
+	}
+
+	/**
+	 * Project slides and file surfaces whose exact source was admitted by the caller.
+	 * The IDs must come from a fresh source-visibility check, not stored metadata.
+	 * @param Content $content
+	 * @param string[] $admittedFileIds
+	 * @return string
+	 */
+	public static function extractWithAdmittedSources( Content $content, array $admittedFileIds ): string {
+		$allowed = array_fill_keys( $admittedFileIds, true );
+		$surfaces = array_filter( self::surfaces( $content ), static function ( array $surface ) use ( $allowed ) {
+			$kind = $surface['kind'] ?? null;
+			$id = $surface['id'] ?? null;
+			return $kind === 'slide' || ( in_array( $kind, [ 'image', 'pdf' ], true ) &&
+				is_string( $id ) && isset( $allowed[$id] ) );
+		} );
+		return self::extractSurfaces( $surfaces );
+	}
+
+	/** @param array[] $surfaces @return string */
+	private static function extractSurfaces( array $surfaces ): string {
 		$lines = [];
-		foreach ( self::surfaces( $content ) as $surface ) {
+		foreach ( $surfaces as $surface ) {
 			$lines[] = is_string( $surface['label'] ?? null ) ? $surface['label'] : '';
 			$lines[] = self::layerText( $surface );
 			foreach ( is_array( $surface['layers'] ?? null ) ? $surface['layers'] : [] as $layer ) {

@@ -2,8 +2,23 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.8.0-rc.1] - 2026-11-07
+
+Testing candidate for page-owned layer sets and native page revision history.
+Includes image, slide and whole-PDF editing, history/restore, source-pinned viewing,
+exports, recovery, reader batching and reader snapshot reuse. Includes stricter
+link-policy refusal and the latest legacy-search refresh safeguards.
+
+**Not a production release.** Legacy search can retain restricted terms until
+refresh jobs complete; full privacy closure, reference performance and physical
+accessibility/device acceptance remain open. Use synthetic/non-sensitive data
+for candidate testing. See [candidate testing](docs/V1_8_CANDIDATE_TESTING.md).
+
 ## [Unreleased]
 
+- Accept the reusable overlay foundation (J114A/A1, October 5): callbacks preserve both controls, Edit requires authorization, mounting honors existing focus without moving it, and disposal is reliable. Full lead JavaScript/static gates pass 15,211 tests / 208 suites; runtime-only `8066cc70` is confirmed pushed. Page-owned bootstrap/viewer integration remains unfinished and the top box remains a temporary UI-10 gap. Qualified PDF evidence passes 34 native tests / 318 assertions; visible native quality loss requires architect review of exact-version pdf.js delivery before integration.
+- Accept corrected native gallery occurrence and whole-layer-set copy migration (M2/N, October 5): preserve explicit/nested selectors, live parser ownership, caption/alt text, one file-scoped PDF-group name, template constraints and exact selected-member identity. Recheck admitted source owners, base visibility and incoming media pins across preparation/synchronous save callbacks; preserve self-owned embed rewrites and native deferred tags/undo. No metadata/output activation or ordinary migration command. UI-10 overlays/full-size viewer remain the next owner-directed priority.
+- Accept the bounded legacy PDF selected-member correction (J113L, October 4): native template/embed payloads, dimensions and page selection agree; missing members do not borrow another PDF page. Lead L/M filter passes 94 tests / 1,263 assertions. The returned gallery change remains unaccepted after explicit-template/nested-render failures and is assigned corrective work in J113M2. Whole-set copy regressions are demonstrated and delegated in J113N; no migration, metadata or output activation.
 - Correct legacy File-page PDF editor selection (J113E, October 4): select the owning file, normalized layer-set name and effective internal page. Grouped PDF pages keep one name. Older split names remain compatible only with matching retained migration metadata; ambiguous or unavailable requests keep the existing list. Stored names, listing entries, pre-migration behavior and output activation are unchanged.
 - Count PDF pages under one normalized layer-set name in parser compatibility lookup (J113D, accepted October 4). Preserve first stored spelling, exact-name precedence, file isolation and native exact-page routing. Transitional single-set show intent remains unchanged; this does not activate the final Default rule.
 - Add a read-only administrator audit of retained file/PDF migration records (J113C, October 3). Exact owner/revision access and deterministic IDs are checked against retained source metadata, including older saves and versions. Reports preserve literal names and expose split PDF labels or conflicting evidence; they do not rename, merge, compare layer payloads or activate migration output.

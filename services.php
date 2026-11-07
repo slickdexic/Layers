@@ -19,6 +19,8 @@ use MediaWiki\Extension\Layers\Revision\PageOwnedScope;
 use MediaWiki\Extension\Layers\Revision\PinnedPdfSource;
 use MediaWiki\Extension\Layers\Revision\SourceVersionResolver;
 use MediaWiki\Extension\Layers\Search\DrawingSearchText;
+use MediaWiki\Extension\Layers\Search\LegacySearchSourceAdmission;
+use MediaWiki\Extension\Layers\Search\VisibleLegacySearchProjection;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
 
@@ -40,9 +42,14 @@ return [
 		return new PageOwnedPilot( $services, [], PageOwnedScope::configuredNamespaces( $services->getMainConfig() ) );
 	},
 	'LayersDrawingSearchText' => static function ( MediaWikiServices $services ): DrawingSearchText {
+		$database = $services->getService( 'LayersDatabase' );
+		$legacy = new VisibleLegacySearchProjection( $database,
+			new LegacySearchSourceAdmission( $services->getRepoGroup()->getLocalRepo() ),
+			$services->getTitleFactory() );
 		return new DrawingSearchText( $services->getService( 'LayersPageOwnedPilot' ),
-			$services->getService( 'LayersDatabase' ), $services->getRevisionLookup(), $services->getPageStore(),
-			$services->getConnectionProvider() );
+			$database, $services->getRevisionLookup(), $services->getPageStore(),
+			$services->getConnectionProvider(), $legacy, $services->getUserFactory()->newAnonymous(),
+			$services->getJobQueueGroup(), $services->getService( 'LayersLogger' ) );
 	},
 	'LayersLogger' => static function ( MediaWikiServices $services ): LayersLogger {
 		return new LayersLogger();

@@ -14,6 +14,8 @@ use MediaWiki\Title\TitleFactory;
 class SourceVersionResolver {
 	private LocalRepo $repo;
 	private TitleFactory $titleFactory;
+	private ?LayersDocumentContent $lastContent = null;
+	private ?\stdClass $lastDocument = null;
 
 	/**
 	 * @param LocalRepo $repo Local repository only; never a repository group
@@ -59,7 +61,15 @@ class SourceVersionResolver {
 		if ( !$content->isReadable() ) {
 			throw new \DomainException( 'layers-source-unavailable' );
 		}
-		$document = json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR );
+		if ( get_class( $content ) === LayersDocumentContent::class && $this->lastContent === $content ) {
+			$document = $this->lastDocument;
+		} else {
+			$document = json_decode( $content->getText(), false, 64, JSON_THROW_ON_ERROR );
+			if ( get_class( $content ) === LayersDocumentContent::class ) {
+				$this->lastContent = $content;
+				$this->lastDocument = $document;
+			}
+		}
 		$files = [];
 		foreach ( $document->surfaces as $surface ) {
 			if ( $surface->kind === 'slide' ||

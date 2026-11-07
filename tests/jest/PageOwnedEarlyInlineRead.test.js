@@ -118,4 +118,98 @@ describe( 'Page-owned inline read scheduling', () => {
 		expect( api.get.mock.calls[ 0 ][ 0 ].binding ).toHaveLength( 50 );
 		expect( api.get.mock.calls[ 1 ][ 0 ].binding ).toHaveLength( 5 );
 	} );
+	it.each( [ 0, 1 ] )( 'mounts completed early batch %i while another batch is pending', async first => {
+		const nodes = [];
+		for ( let i = 0; i < 51; i++ ) {
+			const node = host( 'surface-' + i ); node.textContent = '';
+			node.dataset.layersUnavailable = 'Unavailable'; nodes.push( node );
+		}
+		const duplicate = host( 'surface-0' );
+		const resolve = [];
+		api.get.mockImplementation( () => new Promise( done => resolve.push( done ) ) );
+		install(); ready(); await settle();
+		const response = index => {
+			const id = index === 0 ? 'surface-0' : 'surface-50';
+			return { layersread: { bindings: { [ 'v1:10:' + id ]: Object.assign( {}, bundle,
+				{ surface: Object.assign( {}, bundle.surface, { id } ) } ) } } };
+		};
+		resolve[ first ]( response( first ) ); await settle();
+		expect( nodes[ first === 0 ? 0 : 50 ].querySelector( 'canvas' ) ).not.toBeNull();
+		expect( nodes[ first === 0 ? 50 : 0 ].textContent ).toBe( '' );
+		resolve[ 1 - first ]( response( 1 - first ) ); await settle();
+		expect( nodes[ 0 ].querySelector( 'canvas' ) ).not.toBeNull();
+		expect( nodes[ 50 ].querySelector( 'canvas' ) ).not.toBeNull();
+		expect( duplicate.querySelector( 'canvas' ) ).not.toBeNull();
+	} );
+	it( 'does not mount a late batch after navigation', async () => {
+		const nodes = [];
+		for ( let i = 0; i < 51; i++ ) { nodes.push( host( 'surface-' + i ) ); }
+		const resolve = [];
+		api.get.mockImplementation( () => new Promise( done => resolve.push( done ) ) );
+		install(); ready(); await settle();
+		const part = id => ( { layersread: { bindings: { [ 'v1:10:' + id ]: Object.assign( {}, bundle,
+			{ surface: Object.assign( {}, bundle.surface, { id } ) } ) } } } );
+		resolve[ 0 ]( part( 'surface-0' ) ); await settle();
+		expect( nodes[ 0 ].querySelector( 'canvas' ) ).not.toBeNull();
+		window.dispatchEvent( new Event( 'pagehide' ) );
+		resolve[ 1 ]( part( 'surface-50' ) ); await settle();
+		expect( nodes[ 50 ].querySelector( 'canvas' ) ).toBeNull();
+	} );
+	it( 'mounts fallback batches independently and ignores responses for another batch', async () => {
+		const nodes = [];
+		for ( let i = 0; i < 51; i++ ) {
+			const node = host( 'surface-' + i ); node.textContent = '';
+			node.dataset.layersUnavailable = 'Unavailable'; nodes.push( node );
+		}
+		const resolve = [];
+		api.get.mockImplementation( () => new Promise( done => resolve.push( done ) ) );
+		let bootstrap;
+		jest.isolateModules( () => { bootstrap = require( '../../resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js' ); } );
+		const pending = bootstrap.loadInline( document, api, 'Owner', 42 ); await settle();
+		const part = id => ( { layersread: { bindings: { [ 'v1:10:' + id ]: Object.assign( {}, bundle,
+			{ surface: Object.assign( {}, bundle.surface, { id } ) } ) } } } );
+		resolve[ 0 ]( part( 'surface-50' ) ); await settle();
+		expect( nodes[ 50 ].textContent ).toBe( '' );
+		expect( nodes[ 0 ].textContent ).toBe( 'Unavailable' );
+		resolve[ 1 ]( part( 'surface-50' ) );
+		const dispose = await pending;
+		expect( nodes[ 50 ].querySelector( 'canvas' ) ).not.toBeNull();
+		dispose();
+	} );
+	it( 'isolates a failed batch across 101 bindings while other batches continue', async () => {
+		const nodes = [];
+		for ( let i = 0; i < 101; i++ ) {
+			const node = host( 'surface-' + i ); node.textContent = '';
+			node.dataset.layersUnavailable = 'Unavailable'; nodes.push( node );
+		}
+		const requests = [];
+		api.get.mockImplementation( () => new Promise( ( resolve, reject ) => requests.push( { resolve, reject } ) ) );
+		let bootstrap;
+		jest.isolateModules( () => { bootstrap = require( '../../resources/ext.layers/viewer/PageOwnedRevisionBootstrap.js' ); } );
+		const pending = bootstrap.loadInline( document, api, 'Owner', 42 ); await settle();
+		const part = id => ( { layersread: { bindings: { [ 'v1:10:' + id ]: Object.assign( {}, bundle,
+			{ surface: Object.assign( {}, bundle.surface, { id } ) } ) } } } );
+		requests[ 0 ].reject( new Error( 'private failure' ) );
+		requests[ 2 ].resolve( part( 'surface-100' ) ); await settle();
+		expect( nodes[ 0 ].textContent ).toBe( 'Unavailable' );
+		expect( nodes[ 50 ].textContent ).toBe( '' );
+		expect( nodes[ 100 ].querySelector( 'canvas' ) ).not.toBeNull();
+		expect( document.body.textContent ).not.toContain( 'private failure' );
+		requests[ 1 ].resolve( part( 'surface-50' ) );
+		const dispose = await pending;
+		expect( nodes[ 50 ].querySelector( 'canvas' ) ).not.toBeNull();
+		dispose();
+	} );
+	it( 'does not mount a batch after the displayed revision changes', async () => {
+		const nodes = [];
+		for ( let i = 0; i < 51; i++ ) { nodes.push( host( 'surface-' + i ) ); }
+		const resolve = [];
+		api.get.mockImplementation( () => new Promise( done => resolve.push( done ) ) );
+		install(); ready(); await settle(); config.wgRevisionId = 43;
+		const part = id => ( { layersread: { bindings: { [ 'v1:10:' + id ]: Object.assign( {}, bundle,
+			{ surface: Object.assign( {}, bundle.surface, { id } ) } ) } } } );
+		resolve[ 0 ]( part( 'surface-0' ) ); resolve[ 1 ]( part( 'surface-50' ) ); await settle();
+		expect( nodes[ 0 ].querySelector( 'canvas' ) ).toBeNull();
+		expect( nodes[ 50 ].querySelector( 'canvas' ) ).toBeNull();
+	} );
 } );

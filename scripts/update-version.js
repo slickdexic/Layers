@@ -45,7 +45,7 @@ const MW_VERSION_REQUIREMENTS = {
 const DATE_FILES = [
 	{
 		file: 'README.md',
-		pattern: /(> \*\*Version:\*\* \d+\.\d+\.\d+ \()([^)]+)(\))/,
+		pattern: /(> \*\*Version:\*\* \d+\.\d+\.\d+(?:-rc\.\d+)? \()([^)]+)(\))/,
 		format: 'long',
 		replacement: ( date ) => `$1${ date }$3`
 	},
@@ -67,38 +67,38 @@ const DATE_FILES = [
 const VERSION_FILES = [
 	{
 		file: 'extension.json',
-		pattern: /"version":\s*"(\d+\.\d+\.\d+)"/,
+		pattern: /"version":\s*"(\d+\.\d+\.\d+(?:-rc\.\d+)?)"/,
 		replacement: ( version ) => `"version": "${ version }"`,
 		isSource: true
 	},
 	{
 		file: 'resources/ext.layers.editor/LayersNamespace.js',
-		pattern: /const VERSION = '(\d+\.\d+\.\d+)'/,
+		pattern: /const VERSION = '(\d+\.\d+\.\d+(?:-rc\.\d+)?)'/,
 		replacement: ( version ) => `const VERSION = '${ version }'`
 	},
 	{
 		file: 'README.md',
-		pattern: /> \*\*Version:\*\* (\d+\.\d+\.\d+)/,
+		pattern: /> \*\*Version:\*\* (\d+\.\d+\.\d+(?:-rc\.\d+)?)/,
 		replacement: ( version ) => `> **Version:** ${ version }`
 	},
 	{
 		file: 'Mediawiki-Extension-Layers.mediawiki',
-		pattern: /\|version\s*=\s*(\d+\.\d+\.\d+)/,
+		pattern: /\|version\s*=\s*(\d+\.\d+\.\d+(?:-rc\.\d+)?)/,
 		replacement: ( version ) => `|version         = ${ version }`
 	},
 	{
 		file: 'wiki/Home.md',
-		pattern: /\*\*Manifest version\*\*\s*\|\s*(\d+\.\d+\.\d+)/,
+		pattern: /\*\*Manifest version\*\*\s*\|\s*(\d+\.\d+\.\d+(?:-rc\.\d+)?)/,
 		replacement: ( version ) => `**Manifest version** | ${ version }`
 	},
 	{
 		file: 'wiki/Installation.md',
-		pattern: /manifest still says \*\*(\d+\.\d+\.\d+)\*\*/,
+		pattern: /manifest still says \*\*(\d+\.\d+\.\d+(?:-rc\.\d+)?)\*\*/,
 		replacement: ( version ) => `manifest still says **${ version }**`
 	},
 	{
 		file: 'improvement_plan.md',
-		pattern: /\*\*Version:\*\*\s*(\d+\.\d+\.\d+)/,
+		pattern: /\*\*Version:\*\*\s*(\d+\.\d+\.\d+(?:-rc\.\d+)?)/,
 		replacement: ( version ) => `**Version:** ${ version }`
 	}
 ];
@@ -119,7 +119,7 @@ function getSourceVersion() {
 	const extensionPath = path.join( getProjectRoot(), 'extension.json' );
 	const content = fs.readFileSync( extensionPath, 'utf8' );
 	// Match version with optional branch suffix (e.g., "1.5.51" or "1.5.51-REL1_39")
-	const match = content.match( /"version":\s*"(\d+\.\d+\.\d+)(?:-[A-Za-z0-9_]+)?"/ );
+	const match = content.match( /"version":\s*"(\d+\.\d+\.\d+(?:-rc\.\d+)?)(?:-[A-Za-z0-9_]+)?"/ );
 
 	if ( !match ) {
 		console.error( 'ERROR: Could not find version in extension.json' );
@@ -496,8 +496,8 @@ if ( args.includes( '--set' ) ) {
 	const setIndex = args.indexOf( '--set' );
 	const newVersion = args[ setIndex + 1 ];
 
-	if ( !newVersion || !/^\d+\.\d+\.\d+$/.test( newVersion ) ) {
-		console.error( 'ERROR: Invalid version format. Use X.Y.Z (e.g., 1.5.36)' );
+	if ( !newVersion || !/^\d+\.\d+\.\d+(?:-rc\.\d+)?$/.test( newVersion ) ) {
+		console.error( 'ERROR: Invalid version format. Use X.Y.Z or X.Y.Z-rc.N (e.g., 1.8.0-rc.1)' );
 		process.exit( 1 );
 	}
 

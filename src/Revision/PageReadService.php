@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Revision;
 
+use MediaWiki\Extension\Layers\Content\LayersDocumentContent;
 use MediaWiki\Permissions\Authority;
 use MediaWiki\Title\Title;
 use Wikimedia\Rdbms\IDBAccessObject;
@@ -13,6 +14,8 @@ class PageReadService {
 	private PageHistoryAccess $access;
 	private SourceVersionResolver $sources;
 	private ?SourceRenditions $renditions;
+	private ?LayersDocumentContent $lastContent = null;
+	private ?array $lastSnapshot = null;
 
 	public function __construct( PageHistoryAccess $access, SourceVersionResolver $sources,
 		?SourceRenditions $renditions = null
@@ -76,7 +79,7 @@ class PageReadService {
 			return [];
 		}
 		$bundles = [];
-		$surfaces = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR )['surfaces'];
+		$surfaces = $this->snapshot( $content )['surfaces'];
 		$fileIds = [];
 		foreach ( $surfaces as $surface ) {
 			if ( $surface['kind'] !== 'slide' && in_array( $surface['id'], $wanted, true ) ) {
@@ -133,7 +136,7 @@ class PageReadService {
 		} catch ( \DomainException $e ) {
 			throw new \DomainException( 'layers-revision-unavailable', 0, $e );
 		}
-		$snapshot = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR );
+		$snapshot = $this->snapshot( $content );
 		$geometry = [];
 		$renditions = [];
 		foreach ( $snapshot['surfaces'] as $surface ) {
@@ -163,5 +166,18 @@ class PageReadService {
 		}
 		return [ 'revisionId' => $revisionId, 'snapshot' => $snapshot, 'sourceGeometry' => $geometry ] +
 			( $this->renditions ? [ 'sourceRenditions' => $renditions ] : [] );
+	}
+
+	/** @return array Exact validated snapshot; callers receive a copy-on-write array. */
+	private function snapshot( LayersDocumentContent $content ): array {
+		if ( get_class( $content ) === LayersDocumentContent::class && $this->lastContent === $content ) {
+			return $this->lastSnapshot;
+		}
+		$snapshot = json_decode( $content->getText(), true, 64, JSON_THROW_ON_ERROR );
+		if ( get_class( $content ) === LayersDocumentContent::class ) {
+			$this->lastContent = $content;
+			$this->lastSnapshot = $snapshot;
+		}
+		return $snapshot;
 	}
 }

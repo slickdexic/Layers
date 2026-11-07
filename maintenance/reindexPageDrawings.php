@@ -22,6 +22,7 @@ use MediaWiki\Extension\Layers\Search\DrawingSearchText;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
 use MediaWiki\Maintenance\Maintenance;
 use MediaWiki\Page\PageIdentity;
+use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\NameTableAccessException;
 use MediaWiki\Title\Title;
 
@@ -116,12 +117,16 @@ class ReindexPageDrawings extends Maintenance {
 	 * @param PageIdentity $page
 	 */
 	private function index( PageIdentity $page ): void {
-		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionByPageId( $page->getId() );
-		$text = $revision && !isset( $this->indexed[$page->getId()] ) ? $this->text->get( $page, $revision ) : '';
-		if ( $text !== '' ) {
-			$this->text->index( $page->getId(), $page, $revision, $text );
-			$this->indexed[$page->getId()] = true;
+		if ( isset( $this->indexed[$page->getId()] ) ) {
+			return;
 		}
+		$revision = $this->getServiceContainer()->getRevisionLookup()->getRevisionByPageId( $page->getId() );
+		if ( !$revision || $revision->isDeleted( RevisionRecord::DELETED_TEXT ) ) {
+			return;
+		}
+		// An empty projection must replace stale layer text while retaining the main slot.
+		$this->text->indexWithFence( $page->getId(), $page, $revision, '' );
+		$this->indexed[$page->getId()] = true;
 	}
 }
 

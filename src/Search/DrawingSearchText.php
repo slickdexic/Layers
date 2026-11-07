@@ -11,13 +11,17 @@ use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
+use MediaWiki\JobQueue\JobQueueGroup;
 use MediaWiki\Page\PageIdentity;
 use MediaWiki\Page\PageLookup;
 use MediaWiki\Page\PageReference;
+use MediaWiki\Permissions\Authority;
 use MediaWiki\Revision\RevisionLookup;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Revision\SlotRecord;
 use MediaWiki\Search\SearchUpdate;
+use MediaWiki\Title\Title;
+use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDBAccessObject;
 use Wikimedia\Rdbms\IExpression;
@@ -37,6 +41,10 @@ class DrawingSearchText {
 	private RevisionLookup $revisions;
 	private PageLookup $pages;
 	private IConnectionProvider $connections;
+	private VisibleLegacySearchProjection $visibleLegacy;
+	private Authority $indexAuthority;
+	private JobQueueGroup $jobs;
+	private LoggerInterface $logger;
 
 	/**
 	 * @param PageOwnedPilot $pilot
@@ -44,15 +52,24 @@ class DrawingSearchText {
 	 * @param RevisionLookup $revisions
 	 * @param PageLookup $pages
 	 * @param IConnectionProvider $connections
+	 * @param VisibleLegacySearchProjection $visibleLegacy
+	 * @param Authority $indexAuthority
+	 * @param JobQueueGroup $jobs
+	 * @param LoggerInterface $logger
 	 */
 	public function __construct( PageOwnedPilot $pilot, LayersDatabase $db, RevisionLookup $revisions,
-		PageLookup $pages, IConnectionProvider $connections
+		PageLookup $pages, IConnectionProvider $connections, VisibleLegacySearchProjection $visibleLegacy,
+		Authority $indexAuthority, JobQueueGroup $jobs, LoggerInterface $logger
 	) {
 		$this->pilot = $pilot;
 		$this->db = $db;
 		$this->revisions = $revisions;
 		$this->pages = $pages;
 		$this->connections = $connections;
+		$this->visibleLegacy = $visibleLegacy;
+		$this->indexAuthority = $indexAuthority;
+		$this->jobs = $jobs;
+		$this->logger = $logger;
 	}
 
 	/**
@@ -74,9 +91,7 @@ class DrawingSearchText {
 				$revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW ) );
 		}
 		if ( $page->getNamespace() === NS_FILE ) {
-			foreach ( $this->db->getFileSetsForSearch( $page->getDBkey(), $fromPrimary ) as $set ) {
-				$parts[] = PageDrawingSearchText::layerText( $set );
-			}
+			$parts[] = $this->visibleLegacy->file( $page->getDBkey(), $this->indexAuthority, $fromPrimary );
 		}
 		$queried = [];
 		foreach ( $shown ?? $this->shown( $page, $fromPrimary ) as [ $kind, $name, $setName ] ) {
@@ -87,8 +102,13 @@ class DrawingSearchText {
 			}
 			$queried[$key] = true;
 			$slide = $kind === ShownLayerSets::SLIDE;
-			foreach ( $this->db->getSetForSearch( $slide ? LayersConstants::SLIDE_PREFIX . $name : $name, $setName,
-				$slide, $fromPrimary ) as $set
+			if ( !$slide ) {
+				$parts[] = $this->visibleLegacy->shown( $name, $setName, false, $this->indexAuthority,
+					$fromPrimary );
+				continue;
+			}
+			foreach ( $this->db->getSetForSearch( LayersConstants::SLIDE_PREFIX . $name, $setName,
+				true, $fromPrimary ) as $set
 			) {
 				$parts[] = PageDrawingSearchText::layerText( $set );
 			}
@@ -112,6 +132,61 @@ class DrawingSearchText {
 	}
 
 	/**
+	 * Write from fresh primary state and recheck it after the transaction commits.
+	 * The supplied revision and projection identify the triggering work, but may
+	 * have been prepared before a source changed; neither is trusted for the write.
+	 * @param int $pageId
+	 * @param PageIdentity $page
+	 * @param RevisionRecord $revision
+	 * @param string $drawingText
+	 * @param array|null $shown Fresh parser properties when available
+	 */
+	public function indexWithFence( int $pageId, PageIdentity $page, RevisionRecord $revision,
+		string $drawingText, ?array $shown = null
+	): void {
+		$record = $this->pages->getPageById( $pageId, IDBAccessObject::READ_LATEST );
+		$current = $record ? $this->revisions->getRevisionByPageId( $pageId, 0, IDBAccessObject::READ_LATEST ) : null;
+		if ( !$record || !$record->isSamePageAs( $page ) || $revision->getPageId() !== $pageId || !$current ) {
+			return;
+		}
+		$entries = $shown ?? $this->shown( $record, true );
+		$text = $this->get( $record, $current, true, $entries );
+		$this->index( $pageId, $record, $current, $text );
+		$hasLegacyFile = $record->getNamespace() === NS_FILE &&
+			( $text !== '' || $this->db->hasFileSetsForSearch( $record->getDBkey() ) );
+		foreach ( $entries as $entry ) {
+			$hasLegacyFile = $hasLegacyFile || ( $entry[0] ?? null ) === ShownLayerSets::FILE;
+		}
+		if ( !$hasLegacyFile ) {
+			return;
+		}
+		$indexedRevision = $current->getId();
+		$this->connections->getPrimaryDatabase()->onTransactionCommitOrIdle( function () use (
+			$pageId, $text, $indexedRevision, $record
+		): void {
+			try {
+				$latestPage = $this->pages->getPageById( $pageId, IDBAccessObject::READ_LATEST );
+				$latest = $latestPage ? $this->revisions->getRevisionByPageId( $pageId, 0,
+					IDBAccessObject::READ_LATEST ) : null;
+				if ( $latest && ( $latest->getId() !== $indexedRevision ||
+					$this->get( $latestPage, $latest, true ) !== $text ) ) {
+					$this->update( $latestPage );
+				}
+			} catch ( \Throwable $e ) {
+				$this->logger->error( 'Search write verification failed',
+					[ 'exception' => $e, 'pageId' => $pageId ] );
+				try {
+					$this->jobs->push( new PageSearchRefreshJob( Title::newFromPageReference( $record ),
+						[ 'pageId' => $pageId ] ) );
+				} catch ( \Throwable $queueError ) {
+					$this->logger->error( 'Search verification retry scheduling failed',
+						[ 'exception' => $queueError, 'pageId' => $pageId ] );
+				}
+			}
+		}, __METHOD__ );
+	}
+
+	/**
 	 * Reindex the current revision of a page after a shared layer set it shows changes, which is not a page edit.
 	 *
 	 * @param PageReference $page
@@ -122,7 +197,7 @@ class DrawingSearchText {
 		$revision = $record ? $this->revisions->getRevisionByPageId( $record->getId(), 0,
 			IDBAccessObject::READ_LATEST ) : null;
 		if ( $record && $revision ) {
-			$this->index( $record->getId(), $record, $revision, $this->get( $record, $revision, true, $shown ) );
+			$this->indexWithFence( $record->getId(), $record, $revision, '', $shown );
 		}
 	}
 
@@ -162,7 +237,7 @@ class DrawingSearchText {
 	 * @param bool $fromPrimary
 	 * @return string[][] ShownLayerSets entries from the stored page property, read without PageProps' cache
 	 */
-	private function shown( PageReference $page, bool $fromPrimary ): array {
+	protected function shown( PageReference $page, bool $fromPrimary ): array {
 		$record = $this->pages->getPageByReference( $page,
 			$fromPrimary ? IDBAccessObject::READ_LATEST : IDBAccessObject::READ_NORMAL );
 		if ( !$record ) {

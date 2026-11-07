@@ -69,8 +69,7 @@ function rawExactTextResponse( response, moduleName ) {
 	if ( !value || value.version !== 1 || typeof value.data !== 'string' ) { return response; }
 	try { return { ...response, [ moduleName ]: JSON.parse( value.data ) }; } catch { return response; }
 }
-
-function surface( id, kind, populated ) {
+function surface( id, kind, populated ) {
 	return { id, kind, label: 'Same', canvas: { width: 100, height: 50, backgroundColor: 'white', extra: [ null, false, 0, '' ] },
 		...( kind === 'image' ? { source: { fileTitle: 'File:Exact.png', sha1: 'pin', timestamp: '20261001010101', page: 1 } } : {} ),
 		layers: populated ? [ { id: 'old', type: 'text', text: 'old' } ] : [], ...( populated ? { readingOrder: [ 'old' ] } : {} ) };

@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Revision;
 
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
+use MediaWiki\Extension\Layers\Validation\LayerLinkValidator;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 
 /** Version-one page-owned snapshot validation used by read and publication services. */
@@ -15,6 +16,10 @@ class DocumentSchema {
 	public const MAX_LAYERS_PER_SURFACE = 100;
 	public const MAX_TOTAL_LAYERS = 1000;
 	public const MAX_DIMENSION = 4096;
+
+	/** @param LayerLinkValidator|null $links Explicit policy for isolated callers */
+	public function __construct( private ?LayerLinkValidator $links = null ) {
+	}
 
 	/**
 	 * Validate without silently repairing data and return canonical JSON.
@@ -178,7 +183,7 @@ class DocumentSchema {
 		} catch ( \JsonException $e ) {
 			throw new \InvalidArgumentException( 'invalid-layer-json-number', 0, $e );
 		}
-		$validator = new ServerSideLayerValidator( self::MAX_LAYERS_PER_SURFACE, 1048576 );
+		$validator = new ServerSideLayerValidator( self::MAX_LAYERS_PER_SURFACE, 1048576, $this->links );
 		$result = $validator->validateLayers( $raw );
 		if ( !$result->isValid() || JsonSnapshotCodec::encode( $surface->layers ) !==
 			JsonSnapshotCodec::encode( $result->getData() ) ) {

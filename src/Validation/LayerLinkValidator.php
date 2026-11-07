@@ -15,8 +15,8 @@ use MediaWiki\Title\Title;
  */
 class LayerLinkValidator {
 
-	/** @var string Regex partial pattern for allowed external URL protocols */
-	private string $protocols;
+	/** @var string|null Regex partial pattern, null if the wiki policy is unavailable */
+	private ?string $protocols;
 
 	/** @var callable Callable validating wiki title strings */
 	private $titleValidator;
@@ -35,11 +35,9 @@ class LayerLinkValidator {
 			try {
 				if ( class_exists( MediaWikiServices::class ) ) {
 					$protocols = MediaWikiServices::getInstance()->getUrlUtils()->validProtocols();
-				} else {
-					$protocols = 'https?:\/\/|ftp:\/\/|mailto:|\/\/';
 				}
 			} catch ( \Throwable $e ) {
-				$protocols = 'https?:\/\/|ftp:\/\/|mailto:|\/\/';
+				$protocols = null;
 			}
 		}
 		$this->protocols = $protocols;
@@ -52,9 +50,9 @@ class LayerLinkValidator {
 						return Title::newFromText( $text, $ns );
 					}
 				} catch ( \Throwable $e ) {
-					return self::fallbackTitleCheck( $text );
+					return null;
 				}
-				return self::fallbackTitleCheck( $text );
+				return null;
 			};
 		} else {
 			$this->titleValidator = $titleValidator;
@@ -62,7 +60,7 @@ class LayerLinkValidator {
 	}
 
 	/**
-	 * Basic title validation fallback when MediaWiki Title parser services are disabled.
+	 * Basic title check for explicitly configured standalone callers.
 	 *
 	 * @param string $text Title candidate string
 	 * @return bool|null Non-null if valid, null if invalid
@@ -109,6 +107,9 @@ class LayerLinkValidator {
 		if ( preg_match( '/[\x00-\x1f\x7f]/', $value ) ) {
 			return [ 'valid' => false, 'error' => 'Link cannot contain control characters' ];
 		}
+		if ( $this->protocols === null ) {
+			return [ 'valid' => false, 'error' => 'Link validation is unavailable' ];
+		}
 
 		// Script-bearing pseudo-protocols are refused by name even if a wiki lists them in
 		// $wgUrlProtocols. "File:" and "Data:" are also namespaces, so they are refused only when
@@ -123,8 +124,20 @@ class LayerLinkValidator {
 
 		// Check if the value starts with an allowed external URL protocol
 		$protocolPattern = '/^(?:' . $this->protocols . ')/i';
-		if ( preg_match( $protocolPattern, $value ) ) {
+		try {
+			$matched = preg_match( $protocolPattern, $value );
+		} catch ( \Throwable $e ) {
+			return [ 'valid' => false, 'error' => 'Link validation is unavailable' ];
+		}
+		if ( $matched === false ) {
+			return [ 'valid' => false, 'error' => 'Link validation is unavailable' ];
+		}
+		if ( $matched === 1 ) {
 			return $this->validateExternalUrl( $value );
+		}
+		// A URL rejected by the wiki's protocol policy must not be reinterpreted as a page title.
+		if ( preg_match( '~^(?:[a-z][a-z0-9+.-]*://|//|mailto:)~i', $value ) ) {
+			return [ 'valid' => false, 'error' => 'Link protocol is forbidden' ];
 		}
 
 		return $this->validateInternalLink( $value );
@@ -184,7 +197,11 @@ class LayerLinkValidator {
 			return [ 'valid' => true, 'value' => $value ];
 		}
 
-		$title = ( $this->titleValidator )( $titlePart );
+		try {
+			$title = ( $this->titleValidator )( $titlePart );
+		} catch ( \Throwable $e ) {
+			return [ 'valid' => false, 'error' => 'Link validation is unavailable' ];
+		}
 		if ( !$title ) {
 			return [ 'valid' => false, 'error' => 'Invalid wiki page title in link' ];
 		}

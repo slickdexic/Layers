@@ -5,6 +5,9 @@
       <file>core/PageHistoryAccessTest.php</file>
       <file>core/PagePublicationServiceTest.php</file>
       <file>core/SlideBindingReadEfficiencyTest.php</file>
+      <file>core/ReaderSnapshotReuseTest.php</file>
+      <file>core/ReaderSourceRevalidationTest.php</file>
+      <file>core/RetainedFileDeletionTest.php</file>
       <file>core/ApiLayersReadTest.php</file>
       <file>core/PageOwnedHistoryHooksTest.php</file>
       <file>core/HistoryUndoToolsTest.php</file>

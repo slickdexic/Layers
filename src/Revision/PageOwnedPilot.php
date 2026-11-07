@@ -57,7 +57,7 @@ class PageOwnedPilot {
 	public function __construct( MediaWikiServices $services, array $ownerKeys = [], array $namespaces = [] ) {
 		$this->scope = PageOwnedScope::newFromServices( $services, $ownerKeys, $namespaces );
 		$this->services = $services;
-		$access = new PageHistoryAccess( $services->getRevisionLookup() );
+		$access = new PageHistoryAccess( $services->getRevisionLookup(), true );
 		$sources = new SourceVersionResolver( $services->getRepoGroup()->getLocalRepo(), $services->getTitleFactory() );
 		$this->publisher = new PagePublicationService( $services->getWikiPageFactory(), $access, $sources,
 			new PageRevisionWriter(), new PublicationAdmissionContext(), $services->getHookContainer(),
@@ -1919,14 +1919,23 @@ class PageOwnedPilot {
 				return [];
 			}
 			$surfaces = array_column( json_decode( $content->getText(), true )['surfaces'], null, 'id' );
+			$fileIds = [];
 			foreach ( $result as $binding => $bundle ) {
 				$id = $bundle['surface']['id'];
-				try {
-					if ( ( $surfaces[$id] ?? null ) !== $bundle['surface'] ) {
-						throw new \DomainException( 'layers-revision-unavailable' );
-					}
-					$sources->resolve( $content, $authority, [ $id ] );
-				} catch ( \DomainException $e ) {
+				if ( ( $surfaces[$id] ?? null ) !== $bundle['surface'] ) {
+					unset( $result[$binding] );
+				} elseif ( $bundle['surface']['kind'] !== 'slide' ) {
+					$fileIds[] = $id;
+				}
+			}
+			try {
+				// Decode once, but reauthorize each source separately after editor hooks.
+				$files = $fileIds ? $sources->resolveIndividually( $content, $authority, $fileIds ) : [];
+			} catch ( \DomainException $e ) {
+				return [];
+			}
+			foreach ( $result as $binding => $bundle ) {
+				if ( $bundle['surface']['kind'] !== 'slide' && !isset( $files[$bundle['surface']['id']] ) ) {
 					unset( $result[$binding] );
 				}
 			}

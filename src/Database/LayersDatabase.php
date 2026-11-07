@@ -1488,6 +1488,33 @@ class LayersDatabase {
 	 * @return array[] Decoded set data, whose `layers` holds the layers; unreadable sets are skipped
 	 */
 	public function getFileSetsForSearch( string $imgName, bool $fromPrimary = false ): array {
+		return $this->fileSetsForSearch( $imgName, $fromPrimary, false );
+	}
+
+	/**
+	 * Return the same selected file sets with their stored source identity for visibility checks.
+	 * @param string $imgName
+	 * @param bool $fromPrimary
+	 * @return array[] Entries contain data, sha1 and page
+	 */
+	public function getFileSetsForSearchWithSources( string $imgName, bool $fromPrimary = false ): array {
+		return $this->fileSetsForSearch( $imgName, $fromPrimary, true );
+	}
+
+	/** Whether a file has retained legacy rows, without loading their layer payloads. */
+	public function hasFileSetsForSearch( string $imgName ): bool {
+		$db = $this->getWriteDb();
+		$name = $this->normalizeImageName( $imgName );
+		if ( !$db || $name === '' ) {
+			return false;
+		}
+		return $db->newSelectQueryBuilder()->select( 'ls_id' )->from( 'layer_sets' )
+			->where( [ 'ls_img_name' => $name, $db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ] )
+			->limit( 1 )->caller( __METHOD__ )->fetchField() !== false;
+	}
+
+	/** @return array[] */
+	private function fileSetsForSearch( string $imgName, bool $fromPrimary, bool $withSources ): array {
 		$db = $fromPrimary ? $this->getWriteDb() : $this->getReadDb();
 		$name = $this->normalizeImageName( $imgName );
 		if ( !$db || $name === '' ) {
@@ -1497,7 +1524,7 @@ class LayersDatabase {
 			->where( [ 'ls_img_name' => $name, $db->expr( 'ls_img_sha1', '!=', LayersConstants::TYPE_SLIDE ) ] )
 			->groupBy( [ 'ls_name', 'ls_page' ] )->limit( self::MAX_SEARCH_SETS )
 			->caller( __METHOD__ )->fetchFieldValues();
-		return $this->decodeSetsForSearch( $db, $ids );
+		return $this->decodeSetsForSearch( $db, $ids, $withSources );
 	}
 
 	/**
@@ -1511,6 +1538,27 @@ class LayersDatabase {
 	 * @return array[] Decoded set data, whose `layers` holds the layers
 	 */
 	public function getSetForSearch( string $imgName, string $setName, bool $slide, bool $fromPrimary = false ): array {
+		return $this->setForSearch( $imgName, $setName, $slide, $fromPrimary, false );
+	}
+
+	/**
+	 * Return the same selected set members with their stored source identity.
+	 * @param string $imgName
+	 * @param string $setName
+	 * @param bool $slide
+	 * @param bool $fromPrimary
+	 * @return array[] Entries contain data, sha1 and page
+	 */
+	public function getSetForSearchWithSources( string $imgName, string $setName, bool $slide,
+		bool $fromPrimary = false
+	): array {
+		return $this->setForSearch( $imgName, $setName, $slide, $fromPrimary, true );
+	}
+
+	/** @return array[] */
+	private function setForSearch( string $imgName, string $setName, bool $slide, bool $fromPrimary,
+		bool $withSources
+	): array {
 		$db = $fromPrimary ? $this->getWriteDb() : $this->getReadDb();
 		$name = $this->normalizeImageName( $imgName );
 		if ( !$db || $name === '' ) {
@@ -1528,24 +1576,28 @@ class LayersDatabase {
 		$ids = $db->newSelectQueryBuilder()->select( 'MAX(ls_id)' )->from( 'layer_sets' )
 			->where( $where + [ 'ls_name' => $setName ] )->groupBy( 'ls_page' )->limit( self::MAX_SEARCH_SETS )
 			->caller( __METHOD__ )->fetchFieldValues();
-		return $this->decodeSetsForSearch( $db, $ids );
+		return $this->decodeSetsForSearch( $db, $ids, $withSources );
 	}
 
 	/**
 	 * @param IReadableDatabase $db
 	 * @param array $ids Layer set row IDs
+	 * @param bool $withSources Return the stored source hash and page alongside each decoded set
 	 * @return array[] Decoded data in ID order, within the search size budget
 	 */
-	private function decodeSetsForSearch( IReadableDatabase $db, array $ids ): array {
+	private function decodeSetsForSearch( IReadableDatabase $db, array $ids, bool $withSources ): array {
 		$ids = array_map( 'intval', $ids );
 		sort( $ids );
 		$maxBytes = min( (int)$this->config->get( 'LayersMaxBytes' ), self::MAX_SEARCH_BYTES );
 		$budget = self::MAX_SEARCH_BYTES;
 		$sets = [];
 		foreach ( array_chunk( $ids, 20 ) as $chunk ) {
-			$rows = $db->newSelectQueryBuilder()->select( 'ls_json_blob' )->from( 'layer_sets' )
-				->where( [ 'ls_id' => $chunk ] )->orderBy( 'ls_id' )->caller( __METHOD__ )->fetchFieldValues();
-			foreach ( $rows as $blob ) {
+			$query = $db->newSelectQueryBuilder()
+				->select( $withSources ? [ 'ls_json_blob', 'ls_img_sha1', 'ls_page' ] : [ 'ls_json_blob' ] )
+				->from( 'layer_sets' )->where( [ 'ls_id' => $chunk ] )->orderBy( 'ls_id' )->caller( __METHOD__ );
+			$rows = $withSources ? $query->fetchResultSet() : $query->fetchFieldValues();
+			foreach ( $rows as $row ) {
+				$blob = $withSources ? $row->ls_json_blob : $row;
 				$budget -= strlen( $blob );
 				if ( $budget < 0 ) {
 					return $sets;
@@ -1559,7 +1611,8 @@ class LayersDatabase {
 					continue;
 				}
 				if ( is_array( $data ) ) {
-					$sets[] = $data;
+					$sets[] = $withSources ? [ 'data' => $data, 'sha1' => (string)$row->ls_img_sha1,
+						'page' => (int)$row->ls_page ] : $data;
 				}
 			}
 		}

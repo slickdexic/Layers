@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.95",
+	"version": "1.8.0-rc.1",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -79,7 +79,7 @@
 			"value": null
 		},
 		"LayersBindingReadMaxAge": {
-			"description": "Seconds for which browsers and the CDN may keep an anonymous reader's copy of the page-owned drawings shown on a page's current revision. Logged-in readers, older revisions and private wikis are never cached publicly. 0 disables.",
+			"description": "Legacy compatibility setting. Exact-revision binding reads remain private and are not publicly cached, regardless of this value.",
 			"value": 300
 		},
 		"LayersEnable": {
@@ -227,7 +227,14 @@
 			"services": [ "LayersDrawingSearchText" ]
 		}
 	],
+	"JobClasses": {
+		"layersLegacySearchRefresh": "MediaWiki\\Extension\\Layers\\Search\\LegacySearchRefreshJob",
+		"layersPageSearchRefresh": "MediaWiki\\Extension\\Layers\\Search\\PageSearchRefreshJob"
+	},
 	"HookHandlers": {
+		"LayersLegacySearchRefresh": {
+			"class": "MediaWiki\\Extension\\Layers\\Search\\LegacySearchRefreshHooks"
+		},
 		"LayersPinnedPdfPrivacy": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks\\PinnedPdfPrivacyHooks"
 		},
@@ -262,7 +269,8 @@
 		"ChangeTagsAllowedAdd": "LayersHooks",
 		"ChangeTagsListActive": "LayersHooks",
 		"ListDefinedTags": "LayersHooks",
-		"FileDeleteComplete": "LayersHooks",
+		"FileDeleteComplete": [ "LayersHooks", "LayersLegacySearchRefresh" ],
+		"LocalFilePurgeThumbnails": "LayersLegacySearchRefresh",
 		"ImagePageAfterImageLinks": "LayersUIHooks",
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Database\\LayersSchemaManager::onLoadExtensionSchemaUpdates",
 		"MakeGlobalVariablesScript": "LayersHooks",

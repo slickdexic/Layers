@@ -11,7 +11,7 @@ use Wikimedia\AtEase\AtEase;
 use Wikimedia\FileBackend\FSFile\TempFSFile;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Internal exact-version capture; no endpoint, cache or production registration. */
+/** Captures an exact PDF source for the registered pinned-PDF REST handler. */
 class PinnedPdfSource {
 
 	private PageHistoryAccess $access;

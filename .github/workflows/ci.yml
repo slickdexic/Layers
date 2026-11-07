@@ -47,6 +47,11 @@ jobs:
       - name: Documentation consistency check
         run: npm run check:docs
 
+      - name: JavaScript growth policy and guard tests
+        run: |
+          node --test scripts/tests/check-code-growth.test.js
+          npm run check:code-growth
+
       - name: Release package safety tests
         run: python3 -m unittest discover -s tests/release
 
