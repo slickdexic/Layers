@@ -1,5 +1,58 @@
 # Layers 1.8 release acceptance
 
+## Post-migration search correction — November 7, 2026
+
+Local source now stops legacy recovery rows supplying post-migration search and
+cleans stale entries even after all Layers associations disappear. Two native
+regressions failed before correction. The final affected 1.45 selection passes
+59 tests / 544 assertions, including native search page/API results and counts,
+rerun safety, recovery preservation, source suppression/restoration and cleanup
+failure handling. PHP style passes. Upload fixture isolation failures encountered
+in two older tests were corrected with the existing temporary repository helper.
+
+**Installed-candidate privacy acceptance remains open.** The owner approved the
+[migrated-only release boundary](RELEASE_1_8_MIGRATED_SEARCH_BOUNDARY.md);
+unmigrated legacy search retains its known gap. The upgrade runbook and additional
+PDF/slide/stale-property/delayed-write checks are complete. Installed 1.44
+qualification and exact artifact identity are still required.
+No ordinary wiki content, live index cleanup or installed rc.1 package changed.
+
+## Testing candidate delivered — November 7, 2026
+
+The owner requested lead takeover and delivery of a testing candidate.
+**1.8.0-rc.1 is installed on the maintained MediaWiki 1.44.6 wiki at port 8082.**
+Source commit `fadc14d05dd026379684bd369e34ac057410ae5e`, local branch
+`codex/v1.8.0-rc.1`, is based on public `5d13e58` using an explicit selection
+and separate index. The active working branch/index and unrelated work remain
+intact. No public push, final tag or production release was performed.
+
+The tar package contains 2,936 files, each verified in the built and installed
+image. Tar SHA-256: `525129af30df04a0c92402f985580b66f100855df150ae127d170b059dfc7428`.
+The local build receipt also records the compressed-download checksum. Existing
+mounts, ports, environment and restart policy were compared before/after;
+the combined Compose override keeps the installed-image arrangement. No other
+version service was replaced. All eight witnessed main/file page revision IDs
+and hashes remain unchanged; native teardown left zero `unittest_` tables.
+
+| Check | Fresh result | Boundary |
+| --- | --- | --- |
+| JavaScript and coverage | 19,097 tests, 328 suites pass; statements 94.44%, branches 87.74%, functions 95.26%, lines 95.45% | Selected candidate runtime/test bytes match the tested working files. |
+| Standalone PHP | 1,712 tests / 4,238 assertions; one existing skip | Separate from native core integration. |
+| 1.45 native selection | 232 tests / 1,836 assertions pass | Maintained 1.45.3 / PHP 8.3.31, temporary test tables. |
+| Installed 1.44 native selection | 232 tests / 1,818 assertions pass | Actual installed candidate, 1.44.6 / PHP 8.3.33. Default temporary tables hit MySQL UNION errors; documented normal `unittest_` tables passed after core isolation was verified. |
+| Affected search/link native checks | 44 tests / 371 assertions pass on 1.45 | Not full legacy confidentiality qualification or a 1.44 search-suite pass. |
+| Installed browser checks | Both images, slide and PDF page 2/2 render in ready full-size viewers; image/PDF/slide editors load saved layers; no page errors | Authenticated read-only checks, no Save; screenshots and result JSON outside the repository. Initial probes captured loading states and were corrected to wait for actual content. |
+| Reader paint benchmark | Fails the 300 ms gate: sample 4 was 312.4 ms | Existing authenticated, fresh-browser/warm-server benchmark on the installed 1.44 lane; no retry to hide the miss. Full production reference acceptance remains open. |
+| Release/static/dependency checks | 11 release tests, two growth-guard tests, 44 changed PHP files' style, version/docs, bundles, assets and class references pass; production npm audit reports zero vulnerabilities | Loopback fixture access and Node system CA configuration resolved environment failures without weakening verification. Hosted exact-commit CI remains open. |
+
+Use [candidate testing](V1_8_CANDIDATE_TESTING.md). This delivers the requested
+testing candidate; it does not complete the production gate. Legacy stale-search
+privacy, broader permission/backend/upgrade cleanup, the measured performance
+miss and manual/device/owner acceptance remain open. Keep test content
+non-sensitive. Changes after this freeze require a new candidate identity.
+
+---
+
 **Owner scope decision: October 25, 2026.** Page ownership and native revision
 history will ship independently, with **1.8** as the working version. The
 [charter's independent release gate](PROJECT_CHARTER.md#32-independent-page-history-release)

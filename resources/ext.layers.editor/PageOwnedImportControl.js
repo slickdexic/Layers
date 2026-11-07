@@ -32,11 +32,13 @@
 			const input = document.createElement( 'input' ); input.type = 'search'; input.className = 'layers-page-import-search';
 			input.setAttribute( 'aria-label', this.options.message( 'layers-page-import-search' ) );
 			input.placeholder = this.options.message( 'layers-page-import-search' );
+			const guidance = this._guidance( title.id );
+			input.setAttribute( 'aria-describedby', title.id + '-search-help' );
 			const status = document.createElement( 'p' ); status.className = 'layers-page-import-status'; status.setAttribute( 'role', 'status' );
 			const list = document.createElement( 'ul' ); list.className = 'layers-page-import-results';
 			const decision = document.createElement( 'div' ); decision.className = 'layers-page-import-decision'; decision.hidden = true;
 			const cancel = this._button( 'layers-page-import-cancel', () => this.close() ); cancel.classList.add( 'layers-page-import-cancel' );
-			panel.append( title, input, status, list, decision, cancel ); root.appendChild( panel ); document.body.appendChild( root );
+			panel.append( title, guidance, input, status, list, decision, cancel ); root.appendChild( panel ); document.body.appendChild( root );
 			this.dialog = { root, panel, input, status, list, decision, cancel }; this.generation++;
 			input.addEventListener( 'input', () => { clearTimeout( this.timer ); this.timer = setTimeout( () => this._search( input.value ), 250 ); } );
 			root.addEventListener( 'mousedown', event => { if ( event.target === root ) { this.close(); } } );
@@ -46,6 +48,27 @@
 		_button( key, action ) {
 			const button = document.createElement( 'button' ); button.type = 'button';
 			button.textContent = this.options.message( key ); button.addEventListener( 'click', action ); return button;
+		}
+
+		_guidance( dialogId ) {
+			const match = this.options.getTarget().match, message = this.options.message;
+			const sourceMessages = {
+				image: 'layers-page-import-help-image',
+				slide: 'layers-page-import-help-slide',
+				pdf: 'layers-page-import-help-pdf'
+			};
+			const guidance = document.createElement( 'div' ); guidance.className = 'layers-page-import-guidance';
+			for ( const [ key, args ] of [
+				[ 'layers-page-import-help-purpose', [] ],
+				[ sourceMessages[ match.kind ], [ match.label, match.fileTitle ] ],
+				[ 'layers-page-import-help-search', [] ],
+				[ 'layers-page-import-help-actions', [] ]
+			] ) {
+				const paragraph = document.createElement( 'p' ); paragraph.textContent = message( key, ...args );
+				if ( key === 'layers-page-import-help-search' ) { paragraph.id = dialogId + '-search-help'; }
+				guidance.appendChild( paragraph );
+			}
+			return guidance;
 		}
 
 		_current( dialog, generation ) { return !this.disposed && this.dialog === dialog && this.generation === generation; }

@@ -1,4 +1,4 @@
-# Layers 1.8.0-rc.1 testing candidate
+# Layers 1.8.0-rc.2 testing candidate
 
 Cut November 7, 2026 at the project owner's request. Advances Milestone 1,
 HIST-1–HIST-4, DATA-1–DATA-4 and OPS-1–OPS-3. This is a concrete testing
@@ -8,11 +8,11 @@ candidate, not a declaration that the production release gate has passed.
 
 Use the maintained MediaWiki 1.44 wiki at `http://localhost:8082` for the installed
 candidate. Port 8080 follows ongoing development; 8081 retains its older build.
-The package's version is `1.8.0-rc.1`. The accompanying build receipt identifies
+The package's version is `1.8.0-rc.2`. The accompanying build receipt identifies
 the exact source commit, archive hash and verified installed files.
 
-Use synthetic or non-sensitive content while the legacy privacy issue below
-remains open. Existing test content/accounts are retained. No wiki migration,
+Use synthetic or non-sensitive content for candidate testing. Existing test
+content/accounts are retained. No wiki migration,
 test-data replacement or core upgrade is part of this candidate installation.
 
 1. **Images:** open an owning page, choose Edit layers, change a layer and Save.
@@ -36,12 +36,13 @@ include credentials or private content in bug reports.
 
 ## Known limitations and production blockers
 
-- **Legacy search privacy is not closed.** Source-filtered projection, native
-  refresh jobs and guarded writes improve the old shared-set path, but stale
-  matches can remain before jobs/backend updates complete. Concurrent ordering,
-  per-user restrictions, lost associations and upgrade cleanup remain unresolved.
-  This candidate must not be used to qualify confidentiality on sensitive legacy
-  content. Search is not globally disabled, and this is not a new runtime service.
+- **Migration and search cleanup are required before reopening.** Under the
+  [approved boundary](RELEASE_1_8_MIGRATED_SEARCH_BOUNDARY.md), retained legacy
+  rows no longer supply post-migration search. The cleanup scans all current
+  pages, including those with lost Layers associations. Publicly served
+  unmigrated legacy mode still has its known stale-result privacy gap and is
+  outside v1.8 qualification. Follow the upgrade guide's reader-access restriction,
+  completion check, cleanup and verification sequence.
 - **Page-owned policy A applies.** Readable page-owned layer text remains
   searchable after its referenced file is hidden. Restrict the page revision
   itself to restrict that text. Media delivery still refuses unavailable sources.

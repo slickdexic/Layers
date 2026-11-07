@@ -7,7 +7,7 @@
 
 Add layers to **images and PDF pages**, or build **standalone slides** without a background file. In the page-history candidate, a layer set belongs to its wiki page and file or slide. Saving creates a native revision of the owning page; uploaded originals remain separate.
 
-> **Version:** 1.8.0-rc.1 (November 7, 2026) — testing candidate; not a production release.
+> **Version:** 1.8.0-rc.2 (November 7, 2026) — testing candidate; not a production release.
 
 **Testing candidate cut: November 7, 2026.** This candidate delivers page ownership and native revision history for testing toward **Layers 1.8**. See the [candidate instructions and known limitations](docs/V1_8_CANDIDATE_TESTING.md). Final release acceptance remains open; later search, Cargo and layer-link milestones continue toward 2.0. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release.
 

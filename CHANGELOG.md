@@ -2,6 +2,19 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.8.0-rc.2] - 2026-11-07
+
+Testing candidate with the approved migration/search boundary. Completed
+migrations search only current owning page revisions; retained recovery rows
+cannot restore obsolete layer text. Post-migration cleanup scans all current
+pages and refuses disabled search updates. Upgrades must complete migration
+and search cleanup before reopening to readers. Includes the approved Import
+dialog guidance explaining source eligibility and independent copying.
+
+**Not a production release.** Publicly served unmigrated legacy search remains
+outside this candidate's qualification. Performance, physical accessibility/device
+acceptance and exact-commit hosted CI remain open. See [candidate testing](docs/V1_8_CANDIDATE_TESTING.md).
+
 ## [1.8.0-rc.1] - 2026-11-07
 
 Testing candidate for page-owned layer sets and native page revision history.

@@ -54,6 +54,18 @@ body.layers-editor-open .mw-notification-area:has( .layers-page-import-version-n
 	letter-spacing: -0.025em;
 }
 
+.layers-page-import-guidance {
+	grid-column: 1 / -1;
+	display: grid;
+	gap: 0.75em;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.layers-page-import-guidance p {
+	margin: 0;
+}
+
 .layers-page-import-search {
 	box-sizing: border-box;
 	grid-column: 1 / -1;

@@ -20,6 +20,8 @@
       <file>core/ThumbnailRendererRotationTest.php</file>
       <file>core/FilePageMigrationTest.php</file>
       <file>core/PageCopyMigrationPdfPageTest.php</file>
+      <file>core/MigratedSearchIsolationTest.php</file>
+      <file>core/PageOwnedSearchPolicyTest.php</file>
     </testsuite>
   </testsuites>
   <extensions><extension class="MediaWikiTeardownPHPUnitExtension" /></extensions>

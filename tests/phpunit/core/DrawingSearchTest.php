@@ -17,6 +17,7 @@ use SearchEngine;
 use SearchResult;
 
 require_once __DIR__ . '/TestingAdmissionRegistration.php';
+require_once __DIR__ . '/IsolatedLocalRepoFixture.php';
 
 /**
  * Text inside a page's own layer sets, and in a file's layer sets, is found by the wiki's search.
@@ -28,6 +29,8 @@ require_once __DIR__ . '/TestingAdmissionRegistration.php';
  * @group Database
  */
 class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
+	use IsolatedLocalRepoFixture;
+
 	private function document( string $word, array $extra = [] ): string {
 		$document = json_decode( file_get_contents( __DIR__ . '/../../fixtures/revisions/slide-document-v1.json' ) );
 		$document->surfaces[0]->layers[0]->text = "Checklist $word";
@@ -237,6 +240,7 @@ class DrawingSearchTest extends \MediaWiki\Tests\Api\ApiTestCase {
 
 	/** @return string Name of a newly uploaded file whose page text is $pageText */
 	private function uploadFile( string $pageText ): string {
+		$this->setUpIsolatedLocalRepoFixture();
 		$name = 'LayersSearch' . mt_rand() . '.png';
 		$title = $this->getServiceContainer()->getTitleFactory()->newFromText( 'File:' . $name );
 		$file = $this->getServiceContainer()->getRepoGroup()->getLocalRepo()->newFile( $title );

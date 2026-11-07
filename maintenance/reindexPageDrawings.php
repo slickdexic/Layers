@@ -17,6 +17,7 @@ if ( $IP === false ) {
 require_once "$IP/maintenance/Maintenance.php";
 // @codeCoverageIgnoreEnd
 
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\PageRevisionWriter;
 use MediaWiki\Extension\Layers\Search\DrawingSearchText;
 use MediaWiki\Extension\Layers\Search\ShownLayerSets;
@@ -25,6 +26,7 @@ use MediaWiki\Page\PageIdentity;
 use MediaWiki\Revision\RevisionRecord;
 use MediaWiki\Storage\NameTableAccessException;
 use MediaWiki\Title\Title;
+use Wikimedia\Rdbms\IDBAccessObject;
 
 /**
  * Pages that owned layer sets, files that had layer sets and pages that showed shared sets or slides before
@@ -48,11 +50,42 @@ class ReindexPageDrawings extends Maintenance {
 	/** @inheritDoc */
 	public function execute() {
 		$this->text = $this->getServiceContainer()->getService( 'LayersDrawingSearchText' );
+		if ( MigrationState::isComplete( $this->getPrimaryDB() ) ) {
+			if ( $this->getServiceContainer()->getMainConfig()->get( 'DisableSearchUpdate' ) ) {
+				throw new RuntimeException( 'Search updates are disabled; layer text cleanup did not run.' );
+			}
+			// An old index entry can outlive every Layers association. Scan current
+			// pages once by primary-key cursor; do not retain an unbounded ID set.
+			$count = $this->indexCurrentPages();
+			$this->output( 'Indexed layer text for ' . $count . " page(s).\n" );
+			return true;
+		}
 		$this->indexOwners();
 		$this->indexFilePages();
 		$this->indexPagesShowingSets();
 		$this->output( 'Indexed layer text for ' . count( $this->indexed ) . " page(s).\n" );
 		return true;
+	}
+
+	private function indexCurrentPages(): int {
+		$services = $this->getServiceContainer();
+		$db = $this->getPrimaryDB();
+		$last = 0;
+		$count = 0;
+		do {
+			$ids = $db->newSelectQueryBuilder()->select( 'page_id' )->from( 'page' )
+				->where( $db->expr( 'page_id', '>', $last ) )->orderBy( 'page_id' )
+				->limit( $this->getBatchSize() )->caller( __METHOD__ )->fetchFieldValues();
+			foreach ( $ids as $id ) {
+				$last = (int)$id;
+				$page = $services->getPageStore()->getPageById( $last, IDBAccessObject::READ_LATEST );
+				if ( $page ) {
+					$this->text->update( $page );
+					$count++;
+				}
+			}
+		} while ( count( $ids ) === $this->getBatchSize() );
+		return $count;
 	}
 
 	private function indexOwners(): void {

@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Search;
 use MediaWiki\Content\TextContent;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Migration\MigrationState;
 use MediaWiki\Extension\Layers\Revision\JsonSnapshotCodec;
 use MediaWiki\Extension\Layers\Revision\PageDrawingSearchText;
 use MediaWiki\Extension\Layers\Revision\PageOwnedPilot;
@@ -89,6 +90,13 @@ class DrawingSearchText {
 		) {
 			$parts[] = PageDrawingSearchText::extract(
 				$revision->getContent( PageRevisionWriter::SLOT, RevisionRecord::RAW ) );
+		}
+		// After D3, retained rows are recovery history, not another live source.
+		// Reading them here resurrects text deleted from an owning page and gives
+		// old parser properties authority over that page's independent copy.
+		// Use primary state rather than the request-cached parser migration flag.
+		if ( MigrationState::isComplete( $this->connections->getPrimaryDatabase() ) ) {
+			return implode( "\n", array_filter( $parts, 'strlen' ) );
 		}
 		if ( $page->getNamespace() === NS_FILE ) {
 			$parts[] = $this->visibleLegacy->file( $page->getDBkey(), $this->indexAuthority, $fromPrimary );

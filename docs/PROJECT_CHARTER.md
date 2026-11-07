@@ -5,7 +5,7 @@
 **Next release:** Page ownership and native revision history, working target **Layers 1.8**.
 **Broader finish line:** Layers 2.0, after the remaining ordered milestones and
 applicable charter criteria. Owner direction November 7: deliver a v1.8 testing
-candidate. The candidate manifest is **1.8.0-rc.1**; final acceptance remains open.
+candidate. The candidate manifest is **1.8.0-rc.2**; final acceptance remains open.
 **Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
 set the current work order and commit/push targets. They supersede earlier work
 orders and estimates; dated evidence remains a record of what was proved then.
@@ -61,6 +61,8 @@ Changes the owner has approved (the only removals allowed):
 
 | Date | Change | Where decided |
 | --- | --- | --- |
+| November 7, 2026 | Require completed migration and search-index cleanup before an upgraded v1.8 wiki reopens to readers. Post-migration search uses current owning page revisions; retained legacy rows remain recovery data. Publicly served unmigrated legacy mode is outside this release qualification. | Owner approved the [migration/search boundary](RELEASE_1_8_MIGRATED_SEARCH_BOUNDARY.md): “Approve migration and cleanup before reopening (recommended)”. |
+| November 7, 2026 | Import opens with visible guidance explaining independent copying, matching source names/files, source-page search, Append/Replace, Undo and Save. Existing actions and import eligibility remain. | Owner approved the [Import dialog guidance brief](IMPORT_DIALOG_GUIDANCE_BEHAVIOUR_BRIEF.md): “I approve this change.” |
 | November 6, 2026 | Page-owned layer text remains searchable while its owning page/revision is readable, even when its referenced file is suppressed. Media delivery and legacy shared-set privacy retain their checks. This replaces the November 5 source-dependent discovery rule only for page-owned text. | Owner approved option A in the [search decision brief](RELEASE_1_8_SEARCH_DECISION.md); [active search policy](SEARCH_SOURCE_VISIBILITY_BEHAVIOUR_BRIEF.md). Verification remains open. |
 | September 30, 2026 | The box of links above a page ("Drawings on this page") goes; hover overlays replace it. | UI-10 |
 | September 30, 2026 | The **Edit Layers** tab on `File:` pages goes. Layers are edited on the page that owns them. | UI-10, behaviour brief |

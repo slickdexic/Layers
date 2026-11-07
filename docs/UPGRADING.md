@@ -78,8 +78,9 @@ Layers then requires separate **link discovery and page-history migration**:
 1. Refresh links and process jobs while legacy shared-set discovery is active.
 2. Run the Layers migration without `--commit`, inspect its plan and refusals.
 3. Run the reviewed unscoped migration with `--commit`.
-4. Verify completion, retained content and native editing/history before
-   reopening editing.
+4. Clean the search index using the completed-migration procedure below.
+5. Verify completion, retained content, search and native editing/history before
+   reopening reader and editor access.
 
 Neither the schema updater nor `refreshLinks`/`runJobs` records Layers migration
 completion. There is no documented browser-only replacement for this content
@@ -112,9 +113,20 @@ Before cutover:
    and uploaded file versions; XML export alone is not the complete rollback.
 3. Rehearse the commands below on the copy. Review counts, refusals, native
    history and complete image/slide/PDF contents before proceeding on the wiki.
-4. Schedule an edit freeze for cutover using normal site procedures. The
-   migration account/process must still be allowed to publish page revisions.
+4. Schedule a maintenance window that blocks ordinary reader and editor access,
+   including the search page and APIs, using the site's normal access controls.
+   An edit-only freeze or `$wgReadOnly` is insufficient: either leaves search
+   readable. Keep operator access for the migration account/process, which must
+   still be allowed to publish page revisions. Drain requests and background
+   work running old extension code before installing the candidate. Restart
+   existing job runners on the candidate through normal site procedures.
    Keep editors from continuing with a pre-cutover session.
+
+The owner-approved [search boundary](RELEASE_1_8_MIGRATED_SEARCH_BOUNDARY.md)
+requires migration and search-index cleanup to finish before readers return.
+Retained legacy rows are recovery data after migration, not an additional live
+search source. Do not reopen an incomplete migration as a qualified v1.8
+installation. This also applies to a fresh installation's empty migration.
 
 Do not run cleanup of legacy rows, upload archives, private PDF sources or local
 drafts as part of the upgrade. Migration retains data deliberately.
@@ -230,11 +242,47 @@ If the process is interrupted, retain its output and run the same reviewed plan
 again. Already completed, unchanged copies are recognized. Investigate edited
 targets or new refusals rather than forcing them through.
 
-## 4. Validate before reopening editing
+## 4. Clean search and validate before reopening
+
+Keep the reader/editor restriction in place. Confirm the completion flag above
+is true, and ensure `$wgDisableSearchUpdate` is false in the configuration used
+by maintenance. Run from the MediaWiki root:
+
+```sh
+php extensions/Layers/maintenance/reindexPageDrawings.php
+```
+
+After migration this command scans **every current page**, in bounded batches,
+and replaces its indexed text with ordinary main-slot text plus the current
+owner's layer text. The full scan removes stale legacy terms even where a page
+no longer has any Layers association. It preserves content revisions, original
+layer-set rows and uploaded media. Before migration, the command's legacy mode
+does not establish this cleanup guarantee; do not substitute a pre-migration
+run. Core's `rebuildtextindex.php` alone indexes only the main slot and is not
+a replacement for this step.
+
+Require a successful exit and retain the output. Disabled search updates are
+refused; an index-write failure aborts the command. On interruption or failure,
+keep reader access blocked, resolve the cause and rerun the entire command.
+Previously processed pages can be safely processed again. Do not clear the
+migration flag or discard recovery rows to force completion. Drain candidate
+search work and allow normal database replication to catch up before verifying
+results on reader connections. A separately configured asynchronous search
+backend also needs its own completed refresh and qualification; the native
+database-search evidence does not certify an arbitrary backend.
+
+Use known content from the rehearsal to check ordinary page text and current
+image, slide and all PDF-member layer text in Special:Search, the search-list
+API (including total hits), and generator search. Check obsolete terms unique
+to removed legacy layers produce no results, counts or continuation. Do not
+put secret production text into public test artifacts. Under approved policy A,
+a readable page's own saved layer text remains searchable if its referenced
+file is suppressed; media delivery still enforces source visibility.
 
 | Check | Expected result |
 | --- | --- |
 | Migration output and completion | No unexplained refusal; unscoped completion is true. |
+| Search cleanup | Post-migration command succeeded; ordinary/current layer text is found and obsolete legacy-only terms are absent from results, counts and continuation. No old-code indexing work remains. |
 | Original sources | Retained legacy rows, uploads and older file versions remain available. |
 | Owner identity | Equal names on different pages/files are independent. One PDF's pages share one visible layer-set name. |
 | Main text and stored content | Expected references, complete layers, PDF siblings, source pins and geometry are preserved. No owner ID is introduced into author-facing references. |
@@ -244,7 +292,7 @@ targets or new refusals rather than forcing them through.
 | Rerun | Unchanged completed copies add no duplicate content revision. |
 
 Retain the command output, exact candidate commit and before/after checks with
-the backup. Resume editing only after the site's acceptance checks pass.
+the backup. Resume reader and editor access only after the site's acceptance checks pass.
 Completion of migration is not a declaration that the release candidate has
 passed all device, performance, security or owner acceptance.
 
@@ -266,6 +314,11 @@ migrating again after unscoped undo, refresh links and run jobs again to restore
 template/gallery discovery. Undo does not replace a backup or authorize
 overwriting subsequent owner edits.
 
+Before either undo or full rollback, restrict reader/editor access again and
+drain in-flight indexing work. Unscoped undo restores legacy semantics, including
+the known legacy search privacy gap; it does not qualify publicly served v1.8.
+Review the restored code, data and index together before any reopening.
+
 If a full rollback is needed, preserve any newer work first, stop editing and
 restore the consistent backup with its matching code/configuration/uploads.
 Rolling back only the extension files does not reverse migrated page revisions
@@ -275,9 +328,9 @@ quota refusal. Older editor code cannot read that compact format: recover or
 save those drafts with the updated editor before rolling back. Existing
 uncompacted drafts remain supported.
 
-Search, Cargo and layer-object links remain later milestones. If separately
-validating an existing search index, the native `reindexPageDrawings.php`
-maintenance script is available; those checks do not gate this ownership upgrade.
+New search features, Cargo and layer-object links remain later milestones.
+Cleanup of the existing search index is a required part of this ownership
+upgrade under the approved November 7 release boundary.
 
 ## Current-candidate migration check — October 25, 2026
 

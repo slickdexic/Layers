@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.8.0-rc.1",
+	"version": "1.8.0-rc.2",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -443,6 +443,12 @@
 				"layers-page-copy-from-page",
 				"layers-page-import-button",
 				"layers-page-import-title",
+				"layers-page-import-help-purpose",
+				"layers-page-import-help-image",
+				"layers-page-import-help-slide",
+				"layers-page-import-help-pdf",
+				"layers-page-import-help-search",
+				"layers-page-import-help-actions",
 				"layers-page-import-search",
 				"layers-page-import-searching",
 				"layers-page-import-choose",

@@ -1,5 +1,24 @@
 # Layers 1.8: critical path to release
 
+**November 7 search decision:** the owner approved migration and search cleanup
+before readers regain access. The post-migration repair and expanded native
+1.45 selection pass 59 tests / 544 assertions. The upgrade runbook now requires
+that sequence. The next candidate is rc.2, including approved Import guidance;
+its installed 1.44 verification remains required. Public legacy mode is outside
+this boundary. This supersedes the open design decision below, not the remaining
+performance, manual acceptance and exact-commit hosted CI gates.
+
+**November 7 status correction:** the [current audit assessment](../Codebase_Audit.md#release-readiness-reassessment--november-7-2026)
+and [candidate delivery receipt](RELEASE_1_8_ACCEPTANCE.md#testing-candidate-delivered--november-7-2026)
+supersede the November 6 candidate/version status below. R2 produced
+`1.8.0-rc.1` at `fadc14d05dd026379684bd369e34ac057410ae5e`; the package is verified
+on 8082 and its selected native suites passed on both 1.44 and 1.45. Hosted
+exact-commit CI, the demonstrated legacy-search stale-result interval,
+performance disposition and remaining applicable manual acceptance are still
+open. The approved Import guidance added afterward is on 8080 and needs the
+next reviewed artifact. Do not repeat completed work or require new search,
+Cargo, links or blanket external-backend qualification to close Milestone 1.
+
 November 6, 2026. Advances the independent Milestone 1 HIST/TYPES/DATA/SEC/PERF/OPS
 gates. This is the current execution guide for closing the release, not a new
 charter or permission to waive existing gates. Detailed evidence remains in

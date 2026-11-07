@@ -32,11 +32,29 @@ describe( 'approved working-copy Import picker', () => {
     } );
     test( 'renders exact replacement wording, both slide sizes, working-copy note and Cancel focus', async () => {
         await choose(); expect( document.activeElement ).toBe( control.dialog.cancel );
+        expect( control.dialog.panel.querySelector( '.layers-page-import-guidance' ).hidden ).toBe( false );
         expect( control.dialog.decision.textContent ).toContain( 'from Source page into “ABC” on Target page' );
         expect( control.dialog.decision.textContent ).toContain( 'This replaces ALL existing layers in this layer set (2 layers) with the layers from the other page.' );
         expect( control.dialog.decision.textContent ).toContain( 'This slide: 100 × 50. Source slide: 200 × 120.' );
         expect( control.dialog.decision.textContent ).toContain( 'Nothing is saved until you save the editor.' );
         expect( options.coordinator.apply ).not.toHaveBeenCalled();
+    } );
+    test.each( [ 'image', 'slide', 'pdf' ] )( 'explains %s sources using the filter identity, safely and accessibly', async kind => {
+        const original = options.getTarget(), label = '<img src=x onerror=alert(1)> & saved name';
+        const fileTitle = kind === 'slide' ? null : 'File:<b>Example</b> & file';
+        options.getTarget = () => ( { ...original, kind, name: 'Pending rename',
+            match: { ...original.match, kind, label, fileTitle } } );
+        control.open(); await tick();
+        const guidance = control.dialog.panel.querySelector( '.layers-page-import-guidance' );
+        expect( guidance.textContent ).toContain( msg( 'layers-page-import-help-' + kind, label, fileTitle ) );
+        expect( guidance.textContent ).not.toContain( 'Pending rename' );
+        expect( guidance.querySelector( 'img, b' ) ).toBeNull();
+        expect( guidance.textContent ).toContain( en[ 'layers-page-import-help-purpose' ] );
+        expect( guidance.textContent ).toContain( en[ 'layers-page-import-help-actions' ] );
+        expect( document.getElementById( control.dialog.input.getAttribute( 'aria-describedby' ) ).textContent )
+            .toBe( en[ 'layers-page-import-help-search' ] );
+        expect( options.catalog.search ).toHaveBeenCalledWith( { search: '', target: options.getTarget().match } );
+        expect( document.activeElement ).toBe( control.dialog.input );
     } );
     test( 'Escape cancels prepared Import, releases its private handle and stops editor Escape handling', async () => {
         await choose(); const editorEscape = jest.fn(); document.addEventListener( 'keydown', editorEscape );
