@@ -53,7 +53,13 @@ external URL fetched, or every language received a new human translation.
   remote-only pages/assets must always be preserved.
 
 The initial Help test expected 17 entries and failed after Import Image was
-added; its count was corrected to 18 and the affected tests passed. No runtime
+added; its count was corrected to 18 and the affected tests passed. Hosted CI
+also caught the editor bundle at 2154.4 KB against its 2153 KB raw-source
+limit. The approved Help changes add 2063 raw bytes (705 gzip bytes when that
+file is compressed separately, not a network-payload measurement). The explicit
+editor-only allowance is now 2155 KB; reader budgets and charter timing targets
+are unchanged. Native MediaWiki and browser tests passed on the initial
+documentation commit. No runtime
 permission, migration, search, save or import algorithm changed in this refresh.
 
 ## Publication boundary and remaining work
