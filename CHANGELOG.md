@@ -2,7 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.8.0-rc.3] - 2026-11-07
+## [1.8.0-rc.1] - 2026-11-07
+
+First public release candidate, tagged **v1.8rc1**, based on the qualified local
+rc.3 candidate. Earlier rc.1–rc.3 labels below identify internal test builds.
+
+- Page-owned layer sets on images, slides and whole PDFs, with native revision
+  history, restore/Undo, independent copies and draft/conflict recovery.
+- Retained legacy records no longer supply search after migration. Cleanup
+  removes obsolete indexed terms even when Layers associations are gone.
+- Native search indexing works on both MediaWiki 1.44 and 1.45.
+- Import explains independent copying, matching source names/files, source-page
+  search, Append/Replace, Undo and Save.
+
+**Upgrade requirement:** keep reader/editor access restricted until the reviewed
+migration and search cleanup succeed; follow [UPGRADING](docs/UPGRADING.md).
+Recovery records and source files are preserved. Publicly served unmigrated
+legacy search is outside this candidate's qualification.
+
+**Prerelease:** owner testing reports fast normal use. The retained 312.4 ms
+image-to-layer measurement against 300 ms and remaining physical-device,
+accessibility and Print acceptance are disclosed; this is not final 1.8.
+
+## Internal test build 1.8.0-rc.3 - 2026-11-07
 
 Correct automatic search indexing on MediaWiki 1.44, whose native revision
 event has a different name from 1.45. Both versions now dispatch to the same
@@ -10,7 +32,7 @@ guarded indexing path. Retains rc.2's migration cleanup and Import guidance.
 Rc.2's installed 1.44 qualification failed; it is superseded by this candidate.
 The production release gates and required upgrade sequence remain unchanged.
 
-## [1.8.0-rc.2] - 2026-11-07
+## Internal test build 1.8.0-rc.2 - 2026-11-07
 
 Testing candidate with the approved migration/search boundary. Completed
 migrations search only current owning page revisions; retained recovery rows
@@ -23,7 +45,7 @@ dialog guidance explaining source eligibility and independent copying.
 outside this candidate's qualification. Performance, physical accessibility/device
 acceptance and exact-commit hosted CI remain open. See [candidate testing](docs/V1_8_CANDIDATE_TESTING.md).
 
-## [1.8.0-rc.1] - 2026-11-07
+## Internal test build 1.8.0-rc.1 - 2026-11-07
 
 Testing candidate for page-owned layer sets and native page revision history.
 Includes image, slide and whole-PDF editing, history/restore, source-pinned viewing,

@@ -1,3 +1,33 @@
+# Owner performance feedback — November 7, 2026
+
+The owner reports fast ordinary loading and no remaining observation of the
+earlier performance problems. Ctrl-Shift-R is slow on both Layers and plain
+pages. Record normal-use responsiveness as satisfactory in this observed scope;
+do not keep calling the earlier visible delay an active reproduced defect.
+The retained 312.4 ms image-to-layer benchmark miss and reference-condition
+limits remain a bounded measurement/acceptance item. Attribute any remaining
+cost with a matched plain/layer-page comparison before proposing optimization.
+This is not a changed numeric budget or blanket device/workflow acceptance.
+See [performance evidence](PAGE_HISTORY_PERFORMANCE.md).
+
+# Installed rc.3 search qualification — November 7, 2026
+
+Source `de7fce5a1cf049c143f883a8705f565bdd47aa85`, branch `codex/v1.8.0-rc.3`,
+is installed on 8082; all 2,939 package hashes match. Affected native selection:
+59 tests / 531 assertions on installed 1.44.6; 59 / 543 on 1.45.3. Rc.2 failed
+installed testing because its search ingress depended on a 1.45 event/interface
+and public-search scenarios inherited private-wiki permissions. Rc.3 handles
+both native event names; tests set their intended read policy explicitly.
+The failed rc.2 evidence remains. All witnessed wiki content/uploads are unchanged;
+zero test tables remain. Service configuration and HTTP-denial guard are preserved.
+
+The reported search defect is repaired for the approved migrated path. Use
+[UPGRADING](UPGRADING.md) before reopening any upgraded site. No installed-wiki
+migration or reindex was performed here; cleanup tests used native isolated
+fixtures. Final production acceptance still needs performance disposition,
+applicable manual/device/owner checks and exact-commit hosted CI. Do not reopen
+public legacy mode or replace search architecture. No public push/final tag.
+
 # Layers implementation handoff plan
 
 ## Active implementation: J113H evidence accepted; J113I corrected map accepted; J113J bounded search implemented — October 4, 2026

@@ -46,7 +46,7 @@ describe( 'version documentation verification', () => {
 		const target = path.join( fixture, file );
 		const text = fs.readFileSync( target, 'utf8' );
 		const version = JSON.parse( fs.readFileSync( path.join( fixture, 'extension.json' ), 'utf8' ) ).version;
-		const marker = file === 'wiki/Home.md' ? '**Manifest version** | ' + version : 'manifest still says **' + version + '**';
+		const marker = file === 'wiki/Home.md' ? '**Manifest version** | ' + version : 'manifest **' + version + '**';
 		expect( text ).toContain( marker );
 		fs.writeFileSync( target, text.replace( marker, marker.replace( version, version === '0.0.0' ? '0.0.1' : '0.0.0' ) ) );
 		expect( check().status ).not.toBe( 0 );

@@ -10,7 +10,7 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.8.0-rc.3
+|version         = 1.8.0-rc.1
 |update          = 2026-11-07
 |download        = [https://github.com/slickdexic/Layers/archive/refs/tags/v1.5.95.zip Tagged 1.5.95]
 

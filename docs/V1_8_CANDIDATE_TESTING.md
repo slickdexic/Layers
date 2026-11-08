@@ -1,4 +1,4 @@
-# Layers 1.8.0-rc.3 testing candidate
+# Layers v1.8rc1 public release candidate
 
 Cut November 7, 2026 at the project owner's request. Advances Milestone 1,
 HIST-1–HIST-4, DATA-1–DATA-4 and OPS-1–OPS-3. This is a concrete testing
@@ -8,11 +8,13 @@ candidate, not a declaration that the production release gate has passed.
 
 Use the maintained MediaWiki 1.44 wiki at `http://localhost:8082` for the installed
 candidate. Port 8080 follows ongoing development; 8081 retains its older build.
-The package's version is `1.8.0-rc.3`. The accompanying build receipt identifies
+The public package's version is `1.8.0-rc.1`, tagged `v1.8rc1`. It uses the
+qualified local rc.3 code; local rc.1–rc.3 were internal builds, not earlier
+public releases. The accompanying build receipt identifies
 the exact source commit, archive hash and verified installed files.
 
-Rc.2 exposed a MediaWiki 1.44 event-registration defect during installed testing.
-Rc.3 supports both core event names and keeps public-search test permissions
+Internal rc.2 exposed a MediaWiki 1.44 event-registration defect during installed testing.
+Internal rc.3 supports both core event names and keeps public-search test permissions
 explicit. Use the latest build receipt for qualification; rc.2 did not pass.
 
 Use synthetic or non-sensitive content for candidate testing. Existing test

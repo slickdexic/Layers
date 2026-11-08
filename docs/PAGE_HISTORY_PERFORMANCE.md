@@ -1,5 +1,27 @@
 # Page-history performance
 
+## Owner observation — November 7, 2026
+
+The owner reports that ordinary page loads are fast and the earlier performance
+problems are no longer visible. Ctrl-Shift-R is slow on pages with layers and
+also on plain pages, including the main page. This advances Milestone 1 / PERF
+and OPS-1 as owner evidence of satisfactory normal-use responsiveness. No exact
+port, candidate, browser/device or timings were specified in this report.
+
+This suggests a shared loading/cache/environment contribution, not a demonstrated
+Layers-specific regression. Establish any remaining extension cost with matched
+plain-page/layer-page observations on the same lane and recorded browser/server
+cache states. A forced browser reload does not itself establish a cold server.
+Do not change runtime behavior or undertake a broad rewrite on this observation.
+
+Keep total page loading distinct from PERF-2, which measures layer appearance
+after its image loads. The retained rc.1 benchmark's 312.4 ms sample against
+300 ms used a fresh browser cache and warm server. The owner feedback neither
+erases that measurement nor changes the target; it narrows the remaining work
+to attribution/reference-measurement disposition and does not imply continuing
+visible problems in ordinary use. No new benchmark was run for this entry.
+
+
 ## Installed 1.44 candidate recheck — large-image correction
 
 Public candidate `58827e3ff355296cf69d6a0a24461d8c3ff8606e` was installed on the existing 1.44 wiki. The unchanged, read-only reader benchmark retained its identity, pixel and request guards, with no reported request or browser errors. The first warm-up after the service restart took 2,810.5 ms. Five fresh-browser samples took **314.3, 295.1, 301.0, 335.4 and 299.2 ms**; three exceeded the unchanged 300 ms target. The benchmark therefore failed. The timing is a result for this development machine and its retained private data storage, not a reference-device qualification.

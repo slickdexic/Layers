@@ -1,5 +1,46 @@
 # Layers 1.8 release acceptance
 
+## Owner performance feedback — November 7, 2026
+
+The owner reports fast normal page loads, no remaining observation of the earlier
+performance problems, and slow Ctrl-Shift-R loads on both Layers pages and plain
+pages such as the main page. Record normal-use responsiveness as satisfactory
+in this reported scope. The report does not specify the exact port/artifact,
+browser/device or timings; it is not a blanket performance-budget waiver.
+
+The forced-reload symptom is not established as Layers-specific. Keep it separate
+from the retained rc.1 PERF-2 miss (312.4 ms after image load versus 300 ms,
+fresh browser cache/warm server). Remaining work is bounded baseline attribution
+and reference-measurement disposition, not an assumed continuing editor slowdown.
+See [performance evidence](PAGE_HISTORY_PERFORMANCE.md) and the current audit.
+
+## Installed rc.3 result — November 7, 2026
+
+`de7fce5a1cf049c143f883a8705f565bdd47aa85` is installed on the maintained
+1.44.6 wiki at 8082. The search/migration selection passes **59 tests / 531
+assertions**; matching affected source passes **59 / 543** on 1.45.3. All 2,939
+packaged hashes match the installed image. PHP style, version consistency,
+compatibility/class-reference/registration checks, Import JS/CSS lint and its
+18 affected UI tests pass. Earlier broader rc.1 results are retained for
+unchanged source; this is not a new full-suite or browser-publication claim.
+
+Eight content-table witnesses, all nine pages/sixteen revisions and all uploads
+remain unchanged; test teardown leaves zero test tables. Service mounts, ports,
+environment and restart policy match the original installation. A harmless
+canary gets HTTP 403 and is removed; the separate editor and page-owned editor
+ResourceLoader modules serve rc.3 and the approved Import guidance. An initial
+probe looked for guidance in the base editor module; the correct separate module
+passes. No runtime correction was needed for that probe.
+
+Download SHA-256: `6d49ccb42bbb7e8108875522c736077bbaf744c01bf0811009a21e79198b8917`.
+Local evidence: `F:/Docker/mediawiki/testing/mw144/exports/v1.8.0-rc.3-build/`.
+The [approved migrated boundary](RELEASE_1_8_MIGRATED_SEARCH_BOUNDARY.md) and
+mandatory upgrade cleanup apply. The original search blocker has a qualified
+repair within this tested native-database scope. Public legacy operation,
+other backends and a live-site cutover are not certified. Performance/manual/
+owner acceptance and exact-commit hosted CI still prevent a final release.
+No public push or production tag was made.
+
 ## 1.44 search compatibility correction — November 7, 2026
 
 Rc.2 (`1f2eba885494be2cbc3be7dddba2a3aa3269deca`) failed its installed 1.44

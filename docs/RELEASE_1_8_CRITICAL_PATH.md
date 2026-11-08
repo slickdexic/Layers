@@ -1,5 +1,13 @@
 # Layers 1.8: critical path to release
 
+**Latest November 7 checkpoint:** rc.3 `de7fce5a` is installed and its affected
+search group passes on 1.44 (59 / 531) and 1.45 (59 / 543). It fixes the retained
+legacy indexing/cleanup defects and a newly discovered 1.44 revision-event
+mismatch. The owner-approved migrated-only boundary and mandatory cleanup apply.
+This supersedes the pending installed-search step below. Remaining work is
+performance disposition, applicable manual/device/owner acceptance and exact
+final-artifact hosted CI/publication; no new search architecture is needed.
+
 **November 7 search decision:** the owner approved migration and search cleanup
 before readers regain access. The post-migration repair and expanded native
 1.45 selection pass 59 tests / 544 assertions. The upgrade runbook now requires

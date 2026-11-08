@@ -1,9 +1,11 @@
 # Current release status
 
-**Reviewed October 24, 2026. Milestone 1 remains open.** The candidate implements
-page-owned layer sets with native page revisions. Its manifest still reports
-1.5.95; it is not a tagged Layers 2.0 release. Select an exact reviewed commit
-with passing CI, then follow the upgrade instructions.
+**Public prerelease v1.8rc1, November 7, 2026.** Manifest 1.8.0-rc.1 uses the
+qualified internal rc.3 runtime. The owner authorized commit, push and publication
+as a testing candidate, not final production 1.8. Normal-use performance is
+reported satisfactory; reference timing and remaining physical/manual checks
+remain disclosed. Follow the required migration and search cleanup before
+reopening readers. See [candidate testing](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/V1_8_CANDIDATE_TESTING.md).
 
 The [Milestone 1 release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) defines the
 remaining work. This summary does not add requirements or turn a scoped result

@@ -4,6 +4,12 @@
 and cleanup before reopening (recommended)”. Qualification remains separate.
 **Advances:** Milestone 1 / HIST-4, HIST-8–HIST-9, SEC-2, SEC-6, OPS-1–OPS-3.
 
+**Installed qualification:** rc.3 `de7fce5a1cf049c143f883a8705f565bdd47aa85`
+passes the affected native selection on 1.44.6 (59 tests / 531 assertions) and
+matching affected source on 1.45.3 (59 / 543). See the current
+[acceptance receipt](RELEASE_1_8_ACCEPTANCE.md). Later results supersede the
+pre-installation status below. Live-site migration and cleanup remain required.
+
 ## Finding and correction already tested
 
 The approved D3 migration copies file sets onto File pages and independent

@@ -4,16 +4,18 @@ Layers is a MediaWiki extension for editable layers on images, PDF pages and
 standalone slides. It preserves uploaded originals. Docker is only a
 possible development/test environment, not a runtime requirement.
 
-**Testing candidate: November 7, 2026.** The page-history candidate reports
-1.8.0-rc.1 in its manifest. Tagged 1.5.95 uses older shared storage. Follow [[Installation]] and the
-[upgrade procedure](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), including migration completion.
+**Public release candidate: v1.8rc1, November 7, 2026.** The page-history candidate
+reports 1.8.0-rc.1 in its manifest and uses the qualified internal rc.3 code.
+Tagged 1.5.95 uses older shared storage. Follow [[Installation]] and the
+[upgrade procedure](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/UPGRADING.md),
+including migration and search cleanup before reopening readers.
 The independent page-history release targets Layers **1.8**; it has not yet
 been accepted as a production release. See the candidate testing guide in the
 package's `docs/V1_8_CANDIDATE_TESTING.md`. Search, Cargo and layer links follow toward 2.0.
 
 | Current manifest and tagged baseline | Value |
 | --- | --- |
-| **Manifest version** | 1.8.0-rc.3 |
+| **Manifest version** | 1.8.0-rc.1 |
 | **Release date for this version** | November 7, 2026 |
 
 ## What the candidate does
