@@ -1,5 +1,30 @@
 # Owner performance feedback — November 7, 2026
 
+## Published v1.8rc1 checkpoint — November 8, 2026
+
+The owner-authorized testing prerelease [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
+was published from `cfdf8f2bd31b1d9616871e769317b52c64aba0bd` (manifest
+`1.8.0-rc.1`). Publication was November 7 locally / November 8 UTC.
+[CI](https://github.com/slickdexic/Layers/actions/runs/42446168558),
+[native MediaWiki](https://github.com/slickdexic/Layers/actions/runs/42446168520),
+[browser tests](https://github.com/slickdexic/Layers/actions/runs/42446168517),
+[lint/style](https://github.com/slickdexic/Layers/actions/runs/42446168555) and
+[release wiki sync](https://github.com/slickdexic/Layers/actions/runs/42446565479)
+passed. The downloaded package and checksum were verified; the maintained 1.44.6
+wiki runs its 2,941 verified files with content/uploads preserved.
+
+Migration and search cleanup must finish before readers regain access.
+The 59-test search/migration group passed on 1.44.6 and 1.45.3. Public unmigrated
+legacy operation and arbitrary search backends are outside qualification.
+Final stable acceptance still includes reference performance disposition and
+applicable physical-device, accessibility and Print checks. RC publication does
+not waive those checks. Later main documentation/help corrections are Unreleased.
+
+**Reading the dated records below:** internal rc.1–rc.3 labels were local test
+builds. Statements that publication, exact-release CI or installed rc.3
+replacement were pending describe those earlier checkpoints and are superseded
+by this result. Their failures, test scopes and limits remain evidence.
+
 The owner reports fast ordinary loading and no remaining observation of the
 earlier performance problems. Ctrl-Shift-R is slow on both Layers and plain
 pages. Record normal-use responsiveness as satisfactory in this observed scope;

@@ -1,5 +1,13 @@
 # J111: exact-version full-size viewer proposal
 
+**Release reading note — November 8, 2026:** This design/decision record retains
+its dated proposals and intermediate results. For the shipped v1.8rc1 behavior,
+use the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
+and [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md).
+In particular, `layersread` responses are private with maximum age zero; older
+public-binding-cache proposals are superseded. Later object-link milestones
+remain unaccepted. This note does not rewrite historical evidence.
+
 **October 1, 2026 — draft for the project owner as software architect. Not an approved contract or implementation assignment.** Advances UI-10, HIST-6, TYPES-2, FEAT-3d and SEC-2. The [approved behaviour brief](LAYER_SET_BEHAVIOUR_BRIEF.md) remains authoritative. This proposal resolves the server dependency recorded in the [J111 hold](IMPLEMENTATION_HANDOFF_PLAN.md); it does not lift that hold.
 
 ## What is already approved

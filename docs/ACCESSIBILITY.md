@@ -1,6 +1,6 @@
 # Accessibility Guide
 
-> **Current guidance:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas rendering does not automatically provide a readable or searchable transcript. Layer-text search and accessible transcript acceptance remain separate work; see the [charter](PROJECT_CHARTER.md).
+> **Current guidance:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas rendering does not automatically provide a readable or searchable transcript. Current page-owned layer-text search is included after migration and cleanup; accessible transcript acceptance remains separate work; see the [charter](PROJECT_CHARTER.md).
 
 **Last Updated:** February 2026
 

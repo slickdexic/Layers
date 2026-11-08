@@ -1,5 +1,13 @@
 # Links from layers: Unified architectural design
 
+**Release reading note — November 8, 2026:** This design/decision record retains
+its dated proposals and intermediate results. For the shipped v1.8rc1 behavior,
+use the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
+and [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md).
+In particular, `layersread` responses are private with maximum age zero; older
+public-binding-cache proposals are superseded. Later object-link milestones
+remain unaccepted. This note does not rewrite historical evidence.
+
 **Date:** September 30, 2026  
 **Advances:** FEAT-8, SEC-5, SRCH-3, CARGO-1 (with UI-3, UI-4, SEC-3, HIST-2).  
 **Applies to:** MediaWiki 1.44+ (tested on MediaWiki 1.45.3).  

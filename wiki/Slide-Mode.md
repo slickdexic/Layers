@@ -1,7 +1,7 @@
 # Slide mode
 
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-shared slides. Follow [UPGRADING.md](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) to complete the native
+shared slides. Follow [UPGRADING.md](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) to complete the native
 migration. Milestone 1 acceptance remains open.
 
 ## Page-owned slides after completion
@@ -40,8 +40,9 @@ shared storage is read-only.
 The remaining sections describe the older shared model, its management pages,
 parameters, API examples and retained history. They do **not** override the
 page-owned workflow above. The old per-set revision cap does not prune native
-owner history. Search/Cargo release acceptance belongs to later milestones;
-`Special:Slides` name listing is not proof of instruction-text indexing.
+owner history. Current page-owned slide text is searchable after migration
+and cleanup. Broader search/Cargo acceptance remains separate; the legacy
+`Special:Slides` name filter is not full-text search.
 
 *New in v1.5.22*
 
@@ -51,7 +52,7 @@ Create standalone canvas graphics without requiring a base image. Perfect for di
 
 ## Overview
 
-Slide Mode allows you to create graphics from scratch using all 17 drawing tools, without needing an existing image file. Slides are stored separately from image layer sets and have their own version history.
+Slide Mode allows you to create graphics from scratch using the drawing tools, without needing an existing image file. Slides are stored separately from image layer sets and have their own version history.
 
 **Like images, slides support multiple named layer sets** — you can create different annotation variations (e.g., "english", "spanish", "detailed", "simplified") for the same slide.
 
@@ -169,7 +170,7 @@ This opens the full Layers editor with the slide loaded.
 
 | Feature | Description |
 |---------|-------------|
-| **All 17 Drawing Tools** | Full access to shapes, text, arrows, etc. |
+| **Drawing Tools** | Full access to shapes, text, arrows, etc. |
 | **Custom Canvas Sizes** | Configurable dimensions; standard maximum defaults to 4096×4096. Entry-point limits differ, so verify unusual sizes in the editor |
 | **Background Colors** | Validated colors such as `#ffffff` or `transparent`; not every CSS expression is accepted |
 | **Refresh after saving** | The editor updates after saving; already-open article views may need a reload |

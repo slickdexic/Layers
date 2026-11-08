@@ -196,12 +196,12 @@
 	"layers-prop-text-align": "Property label for horizontal text alignment in text boxes",
 	"layers-prop-vertical-align": "Property label for vertical text alignment in text boxes",
 	"layers-prop-padding": "Property label for padding inside text box layers",
-	"layers-align-left": "Option label for left horizontal alignment",
+	"layers-align-left": "Tooltip for align left button - aligns selected layers to their leftmost edge",
 	"layers-align-center": "Option label for center horizontal alignment",
-	"layers-align-right": "Option label for right horizontal alignment",
-	"layers-align-top": "Option label for top vertical alignment",
+	"layers-align-right": "Tooltip for align right button - aligns selected layers to their rightmost edge",
+	"layers-align-top": "Tooltip for align top button - aligns selected layers to their topmost edge",
 	"layers-align-middle": "Option label for middle vertical alignment",
-	"layers-align-bottom": "Option label for bottom vertical alignment",
+	"layers-align-bottom": "Tooltip for align bottom button - aligns selected layers to their bottommost edge",
 	"layers-prop-width": "Property label for layer width",
 	"layers-prop-height": "Property label for layer height",
 	"layers-prop-preserve-aspect-ratio": "Property label for toggle to preserve image aspect ratio when resizing",
@@ -337,12 +337,10 @@
 	"layers-color-picker-color-preview": "Accessible label template for the color preview button; $1 is the color description",
 	"layers-color-picker-hex-input": "Accessible label for the hex color text input field for keyboard accessibility",
 	"layers-color-picker-hex-placeholder": "Placeholder text shown in the hex color input field indicating the expected format",
-
 	"layers-grab-area": "Accessible label for the draggable grab area to move/select a layer",
 	"layers-keyboard-nav-hint": "Hint text explaining keyboard navigation in the layer panel (arrow keys and Enter)",
 	"layers-layer-toggle-visibility-key": "Keyboard shortcut hint for toggling layer visibility",
 	"layers-layer-toggle-lock-key": "Keyboard shortcut hint for toggling layer lock",
-
 	"layers-section-transform": "Section heading label for transform-related properties (position, rotation, scale)",
 	"layers-section-appearance": "Section heading label for appearance-related properties (fill, stroke, opacity)",
 	"layers-section-effects": "Section heading label for layer effects (shadow, glow, stroke)",
@@ -353,7 +351,6 @@
 	"layers-section-rich-text": "Section heading label for rich text formatting properties (underline, strikethrough, highlight)",
 	"layers-section-callout": "Section heading label for callout tail properties in speech bubble layers",
 	"layers-section-marker": "Section heading label for marker properties in number marker layers",
-
 	"layers-prop-font-family": "Label for font family dropdown selector",
 	"layers-prop-bold": "Checkbox label for bold text formatting",
 	"layers-prop-italic": "Checkbox label for italic text formatting",
@@ -362,12 +359,10 @@
 	"layers-prop-text-shadow-blur": "Label for text shadow blur radius input",
 	"layers-prop-text-shadow-offset-x": "Label for text shadow horizontal offset input",
 	"layers-prop-text-shadow-offset-y": "Label for text shadow vertical offset input",
-
 	"layers-prop-underline": "Checkbox label for underline text formatting in properties panel",
 	"layers-prop-strikethrough": "Checkbox label for strikethrough text formatting in properties panel",
 	"layers-prop-highlight": "Checkbox label for highlight/background color text formatting in properties panel",
 	"layers-prop-highlight-color": "Label for highlight color picker in properties panel",
-
 	"layers-arrow-single": "Dropdown option label: single-headed arrow",
 	"layers-arrow-double": "Dropdown option label: double-headed arrow",
 	"layers-arrow-none": "Dropdown option label: line without arrowheads",
@@ -384,13 +379,8 @@
 	"layers-zoom-reset": "Tooltip for zoom reset button",
 	"layers-zoom-in": "Tooltip for zoom in button",
 	"layers-zoom-fit": "Tooltip for fit-to-window button",
-
-	"layers-align-left": "Tooltip for align left button - aligns selected layers to their leftmost edge",
 	"layers-align-center-h": "Tooltip for align center horizontal button - centers selected layers horizontally",
-	"layers-align-right": "Tooltip for align right button - aligns selected layers to their rightmost edge",
-	"layers-align-top": "Tooltip for align top button - aligns selected layers to their topmost edge",
 	"layers-align-center-v": "Tooltip for align center vertical button - centers selected layers vertically",
-	"layers-align-bottom": "Tooltip for align bottom button - aligns selected layers to their bottommost edge",
 	"layers-distribute-h": "Tooltip for distribute horizontally button - spaces selected layers evenly left to right",
 	"layers-distribute-v": "Tooltip for distribute vertically button - spaces selected layers evenly top to bottom",
 	"layers-alignment-group": "Label for the alignment toolbar group containing align and distribute buttons",
@@ -402,7 +392,6 @@
 	"layers-canvas-snap-desc": "Description text for the Canvas Snap toggle",
 	"layers-align-section": "Section header in the Arrange dropdown for alignment options, indicates 2+ layers required",
 	"layers-distribute-section": "Section header in the Arrange dropdown for distribute options, indicates 3+ layers required",
-
 	"layers-toggle-grid": "Tooltip for toggling grid overlay",
 	"layers-toggle-background": "Tooltip/label for toggling background image visibility",
 	"layers-toggle-rulers": "Tooltip for toggling rulers along the top/left edges of the canvas",
@@ -471,7 +460,7 @@
 	"layers-main-region": "ARIA label for the main editor workspace region",
 	"layers-panel-region": "ARIA label for the layers panel complementary region",
 	"layers-canvas-region": "ARIA label for the drawing canvas region",
-	"layers-loading": "Loading message shown during API requests",
+	"layers-loading": "Generic loading indicator text",
 	"layers-default-text-prefix": "Default prefix for auto-naming text layers",
 	"layers-default-empty": "Default name used when a layer is empty",
 	"layers-type-rectangle": "Generic type label for rectangle layers",
@@ -775,11 +764,9 @@
 	"layers-lightbox-pan-down-tooltip": "Tooltip for the Pan down button, including its Shift plus Down Arrow keyboard shortcut.",
 	"layers-lightbox-pan-right-tooltip": "Tooltip for the Pan right button, including its Shift plus Right Arrow keyboard shortcut.",
 	"layers-lightbox-alt": "Alt text for the full-size image displayed in the layers lightbox viewer",
-
 	"layers-viewer-overlay-label": "Accessible label for the hover overlay toolbar on images with layers",
 	"layers-viewer-edit": "Tooltip for the edit button in the viewer overlay (opens layer editor)",
 	"layers-viewer-view": "Tooltip for the view button in the viewer overlay (opens full size view)",
-
 	"apihelp-layersinfo-summary": "Short summary shown on Special:ApiHelp describing what layersinfo does",
 	"apihelp-layersinfo-param-filename": "Parameter documentation string for the filename parameter of layersinfo",
 	"apihelp-layersinfo-param-layersetid": "Parameter documentation string for the optional layersetid parameter",
@@ -795,7 +782,6 @@
 	"apihelp-layerssave-param-setname": "Parameter documentation string for the optional setname parameter",
 	"apihelp-layerssave-param-token": "Parameter documentation string for the CSRF token parameter",
 	"apihelp-layerssave-example-1": "API help example for saving layers with action=layerssave; includes required filename, data JSON, and CSRF token",
-
 	"layers-filepage-section-title": "Title for the collapsible section on File: pages listing available layer annotation sets",
 	"layers-filepage-set-name": "Table header for the set name column in the File page layer sets list",
 	"layers-filepage-author": "Table header for the author/creator column in the File page layer sets list",
@@ -807,7 +793,6 @@
 	"layers-filepage-drawing-name": "Column heading for the names of the layer sets a File page owns, shown after the migration of shared layer sets into page history.",
 	"layers-filepage-usage-hint-migrated": "Hint below the list of a File page's layer sets after the migration. Plain text, not parsed.\n\nParameters:\n* $1 - file name without namespace\n* $2 - page ID of the File page",
 	"layers-filepage-no-drawings": "Shown by action=editlayers after the migration when the File page has no layer sets. Parsed as wikitext.\n\nParameters:\n* $1 - file name without namespace",
-
 	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
 	"special-editslide-desc": "Description of the Special:EditSlide page.",
 	"layers-slide-disabled": "Error message when slides feature is disabled in configuration",
@@ -826,7 +811,6 @@
 	"layers-slide-background": "Label for the background color input in the create slide form",
 	"layers-slide-background-color": "Tooltip for background color control",
 	"layers-slide-change-color": "Tooltip for clicking to change background color",
-
 	"layers-shape-library-title": "Dialog title for the shape library browser panel",
 	"layers-shape-library-search": "Placeholder text for the search input in the shape library",
 	"layers-shape-library-count": "Text showing the number of shapes in a category. $1 is the count.",
@@ -843,7 +827,6 @@
 	"layers-emoji-no-results": "Message shown when no emoji match the search query",
 	"layers-emoji-not-loaded": "Error shown when the emoji library module is not available",
 	"layers-emoji-load-error": "Error message when an emoji SVG fails to load",
-	"layers-loading": "Generic loading indicator text",
 	"layers-close": "Generic close button label used in dialogs",
 	"layers-text-toolbar-drag": "Tooltip for the drag handle on the floating text formatting toolbar",
 	"layers-text-toolbar-font": "Tooltip for the font family dropdown in the text toolbar",
@@ -894,7 +877,6 @@
 	"layers-search-placeholder": "Placeholder text for the layer search input",
 	"layers-search-clear": "Tooltip for the button that clears the search filter",
 	"layers-search-results": "Status text showing filtered layer count. $1 is visible count, $2 is total count",
-
 	"special-slides": "Name of the Special:Slides page shown in the page title",
 	"special-slides-desc": "Description of the Special:Slides page shown on Special:SpecialPages",
 	"special-slides-create": "Button label to create a new slide",
@@ -925,21 +907,16 @@
 	"special-slides-minutes-ago": "Relative time text for minutes ago. $1 is the number of minutes. Uses PLURAL",
 	"special-slides-hours-ago": "Relative time text for hours ago. $1 is the number of hours. Uses PLURAL",
 	"special-slides-days-ago": "Relative time text for days ago. $1 is the number of days. Uses PLURAL",
-
 	"layers-slide-name": "Label for the slide name input field",
 	"layers-slide-name-hint": "Helper text explaining valid characters for slide names",
-
 	"layers-input-required": "Error message shown when a required field is empty",
 	"layers-input-invalid-number": "Error message shown when an invalid number is entered in a numeric field",
 	"layers-input-min-value": "Error message shown when a number is below the minimum. $1 is the minimum value",
 	"layers-input-max-value": "Error message shown when a number exceeds the maximum. $1 is the maximum value",
 	"layers-input-text-too-long": "Error message shown when text exceeds the character limit. $1 is the maximum character count",
 	"layers-input-char-limit-warning": "Warning message shown when approaching character limit. $1 is current count, $2 is maximum",
-
 	"layers-unknown-user": "Fallback display name used when a user account cannot be resolved (e.g., deleted user)",
-
 	"specialpages-group-layers": "Name of the special pages group for Layers extension pages on Special:SpecialPages",
-
 	"layers-help-title": "Title of the built-in help dialog",
 	"layers-help-close": "Accessible label for the close button in the help dialog",
 	"layers-help-tab-overview": "Tab label for the Overview section in help dialog",
@@ -1031,7 +1008,6 @@
 	"layers-audit-change": "Generic edit summary for layer set modifications. $1 is the set name.",
 	"tag-layers-data-change": "Short name for the layers-data-change change tag, shown in Recent Changes.",
 	"tag-layers-data-change-description": "Description of the layers-data-change change tag, shown on Special:Tags.",
-
 	"layers-prompt-title": "Default title for the generic text-input prompt dialog in the Layers editor.",
 	"layers-shape-library": "Name of the shape library tool, shown in the toolbar and in the keyboard shortcut help dialog.",
 	"layers-discard": "Label for the button that discards unsaved layer changes. Used as a confirm-dialog action.",
@@ -1196,5 +1172,13 @@
 	"layers-page-draft-dialog-check-body": "Explains that Restore keeps the publication hold and directs the editor to Check saved page before another Save.",
 	"layers-page-draft-dialog-save-reminder": "Distinguishes local Restore from an explicit Save that creates an owning-page revision.",
 	"layers-page-draft-dialog-cancel-earlier": "Explains cancellation of an earlier-revision choice: no draft is applied/deleted and current work remains editable.",
-	"layers-page-draft-dialog-cancel-current": "Explains existing current-revision cancellation safeguards: the backup remains, and the editor must reopen to resolve it before saving."
+	"layers-page-draft-dialog-cancel-current": "Explains existing current-revision cancellation safeguards: the backup remains, and the editor must reopen to resolve it before saving.",
+	"layers-help-overview-ownership": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-ownership-desc": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-import": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-import-desc": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-import-actions": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-recovery": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-overview-recovery-desc": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
+	"layers-help-tool-image": "Editor Help dialog text. Explains Import Image as distinct from page-owned layer-set Import."
 }

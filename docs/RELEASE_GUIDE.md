@@ -1,6 +1,10 @@
 # Release guide
 
-Updated September 6, 2026. The manifest remains **1.5.95**; subsequent main fixes are Unreleased until a release is intentionally made. A documentation refresh is not a new version release.
+Updated November 8, 2026. The published testing candidate is **v1.8rc1**,
+manifest **1.8.0-rc.1**, at `cfdf8f2bd31b1d9616871e769317b52c64aba0bd`.
+The tag and downloadable archive are immutable. Later documentation/help fixes
+on main are Unreleased until another candidate is explicitly published.
+A documentation refresh is not a new version release.
 
 ## Before tagging
 

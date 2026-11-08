@@ -1,8 +1,25 @@
 # Frequently asked questions
 
-Reviewed October 24, 2026 for the page-owned candidate. Tagged 1.5.95 uses the
-older shared model. The manifest still reports 1.5.95; choose the reviewed commit
-with passing CI. Milestone 1 acceptance remains open.
+## Search in v1.8rc1
+
+After completed migration and search cleanup, MediaWiki's normal search includes
+eligible text from the current owning page's layer sets, including slides and
+PDF layers. Old page revisions and retained legacy rows do not supply obsolete
+terms to the current page index. Ordinary page text remains searchable.
+
+Layer text saved in a page revision follows that page revision's permissions.
+Hiding the referenced file does not hide text saved in a readable page revision.
+To restrict that text, restrict the appropriate page revision as well. Media
+viewing still checks the referenced source. External search backends and publicly
+served unmigrated legacy mode are not certified by this candidate.
+
+Keep readers and editors restricted through migration and successful search
+cleanup; an edit-only freeze is insufficient. Use the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+
+Updated November 8, 2026 for the published v1.8rc1 testing candidate
+(manifest 1.8.0-rc.1). Tagged 1.5.95 uses the older shared model.
+Final stable 1.8 acceptance remains open; see [[Current Status]].
 
 ## What is Layers, and does it change uploaded originals?
 
@@ -17,7 +34,7 @@ Check [[Installation]] for the manifest compatibility floor and separate legacy
 branches. The candidate's release work covers MediaWiki 1.44 and 1.45; recorded
 checks do not qualify every browser/device combination. Use the PHP/database
 versions required by the chosen core release and verify the
-[release matrix](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for your deployment.
+[release matrix](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for your deployment.
 Do not mix one branch's PHP with another branch's JavaScript.
 
 ## How do I add layers to an image or PDF?
@@ -58,11 +75,13 @@ current behavior and the separately labelled legacy options.
 
 ## How do I copy or Import layers?
 
-Use the integrated Import workflow for admitted source layer sets. Choices from
-different owners remain distinct; preview/preparation is not permanent access or
-Save authority. Whole-PDF Import preserves its complete group. The result is
-local work in the target, with its source attribution; future source edits do
-not silently update it.
+Use Import from the owner-page editor. Images/PDFs require the same file and
+matching layer-set name on another readable page; slides require the same slide
+name. Search by the beginning of the source page title. Sources on the current
+page and arbitrary other files/names/media types are not offered. PDF Import
+copies the whole set by page number. An empty target imports immediately;
+otherwise choose Append or Replace all layers. Undo reverses it; Save publishes
+it. The copy is independent of future source edits. See [[Named Layer Sets]].
 
 The existing editable-layer JSON import/export and image import controls remain
 available for their supported formats. An imported flat image cannot preserve
@@ -133,7 +152,7 @@ current charter; stale native bases are refused and local work is preserved.
 
 ## What performance and accessibility can I expect?
 
-Use the recorded [performance scope](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_HISTORY_PERFORMANCE.md) and
+Use the recorded [performance scope](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md) and
 release matrix. The 100-layer server Save benchmark does not establish total
 browser/device latency. Report a representative slow case without discarding
 layers. Controls, shortcuts, focus handling, ARIA support and narrow-screen
@@ -156,4 +175,4 @@ steps and relevant errors; redact tokens and private data. Search
 [new issue](https://github.com/slickdexic/Layers/issues/new).
 
 See [[Quick Start Guide]], [[Configuration Reference]] and the
-[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current guidance.
+[release checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current guidance.

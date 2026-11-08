@@ -1,5 +1,13 @@
 # Page ownership and ordinary editing implementation plan
 
+**Release reading note — November 8, 2026:** This design/decision record retains
+its dated proposals and intermediate results. For the shipped v1.8rc1 behavior,
+use the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
+and [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md).
+In particular, `layersread` responses are private with maximum age zero; older
+public-binding-cache proposals are superseded. Later object-link milestones
+remain unaccepted. This note does not rewrite historical evidence.
+
 September 23, 2026. **Approved direction; implementation pending.** *September 26 update: lifecycle guards now follow drawing ownership, so moves are supported and restore, import and merge are keyed to whether drawings are involved; see the [current status](CURRENT_STATUS.md). The move veto and title-keyed guards described below are superseded.* This plan extends the existing native revision storage. It does not claim that ordinary embedded drawings already participate in owner-page history. Layers is a MediaWiki extension; Docker is only the existing testing environment.
 
 ## Drawings named per page: the D1 contract — September 27, 2026

@@ -1,7 +1,24 @@
 # Permissions
 
+## Search in v1.8rc1
+
+After completed migration and search cleanup, MediaWiki's normal search includes
+eligible text from the current owning page's layer sets, including slides and
+PDF layers. Old page revisions and retained legacy rows do not supply obsolete
+terms to the current page index. Ordinary page text remains searchable.
+
+Layer text saved in a page revision follows that page revision's permissions.
+Hiding the referenced file does not hide text saved in a readable page revision.
+To restrict that text, restrict the appropriate page revision as well. Media
+viewing still checks the referenced source. External search backends and publicly
+served unmigrated legacy mode are not certified by this candidate.
+
+Keep readers and editors restricted through migration and successful search
+cleanup; an edit-only freeze is insufficient. Use the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-legacy shared storage. [Migration completion](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) changes the
+legacy shared storage. [Migration completion](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) changes the
 storage and editing path; it does not grant additional rights.
 
 ## Rights and defaults
@@ -55,7 +72,7 @@ Test third-party access-control extensions against the intended deployment,
 including cached output, historical views, source listings and exports. Current
 binding reads can use the configured anonymous cache policy; control, historical
 and full-source responses have stricter policies. See the
-[API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
+[API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md).
 
 ## History and exports
 

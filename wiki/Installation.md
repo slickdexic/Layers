@@ -13,7 +13,7 @@ before reopening readers. Final production 1.8 acceptance remains separate.
 
 | Wiki | Layers branch | Manifest version | Notes |
 | --- | --- | --- | --- |
-| 1.44+ | Reviewed page-history candidate or, once released, its 1.8 tag | See manifest version above | Manifest compatibility floor; a default `main` checkout is not proof that the candidate is installed |
+| 1.44+ | `v1.8rc1` testing tag | See manifest version above | Manifest compatibility floor; a default `main` checkout is not proof that the candidate is installed |
 | MediaWiki 1.43 | `REL1_43` | Check branch manifest | Separate branch; verify required fixes in its changelog |
 | MediaWiki 1.39–1.42 | `REL1_39` | Check branch manifest | Unmaintained; upgrade core rather than choosing it for a new deployment |
 
@@ -27,12 +27,12 @@ From the MediaWiki `extensions` directory:
 
 ```sh
 git clone https://github.com/slickdexic/Layers.git
-git -C Layers checkout --detach REVIEWED_COMMIT_OR_TAG
+git -C Layers checkout --detach v1.8rc1
 ```
 
-Replace `REVIEWED_COMMIT_OR_TAG` with the reviewed release/candidate and verify
-its exact-commit CI result. A default-branch clone or the unchanged manifest
-version does not by itself identify the page-history candidate.
+For this testing candidate, use tag `v1.8rc1` (commit
+`cfdf8f2bd31b1d9616871e769317b52c64aba0bd`). The release page records
+passing checks. A default-branch checkout may include newer Unreleased work.
 
 For an existing compatible 1.43 wiki, select the separate `REL1_43` branch. Do not copy main's JavaScript onto a different branch's PHP files.
 
@@ -53,7 +53,7 @@ This creates/migrates **`layer_sets`**. Use the updater rather than executing an
 ## Complete page-history setup
 
 The updater creates database structures; it does not complete the legacy-to-page
-migration. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) to refresh discovery,
+migration. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) to refresh discovery,
 review the dry run and apply the unscoped migration. A fresh wiki with no legacy
 sets also needs the empty migration to record completion. Verify
 `layerspagehistorymigrated: true` through siteinfo before testing page-owned embeds.
@@ -73,17 +73,17 @@ An editor opening alone does not verify publication, revision history or permiss
 The fully rehearsed Layers starting release is **1.5.95** on MediaWiki 1.44.6
 with MySQL. This is a tested starting point, not an enforced technical minimum.
 Rehearse an older installation's actual data before choosing its upgrade route;
-see the [upgrade coverage](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADE_PATH_ACCEPTANCE.md).
+see the [upgrade coverage](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADE_PATH_ACCEPTANCE.md).
 
 Back up the database, uploads and configuration. Record the current branch/commit
 and review the target's changelog. From a clean Layers checkout:
 
 ```sh
 git fetch --tags origin
-git checkout --detach REVIEWED_COMMIT_OR_TAG
+git checkout --detach v1.8rc1
 ```
 
-Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
+Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
 
 The post-1.5.95 fixes bind server export cache files to their source title and preserve creator identity. Regenerate old cached exports. Legacy sets with missing historical creator evidence require `layers-admin` for delete/rename. No schema migration was introduced by those particular fixes.
 
@@ -92,5 +92,5 @@ The post-1.5.95 fixes bind server export cache files to their source title and p
 See [[Configuration Reference]] for actual defaults and limits, and [[Permissions]] for group configuration. Keep the export cache outside the document root. Enable same-origin framing only if using the editor modal and your core/proxy policy requires it.
 
 Before production use, complete the release checklist and owner acceptance.
-Page-history, search and Cargo are separate milestones; this guide does not
-claim acceptance of later search/Cargo functionality.
+Current page-owned text search is included within the approved migrated
+boundary. Broader charter search/Cargo acceptance remains separate.

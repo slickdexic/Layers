@@ -1,5 +1,22 @@
 # Layers for MediaWiki
 
+## Search in v1.8rc1
+
+After completed migration and search cleanup, MediaWiki's normal search includes
+eligible text from the current owning page's layer sets, including slides and
+PDF layers. Old page revisions and retained legacy rows do not supply obsolete
+terms to the current page index. Ordinary page text remains searchable.
+
+Layer text saved in a page revision follows that page revision's permissions.
+Hiding the referenced file does not hide text saved in a readable page revision.
+To restrict that text, restrict the appropriate page revision as well. Media
+viewing still checks the referenced source. External search backends and publicly
+served unmigrated legacy mode are not certified by this candidate.
+
+Keep readers and editors restricted through migration and successful search
+cleanup; an edit-only freeze is insufficient. Use the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
@@ -9,9 +26,9 @@ Add layers to **images and PDF pages**, or build **standalone slides** without a
 
 > **Version:** 1.8.0-rc.1 (November 7, 2026) — testing candidate; not a production release.
 
-**Testing candidate cut: November 7, 2026.** This candidate delivers page ownership and native revision history for testing toward **Layers 1.8**. See the [candidate instructions and known limitations](docs/V1_8_CANDIDATE_TESTING.md). Final release acceptance remains open; later search, Cargo and layer-link milestones continue toward 2.0. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release.
+**Testing candidate cut: November 7, 2026.** This candidate delivers page ownership and native revision history for testing toward **Layers 1.8**. See the [candidate instructions and known limitations](docs/V1_8_CANDIDATE_TESTING.md). The [v1.8rc1 prerelease](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1) is published. Final stable acceptance remains open; broader search acceptance, Cargo and layer-link milestones continue toward 2.0. Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release.
 
-> **Upgrade prerequisite:** Page-owned embed selection starts after the documented migration records completion, including on a fresh wiki with no legacy layer sets. Until then, legacy lookup remains active. Follow the [upgrade guide](docs/UPGRADING.md); do not delete retained legacy data or change completion records manually.
+> **Upgrade prerequisite:** Page-owned embed selection starts after the documented migration records completion, including on a fresh wiki with no legacy layer sets. Until then, legacy lookup remains active and public legacy operation is not qualified for this release. Keep readers and editors restricted until migration and search cleanup succeed. Follow the [upgrade guide](docs/UPGRADING.md); do not delete retained legacy data or change completion records manually.
 
 ## Start here
 

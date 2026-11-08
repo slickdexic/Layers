@@ -1,5 +1,13 @@
 # Bounded viewer toolbar acceptance
 
+**Current reading guide — November 8, 2026:** v1.8rc1 is published.
+The dated findings, assignments and pending checks below describe their original
+checkpoints, not current release status. Use [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md),
+[the current documentation audit](https://github.com/slickdexic/Layers/blob/main/docs/DOCUMENTATION_1_8_AUDIT.md)
+and [the upgrade runbook](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+Reader restriction through migration and search cleanup supersedes any older
+edit-freeze-only instruction. Historical failures and limits are retained.
+
 Recorded October 25, 2026; advances Milestone 1 / UI-3 / UI-8 / UI-10.
 The owner approved the [bounded behavior brief](VIEWER_TOOLBAR_TEXT_LAYOUT_BEHAVIOUR_BRIEF.md)
 before implementation. The earlier tall-stack proposal was not approved.

@@ -11,7 +11,8 @@ Tagged 1.5.95 uses older shared storage. Follow [[Installation]] and the
 including migration and search cleanup before reopening readers.
 The independent page-history release targets Layers **1.8**; it has not yet
 been accepted as a production release. See the candidate testing guide in the
-package's `docs/V1_8_CANDIDATE_TESTING.md`. Search, Cargo and layer links follow toward 2.0.
+package's `docs/V1_8_CANDIDATE_TESTING.md`. Current page-owned layer text is
+searchable after migration and cleanup; Cargo and layer links continue toward 2.0.
 
 | Current manifest and tagged baseline | Value |
 | --- | --- |
@@ -32,17 +33,17 @@ Images/slides offer PNG first and a separate PDF Download; PDFs offer PDF only.
 
 ## Start here
 
-- [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md): exact versions,
+- [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md): exact versions,
   backup, rehearsal, updater, discovery, dry run, completion and recovery.
 - [[Quick Start Guide]], [[Slide Mode]], [[Drawing Tools]] and
   [[Keyboard Shortcuts]]: edit and use the existing tools.
 - [[Wikitext Syntax]] and [[Named Layer Sets]]: choose this page's content.
 - [[Configuration Reference]] and [[Permissions]]: administer the candidate.
 - [[Troubleshooting]] and [[FAQ]]: diagnose failures while preserving work.
-- [Current release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md),
-  [[Current Status]] and [known limits](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md): qualified scopes
+- [Current release checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md),
+  [[Current Status]] and [known limits](https://github.com/slickdexic/Layers/blob/main/docs/KNOWN_ISSUES.md): qualified scopes
   and remaining acceptance. Old dated reports retain their historical scope.
-- [[API Reference]] and the [native API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md):
+- [[API Reference]] and the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md):
   current developer contracts and clearly labelled legacy APIs.
 
 ## Embed examples
@@ -62,11 +63,11 @@ author wikitext. Slide `noedit` hides the edit overlay without changing rights.
 ## Delivery order
 
 Milestone 1 is page ownership/native history with existing capabilities intact.
-It remains open for the release matrix and owner acceptance. Built-in text
-search follows, then Cargo readiness, Cargo integration and on-page object
-links. Those later milestones do not hold up page ownership, and object links
+It remains open for the release matrix and owner acceptance. Current page-owned text search is included in v1.8rc1. Broader search
+acceptance, Cargo readiness, Cargo integration and on-page object links remain
+in the charter order. Those later milestones do not hold up page ownership, and object links
 will not be active in the lightbox.
 
 [Repository](https://github.com/slickdexic/Layers) ·
-[Technical documentation](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/README.md) ·
-[Release preparation](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_PREPARATION.md)
+[Technical documentation](https://github.com/slickdexic/Layers/blob/main/docs/README.md) ·
+[Release preparation](https://github.com/slickdexic/Layers/blob/main/docs/RELEASE_PREPARATION.md)

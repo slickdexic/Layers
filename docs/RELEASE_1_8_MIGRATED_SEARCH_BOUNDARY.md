@@ -1,5 +1,11 @@
 # v1.8 search: approved migration boundary
 
+**Public release:** v1.8rc1 is published at `cfdf8f2b`. Its application code
+matches qualified internal rc.3, including the 1.44 event correction. The
+findings and pending-verification statements below are dated investigation
+steps; the [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) records final candidate
+checks. Migration and cleanup remain mandatory for each upgraded deployment.
+
 **Status:** approved by the project owner November 7, 2026: “Approve migration
 and cleanup before reopening (recommended)”. Qualification remains separate.
 **Advances:** Milestone 1 / HIST-4, HIST-8–HIST-9, SEC-2, SEC-6, OPS-1–OPS-3.

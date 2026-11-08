@@ -1,6 +1,6 @@
 # Architecture overview
 
-Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The target release is Layers 1.8; the current manifest remains 1.5.95 until the release cut. See [[Current Status]] for acceptance limits.
+Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The published testing candidate is v1.8rc1, with manifest 1.8.0-rc.1. Final stable 1.8 acceptance remains separate. See [[Current Status]] for acceptance limits.
 
 ## Data and authority
 
@@ -8,7 +8,7 @@ After migration, the owning page's `layers` slot is authoritative for its layer 
 
 Before migration, `layer_sets` is the shared store. A row is a revision identified by source name/hash, set name and source document page. Slides use `Slide:{name}` and the `slide` hash sentinel. Legacy rows retain their metadata and configured retention rules; those rules do not prune native page history. Shared writes become read-only after migration completion, while old rows remain for history and recovery.
 
-Native editing checks the owning page's read/edit authority, `editlayers`, source visibility and the current base revision. Legacy delete/rename also enforce their creator or `layers-admin` rules. The [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) explains migration and the distinction between schema updates and completion.
+Native editing checks the owning page's read/edit authority, `editlayers`, source visibility and the current base revision. Legacy delete/rename also enforce their creator or `layers-admin` rules. The [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) explains migration and the distinction between schema updates and completion.
 
 ## Server components
 
@@ -49,6 +49,6 @@ The legacy audit trait re-saves unchanged File-page content after a layer mutati
 
 ## Development and future changes
 
-Use the [repository architecture guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/ARCHITECTURE.md) and source for implementation details. See [[Current Status]] and the [release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md).
+Use the [repository architecture guide](https://github.com/slickdexic/Layers/blob/main/docs/ARCHITECTURE.md) and source for implementation details. See [[Current Status]] and the [release checklist](https://github.com/slickdexic/Layers/blob/main/docs/RELEASE_1_8_ACCEPTANCE.md).
 
-Page-owned history is the independent 1.8 release milestone. Built-in layer-text search, Cargo readiness, Cargo integration and on-page layer links follow as separate milestones; existing legacy helpers do not establish acceptance of those later features.
+Page-owned history is the independent 1.8 release milestone. Current page-owned text search is included after migration and cleanup; broader search acceptance, Cargo readiness, Cargo integration and on-page layer links retain their charter milestones. Existing helpers do not establish acceptance of those later features.

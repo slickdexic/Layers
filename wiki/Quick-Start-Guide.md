@@ -1,7 +1,25 @@
 # Quick start
 
+## Import requirements
+
+Import reuses a saved layer set from another readable wiki page as an independent
+copy. Later source edits do not update it, and editing the copy does not change
+the source. Enter the beginning of the source **page title**, not a layer-set
+name. Sources on the current page are not offered.
+
+- Images: the source must use the same image file and matching layer-set name.
+- Slides: the source must have the same slide name.
+- PDFs: the source must use the same PDF and layer-set name. Import copies the
+  whole set and matches pages by page number.
+
+Arbitrary other files, names and media types are not supported by this dialog.
+The matching name uses the saved source-filter identity while a rename is pending.
+An empty target imports immediately. Otherwise choose Append or Replace all
+layers. Undo reverses the import; Save publishes the result. Import Image and
+editable-layer JSON import/export are separate controls.
+
 This guide describes the page-history candidate after migration completion.
-First follow [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), and
+First follow [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md), and
 confirm your account has page-edit and layer-edit permission. Legacy 1.5.x shared
 editing uses a different workflow.
 
@@ -60,5 +78,6 @@ names do not merge different owners' layer sets.
 
 Confirm migration completion, a native owner revision for each successful Save,
 historical viewing, recovery and permissions on your wiki. Then complete the
-[candidate acceptance checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md).
-Text search and Cargo acceptance follow page ownership as separate milestones.
+[candidate acceptance checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md).
+Current page-owned layer text is searchable after migration and cleanup.
+Broader search and Cargo acceptance remain separate charter work.

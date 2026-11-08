@@ -20,10 +20,10 @@ Avoid mutable coverage badges and repeated absolute code-size statistics. Record
 ## Change checklist
 
 1. Read the changed code and list affected user/admin/developer flows for images, slides and PDFs.
-2. Update active guides, examples, known issues and source comments where they make user-facing claims.
+2. Update active guides, examples, known issues and source comments where they make user-facing claims. Include editor Help text and JavaScript fallbacks, English messages, translation descriptions and ResourceLoader registration. Obtain the charter-required wording approval before changing visible help.
 3. Add an Unreleased changelog entry; only update the manifest/tag version as part of an actual release.
 4. Reconcile all three `.mediawiki` source documents. They are publication sources, not proof that mediawiki.org has been edited.
-5. Synchronize Current Status and Changelog mirrors. Run `npm run check:docs`.
+5. Synchronize Current Status and Changelog mirrors. Reconcile version, prerelease/stable state, download targets, migration restrictions, search policy and Import eligibility across every current surface. Run `npm run check:docs` and `npm run check:version`; structural passes do not prove semantic accuracy.
 6. Review security fixes against supported branches. Record the backport commit or an explicit deferral/decline; a main-only fix is not a verified LTS backport.
 7. Review the diff, commit/push the repository, then publish/verify the separate GitHub wiki. Follow wiki/README.md.
 

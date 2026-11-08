@@ -250,13 +250,13 @@
 
 			const content = `
 				<h3>${msg( 'layers-help-overview-title', 'Getting Started' )}</h3>
-				<p>${msg( 'layers-help-overview-intro', 'The Layers Editor lets you add annotations, shapes, and text overlays to images on your wiki.' )}</p>
+				<p>${msg( 'layers-help-overview-intro', 'The Layers Editor adds text, shapes and other layers to images, PDF pages and standalone slides.' )}</p>
 
 				<h4>${msg( 'layers-help-overview-interface', 'Interface' )}</h4>
 				<ul>
 					<li><strong>${msg( 'layers-help-overview-toolbar', 'Toolbar' )}</strong> — ${msg( 'layers-help-overview-toolbar-desc', 'Located at the top. Contains drawing tools, zoom controls, and action buttons.' )}</li>
-					<li><strong>${msg( 'layers-help-overview-canvas', 'Canvas' )}</strong> — ${msg( 'layers-help-overview-canvas-desc', 'The main drawing area showing the image with your annotations.' )}</li>
-					<li><strong>${msg( 'layers-help-overview-panel', 'Layer Panel' )}</strong> — ${msg( 'layers-help-overview-panel-desc', 'Located on the right. Shows all layers, visibility controls, and properties.' )}</li>
+					<li><strong>${msg( 'layers-help-overview-canvas', 'Canvas' )}</strong> — ${msg( 'layers-help-overview-canvas-desc', 'The main editing area shows the image, slide or PDF page with its layers.' )}</li>
+					<li><strong>${msg( 'layers-help-overview-panel', 'Layer Panel' )}</strong> — ${msg( 'layers-help-overview-panel-desc', 'Shows layers, visibility controls and properties. It is beside the canvas on wide screens and above it on narrow screens.' )}</li>
 				</ul>
 
 				<h4>${msg( 'layers-help-overview-workflow', 'Basic Workflow' )}</h4>
@@ -264,14 +264,24 @@
 					<li>${msg( 'layers-help-overview-step1', 'Select a tool from the toolbar (or press its keyboard shortcut).' )}</li>
 					<li>${msg( 'layers-help-overview-step2', 'Click and drag on the canvas to create a shape or annotation.' )}</li>
 					<li>${msg( 'layers-help-overview-step3', 'Use the Properties panel to customize colors, size, and other settings.' )}</li>
-					<li>${msg( 'layers-help-overview-step4', 'Click Save when finished to store your annotations.' )}</li>
+					<li>${msg( 'layers-help-overview-step4', 'Click Save and wait for confirmation. In page-owned editing, Save creates a revision of the owning wiki page.' )}</li>
 				</ol>
+
+				<h4>${msg( 'layers-help-overview-ownership', 'Page ownership and history' )}</h4>
+				<p>${msg( 'layers-help-overview-ownership-desc', 'After migration, open Edit layers on the saved image, slide or PDF embed on its owning wiki page. Layer sets on different pages are independent, even when their names match. Use that page\'s history for earlier saved versions. A PDF layer set uses one name across its pages; Save includes the whole set.' )}</p>
+
+				<h4>${msg( 'layers-help-overview-import', 'Import a layer set' )}</h4>
+				<p>${msg( 'layers-help-overview-import-desc', 'Import copies saved work from another readable wiki page. Images and PDFs require the same file and layer-set name; slides require the same slide name. Other files, names and media types are not offered. Enter the beginning of the source page\'s title. Import makes an independent copy; later source edits do not update it.' )}</p>
+				<p>${msg( 'layers-help-overview-import-actions', 'For PDFs, Import copies the whole layer set and matches pages by page number. An empty target imports immediately; otherwise choose Append or Replace all layers. You can undo Import. Click Save to keep the result.' )}</p>
+
+				<h4>${msg( 'layers-help-overview-recovery', 'Local recovery' )}</h4>
+				<p>${msg( 'layers-help-overview-recovery-desc', 'Review and Restore recover a local draft. Restoring is not a saved page revision until Save succeeds. Keep drafts and current work when a Save fails or its outcome is uncertain.' )}</p>
 
 				<h4>${msg( 'layers-help-overview-selection', 'Selecting & Editing' )}</h4>
 				<ul>
 					<li>${msg( 'layers-help-overview-select-single', 'Click a layer to select it.' )}</li>
 					<li>${msg( 'layers-help-overview-select-multi', 'Ctrl+Click to add layers to selection.' )}</li>
-					<li>${msg( 'layers-help-overview-select-range', 'Shift+Click to select a range of layers.' )}</li>
+					<li>${msg( 'layers-help-overview-select-range', 'In the layer panel, Shift+Click selects a range of layers.' )}</li>
 					<li>${msg( 'layers-help-overview-resize', 'Drag corner handles to resize selected layers.' )}</li>
 					<li>${msg( 'layers-help-overview-rotate', 'Drag the rotation handle (above selection) to rotate.' )}</li>
 				</ul>
@@ -359,7 +369,7 @@
 				{
 					id: 'marker',
 					name: msg( 'layers-tool-marker', 'Marker' ),
-					key: 'M',
+					key: '—',
 					desc: msg( 'layers-help-tool-marker', 'Add numbered or lettered markers. Auto-numbers sequentially. Great for step-by-step instructions.' )
 				},
 				{
@@ -378,18 +388,24 @@
 					id: 'pen',
 					name: msg( 'layers-tool-pen', 'Pen' ),
 					key: 'P',
-					desc: msg( 'layers-help-tool-pen', 'Draw freeform paths by clicking to add points. Double-click to finish. Creates smooth curves.' )
+					desc: msg( 'layers-help-tool-pen', 'Press and drag to draw a freehand path. Release to finish.' )
 				},
 				{
 					id: 'shapes',
 					name: msg( 'layers-shape-library', 'Shape Library' ),
-					key: 'G',
-					desc: msg( 'layers-help-tool-shapes', 'Browse 5,000+ pre-made shapes including arrows, flowchart symbols, icons, and more.' )
+					key: '—',
+					desc: msg( 'layers-help-tool-shapes', 'Browse 1,385 built-in shapes, including safety signs, technical symbols and arrows.' )
+				},
+				{
+					id: 'image',
+					name: msg( 'layers-import-image', 'Import Image' ),
+					key: '—',
+					desc: msg( 'layers-help-tool-image', 'Use Import Image to add an image file as a layer. This is separate from importing a saved layer set from another wiki page.' )
 				},
 				{
 					id: 'emoji',
 					name: msg( 'layers-help-tool-emoji-name', 'Emoji' ),
-					key: 'J',
+					key: '—',
 					desc: msg( 'layers-help-tool-emoji', 'Add emoji from a searchable picker with 2,800+ emoji. Great for reactions and visual indicators.' )
 				}
 			];
@@ -487,12 +503,12 @@
 						{ key: 'S', action: msg( 'layers-tool-star', 'Star' ) },
 						{ key: 'A', action: msg( 'layers-tool-arrow', 'Arrow' ) },
 						{ key: 'L', action: msg( 'layers-tool-line', 'Line' ) },
-						{ key: 'M', action: msg( 'layers-tool-marker', 'Marker' ) },
+						{ key: '—', action: msg( 'layers-tool-marker', 'Marker' ) },
 						{ key: 'D', action: msg( 'layers-tool-dimension', 'Dimension' ) },
 						{ key: 'Shift+D', action: msg( 'layers-tool-angle-dimension', 'Angle Dimension' ) },
 						{ key: 'P', action: msg( 'layers-tool-pen', 'Pen' ) },
-						{ key: 'G', action: msg( 'layers-shape-library', 'Shape Library' ) },
-						{ key: 'J', action: msg( 'layers-help-tool-emoji-name', 'Emoji' ) }
+						{ key: '—', action: msg( 'layers-shape-library', 'Shape Library' ) },
+						{ key: '—', action: msg( 'layers-help-tool-emoji-name', 'Emoji' ) }
 					]
 				},
 				{
@@ -574,15 +590,15 @@
 				<ul>
 					<li><strong>${msg( 'layers-help-tips-cant-select', 'Can\'t select a layer?' )}</strong> — ${msg( 'layers-help-tips-cant-select-fix', 'It may be locked. Click the layer in the panel and check the lock icon.' )}</li>
 					<li><strong>${msg( 'layers-help-tips-layer-hidden', 'Layer disappeared?' )}</strong> — ${msg( 'layers-help-tips-layer-hidden-fix', 'Check if visibility is turned off (eye icon) in the layer panel.' )}</li>
-					<li><strong>${msg( 'layers-help-tips-changes-lost', 'Changes not saving?' )}</strong> — ${msg( 'layers-help-tips-changes-lost-fix', 'Make sure to click Save before closing. Check for any error messages.' )}</li>
+					<li><strong>${msg( 'layers-help-tips-changes-lost', 'Changes not saving?' )}</strong> — ${msg( 'layers-help-tips-changes-lost-fix', 'Keep the editor open and read the error. If the outcome is uncertain, use Check saved page when offered. Preserve your local drafts; do not clear browser storage.' )}</li>
 					<li><strong>${msg( 'layers-help-tips-undo', 'Made a mistake?' )}</strong> — ${msg( 'layers-help-tips-undo-fix', 'Press Ctrl+Z to undo. You can undo multiple steps.' )}</li>
 				</ul>
 
 				<h4>${msg( 'layers-help-tips-display', 'Displaying Layers' )}</h4>
 				<p>${msg( 'layers-help-tips-display-intro', 'To show layers on a wiki page, use wikitext syntax:' )}</p>
 				<ul>
-					<li><code>[[File:Example.jpg|layerset=on]]</code> — ${msg( 'layers-help-tips-display-default', 'Shows the default layer set' )}</li>
-					<li><code>[[File:Example.jpg|layerset=myname]]</code> — ${msg( 'layers-help-tips-display-named', 'Shows a specific named layer set' )}</li>
+					<li><code>[[File:Example.jpg|layerset=on]]</code> — ${msg( 'layers-help-tips-display-default', 'After migration, shows this page and image\'s Default layer set.' )}</li>
+					<li><code>[[File:Example.jpg|layerset=myname]]</code> — ${msg( 'layers-help-tips-display-named', 'After migration, shows the named layer set owned by this page for this image.' )}</li>
 				</ul>
 			`;
 

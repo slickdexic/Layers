@@ -6,11 +6,11 @@
 | '''Scope''' || Retained shared-set revisions; native page-owned snapshots use core revision/slot storage.
 |}
 
-Reviewed against the page-history candidate's MySQL/SQLite schemas, database code and native revision writer. The candidate targets Layers '''1.8'''; it has not yet been accepted or tagged. This is a publication source; no external wiki update is implied.
+Reviewed against the page-history candidate's MySQL/SQLite schemas, database code and native revision writer. The published testing candidate is '''v1.8rc1''' (manifest '''1.8.0-rc.1'''); final stable acceptance remains separate. This is a publication source; no external wiki update is implied.
 
-The '''layer_sets''' table retains the older shared revisions for files, PDF pages and slides. After migration completion, those shared writes are read-only. The implemented page-owned model stores the complete snapshot in the owner's native <code>layers</code> slot alongside its main content. A legacy row ID/revision counter is '''not''' a native owner page ID or MediaWiki revision ID.
+The '''layer_sets''' table retains the older shared revisions for files, PDF pages and slides. After migration completion, those shared writes are read-only, and retained rows are recovery data rather than a source for current search. Complete migration and search cleanup before reopening readers. The implemented page-owned model stores the complete snapshot in the owner's native <code>layers</code> slot alongside its main content. A legacy row ID/revision counter is '''not''' a native owner page ID or MediaWiki revision ID.
 
-Use the native updater and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md migration/recovery procedure], not SQL copied from this reference. Updater/schema installation is separate from completion. Back up the complete wiki database, uploads including old versions, configuration and matching code; this table alone or an XML export is not a complete rollback.
+Use the native updater and [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md migration/recovery procedure], not SQL copied from this reference. Updater/schema installation is separate from completion. Back up the complete wiki database, uploads including old versions, configuration and matching code; this table alone or an XML export is not a complete rollback.
 
 Types below describe the MySQL installation schema; SQLite has its own aligned installation file. The retained successful MySQL upgrade does not qualify every database combination.
 
@@ -21,19 +21,19 @@ Types below describe the MySQL installation schema; SQLite has its own aligned i
 |-
 | <code>ls_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier for each revision
 |-
-| <code>ls_img_name</code> || varchar(255) binary || No || — || Normalized file name, or <code>Slide:{name}</code> for standalone slides
+| <code>ls_img_name</code> || varchar(255) binary || No || â€” || Normalized file name, or <code>Slide:{name}</code> for standalone slides
 |-
-| <code>ls_img_major_mime</code> || varchar(16) || No || — || Major MIME type (e.g., "image")
+| <code>ls_img_major_mime</code> || varchar(16) || No || â€” || Major MIME type (e.g., "image")
 |-
-| <code>ls_img_minor_mime</code> || varchar(100) || No || — || Minor MIME type (e.g., "jpeg", "png")
+| <code>ls_img_minor_mime</code> || varchar(100) || No || â€” || Minor MIME type (e.g., "jpeg", "png")
 |-
-| <code>ls_img_sha1</code> || varchar(32) || No || — || Source file SHA-1; standalone slides use the sentinel <code>slide</code>
+| <code>ls_img_sha1</code> || varchar(32) || No || â€” || Source file SHA-1; standalone slides use the sentinel <code>slide</code>
 |-
-| <code>ls_json_blob</code> || mediumblob || No || — || JSON-encoded layer data (validated, sanitized)
+| <code>ls_json_blob</code> || mediumblob || No || â€” || JSON-encoded layer data (validated, sanitized)
 |-
 | <code>ls_user_id</code> || int unsigned || Yes || NULL || User ID who created this revision
 |-
-| <code>ls_timestamp</code> || binary(14) || No || — || MediaWiki timestamp when revision was saved
+| <code>ls_timestamp</code> || binary(14) || No || â€” || MediaWiki timestamp when revision was saved
 |-
 | <code>ls_revision</code> || int unsigned || No || 1 || Revision number within the named set (1, 2, 3...)
 |-
@@ -107,8 +107,8 @@ The current updater registers the extension-specific <code>layer_sets</code> tab
 
 == See Also ==
 
-* [[Extension:Layers]] — Parent extension documentation
-* [[Extension:Layers#Configuration]] — Configuration parameters
+* [[Extension:Layers]] â€” Parent extension documentation
+* [[Extension:Layers#Configuration]] â€” Configuration parameters
 
 == Creator metadata and historical safety ==
 <code>ls_user_id</code> identifies the author of a particular revision. The legacy JSON <code>ownerId</code> is server-generated original-creator user metadata, not the native owning page ID. It survives pruning; clients cannot assign it. Older rows may lack it. Only a retained revision 1 establishes legacy creator ownership; a later editor must not inherit ownership merely because older rows were deleted.
@@ -117,4 +117,4 @@ Before completion, legacy names/rows can be renamed, pruned or deleted. After co
 
 Native set identity includes the owning page and file/slide/name scope. Every page of one PDF set shares the same visible name; <code>ls_page</code> in this legacy table is an internal source page number, not a different visible set name or native page ID. The same visible name on another file or owner is independent.
 
-See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md the native API guide] for complete-snapshot publication and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md the release checklist] for acceptance. Schema documentation does not authorize direct database edits.
+See [https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md the native API guide] for complete-snapshot publication and [https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md the release checklist] for acceptance. Schema documentation does not authorize direct database edits.

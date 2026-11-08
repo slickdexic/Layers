@@ -337,13 +337,13 @@ describe( 'HelpDialog', () => {
 	} );
 
 	describe( 'renderTools', () => {
-		it( 'should render all 17 tools with icons and descriptions', () => {
+		it( 'should render all 18 tool and image-import entries', () => {
 			const dialog = new HelpDialog();
 			dialog.show();
 			dialog.switchTab( 'tools' );
 
 			const toolItems = dialog.contentArea.querySelectorAll( '.layers-help-tool-item' );
-			expect( toolItems.length ).toBe( 17 );
+			expect( toolItems.length ).toBe( 18 );
 		} );
 
 		it( 'should include icons, names and keyboard shortcuts', () => {

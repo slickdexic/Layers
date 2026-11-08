@@ -1,81 +1,31 @@
-# Layers 1.8 release notes — draft
+# Layers v1.8rc1 release notes
 
-**Status:** preparation draft, not a published release. Final version/tag,
-remaining release checks and project-owner acceptance are pending. The
-[release ledger](RELEASE_1_8_ACCEPTANCE.md) is authoritative.
+Published November 7, 2026 locally / November 8 UTC. The immutable release is
+[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1); later main
+documentation/editor-help updates are Unreleased.
 
-## Page ownership and native history
+This is the first public **Layers 1.8 release candidate**, intended for testing. The extension reports **1.8.0-rc.1**. It includes the fixes qualified in the internal rc.3 build; internal candidate numbers were not earlier public releases.
 
-Layer sets belong to the wiki page that uses them. Saving a change creates a
-native revision of that owning page, with its editor, summary and history.
-Historical viewing, layer diffs and selective restoration use the saved
-snapshot and its recorded source version.
+### What is included
 
-Names are scoped to the owning page and file or slide. Two files can both have
-a layer set named `ABC`. One PDF layer set keeps that same name across its
-pages; selecting a PDF page does not create a differently named layer set.
-Authors use `layerset=ABC` and `{{#Slide:ABC}}`, without typing owner IDs.
+- Page-owned layer sets for images, slides and whole PDFs, with native MediaWiki revision history, restore/Undo and independent copies.
+- Draft recovery and conflict handling that preserve unsaved work.
+- Search cleanup that removes obsolete legacy terms after migration while preserving ordinary page text and current page-owned layer text.
+- Correct automatic search indexing on both MediaWiki 1.44 and 1.45.
+- Import guidance explaining eligible sources, independent copying, Append/Replace, Undo and Save.
 
-## Editing, Import and viewing
+### Installation and upgrades
 
-- Edit layers and View full size overlays remain the page entry points for
-  images, slides and PDF pages. Saving or closing returns to the owning page.
-- Copy and Import create an independent local branch. The first Save records
-  source attribution; it does not create a live link to another page's layers.
-  Whole-PDF Import and Undo/Redo preserve all imported members.
-- Local draft recovery, stale-Save refusal and explicit reconciliation preserve
-  current work. Restoring a local draft is distinct from saving a page revision.
-- Images and slides offer Download PNG first, plus Download PDF. PDFs offer
-  Download PDF only. Exports include saved layers; historical viewing retains
-  the recorded file version.
-- The full-size viewer retains Zoom, Fit, PDF navigation, Print and Download.
-  Enlarged media supports touch/button/keyboard panning. Its toolbar remains
-  bounded so controls do not consume the media area.
+Requires **MediaWiki 1.44 or newer** and the PHP/database versions required by that core. PDF annotation requires the normal MediaWiki PDF-handler dependencies. Docker is not a runtime dependency.
 
-Existing editor tools and styling capabilities are retained. New search, Cargo
-readiness/integration and layer-object links belong to later milestones; they
-are not prerequisites for this page-history release.
+Download **Layers-v1.8rc1.tar.gz** and verify it against **SHA256SUMS**. The package includes runtime assets and license notices; it excludes private settings, wiki data, uploads, logs, Git history and development dependencies.
 
-## Upgrade requirements
+**Before reopening an upgraded wiki to readers:** back up and rehearse, restrict reader/editor access, drain old-code work, complete the reviewed layer-set migration, then successfully clean the search index and verify the results. An edit-only freeze is insufficient. Retained legacy records remain recovery data. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/UPGRADING.md).
 
-Read the [complete upgrade guide](UPGRADING.md) before deployment.
+### Verification and known limits
 
-- Use the MediaWiki 1.44+ build and that core release's PHP/database requirements.
-  Docker is development infrastructure, not an extension dependency.
-- The fully tested full-upgrade starting release is **Layers 1.5.95**. Older
-  schema checks are narrower evidence, not complete older-release migrations.
-- Preserve and verify the site's database, retained uploads, private settings
-  and matching software. Deploy one coherent reviewed extension package.
-- Run the schema updater through `mw-config` or CLI, refresh links/process jobs,
-  review the Layers migration dry run, then commit the unscoped migration.
-  `mw-config` alone does not finish the content migration.
-- Verify completion and content/history/editing/output before reopening editing.
-  Retained legacy rows and uploaded versions are recovery data, not cleanup
-  targets. Completed migration makes the old shared sets read-only.
+The affected search/migration group passes on native MediaWiki 1.44.6 (59 tests / 531 assertions) and 1.45.3 (59 / 543). The public candidate preserves that tested application behavior; only release identification and delivery documentation changed. The [acceptance ledger](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/RELEASE_1_8_ACCEPTANCE.md) records the broader scoped evidence and retained failures. All hosted checks passed for release commit `cfdf8f2bd31b1d9616871e769317b52c64aba0bd`: [CI](https://github.com/slickdexic/Layers/actions/runs/42446168558), [native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/42446168520), [browser tests](https://github.com/slickdexic/Layers/actions/runs/42446168517), and [lint/style checks](https://github.com/slickdexic/Layers/actions/runs/42446168555).
 
-## Evidence and disclosed limits
+The owner reports fast normal loading and no remaining observation of earlier performance problems. Forced reload is also slow on pages without Layers. A retained image-to-layer paint sample measured 312.4 ms against the 300 ms target; reference-condition, physical-device, accessibility and Print acceptance remain disclosed for final 1.8. Publicly served unmigrated legacy search and arbitrary external search backends are not certified by this candidate.
 
-The [candidate security review](PAGE_HISTORY_SECURITY_REVIEW.md) records the
-corrected Import/recovery request-budget bypass, compatible development-tool
-security updates and the completed source-led application review with its
-limits. Server-generated thumbnail/PDF text now stays literal instead of
-expanding renderer expressions; new cache keys prevent reuse of older affected
-renders. Stored text is preserved. Custom-shape SVG now refuses external file/network
-resource references before native conversion, preserving internal references
-and existing publication limits. Locked npm and PHP audits report no known
-advisories at this checkpoint; shipped assets remain unchanged. Final-cut
-rechecks and owner acceptance remain; this does not declare the release accepted.
-
-The [upgrade matrix](UPGRADE_PATH_ACCEPTANCE.md),
-[native acceptance](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md),
-[whole-PDF Import evidence](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and
-[recovery checkpoint](INTENDED_WIKI_RECOVERY_CHECKPOINT.md) distinguish recorded
-passes from missing version/device combinations. Scoped tests do not establish
-every browser, physical device, assistive technology or database upgrade.
-
-Earlier pre-release pilot data is separate from a fresh 1.5.95 upgrade. The
-[read-only review](PILOT_DATA_REVIEW.md) identifies retained split-name PDF groups
-requiring owner disposition; no automatic historical repair is included.
-Manual Print/device/accessibility, remaining performance/security checks and
-owner sign-off stay explicit in the release ledger. These draft notes do not
-declare those checks accepted or authorize a release tag.
+Please test using the [candidate checklist](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/V1_8_CANDIDATE_TESTING.md) and report the page/media type, browser/device, reproduction steps and whether Save completed. Do not include credentials or private content in reports.

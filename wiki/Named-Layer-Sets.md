@@ -1,7 +1,25 @@
 # Named layer sets
 
+## Import requirements
+
+Import reuses a saved layer set from another readable wiki page as an independent
+copy. Later source edits do not update it, and editing the copy does not change
+the source. Enter the beginning of the source **page title**, not a layer-set
+name. Sources on the current page are not offered.
+
+- Images: the source must use the same image file and matching layer-set name.
+- Slides: the source must have the same slide name.
+- PDFs: the source must use the same PDF and layer-set name. Import copies the
+  whole set and matches pages by page number.
+
+Arbitrary other files, names and media types are not supported by this dialog.
+The matching name uses the saved source-filter identity while a rename is pending.
+An empty target imports immediately. Otherwise choose Append or Replace all
+layers. Undo reverses the import; Save publishes the result. Import Image and
+editable-layer JSON import/export are separate controls.
+
 Reviewed October 24, 2026 against the page-owned candidate. Tagged 1.5.95 uses
-older shared storage. Follow [the upgrade instructions](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md)
+older shared storage. Follow [the upgrade instructions](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md)
 before relying on post-migration behavior. Milestone 1 acceptance remains open.
 
 ## Ownership and names
@@ -105,11 +123,11 @@ uses recency, and legacy deletion can remove retained revisions.
 
 After completion, those shared sets remain read-only. Do not use `layerssave`,
 `layersrename` or `layersdelete` to update page-owned sets. Use the owner-page
-editor; integrations must follow the [API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
+editor; integrations must follow the [API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md).
 
 ## See also
 
 - [[Wikitext Syntax|Wikitext-Syntax]]
 - [[Slide Mode|Slide-Mode]]
 - [[Quick Start|Quick-Start-Guide]]
-- [Upgrade and recovery](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md)
+- [Upgrade and recovery](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md)

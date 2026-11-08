@@ -1,5 +1,13 @@
 # Authorized historical asset delivery: L02 decision record
 
+**Release reading note — November 8, 2026:** This design/decision record retains
+its dated proposals and intermediate results. For the shipped v1.8rc1 behavior,
+use the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
+and [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md).
+In particular, `layersread` responses are private with maximum age zero; older
+public-binding-cache proposals are superseded. Later object-link milestones
+remain unaccepted. This note does not rewrite historical evidence.
+
 ## Layers is a MediaWiki extension — Docker is only the test environment
 
 **Layers is a MediaWiki extension. It is not Docker-based. Docker is used only to host our development/test MediaWiki installation.** Docker, containers, PowerShell, .NET, host supervisors and container orchestration are not Layers runtime architecture, deployment requirements or feature backends. Do not add them as required or optional Layers capabilities.

@@ -54,8 +54,10 @@ include credentials or private content in bug reports.
   itself to restrict that text. Media delivery still refuses unavailable sources.
 - Reference reader latency, full physical-device/keyboard/screen-reader and
   owner acceptance remain open. Automated tests do not substitute for those checks.
-- Final exact-candidate hosted CI and broader backend qualification are separate
-  from local candidate testing. No production tag or GitHub release is implied.
+- Exact-commit hosted CI passed and the v1.8rc1 GitHub prerelease is published.
+  Final stable acceptance and broader search-backend qualification remain separate.
+  Main may include later Unreleased documentation/help corrections; the RC1
+  tag and downloadable archive remain unchanged.
 
 ## Package and installation
 

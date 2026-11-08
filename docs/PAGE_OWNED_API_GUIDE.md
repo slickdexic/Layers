@@ -117,13 +117,11 @@ See [PDF creation viewer](PDF_CREATION_VIEWER.md).
 
 ## Privacy and delivery
 
-Exact snapshots, historical/control/viewer/editor responses and Import
-preparation use private zero-age API caching. One deliberate exception is a
-current-revision binding-only read without controls: `LayersBindingReadMaxAge`
-can allow bounded anonymous public caching; logged-in reads remain private.
-The read module starts private, and errors do not become public merely because
-the request supplied a cache age. Final HTTP/session headers must still match
-the applicable endpoint policy.
+All `layersread` responses, including anonymous current-binding reads and
+failures, are private with maximum age zero. Import preparation also uses
+private zero-age responses. `LayersBindingReadMaxAge` is a retained compatibility
+setting, not an opt-in to public caching. Request-selected cache ages do not
+override the private policy. Exact PDF delivery uses its own no-store policy.
 
 Use returned exact-source descriptors and delivery URLs. Never synthesize a
 path into private capture/export storage. The native PDF path captures a
@@ -148,5 +146,6 @@ other native lifecycle actions retain their own checks.
 Refer to the [release checklist](MILESTONE_1_RELEASE_CHECKLIST.md) for qualified
 version/device/security/data combinations. Dated implementation notes are
 historical evidence, not current registration instructions or complete release
-acceptance. Search, Cargo readiness, Cargo and on-page links remain later
-milestones.
+acceptance. Current page-owned text search is included after migration and
+cleanup; broader search acceptance, Cargo readiness, Cargo and on-page links
+remain in their charter order.

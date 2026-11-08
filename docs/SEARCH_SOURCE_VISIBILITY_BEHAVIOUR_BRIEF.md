@@ -1,5 +1,10 @@
 # Search visibility for layer text
 
+**November 8 status:** the approved page-owned policy and migrated search
+boundary are qualified in v1.8rc1. The verification-open language in the
+original brief below is historical. Public legacy mode remains unqualified.
+See [release acceptance](RELEASE_1_8_ACCEPTANCE.md).
+
 Advances HIST-3, SEC-2, SEC-6 and DATA-4. **Approved November 5, 2026;
 amended by owner approval of option A on November 6.** The
 [decision record](RELEASE_1_8_SEARCH_DECISION.md) contains the approval and

@@ -21,15 +21,15 @@ Exercise production behavior, including negative cases. An assertion that only r
 
 Cover images, standalone slides and PDF pages. For asynchronous viewers/editors, test stale successes and failures, both image-load orders, page changes, close/reopen and retained unsaved work. Permission tests should cover ordinary page rights and Layers ownership separately.
 
-Database doubles establish call scope; they do not establish live transaction/concurrency behavior. Native revision-history, search and Cargo integration must eventually have real-wiki acceptance tests before being advertised.
+Database doubles establish call scope; they do not establish live transaction/concurrency behavior. v1.8rc1 has native revision-history and migrated-search regression evidence; use the acceptance ledger for its scope. Cargo and any expanded claims still need their applicable native acceptance.
 
 ## Core-backed revision tests
 
-For current disposable-wiki setup, portable release-package coverage and the
+For maintained test-wiki setup, portable release-package coverage and the
 standalone/native distinction, use the [native regression guide](https://github.com/slickdexic/Layers/blob/main/docs/NATIVE_REGRESSION_TESTING.md).
 The checkpoint below is dated evidence, not the current release qualification.
 
-The internal page-history persistence proof has a separate suite using MediaWiki's real integration harness and isolated test tables. It does not run under the extension's standalone stub bootstrap. Use a disposable development wiki with core test dependencies and set `MW_INSTALL_PATH`:
+The internal page-history persistence proof has a separate suite using MediaWiki's real integration harness and isolated test tables. It does not run under the extension's standalone stub bootstrap. Reuse a maintained development wiki with core test dependencies and isolated test tables; set `MW_INSTALL_PATH`:
 
 ```sh
 MW_INSTALL_PATH=/path/to/mediawiki php vendor/bin/phpunit -c tests/phpunit/core.xml

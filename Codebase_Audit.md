@@ -1,5 +1,49 @@
 # Codebase audit and remediation roadmap
 
+## Documentation and editor-help reconciliation — November 8, 2026
+
+The owner requested every documentation surface be current, including GitHub
+wiki, `.mediawiki` sources and built-in Help, and approved the exact Help wording.
+The [documentation audit](docs/DOCUMENTATION_1_8_AUDIT.md) inventories all 260
+public documents and records corrections to release identity, search policy,
+reader restriction during upgrades, private API caching, Import eligibility
+and editor guidance. Forty-five affected tests and the clean documentation,
+version, i18n, lint and growth checks pass; all four Help tabs were inspected
+on 8080 at desktop and narrow widths without saving content.
+
+The shipped handlers do not implement the previously advertised M/G/J tool
+shortcuts; toolbar actions still work. Current help/guides disclose that fact;
+the separate Marker tooltip still advertises M and needs a scoped follow-up.
+The published RC1 archive is immutable, so the Help correction is Unreleased
+on main/8080 until a later candidate is built. `.mediawiki` files are publication
+sources; this task does not assert a mediawiki.org update. This advances
+Milestone 1 / OPS-1–OPS-2 and HIST-4–HIST-5.
+
+## Published v1.8rc1 checkpoint — November 8, 2026
+
+The owner-authorized testing prerelease [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
+was published from `cfdf8f2bd31b1d9616871e769317b52c64aba0bd` (manifest
+`1.8.0-rc.1`). Publication was November 7 locally / November 8 UTC.
+[CI](https://github.com/slickdexic/Layers/actions/runs/42446168558),
+[native MediaWiki](https://github.com/slickdexic/Layers/actions/runs/42446168520),
+[browser tests](https://github.com/slickdexic/Layers/actions/runs/42446168517),
+[lint/style](https://github.com/slickdexic/Layers/actions/runs/42446168555) and
+[release wiki sync](https://github.com/slickdexic/Layers/actions/runs/42446565479)
+passed. The downloaded package and checksum were verified; the maintained 1.44.6
+wiki runs its 2,941 verified files with content/uploads preserved.
+
+Migration and search cleanup must finish before readers regain access.
+The 59-test search/migration group passed on 1.44.6 and 1.45.3. Public unmigrated
+legacy operation and arbitrary search backends are outside qualification.
+Final stable acceptance still includes reference performance disposition and
+applicable physical-device, accessibility and Print checks. RC publication does
+not waive those checks. Later main documentation/help corrections are Unreleased.
+
+**Reading the dated records below:** internal rc.1–rc.3 labels were local test
+builds. Statements that publication, exact-release CI or installed rc.3
+replacement were pending describe those earlier checkpoints and are superseded
+by this result. Their failures, test scopes and limits remain evidence.
+
 ## Public release-candidate authorization â€” November 7, 2026
 
 The owner requested commit/push and release as **v1.8rc1**. This is the first

@@ -1,8 +1,25 @@
 # Troubleshooting
 
+## Search in v1.8rc1
+
+After completed migration and search cleanup, MediaWiki's normal search includes
+eligible text from the current owning page's layer sets, including slides and
+PDF layers. Old page revisions and retained legacy rows do not supply obsolete
+terms to the current page index. Ordinary page text remains searchable.
+
+Layer text saved in a page revision follows that page revision's permissions.
+Hiding the referenced file does not hide text saved in a readable page revision.
+To restrict that text, restrict the appropriate page revision as well. Media
+viewing still checks the referenced source. External search backends and publicly
+served unmigrated legacy mode are not certified by this candidate.
+
+Keep readers and editors restricted through migration and successful search
+cleanup; an edit-only freeze is insufficient. Use the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+
 Reviewed October 24, 2026 for the page-owned candidate. Tagged 1.5.95 uses the
 older shared model. Start with [[Installation]] and the
-[upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md); Milestone 1 acceptance remains open.
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md); Milestone 1 acceptance remains open.
 
 ## Preserve current work first
 
@@ -23,7 +40,7 @@ embed, shown on hover, keyboard focus or tap.
 
 1. Confirm the exact wiki and page. Different hosts or ports can be different
    installations with different data and extension code. Check `Special:Version`
-   and the installed reviewed commit; the 1.5.95 manifest alone is insufficient.
+   and the installed commit/tag. v1.8rc1 reports 1.8.0-rc.1; main can include newer Unreleased work.
 2. Confirm Layers is loaded and the embed is saved. Check migration completion,
    including on a fresh empty wiki. Running the updater alone is not completion.
 3. Check this page's embed name. After completion, `layerset=on` means
@@ -81,10 +98,10 @@ per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded
 image validation has a separate 1 MiB bound. Raising `$wgLayersMaxBytes` or a
 legacy count setting does not expand the native schema. Do not split a whole-PDF
 Save into independent page writes. See [[Configuration Reference]] and the
-[native API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
+[native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md).
 
 For a slow Save, distinguish upload, API/server time, rendering and return/reopen
-work. The [bounded server benchmark](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_HISTORY_PERFORMANCE.md) records
+work. The [bounded server benchmark](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md) records
 100-layer Saves at 98–122 ms on its local fixture; it is not a promise of total
 browser/device latency on every wiki. Preserve representative content when
 reporting a slowdown rather than deleting layers to make the measurement pass.
@@ -131,7 +148,7 @@ history export. See [[API Reference]].
 ## Canvas, tools, shortcuts and layout
 
 Inspect console and failed resource responses first. Check CSP restrictions
-against [the CSP guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CSP_GUIDE.md) instead of disabling protections.
+against [the CSP guide](https://github.com/slickdexic/Layers/blob/main/docs/CSP_GUIDE.md) instead of disabling protections.
 Check editor focus and whether a text field owns keyboard input. Preserve work
 before changing browser context or trying a fresh reproduction.
 
@@ -139,7 +156,7 @@ Use one matched source/assets tree. The approved narrow layout wraps the
 existing header controls and places the layer panel above a full-width canvas;
 Save should remain reachable. Report viewport, zoom and skin if it is clipped.
 Keyboard, touch and assistive-technology coverage remains scoped to the
-[release matrix](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md); do not assume a
+[release matrix](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md); do not assume a
 complete browser/device qualification from one passing desktop journey.
 
 For rendering or interaction lag, record layer count/types, effects, source
@@ -163,4 +180,4 @@ was confirmed and whether unsaved work/drafts remain in the editor.
 Use [existing issues](https://github.com/slickdexic/Layers/issues) or the
 [issue form](https://github.com/slickdexic/Layers/issues/new). See [[FAQ]],
 [[Configuration Reference]] and the
-[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current limits.
+[release checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for current limits.

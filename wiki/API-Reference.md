@@ -1,6 +1,6 @@
 # Action API reference
 
-Reviewed October 24, 2026. The [page-owned API guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md)
+Reviewed October 24, 2026. The [page-owned API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
 is the current entry point for native reads, publication, Import and privacy.
 Native modules are installed by the extension registration callback as well as
 extension.json. They are not all disabled or unregistered, and normal
@@ -10,8 +10,8 @@ The tables/examples below describe **legacy shared storage**, followed by
 separately scoped native endpoint notes. After migration completion,
 `layerssave`, `layersrename` and `layersdelete` refuse shared writes; they
 cannot mutate owner-page snapshots. Tagged 1.5.95 uses the older shared model.
-See [UPGRADING](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md) for the completion prerequisite and the
-[release checklist](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for acceptance.
+See [UPGRADING](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) for the completion prerequisite and the
+[release checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md) for acceptance.
 
 Use MediaWiki's `api.php` with `format=json`. Load `mediawiki.api` before
 using `new mw.Api()`. Check API errors and the module-specific result, not
@@ -182,7 +182,7 @@ Use the returned delivery URL; do not construct a path into the export cache. `S
 
 ## Integration boundaries
 
-The legacy modules above do not bind shared sets to native owner revisions. Page-owned publication is implemented through separate registered modules; use the [current guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md). Search/Cargo acceptance remains in later milestones. On the exact installed candidate, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
+The legacy modules above do not bind shared sets to native owner revisions. Page-owned publication is implemented through separate registered modules; use the [current guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md). Search/Cargo acceptance remains in later milestones. On the exact installed candidate, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.
 
 ## Explicit save-name validation
 
@@ -193,7 +193,7 @@ For retained legacy compatibility, `layerssave` treats nonempty `setname` values
 The following endpoint reads existing image/slide members. The integrated
 candidate now uses native Import callers; the earlier registration-only
 checkpoint is not the current activation state. Whole-PDF and empty-target
-workflows use separate actions listed in the [current guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md).
+workflows use separate actions listed in the [current guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md).
 
 ### layersworkingcopyimportread - GET
 
@@ -270,5 +270,5 @@ The response contains native PDF count/page geometry, an empty ephemeral anchor
 and an exact-source delivery descriptor. Opening/exporting revalidates it. The
 separate GET/HEAD delivery URL resolves the saved occurrence and compares its
 source digest; it does not accept a caller-selected file/version. See the
-[PDF creation viewer contract](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PDF_CREATION_VIEWER.md) for response
+[PDF creation viewer contract](https://github.com/slickdexic/Layers/blob/main/docs/PDF_CREATION_VIEWER.md) for response
 privacy, source capture, refusal rules and bounded acceptance limits.

@@ -1,5 +1,13 @@
 # Internal exact-revision read contract
 
+**Release reading note — November 8, 2026:** This design/decision record retains
+its dated proposals and intermediate results. For the shipped v1.8rc1 behavior,
+use the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md)
+and [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md).
+In particular, `layersread` responses are private with maximum age zero; older
+public-binding-cache proposals are superseded. Later object-link milestones
+remain unaccepted. This note does not rewrite historical evidence.
+
 ## Source renditions in read bundles — September 26, 2026
 
 The pilot's `PageReadService` now adds core renditions of each image/PDF surface's exact pinned source version (see the [delivery decision](PAGE_OWNED_ASSET_DELIVERY_DESIGN.md)):

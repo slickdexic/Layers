@@ -1,5 +1,13 @@
 # Page-owned Layers history: implementation contract
 
+**Current reading guide — November 8, 2026:** v1.8rc1 is published.
+The dated findings, assignments and pending checks below describe their original
+checkpoints, not current release status. Use [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md),
+[the current documentation audit](https://github.com/slickdexic/Layers/blob/main/docs/DOCUMENTATION_1_8_AUDIT.md)
+and [the upgrade runbook](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
+Reader restriction through migration and search cleanup supersedes any older
+edit-freeze-only instruction. Historical failures and limits are retained.
+
 > **Historical implementation log:** The dated checkpoints and assignments
 > below describe earlier stages, not the current activation state. The 1.8
 > candidate integrates page-owned history; see the [release ledger](RELEASE_1_8_ACCEPTANCE.md),

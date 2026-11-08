@@ -2,7 +2,8 @@
 
 > **Current guidance — September 6, 2026:** The tools apply to images, PDF pages and standalone slides. Client rendering and server PDF export have different fidelity; inspect exported output. Current history/search limitations are described in [[Current Status]].
 
-Layers provides **17 professional drawing tools** for comprehensive image annotation.
+Layers provides tools for editing images, PDF pages and standalone slides,
+including Angle Dimension and the separate Import Image action.
 
 ---
 
@@ -14,8 +15,9 @@ Layers provides **17 professional drawing tools** for comprehensive image annota
 | **Text** | `T` | T | Annotation | Single-line text labels |
 | **Text Box** | `X` | 📝 | Annotation | Multi-line text with container |
 | **Callout** | `B` | 💬 | Annotation | Speech bubbles with draggable tail |
-| **Marker** | `M` | ① | Annotation | Numbered/lettered markers for labeling |
+| **Marker** | Toolbar | ① | Annotation | Numbered/lettered markers for labeling |
 | **Dimension** | `D` | ↔ | Annotation | Technical measurement annotations |
+| **Angle Dimension** | `Shift+D` | ∠ | Annotation | Angle measurements with two arms |
 | **Pen** | `P` | ✏️ | Drawing | Freehand path drawing |
 | **Rectangle** | `R` | ▢ | Shape | Rectangles and squares |
 | **Circle** | `C` | ○ | Shape | Perfect circles |
@@ -600,3 +602,10 @@ Images are stored as base64 data URLs. The maximum size is configurable:
 - [[Keyboard Shortcuts]] — Complete shortcut reference
 - [[Style Presets]] — Save and reuse tool styles
 - [[Alignment and Distribution]] — Precise positioning
+
+## Shortcut limitation in v1.8rc1
+
+Older help advertises M for Marker, G for Shape Library and J for Emoji.
+The shipped keyboard dispatcher does not implement these three shortcuts; use
+the toolbar controls. Ctrl+G and Ctrl+Shift+G do implement grouping/ungrouping.
+This documentation correction does not add or remove editor functionality.

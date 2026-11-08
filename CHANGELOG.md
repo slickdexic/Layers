@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Documentation and editor help
+- Reconcile release status, search visibility, migration/cleanup requirements and
+  Import eligibility across repository guides, GitHub wiki and all three
+  `.mediawiki` publication sources. Preserve dated evidence and final-release limits.
+- Update built-in Help with the approved page-owned workflow, Save, recovery and
+  Import explanation; correct Pen, shape-library count, default selection and
+  narrow-screen panel guidance. Include Import Image and stop advertising the
+  unimplemented M/G/J shortcuts. Existing editor actions are unchanged.
+- These changes follow the immutable v1.8rc1 tag and are not included in its archive.
+
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
 ## [1.8.0-rc.1] - 2026-11-07

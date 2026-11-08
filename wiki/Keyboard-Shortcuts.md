@@ -28,8 +28,10 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `S` | Star | Draw stars |
 | `A` | Arrow | Draw arrows |
 | `L` | Line | Draw straight lines |
-| `M` | Marker | Numbered/lettered markers |
+| Toolbar | Marker | Numbered/lettered markers |
 | `D` | Dimension | Measurement annotations |
+| `Shift+D` | Angle Dimension | Angle measurement annotations |
+| Toolbar | Shape Library / Emoji / Import Image | Open the corresponding control |
 
 > **Note:** The Zoom tool (`Z`) has been removed. Use the zoom controls in the View shortcuts instead.
 
@@ -220,3 +222,10 @@ The single-key tool shortcuts (`V`, `T`, `R`, `A`, etc.) are the most valuable t
 
 - [[Drawing Tools]] — Complete tool reference
 - [[Quick Start Guide]] — Getting started tutorial
+
+## Shortcut limitation in v1.8rc1
+
+Older help advertises M for Marker, G for Shape Library and J for Emoji.
+The shipped keyboard dispatcher does not implement these three shortcuts; use
+the toolbar controls. Ctrl+G and Ctrl+Shift+G do implement grouping/ungrouping.
+This documentation correction does not add or remove editor functionality.

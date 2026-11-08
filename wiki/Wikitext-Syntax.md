@@ -1,6 +1,6 @@
 # Wikitext Syntax
 
-> **Candidate guidance — October 24, 2026:** After [migration completion](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), bare names select this page's own layer sets. Save captures changes in native owner-page history. `layerset=on` selects `Default`; it does not select the most recently saved shared set. Tagged 1.5.95 uses the older shared model. `noedit` and hidden controls are not authorization. Milestone 1 acceptance remains open.
+> **Candidate guidance — October 24, 2026:** After [migration completion](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md), bare names select this page's own layer sets. Save captures changes in native owner-page history. `layerset=on` selects `Default`; it does not select the most recently saved shared set. Tagged 1.5.95 uses the older shared model. `noedit` and hidden controls are not authorization. Milestone 1 acceptance remains open.
 
 Use **Edit layers** and **View full size** on the embed (hover, focus or tap). Author-facing wikitext contains names only, never owner page IDs or internal binding tokens. The same name on another owner or another file identifies an independent set. A PDF keeps one visible set name across all its pages.
 

@@ -3,7 +3,7 @@
 {{Extension
 |image           = ExtensionLayersEditor.png
 |name            = Layers
-|status          = stable
+|status          = beta
 |type1           = media
 |type2           = parser function
 |type3           = special
@@ -12,10 +12,10 @@
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
 |version         = 1.8.0-rc.1
 |update          = 2026-11-07
-|download        = [https://github.com/slickdexic/Layers/archive/refs/tags/v1.5.95.zip Tagged 1.5.95]
+|download        = [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 v1.8rc1 testing candidate]
 
-|readme          = [https://github.com/slickdexic/Layers/blob/v1.5.95/README.md README]
-|changelog       = [https://github.com/slickdexic/Layers/blob/v1.5.95/CHANGELOG.md CHANGELOG]
+|readme          = [https://github.com/slickdexic/Layers/blob/v1.8rc1/README.md README]
+|changelog       = [https://github.com/slickdexic/Layers/blob/v1.8rc1/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
 |mediawiki       = >= 1.44.0
@@ -50,12 +50,12 @@
 |hook25 = LinksUpdateComplete
 |hook26 = SkinTemplateNavigation::Universal
 |hook27 = CargoSetFormatClasses
-|description     = A non-destructive annotation system for images, PDFs and standalone slides with 17 drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and keyboard editing controls.
+|description     = A non-destructive annotation system for images, PDFs and standalone slides with drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and keyboard editing controls.
 }}
 
 
 == Current candidate and release status ==
-The page-owned candidate targets an independent '''Layers 1.8''' release and has not yet been accepted or tagged. The version, release date and stable status above identify the last tagged '''1.5.95''' release. Candidate registration/configuration and behavior are described below. Use an exact reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md release checklist]. Editing this source file does not publish it to mediawiki.org.
+The published testing candidate is '''v1.8rc1''' (manifest '''1.8.0-rc.1'''), with passing exact-commit automated checks. Final stable 1.8 acceptance remains separate. See the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 release notes] for verification and known limits. Editing this source file does not publish it to mediawiki.org.
 
 The candidate stores layer sets in the '''owning page's native revision history''' after migration completion. A layer set belongs to one page and one file or slide. Equal names on different owners or files are independent. A PDF has one visible set name across all its pages; the page number selects an internal member, not a different set name.
 
@@ -66,7 +66,7 @@ Use '''Edit layers''' and '''View full size''' on the saved embed, available on 
 Images and slides offer '''Download PNG''' first and a separate '''Download PDF'''. PDFs offer '''Download PDF''' only. Viewing, page navigation, Print and Download use the admitted saved content. Failed PDF pages must refuse complete assembly rather than silently shorten the result. OS/physical Print and the remaining device/version combinations retain their release-checklist limits.
 
 == Why Layers? ==
-* '''Professional Tools:''' 17 [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics.
+* '''Professional Tools:''' [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' Provides [[#Keyboard Shortcuts|keyboard controls]], ARIA labels, and high-contrast indicators. No formal WCAG conformance assessment is claimed.
 
@@ -101,7 +101,7 @@ A slide is a standalone canvas owned by the page whose snapshot contains it. Sav
 
 After completion, <code>layerset=on</code> selects this owner/file's <code>Default</code> set, not the most recently saved shared set. <code>off</code> and <code>none</code> suppress layers; the older <code>layers=</code> spelling remains supported. Native names compare without case differences; spaces and underscores normalize alike, while the saved spelling remains visible. Missing sets may open empty for an eligible authorized editor, never by substituting another saved set.
 
-Saved native geometry/background remain authoritative. Existing slide <code>size</code>/<code>noedit</code> syntax remains supported; verify the intended candidate result. Legacy shared-slide <code>layerset</code>, <code>canvas</code>, <code>background</code>, <code>size</code>, <code>class</code> and <code>editable</code> options, plus <code>Special:Slides</code>/<code>Special:EditSlide</code>, retain their separately labelled reference at [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Slide-Mode.md Slide Mode]. They do not grant admission to another page's native content. <code>noedit</code> hides an edit button, not server authorization.
+Saved native geometry/background remain authoritative. Existing slide <code>size</code>/<code>noedit</code> syntax remains supported; verify the intended candidate result. Legacy shared-slide <code>layerset</code>, <code>canvas</code>, <code>background</code>, <code>size</code>, <code>class</code> and <code>editable</code> options, plus <code>Special:Slides</code>/<code>Special:EditSlide</code>, retain their separately labelled reference at [https://github.com/slickdexic/Layers/blob/main/wiki/Slide-Mode.md Slide Mode]. They do not grant admission to another page's native content. <code>noedit</code> hides an edit button, not server authorization.
 
 == Installation and upgrade ==
 The candidate's manifest requires MediaWiki 1.44 or newer. Use the PHP/database versions required by the chosen supported core release; the extension's compatibility floor is not an endorsement of an obsolete core version. See [https://www.mediawiki.org/wiki/Manual:Installation_requirements core installation requirements]. PDF layers require working native PDF thumbnails and the applicable media handler/rasterizer dependencies. Slides need no uploaded background file or PDF renderer.
@@ -111,9 +111,9 @@ For an older compatible 1.43 wiki, check the separate <code>REL1_43</code> branc
 From MediaWiki's <code>extensions</code> directory:
 <syntaxhighlight lang="bash">
 git clone https://github.com/slickdexic/Layers.git
-git -C Layers checkout --detach REVIEWED_COMMIT_OR_TAG
+git -C Layers checkout --detach v1.8rc1
 </syntaxhighlight>
-Replace the placeholder with the exact reviewed candidate/release and verify its CI. A default-branch clone or unchanged manifest number does not identify the candidate.
+Use tag v1.8rc1 for this testing release; main may contain later Unreleased work. Verify the selected commit and release checks.
 
 Add to <code>LocalSettings.php</code>:
 <syntaxhighlight lang="php">
@@ -126,9 +126,15 @@ php maintenance/run.php update
 
 The fully rehearsed starting release is '''Layers 1.5.95''' on MediaWiki 1.44.6 with MySQL. This is a tested starting point, not an enforced technical minimum; rehearse an older installation's actual data before choosing its route.
 
-The updater is not migration completion. Follow the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md full upgrade and recovery procedure]: rehearse on an actual wiki copy; retain consistent database/uploads/configuration backups and matching old code; arrange the edit freeze; refresh discovery; review the dry run; apply the unscoped migration; and verify <code>layerspagehistorymigrated: true</code> through siteinfo. A fresh empty wiki also needs completion recorded by that procedure. A scoped migration does not complete the whole wiki. Never fabricate the completion record or install a sample table manually.
+The updater is not migration completion. Follow the [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md full upgrade and recovery procedure]: rehearse on an actual wiki copy; retain consistent database/uploads/configuration backups and matching old code; restrict readers and editors; drain old-code work; refresh discovery; review the dry run; apply the unscoped migration; verify <code>layerspagehistorymigrated: true</code> through siteinfo; then run successful search cleanup and verify the results before readers regain access. An edit-only freeze is insufficient. A fresh empty wiki also needs completion recorded by that procedure. A scoped migration does not complete the whole wiki. Never fabricate the completion record or install a sample table manually.
 
-Validate images, slides, complete PDFs, native history and current/old source versions before reopening normal edits. Retain shared rows and archived sources. Distinguish safe reruns, native content restoration and full backup rollback. A fresh successful migration does not automatically reconcile all earlier migrated history.
+Validate images, slides, complete PDFs, native history and current/old source versions before reopening reader and editor access. Retain shared rows and archived sources. Distinguish safe reruns, native content restoration and full backup rollback. A fresh successful migration does not automatically reconcile all earlier migrated history.
+
+== Search and visibility ==
+Current page-owned layer text is included in MediaWiki search after migration and successful cleanup. Old revisions and retained legacy rows do not supply obsolete terms. Layer text follows the owning page revision's permissions: hiding a referenced file does not hide readable page-owned text. Restrict the appropriate page revision to restrict that text. Media viewing still checks its source. Public unmigrated legacy operation and arbitrary external search backends are outside this candidate's qualification.
+
+== Search and visibility ==
+Current page-owned layer text is included in MediaWiki search after migration and successful cleanup. Old revisions and retained legacy rows do not supply obsolete terms. Layer text follows the owning page revision's permissions: hiding a referenced file does not hide readable page-owned text. Restrict the appropriate page revision to restrict that text. Media viewing still checks its source. Public unmigrated legacy operation and arbitrary external search backends are outside this candidate's qualification.
 
 == Configuration ==
 Set overrides after loading the extension. The following defaults are checked against the candidate manifest; scopes are checked against the current callers.
@@ -138,7 +144,7 @@ Set overrides after loading the extension. The following defaults are checked ag
 |-
 | <code>$wgLayersPageDrawingNamespaces</code> || array or null || <code>null</code> || Namespaces where new ownership may start. <code>null</code> means content namespaces and File; <code>[]</code> admits no new owners. Existing owners retain their content in any namespace, subject to permissions.
 |-
-| <code>$wgLayersBindingReadMaxAge</code> || integer || <code>300</code> || Maximum seconds of anonymous public caching for a current-revision binding read. <code>0</code> disables this caching. Logged-in, historical, snapshot, control, viewer/editor, error and private-wiki responses are not publicly cached.
+| <code>$wgLayersBindingReadMaxAge</code> || integer || <code>300</code> || Retained compatibility setting. All <code>layersread</code> binding responses are private with maximum age zero regardless of this value.
 |-
 | <code>$wgLayersEnable</code> || boolean || <code>true</code> || Enables the hooks/UI paths that consult it. It does not unregister stored native content or replace API permissions.
 |-
@@ -195,12 +201,12 @@ Native document bounds are separate from legacy settings: 2097152 serialized byt
 
 New ownership defaults to content namespaces and File; an empty namespace array admits no new owners, while existing owners retain their content in any namespace, subject to permissions. The retired pilot-enabled/owner/namespace settings are ignored. Anonymous current-binding reads can remain cached for the configured age; historical, control, viewer/editor and private-wiki responses have stricter policies. Exact PDF delivery uses a separate no-store boundary.
 
-See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md the configuration reference] for fonts, quotas, framing and per-path limits. The native registration/snapshot APIs are implemented; historical class names containing <code>Pilot</code> do not mean normal Saves still use shared storage.
+See [https://github.com/slickdexic/Layers/blob/main/wiki/Configuration-Reference.md the configuration reference] for fonts, quotas, framing and per-path limits. The native registration/snapshot APIs are implemented; historical class names containing <code>Pilot</code> do not mean normal Saves still use shared storage.
 
 === Permissions ===
 Native editing requires ordinary read/edit authority on the '''owning page''', <code>editlayers</code>, source visibility and fresh revision/source checks. Blocks and page protection apply. A File page and an article embedding its file are different owners. Save uses POST and native CSRF validation. A source listing, preview or old delivery descriptor is not lasting access or publication authority.
 
-Registered users and sysops receive <code>editlayers</code> by default; anonymous users do not. Sysops receive <code>layers-admin</code> for legacy creator-check overrides. That right does not bypass native owner protection or source/revision visibility. Old shared rename/delete rules differ from native snapshot changes; earlier readable native revisions retain saved content. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Permissions.md permissions].
+Registered users and sysops receive <code>editlayers</code> by default; anonymous users do not. Sysops receive <code>layers-admin</code> for legacy creator-check overrides. That right does not bypass native owner protection or source/revision visibility. Old shared rename/delete rules differ from native snapshot changes; earlier readable native revisions retain saved content. See [https://github.com/slickdexic/Layers/blob/main/wiki/Permissions.md permissions].
 
 === Maintenance and failure recovery ===
 Keep unsaved work and drafts intact after an uncertain/refused Save. Use the existing '''Check'''/reconciliation flow to establish the outcome before republishing. Do not clear local storage, substitute another file/revision/PDF page or split native PDF Save into independent page writes.
@@ -209,19 +215,19 @@ The retained legacy renderer/export cache is separate from native history. Keep 
 <syntaxhighlight lang="bash">
 php extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30 --dry-run
 </syntaxhighlight>
-Review the reported cache paths before an intended cleanup. This is not a way to prune native revisions, legacy migration evidence, uploads or local acceptance archives. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Troubleshooting.md troubleshooting] and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md current limits].
+Review the reported cache paths before an intended cleanup. This is not a way to prune native revisions, legacy migration evidence, uploads or local acceptance archives. See [https://github.com/slickdexic/Layers/blob/main/wiki/Troubleshooting.md troubleshooting] and [https://github.com/slickdexic/Layers/blob/main/docs/KNOWN_ISSUES.md current limits].
 
 == Key Features ==
 
 === Annotation Tools ===
-* '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
+* '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded cornersâ€”perfect for tutorials and explanations.
 * '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
 * '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
 * '''Shape Library (1,385 Shapes)''': Built-in library with 12 categories including arrows, basic shapes, callouts, flowchart, [[w:ISO 7010|ISO 7010]] safety symbols, [https://www.iso.org/obp/ui/#iso:pub:PUB400008:en IEC 60417], ISO 7000, [[w:GHS hazard pictograms|GHS]], ECB, math, and more. All shapes render as crisp SVG vectors.
 * '''Emoji Library (2,817 Emoji)''': Google Noto Color Emoji library with 19 categories (smileys, gestures, people, animals, food, travel, sports, and more). Lazy-loaded SVG thumbnails for fast browsing.
 
 === Visual Effects ===
-* '''Blur Fill''': Apply a "frosted glass" blur effect to any shape—blur what's beneath instead of using a solid fill.
+* '''Blur Fill''': Apply a "frosted glass" blur effect to any shapeâ€”blur what's beneath instead of using a solid fill.
 * '''Shadow & Glow''': Add drop shadows with configurable blur, offset, and spread. Glow effects for emphasis.
 * '''Blend Modes''': Standard blend modes (multiply, screen, overlay, etc.) for professional compositing.
 * '''Opacity Controls''': Independent fill and stroke opacity for fine-tuned transparency.
@@ -235,7 +241,7 @@ Review the reported cache paths before an intended cleanup. This is not a way to
 === Professional Workflow ===
 * '''Style Presets''': Save and reuse style configurations (colors, stroke width, fonts) per tool type.
 * '''Smart Guides''': Snap to edges and centers of other objects with visual alignment guides.
-* '''Key Object Alignment''': Industry-standard alignment matching Adobe Illustrator—last selected object becomes the alignment anchor.
+* '''Key Object Alignment''': Industry-standard alignment matching Adobe Illustratorâ€”last selected object becomes the alignment anchor.
 * '''Distribute Tools''': Evenly space selected layers horizontally or vertically.
 
 === Interactive editing ===
@@ -327,11 +333,11 @@ The following retained modes describe legacy host-link behavior. They are separa
 |-
 | Dimension || {{key press|D}} || Measurements || Technical dimension annotations with tick marks
 |-
-| Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
+| Custom Shape || â€” || Shape Library || Arrows, symbols, flowchart shapes, and more
 |-
-| Emoji || — || Emoji Library || 2,817 Noto Color Emoji in 19 categories
+| Emoji || â€” || Emoji Library || 2,817 Noto Color Emoji in 19 categories
 |-
-| Image || — || Import Images || Add PNG, JPG, GIF, WebP images as layers
+| Image || â€” || Import Images || Add PNG, JPG, GIF, WebP images as layers
 |}
 
 == Keyboard Shortcuts ==
@@ -367,9 +373,9 @@ Use exact-commit CI and the current release matrix, not old test counts or code-
 The binding order is '''page ownership/native history; built-in layer-text search; Cargo readiness; Cargo integration; then layer-object links on wiki-page images, slides and PDF pages'''. Object links are excluded from the lightbox. Existing Cargo gallery/field helpers remain; their presence does not qualify the later milestones or authorize new architecture.
 
 == See also ==
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md Upgrade and recovery]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_RELEASE_CHECKLIST.md Release checklist]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md Native API guide]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md Configuration]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CURRENT_STATUS.md Current status]
+* [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md Upgrade and recovery]
+* [https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md Release checklist]
+* [https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md Native API guide]
+* [https://github.com/slickdexic/Layers/blob/main/wiki/Configuration-Reference.md Configuration]
+* [https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md Current status]
 * [https://github.com/slickdexic/Layers/wiki Separate GitHub wiki]

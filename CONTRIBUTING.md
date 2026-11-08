@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-> **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. The next priorities are page revision history, MediaWiki search and Cargo projection; do not document proposals as shipped behavior.
+> **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. v1.8rc1 includes page-owned revision history and migrated page-owned text search. Broader search acceptance and Cargo work retain their charter order; do not document proposals as shipped behavior.
 
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.
 
@@ -20,7 +20,7 @@ Never commit directly to REL branches. All changes must be tested on `main` firs
 
 **Target: <110,000 lines of JavaScript**
 
-This extension is feature-rich by design—**17 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,385 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) and bundled emoji data (emoji-bundle.json) account for ~15,000 lines of JavaScript. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
+This extension is feature-rich by design—drawing tools, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,385 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) and bundled emoji data (emoji-bundle.json) account for ~15,000 lines of JavaScript. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
 
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns

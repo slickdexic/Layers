@@ -4,9 +4,9 @@ Reviewed October 24, 2026 against the candidate's `extension.json` and callers.
 These are extension defaults, not MediaWiki defaults. Set overrides after
 `wfLoadExtension( 'Layers' );` in `LocalSettings.php`.
 
-The candidate still reports 1.5.95 in its manifest; use an exact reviewed commit
-with passing CI. Tagged 1.5.95 uses the older shared model. Follow the
-[upgrade guide](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md), including migration completion on an empty
+The published testing candidate is v1.8rc1 (manifest 1.8.0-rc.1), with
+passing exact-commit CI. Tagged 1.5.95 uses the older shared model. Follow the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md), including migration completion on an empty
 new wiki. Changing a setting does not record completion or migrate content.
 
 ## Native page ownership and caching
@@ -14,17 +14,18 @@ new wiki. Changing a setting does not record completion or migrate content.
 | Setting | Default | Scope |
 | --- | --- | --- |
 | `$wgLayersPageDrawingNamespaces` | `null` | Namespaces where new ownership may start. `null` means content namespaces and File; `[]` admits no new owners. Existing owners retain their content in any namespace, subject to permissions. |
-| `$wgLayersBindingReadMaxAge` | `300` | Maximum seconds of anonymous public caching for a current-revision binding read. `0` disables this caching. Logged-in, historical, snapshot, control, viewer/editor, error and private-wiki responses are not publicly cached. |
+| `$wgLayersBindingReadMaxAge` | `300` | Retained compatibility setting. All binding reads remain private with maximum age zero regardless of this value. |
 
 Native history, the `layers` slot and save/import/merge/restore guards are
 registered through supported MediaWiki mechanisms. No pilot switch or owner
 allowlist is needed. The retired `$wgLayersPageOwnedPilotEnabled`,
 `$wgLayersPageOwnedPilotOwners` and `$wgLayersPageOwnedPilotNamespaces` are ignored.
 
-A cached anonymous current-binding response can remain for the configured age
-after a deletion or visibility change. Exact PDF delivery has separate no-store
-responses and fresh authorization. Choose the binding cache age for the wiki's
-visibility requirements; it is not an authorization override.
+All `layersread` responses, including anonymous bindings and failures, are
+private with maximum age zero; request-supplied cache ages do not override this.
+`LayersBindingReadMaxAge` is retained for compatibility and does not enable
+public response caching. Exact PDF delivery has its own no-store policy and
+fresh authorization. Previously delivered content cannot be recalled.
 
 ## Native document bounds
 
@@ -125,7 +126,7 @@ and `editlayers-create`. Defaults are in `extension.json` under `RateLimits`;
 MediaWiki's `$wgRateLimits` supplies overrides. Page-owned metadata uses the
 information budget; exact PDF delivery and missing-PDF editor preparation use
 the separate render budget. Do not raise quotas as the first response to a
-retry loop. See [native HTTP acceptance](https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md).
+retry loop. See [native HTTP acceptance](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md).
 
 See [[Permissions]] for owner-page rights. No setting above bypasses owner,
 revision, source or CSRF checks. `LayersRejectAbortedRequests` is not a

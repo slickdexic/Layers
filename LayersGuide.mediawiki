@@ -1,14 +1,14 @@
 '''Layers is a MediaWiki extension. Docker is only one development/test environment, not a runtime dependency.'''
 
 = Layers user guide =
-The page-owned candidate targets an independent '''Layers 1.8''' release; it has not yet been accepted or tagged. The last tagged release and the unchanged manifest number are '''1.5.95'''. Use a reviewed commit with passing CI and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/RELEASE_1_8_ACCEPTANCE.md release checklist]. This repository file is a publication source, not proof of an external wiki update.
+The published testing candidate is '''v1.8rc1''' (manifest '''1.8.0-rc.1'''). It includes page ownership, native revision history and current page-owned text search after migration and cleanup. Final stable acceptance remains separate; see the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 release and limitations]. This repository file is a publication source, not proof of a mediawiki.org update.
 
 == Complete setup first ==
-Follow [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.
+Follow [https://github.com/slickdexic/Layers/blob/main/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.
 
 The fully rehearsed starting release is '''Layers 1.5.95''' on MediaWiki 1.44.6 with MySQL. This is a tested starting point, not an enforced technical minimum. Rehearse an older installation's actual data before choosing its route.
 
-Rehearse on a wiki copy, retain consistent database/uploads/configuration backups and matching old code, review discovery/dry-run results, and use the documented edit freeze and verification. Do not insert a completion record or prune old layers/sources manually.
+Rehearse on a wiki copy, retain consistent database/uploads/configuration backups and matching old code, review discovery/dry-run results, and restrict reader and editor access until migration and search cleanup succeed. An edit-only freeze is insufficient. Verify the results before reopening. Do not insert a completion record or prune old layers/sources manually.
 
 == Start from the owning page ==
 Save the embed on the wiki page that will own the layer set. Use '''Edit layers''' on hover, keyboard focus or tap, then Save and reopen from that same page. '''View full size''' opens the viewer. The old File-page tab is retired after completion; a File description and an article using its image are different owners.
@@ -50,12 +50,12 @@ A PDF keeps the '''same visible set name across its pages''':
 </syntaxhighlight>
 The native <code>page=</code> option selects an internal member, never another stored page as a fallback. An eligible missing set can open empty for an authorized editor; it must not substitute a different saved set.
 
-For slides, the first argument names the saved page-owned slide. Migrated variants may use names such as <code>Safety overview (english)</code>. Saved native canvas geometry/background remain authoritative. Existing size/noedit syntax remains; legacy shared-slide options and special pages are separately described in [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Slide-Mode.md Slide Mode]. <code>noedit</code> suppresses the edit overlay, not authorization. Legacy <code>layerslink</code> modes are separate host-link compatibility paths, not a way to select another article's native set.
+For slides, the first argument names the saved page-owned slide. Migrated variants may use names such as <code>Safety overview (english)</code>. Saved native canvas geometry/background remain authoritative. Existing size/noedit syntax remains; legacy shared-slide options and special pages are separately described in [https://github.com/slickdexic/Layers/blob/main/wiki/Slide-Mode.md Slide Mode]. <code>noedit</code> suppresses the edit overlay, not authorization. Legacy <code>layerslink</code> modes are separate host-link compatibility paths, not a way to select another article's native set.
 
 == Edit, Import and Save ==
 # Add textboxes, callouts, shapes or other layers with the existing drawing tools.
 # Use Pointer to select, move, resize and rotate. Group/folder, style, gradient, alignment, rich-text and image controls remain available.
-# Use the integrated Import workflow for an admitted source. Import creates local target work, not shared future edits. Whole-PDF Import preserves its complete group and source association.
+# Use Import to copy from another readable wiki page: images/PDFs require the same file and layer-set name; slides require the same slide name. Enter the beginning of the source page title. Sources on this page and arbitrary other files/names/media types are not offered. PDF Import copies the whole set by page number. An empty target imports immediately; otherwise choose Append or Replace all layers. Undo reverses Import; Save keeps it. Copies do not share future edits.
 # Save, return to the owning page and reopen the same embed to verify the confirmed result.
 
 Use the editor's keyboard help for its commands. Common commands include Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo, 0 to fit, +/- to zoom and Space-drag to pan. Text fields can own keyboard input.
@@ -72,19 +72,22 @@ Native editing requires ordinary read/edit authority on the '''owner''', <code>e
 
 Native history is not pruned by the old shared 50-revision setting. Removing a native set changes the current snapshot; earlier readable native revisions retain their content. Legacy creator/<code>layers-admin</code> rename/delete rules and retained shared-row deletion are different. Shared mutation APIs become read-only after completion.
 
-Native bounds are 2 MiB for the complete snapshot, 100 members, 100 layers per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded-image data URLs have a 1 MiB bound including base64 text. Raising legacy limits does not expand the native schema. See [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Configuration-Reference.md configuration] and [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Permissions.md permissions].
+Native bounds are 2 MiB for the complete snapshot, 100 members, 100 layers per member, 1000 total layers and 4096-pixel canvas dimensions. Strict embedded-image data URLs have a 1 MiB bound including base64 text. Raising legacy limits does not expand the native schema. See [https://github.com/slickdexic/Layers/blob/main/wiki/Configuration-Reference.md configuration] and [https://github.com/slickdexic/Layers/blob/main/wiki/Permissions.md permissions].
 
 == View, Download and Print ==
 The full-size viewer retains zoom, pan, fit, PDF page navigation, Print and Escape to close. Images/slides offer '''Download PNG''' first and a separate '''Download PDF'''; PDFs offer '''Download PDF''' only. The output includes admitted saved layers. A failed PDF page must refuse assembly rather than emit a shortened document.
 
 Editor image/JSON controls and legacy cached server PDF export remain separate paths. A prepared Print document does not prove completion of the OS dialog or a physical print. Inspect important output and use the release matrix for qualified version/device combinations.
 
+== Search ==
+After migration and successful search cleanup, ordinary MediaWiki search includes current page-owned layer text. Old revisions and retained legacy rows do not contribute obsolete terms. Layer text follows its owning page revision's permissions; hiding the referenced file does not hide readable page-owned text. Restrict the page revision to restrict that text. Media viewing still checks the source. Public unmigrated legacy search and arbitrary external backends are not certified.
+
 == Milestone order and further help ==
 The required order is '''page ownership/native history; built-in layer-text search; Cargo readiness; Cargo integration; then clickable layer-object links on wiki-page images, slides and PDF pages'''. Layer-object links are excluded from the lightbox. Existing Cargo gallery/hint/field helpers remain; their presence is not acceptance of later milestones. Those milestones must not delay page ownership.
 
 If something fails, preserve work and record the exact commit, MediaWiki/browser version, content type, markup and sanitized API/console errors. Never post private content, cookies or tokens to public issues.
 
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/wiki/Troubleshooting.md Troubleshooting]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/PAGE_OWNED_API_GUIDE.md Current native API guide]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/CURRENT_STATUS.md Current release status]
-* [https://github.com/slickdexic/Layers/blob/codex/l01-publication-admission/docs/KNOWN_ISSUES.md Known limits]
+* [https://github.com/slickdexic/Layers/blob/main/wiki/Troubleshooting.md Troubleshooting]
+* [https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md Current native API guide]
+* [https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md Current release status]
+* [https://github.com/slickdexic/Layers/blob/main/docs/KNOWN_ISSUES.md Known limits]

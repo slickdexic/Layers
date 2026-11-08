@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The target release is Layers 1.8; the current manifest remains 1.5.95 until the release cut. See [current status](CURRENT_STATUS.md) for acceptance limits.
+Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The published testing candidate is v1.8rc1, with manifest 1.8.0-rc.1. Final stable 1.8 acceptance remains separate. See [current status](CURRENT_STATUS.md) for acceptance limits.
 
 ## Data and authority
 
@@ -53,4 +53,4 @@ The legacy audit trait re-saves unchanged File-page content after a layer mutati
 
 Use [the API guide](API.md), [developer onboarding](DEVELOPER_ONBOARDING.md) and the source directories above for implementation details. See [current limitations](KNOWN_ISSUES.md) and the [1.8 release ledger](RELEASE_1_8_ACCEPTANCE.md).
 
-Page-owned history is the independent 1.8 release milestone. Built-in layer-text search, Cargo readiness, Cargo integration and on-page layer links follow as separate milestones; existing legacy helpers do not establish acceptance of those later features.
+Page-owned history is the independent 1.8 release milestone. Current page-owned text search is included after migration and cleanup; broader search acceptance, Cargo readiness, Cargo integration and on-page layer links retain their charter milestones. Existing helpers do not establish acceptance of those later features.
