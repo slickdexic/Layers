@@ -1,17 +1,17 @@
 # Codebase audit and remediation roadmap
 
-## Public release-candidate authorization — November 7, 2026
+## Public release-candidate authorization â€” November 7, 2026
 
 The owner requested commit/push and release as **v1.8rc1**. This is the first
 public prerelease, using the qualified internal rc.3 runtime with manifest
-**1.8.0-rc.1**. Earlier local rc.1–rc.3 artifacts remain historical evidence.
+**1.8.0-rc.1**. Earlier local rc.1â€“rc.3 artifacts remain historical evidence.
 The approved migration/search-cleanup requirement remains mandatory. The owner
 reports satisfactory normal-use performance; remaining numeric/reference and
 manual/device/Print qualifications stay disclosed for final 1.8 acceptance.
-This advances Milestone 1 / OPS-1–OPS-3. Publication requires the reviewed clean
+This advances Milestone 1 / OPS-1â€“OPS-3. Publication requires the reviewed clean
 tree and its exact-commit CI; unrelated private work is not part of the release.
 
-## Owner performance observation — November 7, 2026
+## Owner performance observation â€” November 7, 2026
 
 The owner reports that normal page loads are fast and the previous performance
 problems are no longer apparent. Ctrl-Shift-R remains slow, but also on pages
@@ -35,7 +35,7 @@ acceptance item. This feedback is not an instruction to change the 300 ms target
 or a blanket waiver of unmeasured workflows. It does not justify an open-ended
 performance rewrite or delaying release for an unproven Layers-specific cause.
 
-## Search repair qualified on the installed candidate — November 7, 2026
+## Search repair qualified on the installed candidate â€” November 7, 2026
 
 **Layers 1.8.0-rc.3 is installed on port 8082**, source
 `de7fce5a1cf049c143f883a8705f565bdd47aa85`, local branch `codex/v1.8.0-rc.3`.
@@ -61,7 +61,7 @@ now uses only current page-owned layer text after completion; cleanup visits
 every current page in bounded batches, preserving ordinary page text and
 recovery records. It refuses disabled search updates and propagates write
 failures instead of reporting success. This advances Milestone 1 / HIST-4,
-HIST-8–HIST-9, SEC-2, SEC-6 and OPS-1–OPS-3.
+HIST-8â€“HIST-9, SEC-2, SEC-6 and OPS-1â€“OPS-3.
 
 Both new defect regressions failed before correction. PHP style passes. Coverage includes
 Special:Search, list/generator API results and counts, cleanup reruns, unchanged
@@ -89,4 +89,3 @@ The remaining release work is performance disposition, applicable manual/device
 and owner acceptance, and hosted CI/publication for the selected final artifact.
 The broader rc.1 passes remain usable for unchanged files; no full rc.3 suite or
 new browser publication journey is claimed. No public push or final tag was made.
-
