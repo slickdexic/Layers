@@ -278,6 +278,7 @@
 				<p>${msg( 'layers-help-overview-recovery-desc', 'Review and Restore recover a local draft. Restoring is not a saved page revision until Save succeeds. Keep drafts and current work when a Save fails or its outcome is uncertain.' )}</p>
 
 				<h4>${msg( 'layers-help-overview-selection', 'Selecting & Editing' )}</h4>
+				<p>${msg( 'layers-help-group-transform', 'Select a folder to move, rotate or proportionally scale its layers together. Drag inside the group box to move it, use the rotation handle to rotate it, or drag a corner to scale it. Hidden layers move with the group. Unlock all members before transforming the group. Undo reverses the whole operation.' )}</p>
 				<ul>
 					<li>${msg( 'layers-help-overview-select-single', 'Click a layer to select it.' )}</li>
 					<li>${msg( 'layers-help-overview-select-multi', 'Ctrl+Click to add layers to selection.' )}</li>

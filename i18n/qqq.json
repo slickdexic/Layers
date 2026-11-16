@@ -49,6 +49,7 @@
 	"layers-page-draft-choose": "Prompt for choosing a recovery record. $1 is the number of independent drafts.",
 	"layers-page-draft-recover": "Page-owned editor draft message: layers-page-draft-recover",
 	"layers-page-draft-failed": "Page-owned editor draft message: layers-page-draft-failed",
+	"layers-page-draft-quota": "Error when neither browser draft store has space for a verified backup. Keep Save, editor and site data concepts distinct: clearing site data deletes local recovery drafts, not saved wiki revisions.",
 	"layers-page-drawing-name": "Page-owned editor header: the name of the layer set being edited. $1 is the layer set name, as plain text.",
 	"layers-page-drawing-rename": "Page-owned editor: button text, and confirm button of the rename dialog.\n{{Identical|Rename}}",
 	"layers-page-drawing-rename-title": "Page-owned editor: title of the rename dialog, and accessible name of the rename button.",
@@ -1180,5 +1181,13 @@
 	"layers-help-overview-import-actions": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
 	"layers-help-overview-recovery": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
 	"layers-help-overview-recovery-desc": "Editor Help dialog text. Explains the page-owned workflow, matching-source Import or local recovery. Keep action labels consistent with the editor.",
-	"layers-help-tool-image": "Editor Help dialog text. Explains Import Image as distinct from page-owned layer-set Import."
+	"layers-help-tool-image": "Editor Help dialog text. Explains Import Image as distinct from page-owned layer-set Import.",
+	"layers-group-transform-locked": "Editor folder transformation: Unlock this folder and all its layers to move, rotate or scale the group.",
+	"layers-group-transform-empty": "Editor folder transformation: This folder is empty. Add layers to edit them as a group.",
+	"layers-group-transform-invalid": "Editor folder transformation: This group cannot be transformed safely. No layers were changed.",
+	"layers-group-transform-limit": "Editor folder transformation: The group cannot be scaled further because a layer would exceed its supported size.",
+	"layers-group-transform-move": "Editor folder transformation: Move group",
+	"layers-group-transform-rotate": "Editor folder transformation: Rotate group",
+	"layers-group-transform-scale": "Editor folder transformation: Scale group",
+	"layers-help-group-transform": "Editor folder transformation: Select a folder to move, rotate or proportionally scale its layers together. Drag inside the group box to move it, use the rotation handle to rotate it, or drag a corner to scale it. Hidden layers move with the group. Unlock all members before transforming the group. Undo reverses the whole operation."
 }

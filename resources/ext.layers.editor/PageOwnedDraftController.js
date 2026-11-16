@@ -382,6 +382,24 @@
 		}
 
 		/** Explicit persistence; the UI handles storage errors and scheduling. */
+		initialize() {
+			if ( typeof this.store.initialize === 'function' ) return this.store.initialize( this._scope() );
+		}
+
+		async persistDurably( guard = () => {} ) {
+			const capture = () => { guard(); return this.persist(); };
+			return typeof this.store.persistDurably === 'function' ? this.store.persistDurably( capture ) : capture();
+		}
+
+		async revalidateRecovery( handle ) {
+			if ( typeof this.store.revalidateRecovery === 'function' ) await this.store.revalidateRecovery( handle );
+		}
+
+		retireOwnedAsync( guard = () => {} ) {
+			guard();
+			return typeof this.store.retireOwnedAsync === 'function' ? this.store.retireOwnedAsync( guard ) : this.retireOwned();
+		}
+
 		persist() {
 			if ( wholePdfDraftControllers.has( this ) ) { return this.persistWholePdfDraft(); }
 			const scope = this._scope();
@@ -506,7 +524,8 @@
 
 		/** @param {string|Object|null} candidate Source only; writes retain this editor's independent ID */
 		selectRecovery( candidate ) {
-			if ( candidate !== null && typeof candidate === 'object' ) {
+			if ( candidate !== null && typeof candidate === 'object' &&
+				!( typeof this.store.isFallbackCandidate === 'function' && this.store.isFallbackCandidate( candidate ) ) ) {
 				const legacy = this._legacyScope( this._scope() );
 				if ( !this._legacyCandidates.has( candidate ) || !legacy || candidate.surfaceId !== legacy.surfaceId ) {
 					throw this._error();

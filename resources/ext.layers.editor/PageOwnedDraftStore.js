@@ -129,13 +129,15 @@
 		/**
 		 * @param {Object} storage Injected Storage-compatible object with getItem and setItem
 		 * @param {string} [writerId] Unique 32-hex editor instance ID; separate records prevent cross-tab overwrite
+		 * @param {boolean} [verifyWrites] Verify the stored representation at the writer's own key
 		 */
-		constructor( storage, writerId ) {
+		constructor( storage, writerId, verifyWrites = false ) {
 			if ( writerId !== undefined && ( typeof writerId !== 'string' || !/^[a-f0-9]{32}$/.test( writerId ) ) ) {
 				throw failure( 'layers-invalid-draft-storage-request' );
 			}
 			this._writerId = writerId;
 			this._readWriterId = writerId;
+			this._verifyWrites = verifyWrites;
 			this._storage = storage;
 			this._ownedRecords = new Map();
 			try {
@@ -194,11 +196,16 @@
 					if ( stored === null ) { throw error; }
 					this._write( recordKey, stored );
 				}
+				if ( this._verifyWrites && this._read( recordKey ) !== stored ) {
+					throw new Error();
+				}
 				if ( this._writerId !== undefined ) {
 					this._ownedRecords.set( recordKey, stored );
 				}
 			} catch ( e ) {
-				throw failure( 'layers-draft-storage-failed' );
+				const error = failure( 'layers-draft-storage-failed' );
+				error.quota = Boolean( e && ( e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ) );
+				throw error;
 			}
 		}
 

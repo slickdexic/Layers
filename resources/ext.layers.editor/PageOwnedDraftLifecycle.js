@@ -45,6 +45,7 @@
 			check();
 			if ( actions.changed( candidate ) ) {
 				const restore = await ui.confirmRecovery( candidate ); check();
+				if ( restore && typeof controller.revalidateRecovery === 'function' ) { await controller.revalidateRecovery(); check(); }
 				if ( !restore ) {
 					bridge.session.blockPublication(); ui.notifyBlocked(); return;
 				}
@@ -61,7 +62,7 @@
 			for ( const key of keys ) {
 				this.unsubscribers.push( bridge.editor.stateManager.subscribe( key, () => {
 					if ( this.finalized || this.disposed ) { return; }
-					clearTimeout( this.timer ); this.timer = setTimeout( () => this.flush(), 1000 );
+					clearTimeout( this.timer ); this.timer = setTimeout( () => this.flushDurably(), 1000 );
 				} ) );
 			}
 			window.addEventListener( 'pagehide', this.onPageHide );
@@ -79,6 +80,8 @@
 			this.ready = false;
 			this.checking = false;
 			this.saving = false;
+			this.closing = false;
+			this.pendingDurableWrites = 0;
 			this.finalized = false;
 			this.disposed = false;
 			this.timer = null;
@@ -129,7 +132,7 @@
 						guard(); handle = pdf ? await controller.prepareEarlierPdfCreationRecovery( candidate, guard ) :
 							await controller.prepareEarlierCreationRecovery( candidate, client ); guard();
 						const preview = pdf ? controller.reviewEarlierPdfCreationRecovery( handle ) : await bridge.reviewEarlierCreationDraftRecovery( handle, guard ); guard();
-						plans.push( { handle, preview: { ...preview, earlierCreation: true, earlierNumber: plans.length + 1 } } );
+						plans.push( { handle, candidate, preview: { ...preview, earlierCreation: true, earlierNumber: plans.length + 1 } } );
 					} catch ( error ) {
 						if ( handle ) { try { release( handle ); } catch ( cleanupError ) {} }
 						// An unprovable backup stays intact and is not offered as an eligible draft.
@@ -151,6 +154,7 @@
 				const plan = plans[ choice.selected - current.length ];
 				const restore = await ui.confirmRecovery( plan.preview ); guard();
 				if ( restore ) {
+					if ( typeof controller.revalidateRecovery === 'function' ) { await controller.revalidateRecovery( plan.candidate ); guard(); }
 					if ( pdf ) await controller.commitEarlierPdfCreationRecovery( plan.handle );
 					else await bridge.commitEarlierCreationDraftRecovery( plan.handle, guard ); guard();
 					if ( plan.preview.publicationBlocked ) { ui.notifyBlocked(); }
@@ -167,6 +171,11 @@
 
 		/** @return {Promise<void>} Authorization/exact revision loading must already have succeeded */
 		async initialize() {
+			if ( typeof this.controller.initialize === 'function' ) {
+				const initializing = this.controller.initialize();
+				if ( initializing && typeof initializing.then === 'function' ) { await initializing; }
+			}
+			if ( this.disposed || this.finalized ) { return; }
 			const pdf = earlierPdfCreationClients.has( this ), client = pdf ? earlierPdfCreationClients.get( this ) : earlierCreationClients.get( this );
 			const choice = client ? await this._chooseEarlierCreationRecovery( client, pdf ) : null;
 			if ( this.disposed || this.finalized || ( choice && choice.blocked ) ) { return; }
@@ -174,7 +183,7 @@
 			if ( candidates.length ) {
 				const selected = candidates.length === 1 ? 0 :
 					await this.ui.chooseDraft( this.controller.describeCandidates( candidates ) );
-				if ( this.disposed ) {
+				if ( this.disposed || this.finalized ) {
 					return;
 				}
 				if ( !Number.isInteger( selected ) || selected < 0 || selected >= candidates.length ) {
@@ -194,16 +203,25 @@
 				const coordinator = this.bridge.pdfCoordinator;
 				const witness = coordinator ? coordinator.witness() : null;
 				const version = coordinator ? coordinator.version : null;
+				const live = () => canonical( [ this.bridge.getLiveState(), this.bridge.getName ? this.bridge.getName() : null ] );
+				const before = live();
+				const checkLive = () => {
+					if ( live() !== before ) { throw new Error( 'layers-editor-session-unavailable' ); }
+				};
 				const workingHandle = candidate.workingCopyDraft ? this.bridge.prepareWorkingCopyDraftRecovery( candidate ) : null;
 				let recover;
 				try {
 					recover = await this.ui.confirmRecovery( candidate );
+					if ( recover && !this.disposed && !this.finalized && typeof this.controller.revalidateRecovery === 'function' ) {
+						await this.controller.revalidateRecovery();
+					}
+					if ( !this.disposed && !this.finalized ) { checkLive(); }
 					if ( workingHandle && recover ) { this.bridge.preflightWorkingCopyDraftRecovery( workingHandle ); }
 				} catch ( error ) {
 					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
 					throw error;
 				}
-				if ( this.disposed || ( workingHandle && this.finalized ) ) {
+				if ( this.disposed || this.finalized ) {
 					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
 					return;
 				}
@@ -214,9 +232,10 @@
 					if ( !candidate.pdfDraft && !workingHandle ) {
 						await this.bridge.session.revalidate();
 					}
-					if ( this.disposed ) {
+					if ( this.disposed || this.finalized ) {
 						return;
 					}
+					checkLive();
 					if ( workingHandle ) { await this.bridge.commitWorkingCopyDraftRecovery( workingHandle ); }
 					else { await this.bridge.restoreDraft( candidate ); }
 					if ( this.disposed || this.finalized ) {
@@ -240,7 +259,7 @@
 						return;
 					}
 					clearTimeout( this.timer );
-					this.timer = setTimeout( () => this.flush(), 1000 );
+					this.timer = setTimeout( () => this.flushDurably(), 1000 );
 				} ) );
 			}
 			window.addEventListener( 'pagehide', this.onPageHide );
@@ -256,9 +275,40 @@
 				this.controller.persist();
 				return true;
 			} catch ( error ) {
-				if ( saveError ) { this.ui.notifyFailure( true ); } else { this.ui.notifyFailure(); }
+				this.notifyStorageFailure( saveError, error );
 				return false;
 			}
+		}
+
+		/** Wait for verified storage; recapture must never outlive this editor. */
+		async persistDurably() {
+			const guard = () => {
+				if ( !this.ready || this.disposed || this.finalized ) { throw new Error( 'layers-editor-session-unavailable' ); }
+			};
+			guard(); this.pendingDurableWrites++;
+			try {
+				if ( typeof this.controller.persistDurably === 'function' ) { await this.controller.persistDurably( guard ); }
+				else { this.controller.persist(); }
+				guard();
+			} finally { this.pendingDurableWrites--; }
+		}
+
+		/** Async autosave/publication backup; pagehide and Close retain synchronous checks. */
+		async flushDurably( saveError = false ) {
+			clearTimeout( this.timer );
+			if ( !this.ready || this.disposed || this.finalized ) { return false; }
+			try { await this.persistDurably(); return true; } catch ( error ) {
+				if ( !this.disposed && !this.finalized ) {
+					this.notifyStorageFailure( saveError, error );
+				}
+				return false;
+			}
+		}
+
+		/** Preserve the approved quota-specific warning without changing generic failure wording. */
+		notifyStorageFailure( saveError, error ) {
+			if ( error && error.code === 'layers-draft-storage-quota' ) { this.ui.notifyFailure( saveError, error ); }
+			else if ( saveError ) { this.ui.notifyFailure( true ); } else { this.ui.notifyFailure(); }
 		}
 
 		/**
@@ -269,7 +319,7 @@
 			if ( this.finalized ) {
 				return true;
 			}
-			if ( this.disposed || this.saving || this.checking ||
+			if ( this.disposed || this.saving || this.checking || this.closing || this.pendingDurableWrites ||
 				this.bridge.session.getStatus().phase === 'saving' ||
 				( !discard && this.bridge.session.getStatus().phase !== 'ready' ) ) {
 				return false;
@@ -280,6 +330,46 @@
 				this.ui.notifyFailure();
 				return false;
 			}
+			return this.completeClose();
+		}
+
+		/** Await owned-record retirement without treating pending writes as completed backups. */
+		finalizeCloseAsync( discard = false ) {
+			if ( this.finalized ) { return true; }
+			const phase = this.bridge.session.getStatus().phase;
+			if ( this.disposed || this.saving || this.checking || this.closing || this.pendingDurableWrites ||
+				phase === 'saving' || ( !discard && phase !== 'ready' ) ) { return false; }
+			if ( typeof this.controller.retireOwnedAsync !== 'function' ) { return this.finalizeClose( discard ); }
+			return this.closeDurably();
+		}
+
+		/** Recheck live work across the storage transaction before completing Close. */
+		async closeDurably() {
+			const witness = () => canonical( [ this.bridge.getLiveState(), this.bridge.getName ? this.bridge.getName() : null,
+				this.bridge.session.getStatus(), this.bridge.pdfCoordinator ? this.bridge.pdfCoordinator.witness( true ) : null ] );
+			const before = witness();
+			const guard = () => {
+				if ( this.disposed || this.finalized || this.pendingDurableWrites || witness() !== before ) {
+					throw new Error( 'layers-editor-session-unavailable' );
+				}
+			};
+			this.closing = true;
+			clearTimeout( this.timer );
+			try {
+				const retirement = this.controller.retireOwnedAsync( guard );
+				if ( retirement && typeof retirement.then === 'function' ) { await retirement; }
+				guard();
+				return this.completeClose();
+			} catch ( error ) {
+				// If editing continued during retirement, retain the open work in a new backup.
+				await this.flushDurably();
+				if ( !this.disposed && !this.finalized ) { this.ui.notifyFailure(); }
+				return false;
+			} finally { this.closing = false; }
+		}
+
+		/** Detach only after the chosen close operation has completed. */
+		completeClose() {
 			this.finalized = true;
 			if ( this.bridge.pdfCoordinator && this.bridge.pdfCoordinator.recoveryOperation ) {
 				this.bridge.pdfCoordinator.invalidate();
@@ -301,13 +391,13 @@
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
 			const label = this.bridge.rename( name );
-			this.flush();
+			this.flushDurably();
 			return label;
 		}
 
 		/** @param {string} summary History summary @return {Promise<Object>} */
 		async save( summary = '' ) {
-			if ( !this.ready || this.disposed || this.checking || this.saving ) {
+			if ( !this.ready || this.disposed || this.checking || this.saving || this.closing ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
 			const previous = typeof this.controller._scope === 'function' ? this.controller._scope() : null;
@@ -318,12 +408,11 @@
 					if ( this.finalized || this.disposed ) {
 						throw new Error( 'layers-editor-session-unavailable' );
 					}
-					this.controller.persist();
+					return this.persistDurably();
 				} );
 			} finally {
-				this.saving = false;
 				// Persist the confirmed new base or the conflict/uncertain state plus latest edits.
-				const persisted = this.flush( true );
+				const persisted = await this.flushDurably( true );
 				if ( result ) {
 					result.draftPersisted = persisted;
 					if ( persisted && result.editorStateValid === true && previous &&
@@ -331,13 +420,16 @@
 						try {
 							const current = this.controller._scope();
 							if ( current.baseRevisionId === result.revisionId ) {
-								this.controller.store.retireConfirmed( previous, current );
+								if ( typeof this.controller.store.retireConfirmedAsync === 'function' ) {
+									await this.controller.store.retireConfirmedAsync( previous, current );
+								} else { this.controller.store.retireConfirmed( previous, current ); }
 							}
 						} catch ( error ) {
 							// A failed cleanup leaves the confirmed replacement in place.
 						}
 					}
 				}
+				this.saving = false;
 			}
 			return result;
 		}
@@ -348,14 +440,14 @@
 		 * @return {Promise<Object>} Reconciliation status; never publishes
 		 */
 		async reconcile( resolveRevision ) {
-			if ( !this.ready || this.disposed || this.checking ||
+			if ( !this.ready || this.disposed || this.checking || this.saving || this.closing ||
 				this.bridge.session.getStatus().phase === 'saving' ) {
 				throw new Error( 'layers-editor-session-unavailable' );
 			}
 			this.checking = true;
 			let result;
 			try {
-				if ( !this.flush() ) {
+				if ( !await this.flushDurably() ) {
 					throw new Error( 'layers-draft-storage-failed' );
 				}
 				const revisionId = await resolveRevision();
@@ -365,8 +457,8 @@
 				result = await this.bridge.reconcile( revisionId );
 				return result;
 			} finally {
+				const persisted = await this.flushDurably();
 				this.checking = false;
-				const persisted = this.flush();
 				if ( result ) {
 					result.draftPersisted = persisted;
 				}

@@ -29,6 +29,17 @@
 		if ( !candidate || candidate.record !== record || readCandidate( record, candidate.writer ) !== candidate.raw ) throw failure();
 		return candidate;
 	}
+	async function durable( store, capture ) {
+		return typeof store.persistDurably === 'function' ? store.persistDurably( capture ) : capture();
+	}
+	async function revalidate( record, handle ) {
+		const candidate = inspect( record, handle );
+		if ( typeof record.store.revalidateRecovery !== 'function' ) return;
+		record.store.selectRecovery( candidate.writer );
+		try { await record.store.revalidateRecovery(); }
+		finally { record.store.selectRecovery( record.writer ); }
+		inspect( record, handle );
+	}
 	function discardable( record, reviewCancelled ) {
 		const status = record.host.getStatus(), attempt = record.host.captureExitEnvelope().publicationAttempt;
 		if ( ( reviewCancelled ? !record.cancelled || record.ready || attempt : !record.ready || record.cancelled ) ||
@@ -79,6 +90,17 @@
 			return json;
 		}
 
+		async persistDurably() {
+			const record = data( this );
+			return durable( record.store, () => this.persist() );
+		}
+
+		async initialize() {
+			const record = data( this );
+			if ( typeof record.store.initialize === 'function' ) await record.store.initialize( record.scope );
+			data( this );
+		}
+
 		listCandidates() {
 			const record = data( this );
 			return record.store.listCandidates( record.scope ).map( writer => {
@@ -103,7 +125,8 @@
 			const record = data( this ); if ( record.reviewing || record.saving || record.checking || !ui || typeof ui.choose !== 'function' || typeof ui.confirm !== 'function' ) throw failure();
 			record.reviewing = true; record.ready = false; const plans = [];
 			try {
-				const handles = this.listCandidates();
+				if ( typeof record.store.initialize === 'function' ) await record.store.initialize( record.scope );
+				data( this ); const handles = this.listCandidates();
 				if ( !handles.length ) { record.ready = true; return false; }
 				for ( const handle of handles ) {
 					try { plans.push( { candidate: handle, ...record.host.prepareDraftRecovery( this.inspectCandidate( handle ) ) } ); }
@@ -116,7 +139,9 @@
 				const plan = plans[ selected ]; if ( !plan.handle ) throw failure(); inspect( record, plan.candidate );
 				const restore = await ui.confirm( plan.preview ); data( this ); inspect( record, plan.candidate );
 				if ( !restore ) { record.cancelled = true; record.host.blockPublication(); return false; }
-				const restored = await record.host.commitDraftRecovery( plan.handle, () => { data( this ); inspect( record, plan.candidate ); } );
+				await revalidate( record, plan.candidate ); data( this );
+				const restored = await record.host.commitDraftRecovery( plan.handle, () => { data( this ); inspect( record, plan.candidate ); },
+					async () => { await revalidate( record, plan.candidate ); data( this ); } );
 				record.ready = true; return restored;
 			} finally {
 				plans.forEach( plan => { if ( plan.handle ) record.host.releaseDraftRecovery( plan.handle ); } ); record.reviewing = false;
@@ -126,10 +151,10 @@
 		async save( summary = '' ) {
 			const record = data( this ); if ( !record.ready || record.reviewing || record.saving || record.checking || record.cancelled ) throw failure();
 			record.saving = true; let result;
-			try { result = await record.host.save( summary, () => { data( this ); this.persist(); }, () => { data( this ); } ); return result; }
+			try { result = await record.host.save( summary, async () => { data( this ); await this.persistDurably(); data( this ); }, () => { data( this ); } ); return result; }
 			finally {
 				record.saving = false;
-				try { this.persist(); if ( result ) result.draftPersisted = true; }
+				try { await this.persistDurably(); if ( result ) result.draftPersisted = true; }
 				catch ( error ) { if ( result ) result.draftPersisted = false; }
 			}
 		}
@@ -149,8 +174,11 @@
 					bindings.some( binding => checkpointStore[ binding.key ] !== binding.value ) ) throw failure();
 				checkpointStore.selectRecovery( writer ); return checkpointStore.read( record.scope );
 			};
-			if ( checkpointRead() !== null ) throw failure();
-			const raw = this.persist(); checkpointStore.write( record.scope, raw );
+			if ( typeof checkpointStore.initialize === 'function' ) await checkpointStore.initialize( record.scope );
+			data( this ); if ( checkpointRead() !== null ) throw failure();
+			const raw = await this.persistDurably();
+			await durable( checkpointStore, () => { data( this ); checkpointStore.write( record.scope, raw );
+				if ( checkpointRead() !== raw ) throw failure(); } );
 			const check = () => {
 				data( this ); if ( record.cancelled || record.reviewing || record.saving || !record.ready || host.reconcilePublication !== reconcile ||
 					readCandidate( record, record.writer ) !== raw || checkpointRead() !== raw ||
@@ -162,7 +190,7 @@
 			finally {
 				record.checking = false;
 				if ( result && result.applied ) {
-					try { this.persist(); result.draftPersisted = true; } catch ( error ) { result.draftPersisted = false; }
+					try { await this.persistDurably(); result.draftPersisted = true; } catch ( error ) { result.draftPersisted = false; }
 				}
 			}
 		}
@@ -202,8 +230,29 @@
 			return Object.freeze( { raw, preflight: () => { check(); if ( read() !== raw ) throw failure(); } } );
 		}
 
+		async preserveForExitAsync( store ) {
+			const record = data( this );
+			if ( typeof store.initialize === 'function' ) await store.initialize( record.scope );
+			data( this ); return durable( store, () => this.preserveForExit( store ) );
+		}
+
 		/** Prepare exact owned-record retirement only. Recovery/checkpoint writers never become owned here. */
 		prepareOwnedDiscard( exitStore, options ) {
+			return this.prepareDiscardRecords( exitStore, options, false );
+		}
+
+		async prepareOwnedDiscardAsync( exitStore, options ) {
+			await this.initializeExitStore( exitStore ); const record = data( this );
+			return this.prepareDiscardRecords( exitStore, options, typeof record.store.retireGroupAsync === 'function' );
+		}
+
+		async initializeExitStore( exitStore ) {
+			const record = data( this );
+			if ( typeof exitStore.initialize === 'function' ) await exitStore.initialize( record.scope );
+			data( this );
+		}
+
+		prepareDiscardRecords( exitStore, options, asynchronous ) {
 			const record = data( this );
 			const property = options && Object.getOwnPropertyDescriptor( options, 'reviewCancelled' );
 			if ( options !== undefined && ( !property || !Object.hasOwn( property, 'value' ) || property.value !== true || Reflect.ownKeys( options ).length !== 1 ) ) throw failure();
@@ -227,16 +276,33 @@
 			const check = removed => {
 				checkBindings();
 				witness();
-				for ( const entry of entries ) if ( record.read( entry.key ) !== ( removed.has( entry ) ? null : entry.raw ) ) throw failure();
+				if ( asynchronous ) {
+					if ( readCandidate( record, record.writer ) !== record.lastOwnedRaw ) throw failure();
+					exitStore.selectRecovery( writer ); if ( exitStore.read( record.scope ) !== ( exit ? exit.raw : null ) ) throw failure();
+				} else for ( const entry of entries ) if ( record.read( entry.key ) !== ( removed.has( entry ) ? null : entry.raw ) ) throw failure();
 				checkBindings(); witness();
 			};
 			check( new Set() ); const handle = Object.freeze( {} );
-			discards.set( handle, { owner: this, record, entries, check, remove: storage.removeItem, storage } ); return handle;
+			discards.set( handle, { owner: this, record, entries, check, checkBindings, witness, exitStore, asynchronous, remove: storage.removeItem, storage } ); return handle;
+		}
+
+		async commitOwnedDiscardAsync( handle, ownerGuard ) {
+			const plan = discards.get( handle ); if ( !plan || plan.owner !== this || typeof ownerGuard !== 'function' ) throw failure();
+			if ( !plan.asynchronous ) return this.commitOwnedDiscard( handle, ownerGuard );
+			discards.delete( handle ); const { record } = plan;
+			plan.check( new Set() ); ownerGuard(); record.discarding = true;
+			try {
+				await record.store.retireGroupAsync( [ record.store, plan.exitStore ], () => {
+					plan.checkBindings(); plan.witness(); ownerGuard(); plan.checkBindings(); plan.witness();
+				} );
+				record.disposed = true; return true;
+			} finally { record.discarding = false; }
 		}
 
 		/** Synchronous retirement with rollback on refusal. No work, histories or other writers are changed. */
 		commitOwnedDiscard( handle, ownerGuard ) {
 			const plan = discards.get( handle ); if ( !plan || plan.owner !== this || typeof ownerGuard !== 'function' ) throw failure();
+			if ( plan.asynchronous ) throw failure();
 			discards.delete( handle ); const { record, entries, check, remove, storage } = plan, removed = new Set();
 			check( removed ); ownerGuard(); check( removed ); record.discarding = true;
 			try {

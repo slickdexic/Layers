@@ -81,6 +81,15 @@
 				return;
 			}
 			for ( let i = 0; i < selectedLayerIds.length; i++ ) {
+				let parent = this.getLayerById( selectedLayerIds[ i ] )?.parentGroup;
+				const visited = new Set();
+				while ( parent && !visited.has( parent ) && !selectedLayerIds.includes( parent ) ) {
+					visited.add( parent );
+					parent = this.getLayerById( parent )?.parentGroup;
+				}
+				if ( parent && selectedLayerIds.includes( parent ) ) {
+					continue; // A selected folder owns its descendants' single frame.
+				}
 				const isKeyObject = selectedLayerIds.length > 1 && selectedLayerIds[ i ] === keyObjectId;
 				this.drawSelectionIndicators( selectedLayerIds[ i ], isKeyObject );
 			}
@@ -102,9 +111,9 @@
 				return;
 			}
 
-			// Group layers (folders) are containers only - no canvas representation
-			// They should not have selection handles drawn on the canvas
+			// Folders use one transient selection frame; their members retain ordinary geometry.
 			if ( layer.type === 'group' ) {
+				this.drawGroupSelection( layer );
 				return;
 			}
 
@@ -221,6 +230,9 @@
 
 			for ( let i = 0; i < handles.length; i++ ) {
 				const h = handles[ i ];
+				if ( layer.type === 'group' && h.type.length !== 2 ) {
+					continue;
+				}
 				this.ctx.fillRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
 				this.ctx.strokeRect( h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize );
 
@@ -253,14 +265,35 @@
 		}
 
 		/**
-		 * Draw selection indicators for line/arrow layers - just endpoint handles
-		 * Lines and arrows don't need a bounding box or rotation handle -
-		 * they are manipulated by dragging their endpoints directly.
-		 * Arrows with control points also get a draggable curve handle.
+		 * Draw the folder's shared frame and proportional scaling/rotation handles.
 		 *
-		 * @param {Object} layer - The line or arrow layer
-		 * @param {boolean} [isKeyObject=false] - Whether this is the key object (alignment reference)
+		 * @param {Object} layer The selected folder
 		 */
+		drawGroupSelection( layer ) {
+			const selection = this.config.getGroupSelection?.( layer.id );
+			if ( !selection ) {
+				return;
+			}
+			const bounds = selection.bounds;
+			const display = { ...layer, rotation: selection.rotation };
+			const rotated = !!display.rotation;
+			let local = bounds;
+			this.ctx.save();
+			if ( rotated ) {
+				this.ctx.translate( bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 );
+				this.ctx.rotate( display.rotation * Math.PI / 180 );
+				local = { x: -bounds.width / 2, y: -bounds.height / 2, width: bounds.width, height: bounds.height };
+			}
+			this.ctx.strokeStyle = this.lineColor;
+			this.ctx.lineWidth = 1;
+			this.ctx.setLineDash( [ 4, 4 ] );
+			this.ctx.strokeRect( local.x, local.y, local.width, local.height );
+			this.drawSelectionHandles( local, display, rotated, bounds );
+			this.drawRotationHandle( local, display, rotated, bounds );
+			this.ctx.restore();
+		}
+
+		/** Draw endpoint handles for an individual line or arrow. */
 		drawLineSelectionIndicators( layer, isKeyObject ) {
 			const handleSize = this.handleSize;
 

@@ -2,6 +2,41 @@
 
 ## Unreleased
 
+### Folder transforms
+- Use endpoint midpoints when rotating lines and arrows, and preserve the Pen
+  renderer's default stroke width during group scaling.
+- Complete consecutive folder touch gestures before double-tap handling; preserve
+  cancellation and the existing individual-layer double-tap behavior.
+- Select a folder to move its nested layers together, rotate them about a shared
+  center, or scale proportionally using its four corner handles. Hidden members
+  participate; a locked member blocks the entire operation. Each changed gesture
+  is one Undo step; Escape cancels the preview. Existing Save and recovery retain
+  ordinary member geometry and folder relationships.
+- Shift snaps rotation to 15 degrees; Alt scales from the center. Existing arrow
+  shortcuts move the folder, Alt+Left/Right rotates, and Ctrl/Command+Arrow scales
+  it proportionally. Scale limits reject the whole gesture without distortion.
+- This is working-source follow-up, not part of the immutable v1.8rc1 archive.
+
+### Save feedback
+- Allow a verified localStorage backup when an earlier IndexedDB backup cannot
+  be read. When the current backup needs IndexedDB, verify its exact bytes
+  before Save can proceed.
+- Handle committed IndexedDB changes whose readback fails: retry verifies the
+  exact backup before proceeding; refused cleanup attempts to restore missing
+  owned copies without overwriting concurrent drafts. Continued storage failure
+  still refuses success.
+- Add the approved IndexedDB fallback when ordinary and compact local backups
+  cannot fit. Await commit and exact verification before publication; recover
+  through the existing explicit choices, preserve other writers' drafts, and
+  await asynchronous Close cleanup. Ordinary and PDF first-Save paths retain
+  known publication outcomes when a later backup fails. Browser acceptance is
+  still open; this is not part of the v1.8rc1 archive.
+- Verify the actual compact backup written during the PDF first-Save handoff,
+  avoiding a false failure when quota requires lossless packing.
+- Show the existing localized draft-storage guidance instead of an internal error
+  key when a required backup cannot be stored. Preserve unsaved work, existing
+  drafts and the pre-publication backup requirement.
+
 ### Documentation and editor help
 - Reconcile release status, search visibility, migration/cleanup requirements and
   Import eligibility across repository guides, GitHub wiki and all three

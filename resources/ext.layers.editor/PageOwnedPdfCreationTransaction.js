@@ -6,6 +6,11 @@
 	const importPublications = new WeakMap();
 	const importPublicationRecoveries = new WeakMap();
 	const importReconciliations = new WeakMap();
+	const storageCodes = new Set( [ 'layers-draft-storage-failed', 'layers-draft-storage-quota' ] );
+	const storageFailure = error => {
+		const code = error && error.code === 'layers-draft-storage-quota' ? error.code : 'layers-draft-storage-failed';
+		return Object.assign( new Error( code ), { code } );
+	};
 	const unavailable = () => Object.assign( new Error( 'layers-editor-session-unavailable' ),
 		{ code: 'layers-editor-session-unavailable' } );
 	const positive = value => Number.isInteger( value ) && value > 0 && value <= 2147483647;
@@ -135,7 +140,7 @@
 			![ 'prepared', 'dispatched', 'refused', 'unknown' ].includes( attempt.dispatchState ) ||
 			attempt.revisionId !== null ||
 			( attempt.code !== null && !publicationCodes.has( attempt.code ) &&
-				![ 'layers-publication-outcome-unknown', 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) ) ||
+				![ 'layers-publication-outcome-unknown', ...storageCodes, 'layers-editor-session-unavailable' ].includes( attempt.code ) ) ||
 			( [ 'prepared', 'dispatched', 'confirmed' ].includes( attempt.dispatchState ) && attempt.code !== null ) ) throw unavailable();
 		const next = attempt.snapshot, expected = snapshot( record, new Map() );
 		if ( !next || !Array.isArray( next.surfaces ) || !equal( { ...next, surfaces: [] }, { ...expected, surfaces: [] } ) ||
@@ -298,7 +303,7 @@
 			const confirmed = attempt.dispatchState === 'confirmed', unknown = attempt.dispatchState === 'unknown';
 			if ( confirmed ? !positive( attempt.revisionId ) || attempt.revisionId <= record.fixed.target.revisionId : attempt.revisionId !== null ) throw unavailable();
 			if ( unknown ? attempt.code !== 'layers-publication-outcome-unknown' : attempt.dispatchState === 'refused' ?
-				!publicationCodes.has( attempt.code ) && ![ 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) :
+				!publicationCodes.has( attempt.code ) && ![ ...storageCodes, 'layers-editor-session-unavailable' ].includes( attempt.code ) :
 				attempt.code !== null ) throw unavailable();
 			const capsule = attempt.capsule, draft = capsule && capsule.draft;
 			if ( !capsule || !equal( Object.keys( capsule ).sort(), [ 'draft', 'sources', 'version' ] ) || capsule.version !== 1 ||
@@ -332,7 +337,7 @@
 		const confirmed = attempt.dispatchState === 'confirmed', unknown = attempt.dispatchState === 'unknown';
 		if ( confirmed ? !positive( attempt.revisionId ) || attempt.revisionId <= record.fixed.target.revisionId : attempt.revisionId !== null ) throw unavailable();
 		if ( unknown ? attempt.code !== 'layers-publication-outcome-unknown' : attempt.dispatchState === 'refused' ?
-			!publicationCodes.has( attempt.code ) && ![ 'layers-revision-save-failed', 'layers-draft-storage-failed', 'layers-editor-session-unavailable' ].includes( attempt.code ) :
+			!publicationCodes.has( attempt.code ) && ![ 'layers-revision-save-failed', ...storageCodes, 'layers-editor-session-unavailable' ].includes( attempt.code ) :
 			attempt.code !== null ) throw unavailable();
 		const capsule = attempt.capsule, draft = capsule && capsule.draft;
 		if ( !capsule || !equal( Object.keys( capsule ).sort(), [ 'draft', 'sources', 'version' ] ) || capsule.version !== 1 ||
@@ -550,7 +555,7 @@
 			try {
 				if ( beforePublish ) {
 					try { await beforePublish(); }
-					catch ( ignored ) { throw Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } ); }
+					catch ( error ) { throw storageFailure( error ); }
 				}
 				check(); const reads = [];
 				if ( sourceFree ) {
@@ -597,7 +602,7 @@
 			} catch ( error ) {
 				const code = dispatched ? ( error && ( publicationCodes.has( error.code ) || error.code === 'layers-revision-save-failed' ) ?
 					error.code : 'layers-publication-outcome-unknown' ) :
-					error && error.code === 'layers-draft-storage-failed' ? error.code : 'layers-editor-session-unavailable';
+					error && storageCodes.has( error.code ) ? error.code : 'layers-editor-session-unavailable';
 				if ( record.phase !== 'disposed' ) record.phase = code === 'layers-edit-conflict' ? 'conflict' :
 					code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
 				publication.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused';
@@ -814,7 +819,7 @@
 			try {
 				if ( beforePublish ) {
 					try { await beforePublish(); }
-					catch ( error ) { throw Object.assign( new Error( 'layers-draft-storage-failed' ), { code: 'layers-draft-storage-failed' } ); }
+					catch ( error ) { throw storageFailure( error ); }
 				}
 				current( this, record, null, 'saving' );
 				host.check(); current( this, record, null, 'saving' );
@@ -837,7 +842,7 @@
 					activePage: record.page, originalCreation: identity( record.fixed ) } );
 			} catch ( error ) {
 				const code = publishing ? ( error && publicationCodes.has( error.code ) ? error.code : 'layers-publication-outcome-unknown' ) :
-					error && error.code === 'layers-draft-storage-failed' ? error.code : 'layers-editor-session-unavailable';
+					error && storageCodes.has( error.code ) ? error.code : 'layers-editor-session-unavailable';
 				if ( record.phase !== 'disposed' ) record.phase = code === 'layers-edit-conflict' ? 'conflict' :
 					code === 'layers-publication-outcome-unknown' ? 'uncertain' : 'ready';
 				record.attempt.dispatchState = code === 'layers-publication-outcome-unknown' ? 'unknown' : 'refused'; record.attempt.code = code;

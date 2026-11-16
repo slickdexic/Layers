@@ -671,10 +671,11 @@
 
 		releaseDraftRecovery( handle ) { const plan = recoveries.get( handle ); if ( plan && plan.host === this ) recoveries.delete( handle ); }
 
-		async commitDraftRecovery( handle, beforeCommit ) {
+		async commitDraftRecovery( handle, beforeCommit, verifyRecovery ) {
 			const plan = recoveries.get( handle ); if ( !plan || plan.host !== this ) throw unavailable();
 			const { record, envelope } = plan; plan.check();
-			if ( record.recovering || ( beforeCommit !== undefined && typeof beforeCommit !== 'function' ) ) throw unavailable();
+			if ( record.recovering || ( beforeCommit !== undefined && typeof beforeCommit !== 'function' ) ||
+				( verifyRecovery !== undefined && typeof verifyRecovery !== 'function' ) ) throw unavailable();
 			recoveries.delete( handle ); record.recovering = true;
 			const operation = { generation: plan.generation, handle: null, stage: null }; record.operation = operation;
 			let patch, committed = false;
@@ -702,6 +703,7 @@
 				const state = { canvas: surface.canvas, layers: surface.layers }, { canvas, store, history, editor, Store } = record;
 				const stage = canvas.stageExactBackground( context.rendition.url ); operation.stage = stage;
 				await stage.promise; check(); canvas.preflightStagedBackground( stage );
+				if ( verifyRecovery ) { await verifyRecovery(); check(); }
 				if ( stage.url !== context.rendition.url || stage.info.width !== context.rendition.width || stage.info.height !== context.rendition.height ) throw unavailable();
 				const selection = canvas.selectionManager && canvas.selectionManager.prepareWorkingCopyImportSelection( state.layers, [] );
 				patch = store.prepareWorkingCopyPatch( { values: { layers: state.layers, isSlide: false, isDirty: true, selectedLayerIds: [],

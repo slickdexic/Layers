@@ -283,6 +283,12 @@
 				}
 			}
 
+			if ( cm.currentTool === 'pointer' && !e.ctrlKey && !e.metaKey &&
+				cm.transformController?.groupTransform?.hit( point ) ) {
+				cm.transformController.startDrag( point );
+				return;
+			}
+
 			cm.isDrawing = true;
 
 			if ( cm.currentTool === 'zoom' ) {
@@ -597,6 +603,10 @@
 			// Note: Delete/Backspace is handled by EventManager to avoid duplicate handlers
 
 			// Pan shortcuts with arrow keys (only if not already handled by nudge)
+			if ( !e.defaultPrevented && cm.transformController?.groupTransform?.keyboard( e ) ) {
+				e.preventDefault();
+				return;
+			}
 			if ( !e.ctrlKey && !e.metaKey && !e.defaultPrevented ) {
 				const panDistance = 20;
 				switch ( e.key ) {
@@ -706,10 +716,19 @@
 		}
 
 		handleTouchEnd( e ) {
+			if ( e.type === 'touchcancel' && this.cm.transformController?.groupTransform?.finish( true ) ) {
+				return;
+			}
 			const cm = this.cm;
 			const changedTouch = ( e.changedTouches && e.changedTouches[ 0 ] ) || null;
 			if ( changedTouch ) {
 				cm.lastTouchPoint = { clientX: changedTouch.clientX, clientY: changedTouch.clientY };
+			}
+			// A completed folder gesture must not become a double-tap zoom.
+			if ( cm.transformController?.groupTransform?.session ) {
+				cm.transformController.groupTransform.finish();
+				cm.lastTouchTime = 0;
+				return;
 			}
 			// P2-199 FIX: Double-tap detection must measure interval between
 			// consecutive touchEnds, not tap duration (touchEnd - touchStart).

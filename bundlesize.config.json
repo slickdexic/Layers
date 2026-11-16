@@ -6,8 +6,13 @@
 	},
 	{
 		"resourceModule": "ext.layers.editor",
-		"maxSize": "2155 KB",
-		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. The budget allows 2 KB for undoable legacy recovery and 1 KB for visible Save-error handling; affected files add about 371 and 312 gzip bytes respectively when compressed separately. The approved v1.8 Help corrections add 2063 raw bytes (705 gzip bytes when this file is compressed separately); the editor-only limit adds 2 KB to account for this text. Reader budgets and charter timing targets are unchanged."
+		"maxSize": "2187 KB",
+		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. The budget allows 2 KB for undoable legacy recovery and 1 KB for visible Save-error handling; affected files add about 371 and 312 gzip bytes respectively when compressed separately. The approved v1.8 Help corrections add 2063 raw bytes (705 gzip bytes when this file is compressed separately); the editor-only limit adds 2 KB to account for this text. Reader budgets and charter timing targets are unchanged. Owner-approved folder transforms add about 28 KB of editor-only geometry, transaction and selection code; this reviewed allowance adds 30 KB. Reader limits and timing targets stay unchanged."
+	},
+	{
+		"resourceModule": "ext.layers.editor.pageOwned",
+		"maxSize": "920 KB",
+		"note": "Page-owned editor module, now explicitly budgeted. November 11 review measured about 915 KB including the approved transactional draft fallback, recovery and PDF handoff integration. This is a new check for an existing editor-only module, not a reader allowance. See docs/CODE_GROWTH_POLICY.md for the bounded source and base-editor changes."
 	},
 	{
 		"resourceModule": "ext.layers.shared",

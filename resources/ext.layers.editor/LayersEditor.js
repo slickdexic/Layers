@@ -2218,6 +2218,13 @@ class LayersEditor {
 		if ( !synchronous && error && error.code === 'layers-content-not-renderable' && typeof mw !== 'undefined' && mw.msg ) {
 			errorMsg = mw.msg( 'layers-content-not-renderable' );
 		}
+		const draftCode = error && ( error.code || error.message );
+		if ( [ 'layers-draft-storage-failed', 'layers-draft-storage-quota' ].includes( draftCode ) ) {
+			const quota = draftCode === 'layers-draft-storage-quota';
+			const fallback = quota ? 'Your browser has no room for this local draft. Keep this editor open to preserve your changes. If storage becomes available, try Save again. Clearing this site’s data removes its local drafts.' :
+				'Your local draft could not be saved. Keep this editor open to avoid losing changes.';
+			errorMsg = window.layersMessages ? window.layersMessages.get( quota ? 'layers-page-draft-quota' : 'layers-page-draft-failed', fallback ) : fallback;
+		}
 		if ( typeof mw !== 'undefined' && mw.notify ) {
 			mw.notify( errorMsg, { type: 'error', classes: 'layers-save-error' } );
 		}
@@ -2268,24 +2275,29 @@ class LayersEditor {
 	 * @param {boolean} navigateBack Whether to navigate back
 	 */
 	cancel ( navigateBack ) {
-		if ( this._closeCompleted ) {
+		if ( this._closeCompleted || this._closePending ) {
 			return;
 		}
 		if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
 			this.layerPanel.settleGradientControls( true );
 		}
 		const savedFilename = this.filename;
-		const finalize = ( discard = false ) => {
+		const finalize = ( discard, complete ) => {
+			if ( this._closeCompleted || this._closePending ) { return; }
 			const creation = this.apiManager && this.apiManager.pageOwnedCreation;
-			if ( creation && !creation.transferred ) return !this._closeCompleted && creation.finalizeClose( discard );
 			const drafts = this.apiManager && this.apiManager.pageOwnedDrafts;
-			return !this._closeCompleted && ( !drafts || drafts.finalizeClose( discard ) );
+			const target = creation && !creation.transferred ? creation : drafts;
+			const finish = ( ok ) => { this._closePending = false; if ( ok && !this._closeCompleted ) { complete(); } };
+			const failed = ( error ) => { this._closePending = false; LayersEditor.prototype._handleSaveError.call( this, error ); };
+			this._closePending = true;
+			try {
+				const result = target ? ( target.finalizeCloseAsync || target.finalizeClose ).call( target, discard ) : true;
+				if ( result && typeof result.then === 'function' ) { result.then( finish, failed ); }
+				else { finish( result ); }
+			} catch ( error ) { failed( error ); }
 		};
 
-		const close = () => {
-			if ( !finalize() ) {
-				return;
-			}
+		const completeClose = () => {
 			if ( this.draftManager ) {
 				this.draftManager.clearDraft();
 			}
@@ -2298,11 +2310,9 @@ class LayersEditor {
 				this.navigateBackToFileWithName( savedFilename );
 			}
 		};
+		const close = () => finalize( false, completeClose );
 
-		const discardAndClose = ( discard = true ) => {
-			if ( !finalize( discard ) ) {
-				return;
-			}
+		const discardAndClose = ( discard = true ) => finalize( discard, () => {
 			if ( this.stateManager ) {
 				this.stateManager.set( 'isDirty', false );
 			}
@@ -2326,8 +2336,8 @@ class LayersEditor {
 			if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 				this.eventManager.destroy();
 			}
-			close();
-		};
+			completeClose();
+		} );
 
 		if ( !this.hasUnsavedChanges() ) {
 			// No unsaved changes - clear any stale draft and close

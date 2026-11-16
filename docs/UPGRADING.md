@@ -328,6 +328,13 @@ quota refusal. Older editor code cannot read that compact format: recover or
 save those drafts with the updated editor before rolling back. Existing
 uncompacted drafts remain supported.
 
+The post-RC1 working source includes the owner-approved IndexedDB fallback for
+backups that cannot fit in localStorage even after compaction. Older versions
+cannot discover those IndexedDB drafts. Before rollback, explicitly recover and
+save them with the updated editor; preserve the browser profile and site data.
+Use the same browser profile and wiki origin where the drafts were made. This
+applies to builds with the IndexedDB fallback, introduced after v1.8rc1.
+
 New search features, Cargo and layer-object links remain later milestones.
 Cleanup of the existing search index is a required part of this ownership
 upgrade under the approved November 7 release boundary.

@@ -49,6 +49,7 @@
 	"layers-page-draft-choose": "There are $1 independent drafts for this page revision. Enter a draft number from 1 to $1 to review, or Cancel to keep all drafts unchanged.",
 	"layers-page-draft-recover": "A local draft exists for this page revision. Restore it? Cancel keeps the saved revision.",
 	"layers-page-draft-failed": "Your local draft could not be saved. Keep this editor open to avoid losing changes.",
+	"layers-page-draft-quota": "Your browser has no room for this local draft. Keep this editor open to preserve your changes. If storage becomes available, try Save again. Clearing this site’s data removes its local drafts.",
 	"layers-page-drawing-name": "Layer set: $1",
 	"layers-page-drawing-rename": "Rename",
 	"layers-page-drawing-rename-title": "Rename layer set",
@@ -1180,5 +1181,13 @@
 	"layers-help-overview-import-actions": "For PDFs, Import copies the whole layer set and matches pages by page number. An empty target imports immediately; otherwise choose Append or Replace all layers. You can undo Import. Click Save to keep the result.",
 	"layers-help-overview-recovery": "Local recovery",
 	"layers-help-overview-recovery-desc": "Review and Restore recover a local draft. Restoring is not a saved page revision until Save succeeds. Keep drafts and current work when a Save fails or its outcome is uncertain.",
-	"layers-help-tool-image": "Use Import Image to add an image file as a layer. This is separate from importing a saved layer set from another wiki page."
+	"layers-help-tool-image": "Use Import Image to add an image file as a layer. This is separate from importing a saved layer set from another wiki page.",
+	"layers-group-transform-locked": "Unlock this folder and all its layers to move, rotate or scale the group.",
+	"layers-group-transform-empty": "This folder is empty. Add layers to edit them as a group.",
+	"layers-group-transform-invalid": "This group cannot be transformed safely. No layers were changed.",
+	"layers-group-transform-limit": "The group cannot be scaled further because a layer would exceed its supported size.",
+	"layers-group-transform-move": "Move group",
+	"layers-group-transform-rotate": "Rotate group",
+	"layers-group-transform-scale": "Scale group",
+	"layers-help-group-transform": "Select a folder to move, rotate or proportionally scale its layers together. Drag inside the group box to move it, use the rotation handle to rotate it, or drag a corner to scale it. Hidden layers move with the group. Unlock all members before transforming the group. Undo reverses the whole operation."
 }

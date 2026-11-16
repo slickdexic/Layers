@@ -18,8 +18,9 @@
 		for ( const binding of record.methods ) if ( binding.object[ binding.key ] !== binding.value ) throw unavailable();
 		return record;
 	}
-	function notify( record, key ) {
-		try { record.notifications[ key ].call( record.ui ); } catch ( error ) { /* Notification failure cannot erase known work or outcomes. */ }
+	function notify( record, key, error ) {
+		try { if ( error && error.code === 'layers-draft-storage-quota' ) record.notifications[ key ].call( record.ui, error );
+			else record.notifications[ key ].call( record.ui ); } catch ( ignored ) { /* Notification failure cannot erase known work or outcomes. */ }
 	}
 	function detach( record ) {
 		clearTimeout( record.timer ); record.timer = null;
@@ -66,6 +67,8 @@
 			return { ready: record.ready, operation: record.operation, disposed: record.disposed, finalized: record.finalized, transferred: record.transferred };
 		}
 
+		requiresAsyncStorage() { return typeof data( this ).exitStore.persistDurably === 'function'; }
+
 		/** Native host loading precedes this explicit recovery review. Nothing is published here. */
 		async initialize() {
 			const record = data( this ); if ( record.initialized || record.operation ) throw unavailable();
@@ -83,10 +86,10 @@
 				record.ready = true;
 				for ( const key of keys ) record.unsubscribers.push( record.state.subscribe( key, () => {
 					if ( record.disposed || record.finalized || record.transferred ) return;
-					clearTimeout( record.timer ); record.timer = setTimeout( () => this.flush(), 1000 );
+					clearTimeout( record.timer ); record.timer = setTimeout( () => { this.flushAsync(); }, 1000 );
 				} ) );
 			} finally { record.operation = null; }
-			this.flush(); return true;
+			await this.flushAsync(); return true;
 		}
 
 		/** Complete host draft/history, using the active writer only after review permits it. */
@@ -96,7 +99,16 @@
 			if ( !record.ready || record.disposed || record.finalized || record.transferred ) return false;
 			if ( record.operation && record.operation !== 'save' ) { record.pendingFlush = true; return false; }
 			try { data( this, true ); record.controller.persist(); record.pendingFlush = false; return true; }
-			catch ( error ) { notify( record, 'notifyFailure' ); return false; }
+			catch ( error ) { notify( record, 'notifyFailure', error ); return false; }
+		}
+
+		async flushAsync() {
+			const record = records.get( this ); if ( !record ) return false;
+			clearTimeout( record.timer ); record.timer = null;
+			if ( !record.ready || record.disposed || record.finalized || record.transferred ) return false;
+			if ( record.operation ) { record.pendingFlush = true; return false; }
+			try { data( this, true ); await record.controller.persistDurably(); data( this, true ); record.pendingFlush = false; return true; }
+			catch ( error ) { notify( record, 'notifyFailure', error ); return false; }
 		}
 
 		async save( summary = '' ) {
@@ -106,7 +118,7 @@
 				if ( result.draftPersisted === false ) notify( record, 'notifyFailure' );
 				// A known native result stays known even if pagehide disposed this lifecycle during the response.
 				return result;
-			} finally { record.operation = null; if ( record.pendingFlush ) this.flush(); }
+			} finally { record.operation = null; if ( record.pendingFlush ) this.flushAsync(); }
 		}
 
 		/** Caller supplies fresh native dependencies and a fresh independent checkpoint; never retries Save. */
@@ -117,7 +129,7 @@
 			try {
 				const result = await record.controller.reconcilePublication( dependencies, checkpointStore );
 				if ( result.draftPersisted === false ) notify( record, 'notifyFailure' ); return result;
-			} finally { record.operation = null; if ( record.pendingFlush ) this.flush(); }
+			} finally { record.operation = null; if ( record.pendingFlush ) this.flushAsync(); }
 		}
 
 		/** Return fresh saved ownership to the caller. No installation, Close or redirect is implicit. */
@@ -125,13 +137,13 @@
 			const record = data( this, true ); idle( record ); record.operation = 'handoff'; record.epoch++;
 			let result;
 			try {
-				const proof = record.controller.preserveForExit( record.exitStore ); proof.preflight();
-				result = await record.host.handoffSavedSession( dependencies, () => {
+				const proof = await record.controller.preserveForExitAsync( record.exitStore ); proof.preflight();
+				data( this, true ); result = await record.host.handoffSavedSession( dependencies, () => {
 					data( this, true ); if ( record.operation !== 'handoff' ) throw unavailable(); proof.preflight();
 				}, installSavedOwner );
 				record.transferred = true; record.ready = false; detach( record ); record.controller.dispose();
 				return { ...result, exitBackup: proof.raw };
-			} finally { record.operation = null; if ( !result && record.pendingFlush ) this.flush(); }
+			} finally { record.operation = null; if ( !result && record.pendingFlush ) this.flushAsync(); }
 		}
 
 		/** Only a clean, known confirmed creation qualifies. Explicit Discard remains with the existing caller. */
@@ -141,6 +153,17 @@
 			const witness = record.host.witnessLifecycleExit(), handle = Object.freeze( {} );
 			const target = { owner: record.owner, revisionId: status.confirmedRevisionId };
 			closes.set( handle, { owner: this, record, epoch: record.epoch, witness, proof, target } );
+			return { handle, returnTarget: { ...target }, backupPreserved: true };
+		}
+
+		async prepareCleanCloseAsync() {
+			const record = data( this, true ), status = clean( record ), epoch = record.epoch;
+			const witness = record.host.witnessLifecycleExit();
+			const proof = await record.controller.preserveForExitAsync( record.exitStore );
+			data( this, true ); clean( record ); witness(); proof.preflight();
+			if ( record.epoch !== epoch ) throw unavailable();
+			const handle = Object.freeze( {} ), target = { owner: record.owner, revisionId: status.confirmedRevisionId };
+			closes.set( handle, { owner: this, record, epoch, witness, proof, target } );
 			return { handle, returnTarget: { ...target }, backupPreserved: true };
 		}
 
@@ -155,7 +178,7 @@
 		releaseCleanClose( handle ) { const plan = closes.get( handle ); if ( plan && plan.owner === this ) closes.delete( handle ); }
 
 		/** Caller obtains explicit Discard first. Unresolved sent evidence is never retirement authority. */
-		prepareDiscard( options ) {
+		prepareDiscard( options, asynchronous = false ) {
 			const property = options && Object.getOwnPropertyDescriptor( options, 'reviewCancelled' );
 			if ( options !== undefined && ( !property || !Object.hasOwn( property, 'value' ) || property.value !== true || Reflect.ownKeys( options ).length !== 1 ) ) throw unavailable();
 			const reviewCancelled = options !== undefined, record = data( this, !reviewCancelled );
@@ -168,17 +191,26 @@
 				![ 'ready', 'conflict', 'confirmed' ].includes( status.phase ) ||
 				( reviewCancelled && attempt ) ||
 				( attempt && ![ 'refused', 'confirmed' ].includes( attempt.dispatchState ) ) ) throw unavailable();
-			const bindings = [ 'prepareOwnedDiscard', 'commitOwnedDiscard', 'releaseOwnedDiscard' ].map( key => {
+			const bindings = [ 'prepareOwnedDiscard', 'prepareDiscardRecords', 'commitOwnedDiscard', 'commitOwnedDiscardAsync', 'releaseOwnedDiscard' ].map( key => {
 				if ( typeof record.controller[ key ] !== 'function' ) throw unavailable(); return { key, value: record.controller[ key ] };
 			} );
-			const owned = record.controller.prepareOwnedDiscard( record.exitStore, options ), witness = record.host.witnessLifecycleExit();
+			const owned = asynchronous ? record.controller.prepareDiscardRecords( record.exitStore, options, true ) :
+				record.controller.prepareOwnedDiscard( record.exitStore, options ), witness = record.host.witnessLifecycleExit();
 			const handle = Object.freeze( {} ), target = { owner: record.owner, revisionId: status.confirmedRevisionId || status.baseRevisionId };
 			discards.set( handle, { owner: this, record, epoch: record.epoch, owned, witness, bindings, target, reviewCancelled } );
 			return { handle, returnTarget: { ...target } };
 		}
 
+		async prepareDiscardAsync( options ) {
+			const record = data( this ); const witness = record.host.witnessLifecycleExit();
+			await record.controller.initializeExitStore( record.exitStore ); data( this ); witness();
+			return this.prepareDiscard( options, typeof record.exitStore.retireGroupAsync === 'function' );
+		}
+
+		async commitDiscardAsync( handle ) { return this.commitDiscard( handle, true ); }
+
 		/** Private single-use handle; a late edit or storage callback refuses Close and rolls retirement back. */
-		commitDiscard( handle ) {
+		commitDiscard( handle, asynchronous = false ) {
 			const plan = discards.get( handle ); if ( !plan || plan.owner !== this ) throw unavailable(); discards.delete( handle );
 			const check = () => {
 				const record = records.get( this );
@@ -188,10 +220,16 @@
 				for ( const binding of record.methods ) if ( binding.object[ binding.key ] !== binding.value ) throw unavailable();
 				plan.witness();
 			};
-			try { check(); plan.record.controller.commitOwnedDiscard( plan.owned, check ); }
+			const complete = () => {
+				const record = plan.record; record.finalized = true; record.ready = false; record.epoch++; detach( record );
+				return { closed: true, discarded: true, returnTarget: { ...plan.target } };
+			};
+			if ( asynchronous ) return ( async () => {
+				try { check(); await plan.record.controller.commitOwnedDiscardAsync( plan.owned, check ); return complete(); }
+				finally { plan.record.controller.releaseOwnedDiscard( plan.owned ); }
+			} )();
+			try { check(); plan.record.controller.commitOwnedDiscard( plan.owned, check ); return complete(); }
 			finally { plan.record.controller.releaseOwnedDiscard( plan.owned ); }
-			const record = plan.record; record.finalized = true; record.ready = false; record.epoch++; detach( record );
-			return { closed: true, discarded: true, returnTarget: { ...plan.target } };
 		}
 
 		releaseDiscard( handle ) {

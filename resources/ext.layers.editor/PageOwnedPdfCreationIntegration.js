@@ -33,6 +33,7 @@
 		}
 
 		store() {
+			if ( typeof this.manager.createPageOwnedDraftStore === 'function' ) return this.manager.createPageOwnedDraftStore( true );
 			const random = new Uint8Array( 16 ); window.crypto.getRandomValues( random );
 			return new this.classes.PageOwnedDraftStore( window.localStorage,
 				Array.from( random, value => value.toString( 16 ).padStart( 2, '0' ) ).join( '' ) );
@@ -52,6 +53,7 @@
 				this.host = new this.classes.PageOwnedPdfCreationHost( this.editor, this.preparation, { reader: this.reader, publisher: this.publisher } );
 				if ( !await this.host.load() ) throw unavailable(); this.alive();
 				this.controller = new this.classes.PageOwnedPdfCreationDraftController( this.host, this.store(), this.identity, { retainPublicationAttempt: true } );
+				await this.controller.initialize(); this.alive();
 				// Preserve ordinary creation recovery. Only complete Import backups require the Import host before review.
 				for ( const candidate of this.controller.listCandidates() ) {
 					try { if ( [ 3, 4 ].includes( this.controller.inspectCandidate( candidate ).version ) ) { this.enableImports(); break; } }
@@ -60,7 +62,7 @@
 				this.dialog = new this.classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
 				this.lifecycle = new this.classes.PageOwnedPdfCreationLifecycle( this.editor, this.host, this.controller, this.store(), {
 					choose: previews => this.dialog.choose( previews ), confirm: preview => this.dialog.confirm( preview ),
-					notifyFailure: () => this.notify( 'layers-page-draft-failed' ), notifyBlocked: () => this.notify( 'layers-page-draft-blocked', 'warn' )
+					notifyFailure: error => this.notify( error && error.code === 'layers-draft-storage-quota' ? 'layers-page-draft-quota' : 'layers-page-draft-failed' ), notifyBlocked: () => this.notify( 'layers-page-draft-blocked', 'warn' )
 				} );
 				await this.lifecycle.initialize(); this.alive(); this.loaded = true;
 				// Recovery presentation ran before unsavedPages could read the initialized host.
@@ -130,7 +132,7 @@
 					apply: handle => { if ( !this.canImport() || !this.host.commitImport( handle ).applied ) throw unavailable(); },
 					release: handle => this.host.releaseImport( handle )
 				},
-				onApplied: () => this.lifecycle.flush()
+				onApplied: () => this.lifecycle.flushAsync()
 			} );
 			this.importControl.mount( header, header.querySelector( '.layers-header-right' ) );
 		}
@@ -190,7 +192,8 @@
 			await manager.initializePageOwnedDrafts( delivered.bridge.getLiveState(), true,
 				delivered.importApplication ? delivered : undefined );
 			this.alive();
-			const persisted = manager.pageOwnedDrafts.ready && manager.pageOwnedDrafts.flush();
+			const persisted = manager.pageOwnedDrafts.ready && await ( manager.pageOwnedDrafts.flushDurably ?
+				manager.pageOwnedDrafts.flushDurably() : manager.pageOwnedDrafts.flush() );
 			if ( delivered.needsRefresh || !persisted ) delivered.bridge.session.blockPublication();
 			else {
 				manager.applyPageContext( delivered.bridge.pdfCoordinator.getPageContext() );
@@ -219,7 +222,7 @@
 				}
 				const status = this.host.getStatus();
 				return { phase: 'ready', revisionId: status.baseRevisionId, dirty: status.dirty,
-					editorStateValid: !status.needsRefresh && !status.publicationBlocked, draftPersisted: this.lifecycle.flush() };
+					editorStateValid: !status.needsRefresh && !status.publicationBlocked, draftPersisted: await this.lifecycle.flushAsync() };
 			} finally { this.operation = null; }
 		}
 
@@ -232,6 +235,26 @@
 				if ( discard ) this.lifecycle.commitDiscard( plan.handle ); else this.lifecycle.commitCleanClose( plan.handle );
 				this.closed = true; return true;
 			} catch ( error ) { this.notify( 'layers-page-draft-failed' ); return false; }
+		}
+
+		finalizeCloseAsync( discard ) {
+			if ( this.closed ) return true;
+			if ( this.lifecycle && !this.lifecycle.requiresAsyncStorage() ) return this.finalizeClose( discard );
+			return this.closeWithDurableStorage( discard );
+		}
+
+		async closeWithDurableStorage( discard ) {
+			try {
+				this.alive(); if ( !this.loaded || this.operation ) return false;
+				this.operation = 'close';
+				const cancelled = this.controller.getLifecycleStatus().cancelled;
+				const plan = discard ? await this.lifecycle.prepareDiscardAsync( cancelled ? { reviewCancelled: true } : undefined ) :
+					await this.lifecycle.prepareCleanCloseAsync();
+				this.alive();
+				if ( discard ) await this.lifecycle.commitDiscardAsync( plan.handle ); else this.lifecycle.commitCleanClose( plan.handle );
+				this.closed = true; return true;
+			} catch ( error ) { this.notify( 'layers-page-draft-failed' ); return false; }
+			finally { this.operation = null; }
 		}
 
 		/** The fresh saved writer also preserves edits during its recovery dialog, before editor teardown. */

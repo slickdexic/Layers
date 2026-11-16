@@ -968,6 +968,22 @@ describe( 'CanvasEvents', () => {
 	} );
 
 	describe( 'handleTouchEnd', () => {
+		it.each( [ 'touchend', 'touchcancel' ] )( 'finishes a group %s before double-tap detection', ( type ) => {
+			const finish = jest.fn( () => true );
+			mockCanvasManager.transformController.groupTransform = { session: {}, finish };
+			mockCanvasManager.lastTouchTime = Date.now() - 100;
+			const doubleTap = jest.spyOn( canvasEvents, 'handleDoubleTap' );
+			canvasEvents.handleTouchEnd( { type, changedTouches: [ { clientX: 100, clientY: 100 } ] } );
+			expect( finish ).toHaveBeenCalledTimes( 1 );
+			if ( type === 'touchcancel' ) {
+				expect( finish ).toHaveBeenCalledWith( true );
+			} else {
+				expect( finish ).toHaveBeenCalledWith();
+			}
+			expect( doubleTap ).not.toHaveBeenCalled();
+			doubleTap.mockRestore();
+		} );
+
 		it( 'should update last touch point from changedTouches', () => {
 			mockCanvasManager.lastTouchPoint = { clientX: 100, clientY: 100 };
 			const event = {

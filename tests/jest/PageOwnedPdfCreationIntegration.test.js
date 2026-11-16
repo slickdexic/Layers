@@ -20,6 +20,42 @@ function localStorage() {
 	const records = new Map(); return { records, get length() { return records.size; }, key: i => Array.from( records.keys() )[ i ] || null,
 		getItem: key => records.get( key ) ?? null, setItem: ( key, raw ) => records.set( key, raw ), removeItem: key => records.delete( key ) };
 }
+function fallbackDatabase() {
+	const records = new Map(); return { records, refused: false,
+		list: async prefix => Array.from( records ).filter( ( [ key ] ) => key.startsWith( prefix ) ),
+		read: async key => records.get( key ) ?? null,
+		async change( entries ) {
+			if ( this.refused ) throw new Error( 'aborted transaction' );
+			for ( const entry of entries ) if ( ( records.get( entry.key ) ?? null ) !== entry.before ) throw new Error( 'changed record' );
+			for ( const entry of entries ) if ( entry.after === null ) records.delete( entry.key ); else records.set( entry.key, entry.after );
+		} };
+}
+it.each( [ false, true ] )( 'uses the real fallback factory and keeps a confirmed first Save known after backup failure=%s', async refuseAfterSave => {
+	const classes = window.Layers.Editor, previousStore = classes.PageOwnedFallbackDraftStore, previousDatabase = classes.PageOwnedIndexedDBDraftStore;
+	classes.PageOwnedFallbackDraftStore = require( '../../resources/ext.layers.editor/PageOwnedFallbackDraftStore.js' );
+	classes.PageOwnedIndexedDBDraftStore = require( '../../resources/ext.layers.editor/PageOwnedIndexedDBDraftStore.js' );
+	const work = make(), db = fallbackDatabase(); work.manager.pageOwnedDraftDatabase = db;
+	work.storage.setItem = () => { throw Object.assign( new Error( 'full' ), { name: 'QuotaExceededError' } ); };
+	try {
+		await work.manager.loadLayers(); work.edit( 'Durable first PDF Save' );
+		const publish = work.api.postWithToken.getMockImplementation();
+		work.api.postWithToken.mockImplementation( async ( ...args ) => { const reply = await publish( ...args ); db.refused = refuseAfterSave; return reply; } );
+		const result = await work.manager.saveLayers(); expect( result.revisionId ).toBe( 13 );
+		expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
+		if ( refuseAfterSave ) {
+			expect( result ).toMatchObject( { draftPersisted: false, editorStateValid: false } );
+			await expect( work.manager.saveLayers() ).rejects.toThrow(); expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
+			db.refused = false; await work.manager.pageOwnedCreation.check();
+		} else expect( result ).toMatchObject( { draftPersisted: true, editorStateValid: true } );
+		expect( work.manager.pageOwnedCreation.transferred ).toBe( true ); expect( work.manager.pageOwnedDrafts.ready ).toBe( true );
+		expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
+		const saved = Array.from( db.records.values() ).map( JSON.parse ).find( row => row.scope.baseRevisionId === 13 );
+		expect( saved.editorState.layers[ 0 ].text ).toBe( 'Durable first PDF Save' );
+		expect( work.storage.records.size ).toBe( 0 );
+	} finally {
+		work.close(); classes.PageOwnedFallbackDraftStore = previousStore; classes.PageOwnedIndexedDBDraftStore = previousDatabase;
+	}
+} );
 function make( slot = true, initial = 2, storage = localStorage() ) {
 	const work = setup( slot, initial, initial, 2 ); work.host.dispose(); const editor = work.editor;
 	window.localStorage = storage;
@@ -341,5 +377,35 @@ it( 'verifies the saved writer rather than the selected recovery writer when per
 		expect( work.manager.pageOwnedDrafts.flush() ).toBe( true ); expect( other.read( scope ) ).toBe( raw );
 		controller.store.selectRecovery( controller.store._writerId );
 		expect( JSON.parse( controller.store.read( scope ) ).editorState.layers[ 0 ].text ).toBe( 'Later work' );
+	} finally { work.close(); }
+} );
+it( 'completes the saved-editor handoff when the verified backup fits only in packed form', async () => {
+	const storage = localStorage();
+	const write = storage.setItem;
+	const quotaRefusal = jest.fn( () => { throw new DOMException( 'Storage is full', 'QuotaExceededError' ); } );
+	storage.setItem = ( key, raw ) => {
+		if ( raw.startsWith( '{' ) && JSON.parse( raw ).scope.baseRevisionId === 13 ) {
+			quotaRefusal();
+		}
+		write( key, raw );
+	};
+	const work = make( true, 2, storage );
+	const src = 'data:image/png;base64,' + 'A'.repeat( 5000 );
+	try {
+		await work.manager.loadLayers();
+		work.editor.stateManager.set( 'layers', [ {
+			id: 'imported-image', type: 'image', src, x: 5, y: 5, width: 20, height: 20,
+			originalWidth: 20, originalHeight: 20
+		} ] );
+		work.editor.historyManager.saveState( 'Import image' );
+		const result = await work.manager.saveLayers();
+		expect( quotaRefusal ).toHaveBeenCalled();
+		expect( result ).toMatchObject( { revisionId: 13, dirty: false, editorStateValid: true, draftPersisted: true } );
+		const controller = work.manager.pageOwnedDrafts.controller;
+		const scope = controller._scope();
+		const reader = new window.Layers.Editor.PageOwnedDraftStore( storage, 'a'.repeat( 32 ) );
+		const [ writer ] = reader.listCandidates( scope );
+		reader.selectRecovery( writer );
+		expect( JSON.parse( reader.read( scope ) ).editorState.layers[ 0 ].src ).toBe( src );
 	} finally { work.close(); }
 } );

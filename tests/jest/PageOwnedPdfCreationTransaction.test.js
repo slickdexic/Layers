@@ -277,9 +277,10 @@ describe( 'Explicit missing-PDF creation transaction', () => {
 		await expect( transaction.save() ).rejects.toHaveProperty( 'code', 'layers-publication-outcome-unknown' );
 		expect( transaction.getStatus() ).toMatchObject( { phase: 'uncertain', confirmedRevisionId: null } );
 	} );
-	it( 'refuses a failed draft-storage callback without publishing or losing work', async () => {
+	it.each( [ 'layers-draft-storage-failed', 'layers-draft-storage-quota' ] )( 'preserves %s without publishing or losing work', async code => {
 		const { transaction, api } = setup(); edit( transaction, 'Keep' ); const before = transaction.getDraft();
-		await expect( transaction.save( '', async () => { throw new Error( 'Storage full' ); } ) ).rejects.toThrow();
+		await expect( transaction.save( '', async () => { throw Object.assign( new Error( 'Storage full' ), { code } ); } ) )
+			.rejects.toMatchObject( { code } );
 		expect( api.postWithToken ).not.toHaveBeenCalled(); expect( transaction.getDraft() ).toEqual( before );
 	} );
 	it( 'refuses an inaccessible unvisited page without blocking first Save of visited work', async () => {

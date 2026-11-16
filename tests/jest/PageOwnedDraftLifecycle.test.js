@@ -30,6 +30,146 @@ describe( 'PageOwnedDraftLifecycle', () => {
 	} );
 	afterEach( () => { lifecycle.dispose(); jest.useRealTimers(); } );
 
+	it( 'waits for both stores before offering recovery and stops if disposed during discovery', async () => {
+		let resolve;
+		controller.initialize = jest.fn( () => new Promise( done => { resolve = done; } ) );
+		const initializing = lifecycle.initialize();
+		expect( controller.listCandidates ).not.toHaveBeenCalled();
+		lifecycle.dispose(); resolve(); await initializing;
+		expect( controller.listCandidates ).not.toHaveBeenCalled();
+		expect( lifecycle.ready ).toBe( false );
+	} );
+
+	it( 'revalidates the selected stored draft after Restore confirmation before applying it', async () => {
+		controller.inspectRecovery.mockReturnValue( { editorState: {}, publicationBlocked: false } );
+		controller.revalidateRecovery = jest.fn().mockRejectedValue( new Error( 'changed-backup' ) );
+		await expect( lifecycle.initialize() ).rejects.toThrow( 'changed-backup' );
+		expect( ui.confirmRecovery ).toHaveBeenCalledTimes( 1 );
+		expect( bridge.restoreDraft ).not.toHaveBeenCalled();
+		expect( lifecycle.ready ).toBe( false );
+	} );
+
+	it( 'waits for committed backup before publication and refuses Close during the pending write', async () => {
+		await lifecycle.initialize();
+		let complete;
+		controller.persistDurably = jest.fn().mockImplementationOnce( guard => new Promise( resolve => {
+			complete = () => { guard(); resolve(); };
+		} ) ).mockResolvedValue();
+		controller.retireOwned = jest.fn();
+		const published = jest.fn();
+		bridge.save.mockImplementation( async ( summary, beforePublish ) => {
+			await beforePublish(); published(); return { revisionId: 13 };
+		} );
+		const saving = lifecycle.save();
+		expect( published ).not.toHaveBeenCalled();
+		expect( lifecycle.finalizeClose( true ) ).toBe( false );
+		expect( controller.retireOwned ).not.toHaveBeenCalled();
+		complete(); await expect( saving ).resolves.toMatchObject( { revisionId: 13, draftPersisted: true } );
+		expect( published ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it.each( [ 'edits', 'close' ] )( 'does not apply recovery after %s during the renewed permission read', async change => {
+		controller.inspectRecovery.mockReturnValue( { editorState: {}, publicationBlocked: false } );
+		bridge.session.revalidate.mockImplementation( async () => {
+			if ( change === 'close' ) { lifecycle.finalizeClose( true ); }
+			else { bridge.getLiveState = () => ( { canvas: {}, layers: [ { id: 'new' } ] } ); }
+		} );
+		controller.retireOwned = jest.fn();
+		if ( change === 'edits' ) { await expect( lifecycle.initialize() ).rejects.toThrow( 'layers-editor-session-unavailable' ); }
+		else { await lifecycle.initialize(); }
+		expect( bridge.restoreDraft ).not.toHaveBeenCalled();
+		expect( lifecycle.ready ).toBe( false );
+		expect( Object.keys( listeners ) ).toHaveLength( 0 );
+	} );
+
+	it( 'completes local-only retirement before pagehide can recreate the draft', async () => {
+		await lifecycle.initialize();
+		controller.retireOwnedAsync = jest.fn();
+		const closing = lifecycle.finalizeCloseAsync();
+		expect( lifecycle.finalized ).toBe( true );
+		window.dispatchEvent( new Event( 'pagehide' ) );
+		expect( controller.persist ).not.toHaveBeenCalled();
+		await expect( closing ).resolves.toBe( true );
+	} );
+
+	it( 'passes quota failure details to the approved warning callback', async () => {
+		await lifecycle.initialize();
+		const error = Object.assign( new Error( 'layers-draft-storage-quota' ), { code: 'layers-draft-storage-quota' } );
+		controller.persistDurably = jest.fn().mockRejectedValue( error );
+		expect( await lifecycle.flushDurably( true ) ).toBe( false );
+		expect( ui.notifyFailure ).toHaveBeenCalledWith( true, error );
+	} );
+
+	it( 'keeps synchronous Close blocked while an automatic backup transaction is pending', async () => {
+		await lifecycle.initialize();
+		let complete;
+		controller.persistDurably = jest.fn( () => new Promise( resolve => { complete = resolve; } ) );
+		controller.retireOwned = jest.fn();
+		const pending = lifecycle.flushDurably();
+		expect( lifecycle.finalizeClose( true ) ).toBe( false );
+		expect( lifecycle.finalizeCloseAsync( true ) ).toBe( false );
+		complete(); await pending;
+		expect( lifecycle.finalizeClose( true ) ).toBe( true );
+	} );
+
+	it( 'rejects publication when durable storage fails and preserves the open editor', async () => {
+		await lifecycle.initialize();
+		controller.persistDurably = jest.fn().mockRejectedValue( new Error( 'layers-draft-storage-quota' ) );
+		const published = jest.fn();
+		bridge.save.mockImplementation( async ( summary, beforePublish ) => { await beforePublish(); published(); } );
+		await expect( lifecycle.save() ).rejects.toThrow( 'layers-draft-storage-quota' );
+		expect( published ).not.toHaveBeenCalled();
+		expect( lifecycle.finalized ).toBe( false );
+		expect( lifecycle.saving ).toBe( false );
+	} );
+
+	it( 'waits for owned retirement and refuses duplicate Close until its transaction completes', async () => {
+		await lifecycle.initialize();
+		let complete;
+		controller.retireOwnedAsync = jest.fn( () => new Promise( resolve => { complete = resolve; } ) );
+		const closing = lifecycle.finalizeCloseAsync();
+		expect( lifecycle.finalized ).toBe( false );
+		expect( lifecycle.finalizeCloseAsync() ).toBe( false );
+		await expect( lifecycle.save() ).rejects.toThrow( 'layers-editor-session-unavailable' );
+		complete(); await expect( closing ).resolves.toBe( true );
+		expect( lifecycle.finalized ).toBe( true );
+	} );
+
+	it( 'keeps edits made during retirement open and backs them up again', async () => {
+		await lifecycle.initialize();
+		let complete;
+		controller.retireOwnedAsync = jest.fn( () => new Promise( resolve => { complete = resolve; } ) );
+		const closing = lifecycle.finalizeCloseAsync( true );
+		bridge.getLiveState = () => ( { canvas: {}, layers: [ { id: 'late' } ] } );
+		complete(); await expect( closing ).resolves.toBe( false );
+		expect( lifecycle.finalized ).toBe( false );
+		expect( controller.persist ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it( 'refuses Close when a new automatic backup is still pending after retirement', async () => {
+		await lifecycle.initialize();
+		let retire, write;
+		controller.retireOwnedAsync = jest.fn( () => new Promise( resolve => { retire = resolve; } ) );
+		controller.persistDurably = jest.fn().mockImplementationOnce( () => new Promise( resolve => { write = resolve; } ) ).mockResolvedValue();
+		const closing = lifecycle.finalizeCloseAsync();
+		const backup = lifecycle.flushDurably();
+		retire(); await expect( closing ).resolves.toBe( false );
+		expect( lifecycle.finalized ).toBe( false );
+		write(); await backup;
+	} );
+
+	it( 'preserves inactive PDF page edits made during retirement', async () => {
+		await lifecycle.initialize();
+		let retire, pdfState = 'before';
+		bridge.pdfCoordinator = { witness: jest.fn( () => pdfState ) };
+		controller.retireOwnedAsync = jest.fn( () => new Promise( resolve => { retire = resolve; } ) );
+		const closing = lifecycle.finalizeCloseAsync( true );
+		pdfState = 'new inactive page edits'; retire();
+		await expect( closing ).resolves.toBe( false );
+		expect( lifecycle.finalized ).toBe( false );
+		expect( controller.persist ).toHaveBeenCalledTimes( 1 );
+	} );
+
 	it( 'backs up before revision discovery and after reconciliation without publishing', async () => {
 		await lifecycle.initialize();
 		const discover = jest.fn( async () => {

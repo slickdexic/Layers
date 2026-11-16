@@ -174,10 +174,10 @@ describe( 'Explicit creation transaction first Save after whole-PDF Import', () 
 		await expect( work.transaction.saveImport() ).rejects.toMatchObject( { code: 'layers-editor-session-unavailable' } );
 		expect( work.api.postWithToken ).not.toHaveBeenCalled();
 	} );
-	it( 'requires backup persistence before any native revalidation or dispatch', async () => {
+	it.each( [ 'layers-draft-storage-failed', 'layers-draft-storage-quota' ] )( 'preserves %s before native revalidation or dispatch', async code => {
 		const work = await setup(), count = work.native.api.post.mock.calls.length;
-		await expect( work.transaction.saveImport( '', () => { throw new Error( 'full' ); } ) )
-			.rejects.toMatchObject( { code: 'layers-draft-storage-failed' } );
+		await expect( work.transaction.saveImport( '', () => { throw Object.assign( new Error( 'full' ), { code } ); } ) )
+			.rejects.toMatchObject( { code } );
 		expect( work.api.postWithToken ).not.toHaveBeenCalled(); expect( work.native.api.post ).toHaveBeenCalledTimes( count );
 		expect( work.transaction.getImportPublicationState().attempt.dispatchState ).toBe( 'refused' );
 	} );

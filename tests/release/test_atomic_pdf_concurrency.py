@@ -1,5 +1,6 @@
 """Run actual independent PHP processes against one PDF cache target."""
 
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -73,7 +74,15 @@ class AtomicPdfConcurrencyTest(unittest.TestCase):
                     (root / ("go-" + name)).touch()
                 while any(worker.poll() is None for worker in workers):
                     if target.is_file():
-                        self.assertIn(target.read_bytes(), valid)
+                        try:
+                            observed = target.read_bytes()
+                        except PermissionError:
+                            # Windows can deny an open during replacement. The final read
+                            # below still has to succeed once both publishers have exited.
+                            if os.name != "nt":
+                                raise
+                        else:
+                            self.assertIn(observed, valid)
                     if time.monotonic() >= deadline:
                         self.fail("Timed out waiting for concurrent publication")
                     time.sleep(0.001)

@@ -137,6 +137,13 @@ class EventManager {
 	 * @return {boolean} True if event was handled (layers were nudged)
 	 */
 	handleArrowKeyNudge( e ) {
+		if ( e.defaultPrevented ) {
+			return true;
+		}
+		if ( this.editor.canvasManager?.transformController?.groupTransform?.keyboard( e ) ) {
+			e.preventDefault();
+			return true;
+		}
 		// Only handle arrow keys
 		const arrowKeys = [ 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown' ];
 		if ( !arrowKeys.includes( e.key ) ) {

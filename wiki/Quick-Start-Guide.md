@@ -66,6 +66,30 @@ Page turns preserve pending work. Save publishes the complete owner snapshot in
 one native revision. If Save refuses, keep the editor open and resolve the
 reported condition. Review local drafts before explicitly restoring them.
 
+## Local draft storage fallback (Unreleased)
+
+The working source also includes a browser-draft fallback for local storage
+exhaustion. Save waits for a verified backup; Review and Restore still require
+your explicit choice. Keep the same browser profile and site data so its local
+drafts remain available. If both stores are full, keep the editor open and read
+the warning. This fallback is not in the v1.8rc1 archive; browser acceptance is
+still in progress.
+
+## Edit a folder together (Unreleased)
+
+In the working source after v1.8rc1, select the folder row to show one box around
+its layers, including nested folders. Drag inside the box to move them together,
+use the rotation handle to rotate about their shared center, or drag a corner to
+scale proportionally. Shift snaps rotation to 15 degrees; Alt scales about the
+center. Expanded and collapsed folders behave alike.
+
+Hidden members participate and remain hidden. Unlock the folder, its ancestors
+and every member first. An empty folder has no handles. Scaling beyond a member's
+supported limits rejects the whole gesture. Escape cancels a gesture; Undo
+reverses one completed gesture. Select a child row to edit it independently.
+Save publishes the result through the owning page's normal revision history.
+For PDFs, the operation affects the active page's folder only.
+
 ## View and share
 
 Choose **View full size** on the overlay. Images/slides offer **Download PNG**

@@ -128,7 +128,12 @@
 				this._selectionRenderer = new SelectionRendererClass( {
 					ctx: this.ctx,
 					getLayerById: ( id ) => this._getLayerById( id ),
-					getLayerBounds: ( layer ) => this.getLayerBounds( layer )
+					getLayerBounds: ( layer ) => this.getLayerBounds( layer ),
+					getGroupSelection: ( id ) => {
+						const manager = this.editor && this.editor.canvasManager;
+						const groups = manager && manager.transformController && manager.transformController.groupTransform;
+						return groups ? groups.selection( id ) : null;
+					}
 				} );
 			}
 		}

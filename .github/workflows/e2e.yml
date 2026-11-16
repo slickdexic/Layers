@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main ]
   push:
-    branches: [ main, 'codex/l01-publication-admission' ]
+    branches: [ main, 'codex/l01-publication-admission', 'codex/v1.8-successor' ]
 
 jobs:
   # Smoke tests run without MediaWiki - quick sanity check

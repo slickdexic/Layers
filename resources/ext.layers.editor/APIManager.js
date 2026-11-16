@@ -414,6 +414,18 @@
 		} );
 	}
 
+	/** Independent writer, with one transactional fallback connection shared by this editor's stores. */
+	createPageOwnedDraftStore( durable = false ) {
+		const classes = window.Layers.Editor, random = new Uint8Array( 16 );
+		window.crypto.getRandomValues( random );
+		const writer = Array.from( random, value => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+		if ( classes.PageOwnedFallbackDraftStore && classes.PageOwnedIndexedDBDraftStore ) {
+			if ( !this.pageOwnedDraftDatabase ) this.pageOwnedDraftDatabase = new classes.PageOwnedIndexedDBDraftStore( window.indexedDB );
+			return new classes.PageOwnedFallbackDraftStore( window.localStorage, writer, durable, this.pageOwnedDraftDatabase );
+		}
+		return new classes.PageOwnedDraftStore( window.localStorage, writer, durable );
+	}
+
 	/** Install the existing saved lifecycle without reloading or replacing current editor work. */
 	initializePageOwnedDrafts( state, durable = false, delivered ) {
 		const classes = window.Layers.Editor;
@@ -426,17 +438,7 @@
 			classes.PageOwnedImportIntegration.supportsCreation( this.pageOwnedBridge ) ) {
 			this.pageOwnedImport = new classes.PageOwnedImportIntegration( this.pageOwnedBridge, this.api, classes );
 		}
-		// New ID per editor, including duplicated tabs; never inherit a shared tab identifier.
-		const random = new Uint8Array( 16 );
-		window.crypto.getRandomValues( random );
-		const writerId = Array.from( random, ( value ) => value.toString( 16 ).padStart( 2, '0' ) ).join( '' );
-		const Store = durable ? class extends classes.PageOwnedDraftStore {
-			write( scope, raw ) {
-				super.write( scope, raw );
-				if ( this._read( this._recordKey( this._validateAndBuildKey( scope ), this._writerId ) ) !== raw ) throw new Error( 'layers-draft-storage-failed' );
-			}
-		} : classes.PageOwnedDraftStore;
-		const store = new Store( window.localStorage, writerId );
+		const store = this.createPageOwnedDraftStore( durable );
 		const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
 			new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
 		if ( this.pageOwnedImport ) { this.pageOwnedImport.enableDrafts( controller ); }
@@ -446,7 +448,8 @@
 			confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
 			chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
 			notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
-			notifyFailure: ( saveError ) => mw.notify( mw.msg( 'layers-page-draft-failed' ),
+			notifyFailure: ( saveError, error ) => mw.notify( mw.msg( error && error.code === 'layers-draft-storage-quota' ?
+				'layers-page-draft-quota' : 'layers-page-draft-failed' ),
 				saveError ? { type: 'error', classes: 'layers-save-error' } : { type: 'error' } ),
 			notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
 		} );

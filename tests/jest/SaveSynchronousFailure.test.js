@@ -19,6 +19,24 @@ describe( 'synchronous Save failure feedback', () => {
 	} );
 	afterEach( () => { delete window.layersMessages; } );
 
+	test.each( [ [ true, false ], [ false, false ], [ true, true ], [ false, true ] ] )(
+		'localizes draft-storage refusal (synchronous=%s, quota=%s) without retry or data loss', async ( synchronous, quota ) => {
+		const message = quota ? 'Your browser has no room for this local draft. Keep this editor open to preserve your changes. If storage becomes available, try Save again. Clearing this site’s data removes its local drafts.' :
+			'Your local draft could not be saved. Keep this editor open to avoid losing changes.';
+		window.layersMessages.get = ( key ) => key === ( quota ? 'layers-page-draft-quota' : 'layers-page-draft-failed' ) ? message : 'Saving';
+		const error = new Error( quota ? 'layers-draft-storage-quota' : 'layers-draft-storage-failed' );
+		if ( synchronous ) {
+			error.code = error.message;
+			editor.apiManager.saveLayers.mockImplementation( () => { throw error; } );
+		} else {
+			editor.apiManager.saveLayers.mockRejectedValue( error );
+		}
+		await expect( editor.saveCurrentPage() ).resolves.toBe( false );
+		expect( notify ).toHaveBeenCalledWith( message, { type: 'error', classes: 'layers-save-error' } );
+		expect( editor.apiManager.saveLayers ).toHaveBeenCalledTimes( 1 );
+		expect( layers ).toEqual( [ { id: 'unsaved', type: 'rectangle', x: 7 } ] );
+	} );
+
 	test.each( [ 'preparation', 'dispatch' ] )( 'reports %s failure without retrying or losing work', async stage => {
 		if ( stage === 'preparation' ) {
 			editor.layerPanel.settleGradientControls.mockImplementation( () => { throw new Error( 'synthetic' ); } );

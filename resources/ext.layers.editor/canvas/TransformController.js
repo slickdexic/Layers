@@ -37,6 +37,8 @@ class TransformController {
 	/** Creates a new TransformController instance */
 	constructor( canvasManager ) {
 		this.manager = canvasManager;
+		const GroupTransformController = getClass( 'Canvas.GroupTransformController' );
+		this.groupTransform = GroupTransformController ? new GroupTransformController( this ) : null;
 
 		// Transform state
 		this.isResizing = false;
@@ -124,6 +126,9 @@ class TransformController {
 
 	/** Start a resize operation on the selected layer */
 	startResize( handle, startPoint ) {
+		if ( this.groupTransform?.start( 'scale', startPoint, handle ) ) {
+			return;
+		}
 		// Get the layer first to check lock status
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
@@ -155,6 +160,10 @@ class TransformController {
 
 	/** Handle resize during mouse move */
 	handleResize ( point, event ) {
+		if ( this.groupTransform?.session ) {
+			this.groupTransform.update( point, event );
+			return;
+		}
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
 		if ( !layer || !this.originalLayerState ) {
@@ -253,6 +262,9 @@ class TransformController {
 	 * Finish the resize operation
 	 */
 	finishResize () {
+		if ( this.groupTransform?.finish() ) {
+			return;
+		}
 		// Emit final transform event synchronously to sync properties panel with final dimensions
 		const selectedLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( selectedLayer ) {
@@ -280,6 +292,9 @@ class TransformController {
 
 	/** Start a rotation operation on the selected layer */
 	startRotation ( point ) {
+		if ( this.groupTransform?.start( 'rotate', point ) ) {
+			return;
+		}
 		// Get the layer first to check lock status
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
@@ -307,6 +322,10 @@ class TransformController {
 	 * @param {Event} event Mouse event for modifier keys
 	 */
 	handleRotation ( point, event ) {
+		if ( this.groupTransform?.session ) {
+			this.groupTransform.update( point, event );
+			return;
+		}
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( !layer ) {
 			return;
@@ -370,6 +389,9 @@ class TransformController {
 	 * Finish the rotation operation
 	 */
 	finishRotation () {
+		if ( this.groupTransform?.finish() ) {
+			return;
+		}
 		// Emit final transform event synchronously to sync properties panel with final rotation value
 		const selectedLayer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 		if ( selectedLayer ) {
@@ -400,6 +422,9 @@ class TransformController {
 	 * @param {Object} startPoint Starting mouse point
 	 */
 	startDrag ( startPoint ) {
+		if ( this.groupTransform?.start( 'move', startPoint ) ) {
+			return;
+		}
 		// Check if any selected layer is locked
 		const selectedIds = this.manager.getSelectedLayerIds();
 
@@ -455,6 +480,10 @@ class TransformController {
 	 * @param {Object} point Current mouse point
 	 */
 	handleDrag ( point ) {
+		if ( this.groupTransform?.session ) {
+			this.groupTransform.update( point );
+			return;
+		}
 		const deltaX = point.x - this.dragStartPoint.x;
 		const deltaY = point.y - this.dragStartPoint.y;
 
@@ -657,6 +686,9 @@ class TransformController {
 	 * Finish the drag operation
 	 */
 	finishDrag () {
+		if ( this.groupTransform?.finish() ) {
+			return;
+		}
 		// Only mark dirty if actual drag movement occurred (showDragPreview is set in handleDrag)
 		const hadMovement = this.showDragPreview;
 
@@ -1160,6 +1192,8 @@ class TransformController {
 	 * Clean up resources and state
 	 */
 	destroy() {
+		this.groupTransform?.finish( true );
+		this.groupTransform = null;
 		// Cancel any pending transform events
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;

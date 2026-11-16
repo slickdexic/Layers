@@ -21,3 +21,44 @@ replace the separate transferred-bundle or performance budgets.
 The recorded baseline describes the working source reviewed on November 5. It
 must be checked against the exact public release candidate before the workflow
 can qualify that candidate. A successful local check is not remote CI evidence.
+
+## November 8 folder-transform allowance
+
+Explicit source review for the owner-approved FEAT-6/FEAT-4/UI-6 feature permits
+115,500 handwritten lines (500 above the prior ceiling). The implementation
+keeps its geometry and gesture transaction in two separate editor-only modules.
+Small delegation changes increase the existing TransformController, CanvasEvents
+and CanvasRenderer ceilings; SelectionRenderer's folder frame is explicitly
+allowed just above 1,000 lines. This is a bounded feature allowance, not a refresh
+of unrelated file limits. The editor raw-source bundle allowance increases by
+30 KB to 2,185 KB; reader/shared limits and charter timing targets are unchanged.
+Verification must include ResourceLoader's compressed output: source lint alone
+did not catch its handling of an optional-chain callback in CanvasRenderer.
+
+November 9 bounded follow-up review permits six additional CanvasEvents lines
+for completing folder touch gestures before double-tap handling and four
+LayersEditor lines to map a storage refusal to its existing localized message.
+Other file limits and the total/bundle allowances stay unchanged.
+
+## November 11 durable-draft fallback review
+
+The owner approved the IndexedDB fallback and exact warning on November 10
+(DATA-1, DATA-3, HIST-4, UI-7). Review keeps the transactional database adapter
+and dual-store facade separate from the existing lifecycle modules. Their
+commit/readback, writer isolation, recovery and rollback paths need explicit
+code; neither a synchronous storage substitution nor fire-and-forget writes
+meet the approved behavior.
+
+The reviewed change permits 116,000 handwritten lines, 500 above the folder
+ceiling, with measured source near 115,840. APIManager gains three lines net for
+the shared database/store factory and warning dispatch; LayersEditor gains six
+net for the approved warning and awaited Close completion. Their ceilings become
+2,074 and 2,604; other existing per-file ceilings stay unchanged.
+
+The base editor measures 2,186.1 KB; its limit rises by 2 KB to 2,187 KB for that
+integration. Most fallback code belongs to `ext.layers.editor.pageOwned`, which
+previously had no explicit bundle budget. Add a 920 KB limit for its measured
+approximately 915 KB total, including its existing 49 files. This closes a
+coverage gap in the size check rather than treating the module as free growth.
+Reader/shared limits and charter timing targets remain unchanged. Exact-candidate
+ResourceLoader/browser and performance qualification still apply.
