@@ -369,7 +369,7 @@
 		 * @param {Object} result
 		 */
 		validateGradient( layer, result ) {
-			if ( layer.gradient === undefined ) {
+			if ( layer.gradient === undefined || layer.gradient === null ) {
 				return;
 			}
 

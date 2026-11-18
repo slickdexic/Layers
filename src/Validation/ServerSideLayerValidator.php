@@ -438,7 +438,7 @@ class ServerSideLayerValidator {
 		// Validate each property
 		foreach ( self::ALLOWED_PROPERTIES as $property => $expectedType ) {
 			if ( !isset( $layer[$property] ) ) {
-				if ( $property === 'link' && array_key_exists( 'link', $layer ) ) {
+				if ( in_array( $property, [ 'link', 'gradient' ], true ) && array_key_exists( $property, $layer ) ) {
 					$value = null;
 				} else {
 					continue;
@@ -498,6 +498,10 @@ class ServerSideLayerValidator {
 	private function validateProperty( string $property, $value, string $expectedType ): array {
 		if ( $property === 'link' ) {
 			return $this->linkValidator->validate( $value );
+		}
+		// Solid Color explicitly clears the gradient; retain that JSON marker through strict Save.
+		if ( $property === 'gradient' && $value === null ) {
+			return [ 'valid' => true, 'value' => null ];
 		}
 
 		switch ( $expectedType ) {

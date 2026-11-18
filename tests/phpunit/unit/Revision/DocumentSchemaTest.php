@@ -88,6 +88,21 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		}
 	}
 
+	public function testSolidFillNullGradientRoundTripsExactly(): void {
+		foreach ( [ 'arrow' => [ 'x1' => 40, 'y1' => 60, 'x2' => 200, 'y2' => 100 ],
+			'text' => [], 'rectangle' => [ 'width' => 100, 'height' => 50 ] ] as $type => $geometry ) {
+			$doc = self::fixture();
+			$doc->surfaces[0]->layers[0]->type = $type;
+			foreach ( $geometry as $key => $value ) {
+				$doc->surfaces[0]->layers[0]->$key = $value;
+			}
+			$doc->surfaces[0]->layers[0]->fill = '#ff0000';
+			$doc->surfaces[0]->layers[0]->gradient = null;
+			$this->assertEquals( $doc,
+				json_decode( ( new DocumentSchema() )->canonicalize( json_encode( $doc ) ) ) );
+		}
+	}
+
 	public function testLiteralLayerAndRichTextRoundTripWithoutChanges(): void {
 		$schema = new DocumentSchema();
 		foreach ( [ 'a<b>c', '<button>', '  &lt;b&gt; literal  ' ] as $text ) {

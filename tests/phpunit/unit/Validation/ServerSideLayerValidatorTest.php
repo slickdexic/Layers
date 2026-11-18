@@ -422,6 +422,24 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testOnlyExplicitNullDisablesGradientWithoutLosingItsMarker(): void {
+		$validator = $this->createValidator();
+		$layer = [ 'type' => 'rectangle', 'width' => 10, 'height' => 10,
+			'fill' => '#ff0000', 'gradient' => null ];
+		$result = $validator->validateLayer( $layer );
+		$this->assertTrue( $result->isValid() );
+		$this->assertArrayHasKey( 'gradient', $result->getData() );
+		$this->assertNull( $result->getData()['gradient'] );
+		$this->assertSame( '#ff0000', $result->getData()['fill'] );
+		foreach ( [ false, 0, '', [], [ 'type' => 'linear', 'colors' => [] ] ] as $invalid ) {
+			$layer['gradient'] = $invalid;
+			$this->assertFalse( $validator->validateLayer( $layer )->isValid() );
+		}
+	}
+
+	/**
 	 * A run without text used to vanish, deleting a span of the user's text
 	 * without any error.
 	 *

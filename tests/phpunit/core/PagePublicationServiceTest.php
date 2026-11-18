@@ -140,6 +140,34 @@ class PagePublicationServiceTest extends \MediaWikiIntegrationTestCase {
 			->getRevisionByTitle( $page->getTitle() )->getId() );
 	}
 
+	public function testGradientCanBeClearedWithoutLosingSavedHistoryOrSolidFill(): void {
+		$page = $this->getNonexistingTestPage();
+		$actor = $this->actor();
+		$service = $this->service();
+		$doc = json_decode( $this->snapshot() );
+		$layer = $doc->surfaces[0]->layers[0];
+		$layer->fill = '#ff0000';
+		$layer->gradient = (object)[ 'type' => 'radial', 'angle' => 90, 'colors' => [
+			(object)[ 'offset' => 0, 'color' => '#bdc3c7' ],
+			(object)[ 'offset' => 0.5, 'color' => '#2c3e50' ],
+			(object)[ 'offset' => 1, 'color' => '#bdc3c7' ]
+		] ];
+		$gradientJson = json_encode( $doc );
+		$first = $service->publish( $page->getTitle(), $actor, 0, $gradientJson, 'Gradient',
+			new WikitextContent( 'Owner page' ) );
+		$layer->gradient = null;
+		$solidJson = json_encode( $doc );
+		$next = $service->publish( $page->getTitle(), $actor, $first, $solidJson, 'Solid Color' );
+		$lookup = $this->getServiceContainer()->getRevisionLookup();
+		$access = new PageHistoryAccess( $lookup );
+		$this->assertNotSame( $first, $next );
+		$this->assertEquals( json_decode( $gradientJson ),
+			json_decode( $access->read( $page->getTitle(), $first, $actor )->getText() ) );
+		$this->assertEquals( json_decode( $solidJson ),
+			json_decode( $access->read( $page->getTitle(), $next, $actor )->getText() ) );
+		$this->assertSame( 'Owner page', $lookup->getRevisionById( $next )->getContent( SlotRecord::MAIN )->getText() );
+	}
+
 	public function testDrawingNamesAreUniqueOnThePageAndWritableIntoAnEmbed(): void {
 		$page = $this->getNonexistingTestPage();
 		$actor = $this->actor();

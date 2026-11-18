@@ -18,6 +18,8 @@
 - Keep gradient controls active after native Save reorders equal object keys.
 
 ### Gradient editing
+- Save changes from a gradient back to Solid Color, including recovered edits
+  and the explicit cleared-gradient value already held by open editors.
 - Keep gradient controls active after normal editor history capture so repeated
   presets, colour stops and linear/radial changes apply without reselection.
 - Render gradient fills on plain text through the shared editor/viewer renderer.

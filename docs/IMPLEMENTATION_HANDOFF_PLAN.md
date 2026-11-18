@@ -1,3 +1,16 @@
+# Gradient-to-solid Save follow-up — November 18, 2026
+
+Owner testing found that switching an existing radial-gradient arrow to Solid
+Color still failed strict native Save. The UI emits `gradient: null`; server
+validation dropped it while client validation called it invalid. Both now
+accept the explicit no-gradient value, retaining rejection of malformed non-null
+gradients. Advances FEAT-4, HIST-4 and DATA-1. The exact native refusal was
+reproduced, and an already-open failed editor saved successfully after only the
+server update. A permanent arrow/text browser journey covers clearing, Undo/Redo,
+draft recovery, Save, exact readback, reopen and another immediate clear/Save.
+See the [gradient repair follow-up](GRADIENT_REGRESSION_REPAIR_2026-11-18.md#solid-color-follow-up).
+Overall release acceptance remains open.
+
 # Save/Close follow-up — November 18, 2026
 
 Owner testing found a completed server write followed by a false Close prompt

@@ -1991,10 +1991,11 @@ describe( 'LayersValidator', () => {
 			expect( result.errors[ 0 ] ).toContain( 'gradient-invalid' );
 		} );
 
-		it( 'should fail when gradient is null', () => {
+		it( 'accepts the explicit null gradient emitted by Solid Color', () => {
 			const result = makeResult();
 			validator.validateGradient( { gradient: null }, result );
-			expect( result.isValid ).toBe( false );
+			expect( result.isValid ).toBe( true );
+			expect( result.errors ).toEqual( [] );
 		} );
 
 		it( 'should fail when gradient is an array', () => {

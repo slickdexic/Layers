@@ -51,3 +51,33 @@ separately after push.
 This bounded repair does not qualify every editor tool or declare v1.8 ready for
 release. Port 8080 is the owner's primary latest-source testing environment;
 8082 verifies the separately packaged 1.44 compatibility candidate.
+
+## Solid Color follow-up
+
+The owner next found Save refused after an existing radial-gradient arrow was
+changed to Solid Color. The UI deliberately emits `gradient: null`. The server's
+optional-property check skipped null, and DocumentSchema correctly refused the
+lost property. Client LayersValidator also incorrectly rejected null, despite
+the editor using it to clear a gradient. The exact native API refusal was
+reproduced on the dedicated 8080 fixture without changing its stored revision.
+
+Both validators now accept explicit null as no gradient. The server preserves
+the marker exactly; it does not silently remove the property, rewrite the fill
+or accept malformed non-null gradient definitions. No UI action or wording
+changes. This advances FEAT-4, HIST-4 and DATA-1.
+
+The previous browser journey saved active gradients but did not Save after
+clearing them. The existing client test even expected null to fail. That
+expectation is corrected, and the new native schema tests fail against the
+previous server. The permanent browser journey now creates arrow and text
+gradients, clears both, uses Undo/Redo, recovers their unsaved solid-fill draft,
+saves, checks exact native layers, closes and reopens, and repeats an immediate
+gradient-to-solid Save. It passes on 8080 and restores its dedicated fixture.
+
+A separate actual-browser replay opened the old editor, reproduced the failure,
+kept that tab open across the server update and successfully retried Save without
+reloading. Exact native readback retains null and the original solid fill, and
+Close returns normally. The user's page and browser are not fixtures. Focused
+JavaScript, PHP schema/validator, lint/style and source/bundle checks pass.
+Exact-commit hosted native publication and other CI results accompany the
+implementation checkpoint; broader release acceptance remains open.

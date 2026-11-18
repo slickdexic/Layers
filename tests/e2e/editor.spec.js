@@ -273,6 +273,61 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Save and Load', () => {
 		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
 			'Save journeys require the disposable CI fixture' );
+		test( 'gradient to Solid Color survives Undo, recovery and native Save', async ( { page } ) => {
+			test.setTimeout( 120000 );
+			const initialSnapshot = await editorPage.readSnapshot(), expected = [], errors = [];
+			page.on( 'pageerror', error => errors.push( error.message ) );
+			page.on( 'console', message => { if ( message.type() === 'error' && message.text().includes( 'saveLayers rejected' ) ) errors.push( message.text() ); } );
+			const model = id => page.evaluate( selected => window.layersEditorInstance.stateManager.get( 'layers' ).find( layer => layer.id === selected ), id );
+			const select = id => page.locator( `.layer-item[data-layer-id="${ id }"] .layer-grab-area` ).click();
+			try {
+				await editorPage.openEditor();
+				for ( const type of [ 'arrow', 'text' ] ) {
+					await editorPage.selectTool( type );
+					if ( type === 'arrow' ) { await editorPage.drawOnCanvas( 100, 120, 350, 160 ); }
+					else {
+						await editorPage.clickCanvas( 120, 250 );
+						await page.getByRole( 'textbox', { name: 'Type your text here...' } ).fill( 'Solid fill recovery' );
+						await page.getByRole( 'button', { name: 'OK', exact: true } ).click();
+					}
+					const id = await page.evaluate( shape => window.layersEditorInstance.stateManager.get( 'layers' ).filter( layer => layer.type === shape ).at( -1 ).id, type );
+					await select( id ); await page.locator( '.gradient-type-select' ).selectOption( 'radial' );
+					await page.locator( '.gradient-preset-swatch' ).nth( 0 ).click();
+					await expect.poll( async () => ( await model( id ) ).gradient?.type ).toBe( 'radial' );
+					await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+					expected.push( await model( id ) );
+				}
+				await editorPage.save();
+				for ( const layer of expected ) {
+					await select( layer.id ); await page.locator( '.gradient-type-select' ).selectOption( 'solid' );
+					await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+					await expect.poll( async () => ( await model( layer.id ) ).gradient ).toBeNull();
+					await editorPage.undo(); await expect.poll( async () => ( await model( layer.id ) ).gradient ).toEqual( layer.gradient );
+					await editorPage.redo(); await expect.poll( async () => ( await model( layer.id ) ).gradient ).toBeNull();
+				}
+				expect( await page.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedDrafts.flushDurably() ) ).toBe( true );
+				await page.reload(); await page.getByRole( 'button', { name: 'Continue draft', exact: true } ).click();
+				await expect( page.getByRole( 'button', { name: 'Check saved page', exact: true } ) ).toBeVisible();
+				await editorPage.save();
+				const saved = await editorPage.readSnapshot();
+				for ( const layer of expected ) {
+					expect( saved.surfaces[ 0 ].layers.find( item => item.id === layer.id ) ).toEqual( { ...layer, gradient: null } );
+				}
+				await page.getByRole( 'button', { name: 'Close', exact: true } ).click();
+				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
+				await editorPage.openEditor();
+				for ( const layer of expected ) {
+					await select( layer.id ); await expect( page.locator( '.gradient-type-select' ) ).toHaveValue( 'solid' );
+					expect( await model( layer.id ) ).toEqual( { ...layer, gradient: null } );
+				}
+				await select( expected[ 0 ].id ); await page.locator( '.gradient-type-select' ).selectOption( 'linear' );
+				await editorPage.save(); await page.locator( '.gradient-type-select' ).selectOption( 'solid' );
+				await editorPage.save();
+				expect( ( await editorPage.readSnapshot() ).surfaces[ 0 ].layers.find( layer => layer.id === expected[ 0 ].id ).gradient ).toBeNull();
+				expect( errors ).toEqual( [] );
+			} finally { await editorPage.restoreSnapshot( initialSnapshot ); }
+		} );
+
 		test( 'Discard recovery then immediate Save and Close publishes once', async ( { page } ) => {
 			test.setTimeout( 120000 );
 			const initialSnapshot = await editorPage.readSnapshot(), errors = [];
