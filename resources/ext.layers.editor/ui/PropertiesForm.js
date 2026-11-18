@@ -882,14 +882,14 @@
 						// Create gradient editor instance
 						const ownerConfig = editor.config;
 						let refreshTimer;
-						let expectedGradient = layer.gradient;
+						let expectedGradient = JSON.stringify( layer.gradient );
 						const ownsGradient = () => {
 							const layers = editor.stateManager && editor.stateManager.get( 'layers' );
 							if ( !Array.isArray( layers ) ) {
 								return true;
 							}
 							const current = layers.find( item => item.id === layer.id );
-							return current && current.gradient === expectedGradient;
+							return current && JSON.stringify( current.gradient ) === expectedGradient;
 						};
 						const isCurrent = () => !editor._closeCompleted && editor.config === ownerConfig &&
 							ownsGradient() &&
@@ -910,7 +910,7 @@
 								}
 								const layers = editor.stateManager && editor.stateManager.get( 'layers' );
 								const current = Array.isArray( layers ) && layers.find( item => item.id === layer.id );
-								expectedGradient = current ? current.gradient : updates.gradient;
+								expectedGradient = JSON.stringify( current ? current.gradient : updates.gradient );
 							},
 							onFillTypeChange: function () {
 								// Refresh properties panel when switching between solid/gradient

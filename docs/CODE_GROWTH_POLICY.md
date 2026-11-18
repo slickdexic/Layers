@@ -62,3 +62,11 @@ approximately 915 KB total, including its existing 49 files. This closes a
 coverage gap in the size check rather than treating the module as free growth.
 Reader/shared limits and charter timing targets remain unchanged. Exact-candidate
 ResourceLoader/browser and performance qualification still apply.
+
+## November 18 gradient regression repair
+
+FEAT-4, HIST-4 and DATA-1 require the existing gradient controls, glyph painting
+and native Save to work together. The shared LayerRenderer ceiling increases
+from 1,003 to 1,006 lines for three lines connecting its existing gradient
+renderer to plain text. All other file ceilings, the 116,000-line total and
+bundle budgets remain unchanged.

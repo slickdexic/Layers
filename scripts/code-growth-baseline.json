@@ -28,7 +28,7 @@
 		"resources/ext.layers.shared/AngleDimensionRenderer.js": 1067,
 		"resources/ext.layers.shared/ArrowRenderer.js": 1005,
 		"resources/ext.layers.shared/CalloutRenderer.js": 1003,
-		"resources/ext.layers.shared/LayerRenderer.js": 1003,
+		"resources/ext.layers.shared/LayerRenderer.js": 1006,
 		"resources/ext.layers.shared/TextBoxRenderer.js": 1128,
 		"resources/ext.layers.editor/canvas/SelectionRenderer.js": 1018
 	}

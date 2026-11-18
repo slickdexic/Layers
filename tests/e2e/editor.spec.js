@@ -273,6 +273,65 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Save and Load', () => {
 		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
 			'Save journeys require the disposable CI fixture' );
+		test( 'arrow and text gradients support repeated edits and exact Save/reopen', async ( { page } ) => {
+			const initialSnapshot = await editorPage.readSnapshot();
+			const model = id => page.evaluate( selected => window.layersEditorInstance.stateManager.get( 'layers' )
+				.find( layer => layer.id === selected ), id );
+			const expected = [];
+			try {
+				await editorPage.openEditor();
+				for ( const type of [ 'arrow', 'text' ] ) {
+					await page.getByRole( 'button', { name: type === 'arrow' ? 'Arrow' : 'Text', exact: true } ).click();
+					await page.getByRole( 'menuitem', { name: type === 'arrow' ? 'Arrow A' : 'Text T', exact: true } ).click();
+					if ( type === 'arrow' ) {
+						await editorPage.drawOnCanvas( 100, 120, 350, 160 );
+					} else {
+						await editorPage.clickCanvas( 120, 250 );
+						await page.getByRole( 'textbox', { name: 'Type your text here...' } ).fill( 'Gradient text' );
+						await page.getByRole( 'button', { name: 'OK', exact: true } ).click();
+					}
+					await expect.poll( () => page.evaluate( shape => window.layersEditorInstance.stateManager.get( 'layers' )
+						.some( layer => layer.type === shape ), type ), `created ${ type } layer` ).toBe( true );
+					const id = await page.evaluate( shape => window.layersEditorInstance.stateManager.get( 'layers' )
+						.filter( layer => layer.type === shape ).at( -1 ).id, type );
+					await page.locator( `.layer-item[data-layer-id="${ id }"] .layer-grab-area` ).click();
+					const fillType = page.locator( '.gradient-type-select' );
+					await fillType.selectOption( 'linear' );
+					const presets = await page.evaluate( () => Object.values( window.Layers.Renderers.GradientRenderer.getPresets() ) );
+					for ( let index = 0; index < 3; index++ ) {
+						await page.locator( '.gradient-preset-swatch' ).nth( index ).click();
+						await expect.poll( async () => ( await model( id ) ).gradient ).toEqual( presets[ index ] );
+						// Let normal history capture replace the layer objects before the next edit.
+						await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+					}
+					const linearPixels = await page.locator( '.layers-canvas' ).evaluate( canvas => canvas.toDataURL() );
+					await fillType.selectOption( 'radial' );
+					await expect.poll( async () => ( await model( id ) ).gradient.type ).toBe( 'radial' );
+					await expect.poll( () => page.locator( '.layers-canvas' ).evaluate( canvas => canvas.toDataURL() ) )
+						.not.toBe( linearPixels );
+					await page.locator( '.gradient-radius-slider' ).press( 'Home' );
+					await expect.poll( async () => ( await model( id ) ).gradient.radius ).toBe( 0.1 );
+					await fillType.selectOption( 'linear' );
+					await page.locator( '.gradient-angle-slider' ).press( 'End' );
+					await expect.poll( async () => ( await model( id ) ).gradient.angle ).toBe( 360 );
+					expected.push( { id, gradient: ( await model( id ) ).gradient } );
+				}
+				await editorPage.save();
+				const saved = await editorPage.readSnapshot();
+				for ( const layer of expected ) {
+					expect( saved.surfaces[ 0 ].layers.find( item => item.id === layer.id ).gradient ).toEqual( layer.gradient );
+				}
+				await page.getByRole( 'button', { name: 'Close', exact: true } ).click();
+				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
+				await editorPage.openEditor();
+				for ( const layer of expected ) {
+					expect( ( await model( layer.id ) ).gradient ).toEqual( layer.gradient );
+				}
+			} finally {
+				await editorPage.restoreSnapshot( initialSnapshot );
+			}
+		} );
+
 		test( 'can save layers', async () => {
 			const initialSnapshot = await editorPage.readSnapshot();
 			try {

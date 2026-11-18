@@ -63,6 +63,25 @@ describe( 'TextRenderer', () => {
 		}
 	} );
 
+	test.each( [ 'linear', 'radial' ] )( '%s gradient paints the glyph fill after shadow and rotation', type => {
+		const GradientRenderer = require( '../../resources/ext.layers.shared/GradientRenderer.js' );
+		const paint = { addColorStop: jest.fn() };
+		ctx.createLinearGradient = jest.fn( () => paint );
+		ctx.createRadialGradient = jest.fn( () => paint );
+		ctx.measureText.mockReturnValue( { width: 100, actualBoundingBoxAscent: 18, actualBoundingBoxDescent: 4 } );
+		renderer = new TextRenderer( ctx, { gradientRenderer: new GradientRenderer( ctx ) } );
+		const gradient = { type, angle: 0, colors: [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ] };
+		const layer = { text: 'Gradient', x: 150, y: 80, fontSize: 24, textAlign: 'right', rotation: 30,
+			fill: '#00ff00', gradient, shadow: true, shadowSpread: 2 };
+		let finalFill;
+		ctx.fillText.mockImplementation( () => { finalFill = ctx.fillStyle; } );
+		renderer.draw( layer );
+		expect( finalFill ).toBe( paint );
+		expect( paint.addColorStop.mock.calls ).toEqual( [ [ 0, '#ff0000' ], [ 1, '#0000ff' ] ] );
+		expect( type === 'linear' ? ctx.createLinearGradient : ctx.createRadialGradient ).toHaveBeenCalledTimes( 1 );
+		expect( layer.gradient ).toEqual( gradient );
+	} );
+
 	describe( 'constructor', () => {
 		it( 'should create instance with context', () => {
 			expect( renderer ).toBeInstanceOf( TextRenderer );

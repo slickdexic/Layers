@@ -1113,7 +1113,9 @@ class ServerSideLayerValidator {
 			if ( !$this->colorValidator->isSafeColor( $stop['color'] ) ) {
 				return [ 'valid' => false, 'error' => 'Gradient stop colour is not a valid colour' ];
 			}
-			$color = $this->colorValidator->sanitizeColor( $stop['color'] );
+			// Safe CSS spellings must survive strict page-owned publication unchanged.
+			$color = ColorValidator::isValidColor( $stop['color'] ) ?
+				$stop['color'] : $this->colorValidator->sanitizeColor( $stop['color'] );
 
 			$validColors[] = [
 				'offset' => $offset,
@@ -1127,7 +1129,7 @@ class ServerSideLayerValidator {
 		if ( isset( $gradient['angle'] ) && is_numeric( $gradient['angle'] ) ) {
 			$angle = (float)$gradient['angle'];
 			// Normalize to 0-360 range
-			$angle = fmod( $angle, 360 );
+			$angle = $angle >= 0 && $angle <= 360 ? $angle : fmod( $angle, 360 );
 			if ( $angle < 0 ) {
 				$angle += 360;
 			}

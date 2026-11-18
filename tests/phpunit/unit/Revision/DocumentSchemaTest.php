@@ -71,6 +71,23 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		$this->assertNotEmpty( $schema->canonicalize( json_encode( $doc ) ) );
 	}
 
+	public function testSafeGradientColorsAndFullTurnAngleRoundTripExactly(): void {
+		foreach ( [ '#FFF', '#abcd', 'rgba(255,0,0,0.5)', ' RED ' ] as $color ) {
+			foreach ( [ 'linear', 'radial' ] as $type ) {
+				$doc = self::fixture();
+				$doc->surfaces[0]->layers[0]->gradient = (object)[
+					'type' => $type, 'angle' => 360, 'centerX' => 0, 'radius' => 0.7,
+					'colors' => [
+						(object)[ 'offset' => 0, 'color' => $color ],
+						(object)[ 'offset' => 1, 'color' => '#000000' ]
+					]
+				];
+				$this->assertEquals( $doc,
+					json_decode( ( new DocumentSchema() )->canonicalize( json_encode( $doc ) ) ) );
+			}
+		}
+	}
+
 	public function testLiteralLayerAndRichTextRoundTripWithoutChanges(): void {
 		$schema = new DocumentSchema();
 		foreach ( [ 'a<b>c', '<button>', '  &lt;b&gt; literal  ' ] as $text ) {

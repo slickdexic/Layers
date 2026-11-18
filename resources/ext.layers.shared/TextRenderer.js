@@ -48,6 +48,11 @@
 			this.ctx = ctx;
 			this.config = config || {};
 			this.shadowRenderer = this.config.shadowRenderer || null;
+			this.gradientRenderer = this.config.gradientRenderer || null;
+		}
+
+		setGradientRenderer( renderer ) {
+			this.gradientRenderer = renderer;
 		}
 
 		/**
@@ -312,7 +317,13 @@
 			}
 
 			// Draw fill
-			this.ctx.fillStyle = layer.fill || layer.color || '#000000';
+			const left = align === 'center' ? x - textWidth / 2 : align === 'right' ? x - textWidth : x;
+			const ascent = textMetrics.actualBoundingBoxAscent ?? fontSize;
+			const descent = textMetrics.actualBoundingBoxDescent ?? 0;
+			const gradient = this.gradientRenderer && this.gradientRenderer.createGradient( layer, {
+				x: left, y: y - ascent, width: Math.max( 1, textWidth ), height: Math.max( 1, ascent + descent )
+			} );
+			this.ctx.fillStyle = gradient || layer.fill || layer.color || '#000000';
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fillText( text, x, y );
 
@@ -345,6 +356,7 @@
 			this.ctx = null;
 			this.config = null;
 			this.shadowRenderer = null;
+			this.gradientRenderer = null;
 		}
 	}
 

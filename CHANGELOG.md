@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Gradient editing
+- Keep gradient controls active after normal editor history capture so repeated
+  presets, colour stops and linear/radial changes apply without reselection.
+- Render gradient fills on plain text through the shared editor/viewer renderer.
+- Preserve valid CSS gradient colour spellings and a 360-degree angle through
+  native page Save instead of refusing them as altered data.
+
 ### Folder transforms
 - Use endpoint midpoints when rotating lines and arrows, and preserve the Pen
   renderer's default stroke width during group scaling.

@@ -1,3 +1,13 @@
+# Gradient regression repair — November 18, 2026
+
+Owner testing on the maintained 8080 wiki exposed inert gradient controls after
+history capture, missing plain-text gradient painting, and native Save refusing
+valid gradient spellings/360-degree angles. The repair advances FEAT-4, HIST-4
+and DATA-1. It preserves existing controls and exact saved values. See the
+[repair and verification record](GRADIENT_REGRESSION_REPAIR_2026-11-18.md).
+The earlier test results did not establish these complete editor journeys;
+overall v1.8 release readiness remains unaccepted.
+
 # Owner performance feedback — November 7, 2026
 
 ## Published v1.8rc1 checkpoint — November 8, 2026

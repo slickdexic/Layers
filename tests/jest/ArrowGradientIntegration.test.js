@@ -189,7 +189,8 @@ describe( 'Authoritative gradient settlement across real form, panel and editor 
         window.mw = { message: () => ( { exists: () => false } ), config: { get: () => false }, notify: jest.fn(), log: { error: jest.fn() } };
         editor = Object.create( LayersEditor.prototype );
         editor.config = { pageOwned: true };
-        editor.validationManager = { sanitizeLayerData: value => value };
+        const ValidationManager = require( '../../resources/ext.layers.editor/ValidationManager.js' );
+        editor.validationManager = new ValidationManager( editor );
         editor.historyManager = { saveState: jest.fn() };
         editor.stateManager = new StateManager( editor );
         editor.markDirty = () => editor.stateManager.set( 'isDirty', true );
@@ -218,6 +219,23 @@ describe( 'Authoritative gradient settlement across real form, panel and editor 
         editor.updateLayer( 'arrow', { gradient } ); panel.updatePropertiesPanel( 'arrow' );
         expect( controls().querySelector( '.gradient-angle-slider' ).value ).toBe( String( angle === undefined ? 90 : angle ) );
         expect( model().gradient ).toEqual( gradient );
+    } );
+
+    test( 'repeated presets remain usable after the editor recaptures the same layer values', () => {
+        select( 'linear' ); jest.advanceTimersByTime( 0 );
+        const initial = model().gradient;
+        editor.stateManager.set( 'layers', JSON.parse( JSON.stringify( editor.stateManager.get( 'layers' ) ) ) );
+        expect( model().gradient ).not.toBe( initial );
+        expect( model().gradient ).toEqual( initial );
+        controls().querySelectorAll( '.gradient-preset-swatch' )[ 0 ].click();
+        jest.advanceTimersByTime( 150 );
+        expect( model().gradient.angle ).toBe( 180 );
+        editor.stateManager.set( 'layers', JSON.parse( JSON.stringify( editor.stateManager.get( 'layers' ) ) ) );
+        controls().querySelectorAll( '.gradient-preset-swatch' )[ 1 ].click();
+        jest.advanceTimersByTime( 150 );
+        expect( model().gradient.angle ).toBe( 135 );
+        select( 'radial' );
+        expect( model().gradient.type ).toBe( 'radial' );
     } );
 
     test.each( [ 'linear', 'radial' ] )( '%s rapid stops and pending numeric edits survive reconstruction and immediate Save', async type => {

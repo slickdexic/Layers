@@ -6,8 +6,11 @@ candidate, not a declaration that the production release gate has passed.
 
 ## What to test
 
-Use the maintained MediaWiki 1.44 wiki at `http://localhost:8082` for the installed
-candidate. Port 8080 follows ongoing development; 8081 retains its older build.
+Use the maintained development wiki at `http://localhost:8080` to test the latest
+working source on MediaWiki 1.45. The maintained MediaWiki 1.44 wiki at
+`http://localhost:8082` checks the separately installed candidate package for
+compatibility. Check its build receipt before assuming it includes a later
+development fix. Port 8081 retains its older build.
 The public package's version is `1.8.0-rc.1`, tagged `v1.8rc1`. It uses the
 qualified local rc.3 code; local rc.1–rc.3 were internal builds, not earlier
 public releases. The accompanying build receipt identifies
