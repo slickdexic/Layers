@@ -206,6 +206,33 @@ describe( 'native-identity draft admission and full transactions', () => {
 		expect( Array.from( records.entries() ) ).toStrictEqual( p.original );
 	} );
 
+	test( 'does not rebuild old checkpoints before Continue, or at all after Cancel/Discard', async () => {
+		for ( const decision of [ false, true ] ) {
+			const p = await pair(), prepare = jest.spyOn( p.destination.bridge, 'prepareWorkingCopyDraftRecovery' );
+			const lifecycle = new Lifecycle( p.destination.bridge, p.reader, ui( async () => {
+				expect( prepare ).not.toHaveBeenCalled(); return decision;
+			} ) );
+			await lifecycle.initialize(); expect( prepare ).toHaveBeenCalledTimes( decision ? 1 : 0 ); lifecycle.dispose();
+			records.clear();
+		}
+	} );
+
+	test.each( [
+		[ 'history', c => { c.history.history[ 0 ].timestamp++; } ],
+		[ 'selection', c => { c.selection.selectedLayerIds.push( 'old' ); } ],
+		[ 'offscreen work', c => { c.session._snapshot.surfaces[ 1 ].layers[ 0 ].text = 'newer'; } ],
+		[ 'recovery method', c => { c.session.prepareWorkingCopyDraftCheckpoint = () => ( {} ); } ],
+		[ 'display method', c => { c.bridge.prepareWorkingCopyImportDisplay = () => ( {} ); } ]
+	] )( 'deferred preparation preserves late %s while deciding', async ( label, mutate ) => {
+		const p = await pair(); let changed;
+		const lifecycle = new Lifecycle( p.destination.bridge, p.reader, ui( async () => {
+			mutate( p.destination ); changed = witness( p.destination ); return true;
+		} ) );
+		await expect( lifecycle.initialize() ).rejects.toThrow(); preserved( changed );
+		expect( Array.from( records.entries() ) ).toStrictEqual( p.original );
+		expect( p.destination.publisher.publish ).not.toHaveBeenCalled();
+	} );
+
 	test( 'Cancel preserves the original draft and offers no publication', async () => {
 		const p = await pair(), before = clone( p.destination.session.getDraft().snapshot );
 		const lifecycle = new Lifecycle( p.destination.bridge, p.reader, ui( async () => false ) ); await lifecycle.initialize();

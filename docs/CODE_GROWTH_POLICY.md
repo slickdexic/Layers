@@ -84,3 +84,14 @@ The same acceptance journey identified server-canonicalized gradient key order
 after Save. Four PropertiesForm lines compare values independently of object key
 order; its bounded ceiling becomes 1,024. Other per-file, base-editor,
 reader/shared and timing budgets stay unchanged.
+
+## November 18 Save/Close timing repair
+
+HIST-4 and DATA-1 require Close to await the existing publication and its final
+backup instead of offering a conflicting second Save. LayersEditor adds 12 net
+lines for a shared pending Save and its Close continuation; its ceiling becomes
+2,616 and the base-editor bundle allowance increases by 1 KB to 2,188 KB.
+Recovery now captures the loaded editor's witnesses before the decision and
+rebuilds the selected old timeline only after Continue. Its small bridge witness
+fits the existing page-owned budget. Total source, reader and timing ceilings
+are unchanged.

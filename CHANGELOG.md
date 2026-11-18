@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Save and Close
+- Share an active Save between toolbar, keyboard and Close. Close waits through
+  publication and the final backup, avoiding a second Save and a false unsaved
+  prompt. Failed Saves and newer edits keep the editor open.
+- Defer rebuilding recovered Undo history until Continue draft; Discard and
+  Cancel retain their existing safeguards without preparing unused checkpoints.
+
 ### Recovery choices
 - Replace Keep drafts unchanged with Continue draft, confirmed Discard draft and
   open saved version, and Cancel returning to the page. Discard removes only the

@@ -202,7 +202,8 @@
 				const checkLive = () => {
 					if ( live() !== before ) { throw new Error( 'layers-editor-session-unavailable' ); }
 				};
-				const workingHandle = candidate.workingCopyDraft ? this.bridge.prepareWorkingCopyDraftRecovery( candidate ) : null;
+				const workingWitness = candidate.workingCopyDraft ? this.bridge.captureWorkingCopyDraftRecovery() : null;
+				let workingHandle;
 				let recover;
 				try {
 					recover = await this.ui.confirmRecovery( candidate );
@@ -210,7 +211,11 @@
 						await this.controller.revalidateRecovery();
 					}
 					if ( !this.disposed && !this.finalized ) { checkLive(); }
-					if ( workingHandle && recover ) { this.bridge.preflightWorkingCopyDraftRecovery( workingHandle ); }
+					if ( workingWitness && recover && !this.disposed && !this.finalized ) {
+						workingWitness.preflight();
+						workingHandle = this.bridge.prepareWorkingCopyDraftRecovery( candidate );
+						this.bridge.preflightWorkingCopyDraftRecovery( workingHandle );
+					}
 				} catch ( error ) {
 					if ( workingHandle ) { this.bridge.releaseWorkingCopyDraftRecovery( workingHandle ); }
 					throw error;

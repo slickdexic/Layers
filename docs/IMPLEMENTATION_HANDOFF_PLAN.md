@@ -1,3 +1,14 @@
+# Save/Close follow-up — November 18, 2026
+
+Owner testing found a completed server write followed by a false Close prompt
+and rejection of a second Save while the first still finished. The editor now
+shares its active Save and Close waits for the complete result. Recovery defers
+unused old-history preparation until Continue. Advances HIST-4, DATA-1 and
+PERF-3. The permanent 8080 browser journey holds a committed publication response
+and clicks Save/Close immediately; it no longer hides the race behind helper
+completion waits. [Repair evidence and remaining startup delay](SAVE_CLOSE_REGRESSION_REPAIR_2026-11-18.md).
+Overall v1.8 release acceptance remains open.
+
 # Approved recovery choices — November 18, 2026
 
 The owner approved [Continue/Discard/Cancel](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md)

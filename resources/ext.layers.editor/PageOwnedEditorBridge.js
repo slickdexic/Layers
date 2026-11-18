@@ -252,7 +252,23 @@
 			observations.forEach( Store.checkWorkingCopyObservation ); Store.checkWorkingCopyMethods( methods ); return state;
 		}
 
-		/** Prepare recovery before confirmation/read awaits; no live participant is changed. */
+		/** Watch the loaded editor while a decision is pending, without rebuilding the old timeline. */
+		captureWorkingCopyDraftRecovery() {
+			const Store = workingCopyStoreClass( this ), manager = this.editor.historyManager;
+			const selection = this.editor.canvasManager.selectionManager;
+			const historyWitness = manager.captureWorkingCopyImportHistory( this );
+			const selectionWitness = selection.captureWorkingCopyImportSelection();
+			const methods = [ ...[ 'prepareWorkingCopyDraftRecovery', 'commitWorkingCopyDraftRecovery', 'prepareWorkingCopyImportDisplay' ]
+				.map( key => [ this, key ] ), [ manager, 'prepareWorkingCopyDraftTimeline' ],
+				[ selection, 'prepareWorkingCopyImportSelection' ], ...[ 'prepareWorkingCopyDraftRestore',
+					'prepareWorkingCopyDraftCheckpoint', 'inspectWorkingCopyDraftRestore', 'commitWorkingCopyDraftRestore', 'revalidate' ]
+					.map( key => [ this.session, key ] ) ].map( ( [ object, key ] ) => Store.captureWorkingCopyMethod( object, key ) );
+			return Object.freeze( { preflight: () => {
+				historyWitness.preflight(); selectionWitness.preflight(); Store.checkWorkingCopyMethods( methods );
+			} } );
+		}
+
+		/** Prepare a chosen recovery; no live participant is changed. */
 		prepareWorkingCopyDraftRecovery( candidate ) {
 			let history, prepared, display, selection;
 			try {

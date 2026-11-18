@@ -273,6 +273,46 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Save and Load', () => {
 		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
 			'Save journeys require the disposable CI fixture' );
+		test( 'Discard recovery then immediate Save and Close publishes once', async ( { page } ) => {
+			test.setTimeout( 120000 );
+			const initialSnapshot = await editorPage.readSnapshot(), errors = [];
+			page.on( 'pageerror', error => errors.push( error.message ) );
+			page.on( 'console', message => { if ( message.type() === 'error' && message.text().includes( 'saveLayers rejected' ) ) errors.push( message.text() ); } );
+			let release, entered, publications = 0;
+			const held = new Promise( resolve => { release = resolve; } );
+			const committed = new Promise( resolve => { entered = resolve; } );
+			try {
+				await editorPage.openEditor();
+				await editorPage.selectTool( 'arrow' ); await editorPage.drawOnCanvas( 100, 100, 300, 200 );
+				await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+				expect( await page.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedDrafts.flushDurably() ) ).toBe( true );
+				await page.reload();
+				await page.getByRole( 'button', { name: 'Discard draft and open saved version', exact: true } ).click();
+				await page.getByRole( 'button', { name: 'Discard draft', exact: true } ).click();
+				await expect( page.getByRole( 'button', { name: 'Check saved page', exact: true } ) ).toBeVisible();
+				await editorPage.selectTool( 'arrow' ); await editorPage.drawOnCanvas( 100, 100, 320, 220 );
+				const expected = await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ) );
+				await page.route( '**/api.php', async route => {
+					if ( new URLSearchParams( route.request().postData() || '' ).get( 'action' ) !== 'layerspublish' ) { await route.continue(); return; }
+					publications++;
+					const response = await route.fetch(); entered(); await held; await route.fulfill( { response } );
+				} );
+				// helper.save() waits for completion, which hid this race.
+				await page.locator( '.save-button' ).click(); await committed;
+				await page.locator( '.save-button' ).click();
+				await page.getByRole( 'button', { name: 'Close', exact: true } ).click();
+				await expect( page.getByRole( 'alertdialog' ) ).toHaveCount( 0 );
+				expect( await page.evaluate( () => window.layersEditorInstance._closePending ) ).toBe( true );
+				release();
+				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
+				expect( ( await editorPage.readSnapshot() ).surfaces.find( surface => surface.id === 'presentation' ).layers ).toEqual( expected );
+				expect( publications ).toBe( 1 ); expect( errors ).toEqual( [] );
+			} finally {
+				release(); await page.unrouteAll( { behavior: 'wait' } );
+				await editorPage.restoreSnapshot( initialSnapshot );
+			}
+		} );
+
 		test( 'arrow and text gradients survive recovery choices and exact Save/reopen', async ( { page } ) => {
 			test.setTimeout( 120000 );
 			const pageErrors = []; page.on( 'pageerror', error => pageErrors.push( error.message ) );

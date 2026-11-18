@@ -2030,13 +2030,17 @@ class LayersEditor {
 	 * write retains that page's work; the current page uses its normal Save path.
 	 */
 	save () {
+		// Toolbar, keyboard and Close share one publication through final backup cleanup.
+		if ( this._savePromise ) { return this._savePromise; }
 		const buffered = this.pageBuffer ? this.pageBuffer.dirtyPages() : [];
-		if ( !buffered.length ) {
-			return this.saveCurrentPage();
-		}
-		return this.saveBufferedPages( buffered ).then( ( bufferedSaved ) =>
+		const saving = !buffered.length ? this.saveCurrentPage() : this.saveBufferedPages( buffered ).then( ( bufferedSaved ) =>
 			this.saveCurrentPage().then( ( currentSaved ) => bufferedSaved && currentSaved )
 		);
+		const pending = Promise.resolve( saving ).finally( () => {
+			if ( this._savePromise === pending ) { this._savePromise = null; }
+		} );
+		this._savePromise = pending;
+		return pending;
 	}
 
 	/**
@@ -2276,6 +2280,14 @@ class LayersEditor {
 	 */
 	cancel ( navigateBack ) {
 		if ( this._closeCompleted || this._closePending ) {
+			return;
+		}
+		if ( this._savePromise ) {
+			this._closePending = true;
+			this._savePromise.then( ( ok ) => {
+				this._closePending = false;
+				if ( ok === true && !this.isDestroyed ) { this.cancel( navigateBack ); }
+			}, () => { this._closePending = false; } );
 			return;
 		}
 		if ( this.layerPanel && typeof this.layerPanel.settleGradientControls === 'function' ) {
