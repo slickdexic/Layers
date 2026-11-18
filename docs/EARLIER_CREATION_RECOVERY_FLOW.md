@@ -18,10 +18,11 @@ Closing the editor or changing live work during any read refuses the operation.
 No automatic Save occurs. An explicit Save uses the current owning-page revision
 and its normal publication checks.
 
-Cancelling an earlier choice preserves backups and current work and adds no
-publication hold solely because a backup belongs to an earlier revision. The
-existing cancellation safeguards still apply when a current-revision draft is
-selected. Restoring an interrupted or uncertain Save retains its publication
+Owner-approved November 18: the [recovery choices](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md)
+now provide Continue draft, confirmed Discard draft and open saved version, and
+Cancel returning to the owning page. Discard removes only the selected reviewed
+backup. Cancel and Escape preserve backups and do not enter an uninitialized
+editor. Continuing an interrupted or uncertain Save retains its publication
 hold and the existing Check saved page workflow. Refusal keeps newer work and
 backups intact and reports the localized recovery failure.
 
@@ -43,7 +44,8 @@ explanations match their existing safeguards.
 The themed panel follows the Import dialog. Its heading and actions remain
 visible around independently scrollable draft content. Narrow layouts stack
 the existing buttons, with visible keyboard focus and touch-sized targets.
-The selection order, Review/Restore steps, initial focus, cancellation results,
-backup handling and publication behavior are unchanged. Names and preview text
+The November 18 amendment changes the decision actions and cancellation results
+as linked above. Selection order, bounded preview, safe initial focus and native
+publication checks remain. Names and preview text
 are inserted as plain text; private identifiers and guessed dates are omitted.
 Browser/mobile/owner acceptance remains separate from automated client checks.

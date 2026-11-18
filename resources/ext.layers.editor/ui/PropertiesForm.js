@@ -882,14 +882,18 @@
 						// Create gradient editor instance
 						const ownerConfig = editor.config;
 						let refreshTimer;
-						let expectedGradient = JSON.stringify( layer.gradient );
+						const gradientFingerprint = value => JSON.stringify( value, ( key, item ) => {
+							if ( !item || typeof item !== 'object' || Array.isArray( item ) ) { return item; }
+							return Object.fromEntries( Object.keys( item ).sort().map( name => [ name, item[ name ] ] ) );
+						} );
+						let expectedGradient = gradientFingerprint( layer.gradient );
 						const ownsGradient = () => {
 							const layers = editor.stateManager && editor.stateManager.get( 'layers' );
 							if ( !Array.isArray( layers ) ) {
 								return true;
 							}
 							const current = layers.find( item => item.id === layer.id );
-							return current && JSON.stringify( current.gradient ) === expectedGradient;
+							return current && gradientFingerprint( current.gradient ) === expectedGradient;
 						};
 						const isCurrent = () => !editor._closeCompleted && editor.config === ownerConfig &&
 							ownsGradient() &&
@@ -910,7 +914,7 @@
 								}
 								const layers = editor.stateManager && editor.stateManager.get( 'layers' );
 								const current = Array.isArray( layers ) && layers.find( item => item.id === layer.id );
-								expectedGradient = JSON.stringify( current ? current.gradient : updates.gradient );
+								expectedGradient = gradientFingerprint( current ? current.gradient : updates.gradient );
 							},
 							onFillTypeChange: function () {
 								// Refresh properties panel when switching between solid/gradient

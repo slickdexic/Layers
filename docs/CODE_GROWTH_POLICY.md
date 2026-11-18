@@ -70,3 +70,17 @@ and native Save to work together. The shared LayerRenderer ceiling increases
 from 1,003 to 1,006 lines for three lines connecting its existing gradient
 renderer to plain text. All other file ceilings, the 116,000-line total and
 bundle budgets remain unchanged.
+
+## November 18 approved recovery choices
+
+The owner approved Continue draft, confirmed Discard draft and open saved
+version, and Cancel returning to the page. HIST-4, DATA-1, DATA-3 and UI-7
+require exact selected-backup deletion, rollback on storage failure, native
+saved-editor preflight and a fresh editing session. Review permits a bounded
+500-line total increase to 116,500 and two APIManager wiring lines to 2,076.
+The implementation measures approximately 116,161 handwritten lines. The
+page-owned editor budget increases by 15 KB to 935 KB for measured 929.9 KB.
+The same acceptance journey identified server-canonicalized gradient key order
+after Save. Four PropertiesForm lines compare values independently of object key
+order; its bounded ceiling becomes 1,024. Other per-file, base-editor,
+reader/shared and timing budgets stay unchanged.

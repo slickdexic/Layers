@@ -109,6 +109,13 @@
 			} );
 		}
 
+		getRecoveryScope() { return { ...data( this ).scope }; }
+
+		prepareRecoveryDiscard( handle ) {
+			const record = data( this ), candidate = inspect( record, handle );
+			return record.store.prepareRecoveryDiscard( record.scope, candidate.writer, candidate.raw );
+		}
+
 		inspectCandidate( handle ) {
 			const record = data( this ), candidate = inspect( record, handle );
 			try {
@@ -126,7 +133,9 @@
 			record.reviewing = true; record.ready = false; const plans = [];
 			try {
 				if ( typeof record.store.initialize === 'function' ) await record.store.initialize( record.scope );
-				data( this ); const handles = this.listCandidates();
+				data( this );
+				if ( ui.openSaved === true ) { record.ready = true; return false; }
+				const handles = this.listCandidates();
 				if ( !handles.length ) { record.ready = true; return false; }
 				for ( const handle of handles ) {
 					try { plans.push( { candidate: handle, ...record.host.prepareDraftRecovery( this.inspectCandidate( handle ) ) } ); }
@@ -137,8 +146,9 @@
 					record.cancelled = true; record.host.blockPublication(); return false;
 				}
 				const plan = plans[ selected ]; if ( !plan.handle ) throw failure(); inspect( record, plan.candidate );
-				const restore = await ui.confirm( plan.preview ); data( this ); inspect( record, plan.candidate );
+				const restore = await ui.confirm( plan.preview, plan.candidate ); data( this );
 				if ( !restore ) { record.cancelled = true; record.host.blockPublication(); return false; }
+				inspect( record, plan.candidate );
 				await revalidate( record, plan.candidate ); data( this );
 				const restored = await record.host.commitDraftRecovery( plan.handle, () => { data( this ); inspect( record, plan.candidate ); },
 					async () => { await revalidate( record, plan.candidate ); data( this ); } );

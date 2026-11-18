@@ -70,6 +70,41 @@
 	}
 
 	class PageOwnedDraftStore {
+		static unpack( raw ) { return unpackDraft( raw ); }
+
+		/** Capture the exact selected backup; explicit confirmation is supplied by the caller. */
+		prepareRecoveryDiscard( scope, writer = this._readWriterId, expected ) {
+			if ( writer !== undefined && writer !== null && ( typeof writer !== 'string' || !/^[a-f0-9]{32}$/.test( writer ) ) ) {
+				throw failure( 'layers-invalid-draft-storage-request' );
+			}
+			const key = this._recordKey( this._validateAndBuildKey( scope ), writer === null ? undefined : writer );
+			const storage = this._storage, read = this._read, write = this._write, raw = read( key );
+			if ( typeof raw !== 'string' || ( expected !== undefined && unpackDraft( raw ) !== expected ) ) {
+				throw failure( 'layers-draft-storage-failed' );
+			}
+			const check = () => {
+				if ( this._storage !== storage || this._read !== read || this._write !== write ) {
+					throw failure( 'layers-draft-storage-failed' );
+				}
+			};
+			const restore = () => {
+				check(); const current = read( key );
+				if ( current === null ) { write( key, raw ); }
+				if ( read( key ) !== raw ) { throw failure( 'layers-draft-storage-failed' ); }
+			};
+			const preflight = () => { check(); if ( read( key ) !== raw ) { throw failure( 'layers-draft-record-changed' ); } };
+			return Object.freeze( { restore, preflight, discard: ( guard = () => {} ) => {
+				guard(); check();
+				if ( read( key ) !== raw || typeof storage.removeItem !== 'function' ) { throw failure( 'layers-draft-storage-failed' ); }
+				try {
+					guard(); check(); if ( read( key ) !== raw ) { throw failure( 'layers-draft-storage-failed' ); }
+					storage.removeItem( key );
+					if ( read( key ) !== null ) { throw failure( 'layers-draft-storage-failed' ); }
+					guard(); check();
+				} catch ( error ) { if ( read( key ) === null ) { restore(); } throw error; }
+			} } );
+		}
+
 		/** Inactive discovery: same wiki/user/owner only; keys and payloads grant no native authority. */
 		listEarlierCreationCandidates( scope, pdf = false ) {
 			const permitted = JSON.parse( this._validateAndBuildKey( scope ).slice( STORAGE_KEY_PREFIX.length ) );

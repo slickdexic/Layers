@@ -378,7 +378,11 @@ class LayersEditorPage {
 		expect( response.ok() ).toBe( true );
 		const data = await response.json();
 		expect( data.layerspublish?.result ?? ( data.layerssave?.success === 1 ? 'Success' : undefined ) ).toBe( 'Success' );
-		await this.page.waitForTimeout( 500 );
+		await this.page.waitForFunction( () => {
+			const manager = window.layersEditorInstance?.apiManager;
+			return ( !manager?.pageOwnedDrafts || !manager.pageOwnedDrafts.saving ) &&
+				( !manager?.pageOwnedBridge || !manager.pageOwnedBridge.saving );
+		} );
 		return response;
 	}
 

@@ -173,7 +173,7 @@ describe( 'Native missing-PDF editor Import startup', () => {
 		work = make(); await work.manager.loadLayers(); await choose( work ); const expected = copy( work.manager.pageOwnedCreation.host.getDraft().snapshot );
 		work.manager.pageOwnedCreation.lifecycle.flush(); const entries = Array.from( work.storage.records ); work.close(); work = null;
 		const chooseDraft = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'choose' ).mockResolvedValue( 0 );
-		const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'confirm' ).mockResolvedValue( true );
+		const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'decide' ).mockResolvedValue( 'continue' );
 		try {
 			work = make( true, memory( entries ) ); await work.manager.loadLayers();
 			expect( work.manager.pageOwnedCreation.importsEnabled ).toBe( true ); expect( confirm ).toHaveBeenCalled();
@@ -190,7 +190,7 @@ describe( 'Native missing-PDF editor Import startup', () => {
 		const entries = Array.from( work.storage.records ).filter( ( [ , raw ] ) => JSON.parse( raw ).scope.baseRevisionId === 12 );
 		expect( entries.length ).toBeGreaterThan( 0 ); work.close(); work = null;
 		const earlier = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'chooseEarlierCreation' ).mockResolvedValue( { selected: 0 } );
-		const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'confirm' ).mockResolvedValue( true );
+		const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'decide' ).mockResolvedValue( 'continue' );
 		try {
 			work = make( true, memory( entries ), saved ); await work.manager.loadLayers();
 			expect( earlier ).toHaveBeenCalled(); expect( confirm ).toHaveBeenCalled(); expect( work.manager.pageOwnedDrafts.ready ).toBe( true );

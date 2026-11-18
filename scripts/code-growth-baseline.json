@@ -1,10 +1,10 @@
 {
-	"totalLimit": 116000,
+	"totalLimit": 116500,
 	"largeFiles": {
 		"resources/ext.layers/viewer/LayersLightbox.js": 2389,
 		"resources/ext.layers/viewer/SlideController.js": 1203,
 		"resources/ext.layers/viewer/ViewerManager.js": 1336,
-		"resources/ext.layers.editor/APIManager.js": 2074,
+		"resources/ext.layers.editor/APIManager.js": 2076,
 		"resources/ext.layers.editor/canvas/DrawingController.js": 1070,
 		"resources/ext.layers.editor/canvas/InlineTextEditor.js": 1864,
 		"resources/ext.layers.editor/canvas/ResizeCalculator.js": 1073,
@@ -23,7 +23,7 @@
 		"resources/ext.layers.editor/StateManager.js": 1236,
 		"resources/ext.layers.editor/Toolbar.js": 2102,
 		"resources/ext.layers.editor/ToolbarStyleControls.js": 1141,
-		"resources/ext.layers.editor/ui/PropertiesForm.js": 1020,
+		"resources/ext.layers.editor/ui/PropertiesForm.js": 1024,
 		"resources/ext.layers.editor/ui/PropertyBuilders.js": 1978,
 		"resources/ext.layers.shared/AngleDimensionRenderer.js": 1067,
 		"resources/ext.layers.shared/ArrowRenderer.js": 1005,

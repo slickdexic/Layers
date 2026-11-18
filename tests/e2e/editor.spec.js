@@ -273,7 +273,9 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Save and Load', () => {
 		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
 			'Save journeys require the disposable CI fixture' );
-		test( 'arrow and text gradients support repeated edits and exact Save/reopen', async ( { page } ) => {
+		test( 'arrow and text gradients survive recovery choices and exact Save/reopen', async ( { page } ) => {
+			test.setTimeout( 120000 );
+			const pageErrors = []; page.on( 'pageerror', error => pageErrors.push( error.message ) );
 			const initialSnapshot = await editorPage.readSnapshot();
 			const model = id => page.evaluate( selected => window.layersEditorInstance.stateManager.get( 'layers' )
 				.find( layer => layer.id === selected ), id );
@@ -321,12 +323,60 @@ describeEditor( 'Layers Editor', () => {
 				for ( const layer of expected ) {
 					expect( saved.surfaces[ 0 ].layers.find( item => item.id === layer.id ).gradient ).toEqual( layer.gradient );
 				}
+				const arrow = expected[ 0 ];
+				const backups = () => page.evaluate( () => Object.fromEntries( Object.entries( localStorage )
+					.filter( ( [ key ] ) => key.startsWith( 'layers-page-owned-draft-v1:' ) ) ) );
+				const editAngle = async value => {
+					await page.locator( `.layer-item[data-layer-id="${ arrow.id }"] .layer-grab-area` ).click();
+					await page.locator( '.gradient-angle-slider' ).press( value === 0 ? 'Home' : 'End' );
+					await expect.poll( async () => ( await model( arrow.id ) ).gradient.angle ).toBe( value );
+					await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+					expect( await page.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedDrafts.flushDurably() ) ).toBe( true );
+				};
+				const ready = () => expect( page.getByRole( 'button', { name: 'Check saved page', exact: true } ) ).toBeVisible();
+				await editAngle( 0 );
+				const continued = await backups();
+				await page.reload(); await page.getByRole( 'button', { name: 'Continue draft', exact: true } ).click(); await ready();
+				await expect.poll( async () => ( await model( arrow.id ) ).gradient.angle ).toBe( 0 );
+				await page.getByRole( 'button', { name: /^Undo:/ } ).click();
+				await expect.poll( async () => ( await model( arrow.id ) ).gradient.angle ).toBe( 360 );
+				await page.getByRole( 'button', { name: /^Redo:/ } ).click();
+				await expect.poll( async () => ( await model( arrow.id ) ).gradient.angle ).toBe( 0 );
+				await editorPage.save();
+				await editAngle( 360 );
+				const doomed = await page.evaluate( () => {
+					const controller = window.layersEditorInstance.apiManager.pageOwnedDrafts.controller;
+					const key = controller.store._recordKey( controller.store._validateAndBuildKey( controller.getRecoveryScope() ), controller.store._writerId );
+					return { key, raw: localStorage.getItem( key ) };
+				} );
+				expect( doomed.raw ).toBeTruthy();
+				const beforeDiscard = await backups();
+				await page.reload();
+				await page.getByRole( 'button', { name: 'Discard draft and open saved version', exact: true } ).click();
+				await expect( page.getByRole( 'button', { name: 'Discard draft', exact: true } ) ).toBeVisible();
+				await page.getByRole( 'button', { name: 'Cancel', exact: true } ).click();
+				expect( await backups() ).toEqual( beforeDiscard );
+				await page.getByRole( 'button', { name: 'Discard draft and open saved version', exact: true } ).click();
+				await page.getByRole( 'button', { name: 'Discard draft', exact: true } ).click(); await ready();
+				expect( ( await backups() )[ doomed.key ] ).toBeUndefined();
+				for ( const [ key, raw ] of Object.entries( continued ) ) { expect( ( await backups() )[ key ] ).toBe( raw ); }
+				await expect.poll( async () => ( await model( arrow.id ) ).gradient.angle ).toBe( 0 );
+				await editAngle( 360 ); arrow.gradient = ( await model( arrow.id ) ).gradient;
+				await editorPage.save();
+				const afterRecovery = await editorPage.readSnapshot();
+				for ( const layer of expected ) {
+					expect( afterRecovery.surfaces[ 0 ].layers.find( item => item.id === layer.id ).gradient ).toEqual( layer.gradient );
+				}
 				await page.getByRole( 'button', { name: 'Close', exact: true } ).click();
 				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
 				await editorPage.openEditor();
 				for ( const layer of expected ) {
 					expect( ( await model( layer.id ) ).gradient ).toEqual( layer.gradient );
 				}
+				await editAngle( 0 ); const beforeCancel = await backups();
+				await page.reload(); await page.getByRole( 'button', { name: 'Cancel', exact: true } ).click();
+				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
+				expect( await backups() ).toEqual( beforeCancel ); expect( pageErrors ).toEqual( [] );
 			} finally {
 				await editorPage.restoreSnapshot( initialSnapshot );
 			}

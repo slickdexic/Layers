@@ -6,6 +6,36 @@ const database = require( './helpers/draftIndexedDB.js' );
 const scope = { wiki: 'wiki', user: 'user', owner: 'Page', baseRevisionId: 1, surfaceId: 'slide' };
 const writer = 'a'.repeat( 32 ), second = 'b'.repeat( 32 );
 const raw = value => JSON.stringify( { version: 1, scope, phase: 'ready', editorState: { layers: [ value ] }, history: [ value, 'undo', 'redo' ] } );
+
+test.each( [ 'local', 'database', 'both', 'different' ] )( 'explicit discard removes only the reviewed %s backup', async location => {
+	const { adapter, local, storage, key, db } = setup(); storage.quota = false;
+	if ( location !== 'database' ) local.set( key, raw( 'reviewed' ) );
+	if ( location !== 'local' ) db.records.set( key, raw( location === 'different' ? 'other copy' : 'reviewed' ) );
+	const reader = new Fallback( storage, second, true, adapter ); await reader.initialize( scope );
+	const choice = reader.listCandidates( scope ).find( value => location === 'database' ? typeof value === 'object' : value === writer );
+	reader.selectRecovery( choice ); const plan = reader.prepareRecoveryDiscard( scope );
+	local.set( 'unrelated', 'keep' ); await plan.preflight(); await plan.discard();
+	expect( local.has( key ) ).toBe( false ); expect( local.get( 'unrelated' ) ).toBe( 'keep' );
+	expect( db.records.get( key ) ).toBe( location === 'different' ? raw( 'other copy' ) : undefined );
+} );
+
+test( 'discard rolls a committed database deletion back when local deletion fails', async () => {
+	const { adapter, local, storage, key, db } = setup(); storage.quota = false;
+	local.set( key, raw( 'reviewed' ) ); db.records.set( key, raw( 'reviewed' ) );
+	const reader = new Fallback( storage, second, true, adapter ); await reader.initialize( scope ); reader.selectRecovery( writer );
+	const plan = reader.prepareRecoveryDiscard( scope ); storage.removeItem = () => { throw new Error( 'storage unavailable' ); };
+	await expect( plan.discard() ).rejects.toThrow();
+	expect( local.get( key ) ).toBe( raw( 'reviewed' ) ); expect( db.records.get( key ) ).toBe( raw( 'reviewed' ) );
+} );
+
+test( 'discard refuses a database backup changed since review and preserves its newer bytes', async () => {
+	const { adapter, storage, key, db } = setup(); db.records.set( key, raw( 'reviewed' ) );
+	const reader = new Fallback( storage, second, true, adapter ); await reader.initialize( scope );
+	reader.selectRecovery( reader.listCandidates( scope )[ 0 ] ); const plan = reader.prepareRecoveryDiscard( scope );
+	db.records.set( key, raw( 'newer work' ) ); await expect( plan.preflight() ).rejects.toThrow();
+	await expect( plan.discard() ).rejects.toThrow(); expect( db.records.get( key ) ).toBe( raw( 'newer work' ) );
+} );
+
 function setup() {
 	const db = database(), adapter = new Adapter( db.factory ), local = new Map();
 	const storage = { quota: true, getItem: key => local.get( key ) ?? null,

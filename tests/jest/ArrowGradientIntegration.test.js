@@ -230,6 +230,11 @@ describe( 'Authoritative gradient settlement across real form, panel and editor 
         controls().querySelectorAll( '.gradient-preset-swatch' )[ 0 ].click();
         jest.advanceTimersByTime( 150 );
         expect( model().gradient.angle ).toBe( 180 );
+        // Native Save sorts object keys. Equal gradients must remain current afterward.
+        const savedOrder = JSON.parse( JSON.stringify( model().gradient, ( key, item ) =>
+            item && typeof item === 'object' && !Array.isArray( item ) ?
+                Object.fromEntries( Object.keys( item ).sort().map( name => [ name, item[ name ] ] ) ) : item ) );
+        editor.stateManager.set( 'layers', [ { ...model(), gradient: savedOrder } ] );
         editor.stateManager.set( 'layers', JSON.parse( JSON.stringify( editor.stateManager.get( 'layers' ) ) ) );
         controls().querySelectorAll( '.gradient-preset-swatch' )[ 1 ].click();
         jest.advanceTimersByTime( 150 );

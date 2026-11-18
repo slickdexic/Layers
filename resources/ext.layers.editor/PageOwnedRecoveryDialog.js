@@ -4,8 +4,9 @@
 	let sequence = 0;
 	class PageOwnedRecoveryDialog {
 		/** @param {Function} message Localized message lookup */
-		constructor( message ) {
+		constructor( message, explicitChoices = false ) {
 			this.message = message;
+			this.explicitChoices = explicitChoices;
 			this.close = null;
 		}
 
@@ -26,8 +27,11 @@
 			return this._open( [ candidate ], true ).then( ( index ) => index === 0 );
 		}
 
+		/** Explicit intent only; the caller performs verified storage and navigation. */
+		decide( candidate ) { return this._open( [ candidate ], true, null, true ); }
+
 		/** @param {Array} candidates @param {boolean} confirm @return {Promise<?number>} @private */
-		_open( candidates, confirm, onCancel ) {
+		_open( candidates, confirm, onCancel, decisions = false ) {
 			this.dispose();
 			return new Promise( ( resolve ) => {
 				const priorFocus = document.activeElement;
@@ -49,7 +53,8 @@
 				} );
 				label.appendChild( select );
 				const intro = document.createElement( 'div' ); intro.className = 'layers-page-recovery-intro';
-				intro.textContent = this.message( confirm ? 'layers-page-draft-dialog-confirm-intro' : 'layers-page-draft-dialog-choose-intro' );
+				intro.textContent = this.message( decisions ? 'layers-page-draft-dialog-decision-intro' :
+					confirm ? 'layers-page-draft-dialog-confirm-intro' : 'layers-page-draft-dialog-choose-intro' );
 				const badge = document.createElement( 'span' ); badge.className = 'layers-page-recovery-badge';
 				badge.textContent = this.message( 'layers-page-draft-dialog-browser-badge' );
 				const context = document.createElement( 'div' ); context.className = 'layers-page-recovery-context';
@@ -72,10 +77,19 @@
 				const cancellation = document.createElement( 'div' ); cancellation.className = 'layers-page-recovery-cancellation';
 				const accept = document.createElement( 'button' );
 				accept.type = 'button';
-				accept.textContent = this.message( confirm ? 'layers-page-draft-dialog-restore' : 'layers-page-draft-dialog-review' );
+				accept.textContent = this.message( decisions ? 'layers-page-draft-dialog-continue' :
+					confirm ? 'layers-page-draft-dialog-restore' : 'layers-page-draft-dialog-review' );
 				const cancel = document.createElement( 'button' );
 				cancel.type = 'button';
-				cancel.textContent = this.message( 'layers-page-draft-dialog-cancel' );
+				cancel.textContent = this.message( decisions || this.explicitChoices ?
+					'layers-page-draft-dialog-cancel-opening' : 'layers-page-draft-dialog-cancel' );
+				const discard = document.createElement( 'button' ); discard.type = 'button';
+				discard.textContent = this.message( 'layers-page-draft-dialog-discard-open' );
+				discard.className = 'layers-page-recovery-discard';
+				const discardText = document.createElement( 'p' ); discardText.hidden = true;
+				discardText.className = 'layers-page-recovery-content';
+				discardText.textContent = this.message( 'layers-page-draft-dialog-discard-confirm' );
+				let confirmingDiscard = false;
 				const update = () => {
 					const candidate = candidates[ Number( select.value ) ];
 					const layers = candidate && candidate.editorState && candidate.editorState.layers;
@@ -84,7 +98,8 @@
 					noticeTitle.hidden = !( candidate && candidate.earlierCreation );
 					noticeTitle.textContent = this.message( 'layers-page-draft-dialog-earlier-title' );
 					warning.hidden = !( candidate && candidate.publicationBlocked );
-					cancellation.textContent = this.message( candidate && candidate.earlierCreation ? 'layers-page-draft-dialog-cancel-earlier' : 'layers-page-draft-dialog-cancel-current' );
+					cancellation.textContent = this.message( decisions || this.explicitChoices ? 'layers-page-draft-dialog-cancel-return' :
+						candidate && candidate.earlierCreation ? 'layers-page-draft-dialog-cancel-earlier' : 'layers-page-draft-dialog-cancel-current' );
 					accept.disabled = !Array.isArray( layers );
 					preview.textContent = Array.isArray( layers ) ? layers.slice( 0, 50 )
 						.map( ( layer ) => layer && typeof layer.text === 'string' ? layer.text.slice( 0, 200 ) : '' )
@@ -105,17 +120,29 @@
 					resolve( result );
 				};
 				select.addEventListener( 'change', update );
-				accept.addEventListener( 'click', () => { if ( !accept.disabled ) { finish( Number( select.value ) ); } } );
-				cancel.addEventListener( 'click', () => finish( null ) );
-				dialog.addEventListener( 'cancel', ( event ) => { event.preventDefault(); finish( null ); } );
-				const actions = document.createElement( 'div' ); actions.className = 'layers-page-recovery-actions'; actions.append( accept, cancel );
+				accept.addEventListener( 'click', () => { if ( !accept.disabled ) { finish( decisions ? 'continue' : Number( select.value ) ); } } );
+				const cancelAction = () => {
+					if ( confirmingDiscard ) {
+						confirmingDiscard = false; content.hidden = false; intro.hidden = false; discardText.hidden = true; accept.hidden = false;
+						discard.textContent = this.message( 'layers-page-draft-dialog-discard-open' ); cancel.focus();
+					} else { finish( decisions ? 'cancel' : null ); }
+				};
+				cancel.addEventListener( 'click', cancelAction );
+				discard.addEventListener( 'click', () => {
+					if ( confirmingDiscard ) { finish( 'discard' ); return; }
+					confirmingDiscard = true; content.hidden = true; intro.hidden = true; discardText.hidden = false; accept.hidden = true;
+					discard.textContent = this.message( 'layers-page-draft-dialog-discard' ); cancel.focus();
+				} );
+				dialog.addEventListener( 'cancel', ( event ) => { event.preventDefault(); cancelAction(); } );
+				const actions = document.createElement( 'div' ); actions.className = 'layers-page-recovery-actions'; actions.append( accept );
+				if ( decisions ) actions.append( discard ); actions.append( cancel );
 				accept.className = 'layers-page-recovery-primary';
 				const header = document.createElement( 'div' ); header.className = 'layers-page-recovery-header'; header.append( badge, title, intro );
 				const content = document.createElement( 'div' ); content.className = 'layers-page-recovery-content';
 				content.append( label, context, noticeBox, warning, previewTitle, previewNote, preview, reminder, cancellation );
-				dialog.append( header, content, actions );
+				dialog.append( header, content, discardText, actions );
 				document.body.appendChild( dialog );
-				this.close = () => finish( null );
+				this.close = () => finish( decisions ? 'cancel' : null );
 				update();
 				try {
 					dialog.showModal();

@@ -5,6 +5,51 @@
 	const fail = code => Object.assign( new Error( code || 'layers-draft-storage-failed' ), { code: code || 'layers-draft-storage-failed' } );
 	const pending = new WeakMap(), selections = new WeakMap(), earlier = new WeakMap();
 	class PageOwnedFallbackDraftStore extends Store {
+		/** Delete just the reviewed record, including an identical duplicate in the other store. */
+		prepareRecoveryDiscard( scope, writer = this._readWriterId, expected ) {
+			const selected = selections.get( writer );
+			if ( selected ) { if ( selected.store !== this ) throw fail(); writer = selected.writer; }
+			const key = this._recordKey( this._validateAndBuildKey( scope ), writer === null ? undefined : writer );
+			const raw = expected === undefined ? this.read( scope ) : expected;
+			const matches = value => typeof value === 'string' && Store.unpack( value ) === raw;
+			const local = matches( this._read( key ) ) ? super.prepareRecoveryDiscard( scope, writer, raw ) : null;
+			const saved = this.cached.get( key ), database = matches( saved ) ? saved : null;
+			if ( !local && database === null ) throw fail();
+			const rollback = async () => {
+				let error;
+				if ( local ) { try { local.restore(); } catch ( failure ) { error = failure; } }
+				if ( database !== null ) {
+					try {
+						const current = await this.database.read( key );
+						if ( current === null ) await this.database.change( [ { key, before: null, after: database } ] );
+						else if ( current !== database ) throw fail();
+						this.cached.set( key, database );
+					} catch ( failure ) { error = failure; }
+				}
+				if ( error ) throw error;
+			};
+			const preflight = async () => {
+				if ( local ) local.preflight();
+				if ( database !== null && await this.database.read( key ) !== database ) throw fail( 'layers-draft-record-changed' );
+				if ( local ) local.preflight();
+			};
+			return Object.freeze( { restore: rollback, preflight, discard: async ( guard = () => {} ) => {
+				if ( this.busy ) throw fail(); guard(); this.busy = true; let removed = false;
+				try {
+					if ( database !== null ) {
+						guard();
+						try { await this.database.change( [ { key, before: database, after: null } ] ); removed = true; }
+						catch ( error ) { removed = error.committed === true; throw error; }
+					}
+					guard(); if ( local ) local.discard( guard ); guard();
+					if ( database !== null ) this.cached.delete( key );
+				} catch ( error ) {
+					if ( removed ) await rollback();
+					throw error;
+				} finally { this.busy = false; }
+			} } );
+		}
+
 		constructor( storage, writer, verify, database ) {
 			super( storage, writer, verify );
 			this.database = database; this.cached = new Map(); this.committed = new Map(); this.ownedFallback = new Map();

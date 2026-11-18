@@ -11,8 +11,8 @@
 	},
 	{
 		"resourceModule": "ext.layers.editor.pageOwned",
-		"maxSize": "920 KB",
-		"note": "Page-owned editor module, now explicitly budgeted. November 11 review measured about 915 KB including the approved transactional draft fallback, recovery and PDF handoff integration. This is a new check for an existing editor-only module, not a reader allowance. See docs/CODE_GROWTH_POLICY.md for the bounded source and base-editor changes."
+		"maxSize": "935 KB",
+		"note": "Page-owned editor module, raw source bytes. November 18 review permits 15 KB for the owner-approved Continue/Discard/Cancel flow, exact selected-record deletion across local storage and IndexedDB, guarded saved-version loading and fresh-editor continuation. Reader/shared limits stay unchanged. See docs/CODE_GROWTH_POLICY.md."
 	},
 	{
 		"resourceModule": "ext.layers.shared",

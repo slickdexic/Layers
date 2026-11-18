@@ -59,10 +59,13 @@
 					try { if ( [ 3, 4 ].includes( this.controller.inspectCandidate( candidate ).version ) ) { this.enableImports(); break; } }
 					catch ( error ) { /* The existing recovery review reports corrupt or unavailable backups. */ }
 				}
-				this.dialog = new this.classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
+				this.dialog = new this.classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ), true );
+				const recovery = this.manager.pageOwnedRecoveryActions = new this.classes.PageOwnedDraftRecoveryActions( this.manager, this.controller, this.dialog );
 				this.lifecycle = new this.classes.PageOwnedPdfCreationLifecycle( this.editor, this.host, this.controller, this.store(), {
-					choose: previews => this.dialog.choose( previews ), confirm: preview => this.dialog.confirm( preview ),
-					notifyFailure: error => this.notify( error && error.code === 'layers-draft-storage-quota' ? 'layers-page-draft-quota' : 'layers-page-draft-failed' ), notifyBlocked: () => this.notify( 'layers-page-draft-blocked', 'warn' )
+					choose: previews => recovery.choose( previews ), confirm: ( preview, source ) => recovery.confirm( preview, source ),
+					openSaved: recovery.consumeSavedOpen(),
+					notifyFailure: error => this.notify( error && error.code === 'layers-draft-storage-quota' ? 'layers-page-draft-quota' : 'layers-page-draft-failed' ),
+					notifyBlocked: () => { if ( !recovery.departing ) this.notify( 'layers-page-draft-blocked', 'warn' ); }
 				} );
 				await this.lifecycle.initialize(); this.alive(); this.loaded = true;
 				// Recovery presentation ran before unsavedPages could read the initialized host.

@@ -495,6 +495,21 @@
 			}
 		}
 
+		getRecoveryScope() { return this._scope(); }
+
+		/** Capture the selected source without changing it or the editor's write ownership. */
+		prepareRecoveryDiscard( earlier ) {
+			if ( earlier !== undefined ) {
+				const source = this.store.inspectEarlierCreationCandidate( earlier );
+				const current = this._scope();
+				if ( [ 'wiki', 'user', 'owner' ].some( key => source.scope[ key ] !== current[ key ] ) ||
+					source.scope.baseRevisionId >= current.baseRevisionId ) { throw this._error(); }
+				return this.store.prepareRecoveryDiscard( source.scope, source.writerId, source.raw );
+			}
+			const scope = this._selectedLegacy ? this._legacyScope( this._scope() ) : this._scope();
+			return this.store.prepareRecoveryDiscard( scope, undefined, this.store.read( scope ) );
+		}
+
 		/** @return {Array} IDs of independent records for this authorized exact revision */
 		listCandidates() {
 			const scope = this._scope();

@@ -1,3 +1,12 @@
+# Approved recovery choices — November 18, 2026
+
+The owner approved [Continue/Discard/Cancel](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md)
+after Keep drafts unchanged left an editable canvas with unavailable history
+and Save. Implementation preserves source-backup identity, other drafts and
+native publication checks. The permanent browser journey now includes recovery
+and post-Save gradient edits in the same browser context. Advances HIST-4,
+DATA-1, DATA-3, FEAT-4 and UI-7. Overall v1.8 release acceptance remains open.
+
 # Gradient regression repair — November 18, 2026
 
 Owner testing on the maintained 8080 wiki exposed inert gradient controls after

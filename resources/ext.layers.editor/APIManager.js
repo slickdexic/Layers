@@ -442,20 +442,21 @@
 		const controller = new classes.PageOwnedDraftController( this.pageOwnedBridge, store,
 			new classes.PageOwnedSnapshotAdapter(), this.editor.config.pageOwned.draftScope || {} );
 		if ( this.pageOwnedImport ) { this.pageOwnedImport.enableDrafts( controller ); }
-		this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ) );
+		this.pageOwnedRecoveryDialog = new classes.PageOwnedRecoveryDialog( ( ...args ) => mw.msg( ...args ), true );
+		const recovery = this.pageOwnedRecoveryActions = new classes.PageOwnedDraftRecoveryActions( this, controller, this.pageOwnedRecoveryDialog );
 		this.pageOwnedDrafts = new classes.PageOwnedDraftLifecycle( this.pageOwnedBridge, controller, {
-			chooseDraft: ( candidates ) => this.pageOwnedRecoveryDialog.choose( candidates ),
-			confirmRecovery: ( candidate ) => this.pageOwnedRecoveryDialog.confirm( candidate ),
-			chooseEarlierDraft: ( candidates ) => this.pageOwnedRecoveryDialog.chooseEarlierCreation( candidates ),
+			chooseDraft: ( candidates ) => recovery.choose( candidates ),
+			confirmRecovery: ( candidate, source ) => recovery.confirm( candidate, source ),
+			chooseEarlierDraft: ( candidates ) => recovery.choose( candidates, true ),
 			notifyEarlierFailure: () => mw.notify( mw.msg( 'layers-page-draft-earlier-failed' ), { type: 'error' } ),
 			notifyFailure: ( saveError, error ) => mw.notify( mw.msg( error && error.code === 'layers-draft-storage-quota' ?
 				'layers-page-draft-quota' : 'layers-page-draft-failed' ),
 				saveError ? { type: 'error', classes: 'layers-save-error' } : { type: 'error' } ),
-			notifyBlocked: () => mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } )
+			notifyBlocked: () => { if ( !recovery.departing ) mw.notify( mw.msg( 'layers-page-draft-blocked' ), { type: 'warn' } ); }
 		} );
 		if ( durable ) this.pageOwnedCreation.savedDrafts = this.pageOwnedDrafts;
 		if ( this.pageOwnedImport && !durable ) { this.pageOwnedImport.enableEarlierCreationRecovery( this.pageOwnedDrafts ); }
-		return this.pageOwnedDrafts.initialize().then( () => {
+		return this.pageOwnedDrafts.initialize( recovery.consumeSavedOpen() ).then( () => {
 			if ( this.editor && this.pageOwnedDrafts.ready && !this.pageOwnedDrafts.disposed ) {
 				this.pageOwnedRevisionControl = new classes.PageOwnedRevisionControl( {
 					check: () => this.checkPageOwnedRevision(), message: ( key ) => mw.msg( key ), editor: this.editor
@@ -2013,6 +2014,7 @@
 	}
 
 	destroy() {
+		if ( this.pageOwnedRecoveryActions ) this.pageOwnedRecoveryActions.disposed = true;
 		if ( this.pageOwnedCreation ) this.pageOwnedCreation.dispose( true );
 		if ( this.pageOwnedImport ) { this.pageOwnedImport.dispose(); }
 		if ( this.pageOwnedRecoveryDialog ) {

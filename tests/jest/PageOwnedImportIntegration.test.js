@@ -127,7 +127,8 @@ describe( 'actual editor Import composition', () => {
         window.Layers.Editor.APIErrorHandler = class { setEnableSaveButtonCallback() {} destroy() {} };
         window.Layers.Editor.ExportController = class {};
         require( '../../resources/ext.layers.editor/PageOwnedReadClient.js' ); require( '../../resources/ext.layers.editor/PageOwnedPublishClient.js' );
-        require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' ); require( '../../resources/ext.layers.editor/PageOwnedRevisionControl.js' );
+        require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' );
+require( '../../resources/ext.layers.editor/PageOwnedDraftRecoveryActions.js' ); require( '../../resources/ext.layers.editor/PageOwnedRevisionControl.js' );
         require( '../../resources/ext.layers.editor/PageOwnedCopyPicker.js' ); require( '../../resources/ext.layers.editor/APIManager.js' );
         const manager = new window.Layers.Core.APIManager( c.editor );
         try { await manager.loadLayers(); expect( header.querySelector( '.layers-page-import-button' ) ).not.toBeNull();

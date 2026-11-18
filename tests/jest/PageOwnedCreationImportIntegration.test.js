@@ -89,7 +89,7 @@ describe( 'native creation Import editor composition', () => {
             key: index => Array.from( records.keys() )[ index ] ?? null, get length() { return records.size; } };
         mw.Api = jest.fn( () => c.api ); mw.msg = key => require( '../../i18n/en.json' )[ key ]; mw.notify = jest.fn();
         window.Layers.Editor.APIErrorHandler = class { setEnableSaveButtonCallback() {} destroy() {} }; window.Layers.Editor.ExportController = class {};
-        for ( const file of [ 'PageOwnedReadClient', 'PageOwnedPublishClient', 'PageOwnedRecoveryDialog', 'PageOwnedRevisionControl', 'PageOwnedCopyPicker', 'APIManager' ] ) { require( '../../resources/ext.layers.editor/' + file + '.js' ); }
+        for ( const file of [ 'PageOwnedReadClient', 'PageOwnedPublishClient', 'PageOwnedRecoveryDialog', 'PageOwnedDraftRecoveryActions', 'PageOwnedRevisionControl', 'PageOwnedCopyPicker', 'APIManager' ] ) { require( '../../resources/ext.layers.editor/' + file + '.js' ); }
         const manager = new window.Layers.Core.APIManager( c.editor );
         try { await manager.loadLayers(); expect( header.querySelector( '.layers-page-import-button' ) ).not.toBeNull(); expect( header.querySelector( '.layers-page-drawing-copy' ) ).not.toBeNull();
             manager.pageOwnedImport.control.open(); await tick(); manager.pageOwnedImport.control.dialog.list.querySelector( 'button' ).click(); await tick();

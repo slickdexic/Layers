@@ -3,7 +3,7 @@ const { setup, preparation, copy, witness, wait, tickUntil } = require( './fixtu
 for ( const name of [ 'PageOwnedReadClient', 'PageOwnedPublishClient', 'PageOwnedSnapshotAdapter', 'PageOwnedPdfEditorReadClient',
 	'PageOwnedPdfCreationReadClient', 'PageOwnedPdfCreationDraftController', 'PageOwnedPdfCreationLifecycle',
 	'PageOwnedPdfCreationIntegration', 'PageOwnedDraftStore', 'PageOwnedDraftController', 'PageOwnedDraftLifecycle',
-	'PageOwnedRecoveryDialog', 'PageOwnedRevisionControl', 'PageOwnedNameControl', 'PageOwnedSummaryField' ] ) {
+	'PageOwnedRecoveryDialog', 'PageOwnedDraftRecoveryActions', 'PageOwnedRevisionControl', 'PageOwnedNameControl', 'PageOwnedSummaryField' ] ) {
 	require( '../../resources/ext.layers.editor/' + name + '.js' );
 }
 window.Layers.Editor.APIErrorHandler = class { setEnableSaveButtonCallback() {} destroy() {} };
@@ -235,21 +235,21 @@ it( 'keeps a known saved revision when saved-session admission later fails', asy
 		expect( work.api.postWithToken ).toHaveBeenCalledTimes( 1 );
 	} finally { work.close(); }
 } );
-it( 'allows the existing explicit Discard choice after Keep drafts unchanged without deleting the source backup', async () => {
+it( 'Cancel leaves recovery for the owning page without deleting the source backup', async () => {
 	const source = make(), storage = localStorage(); let target;
-	const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'confirm' ).mockResolvedValue( false );
+	const confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'decide' ).mockResolvedValue( 'cancel' );
+	const leave = jest.spyOn( window.Layers.Editor.PageOwnedDraftRecoveryActions.prototype, 'leave' ).mockImplementation( function () { this.departing = true; } );
+	mw.util = { getUrl: title => '/wiki/' + title };
 	try {
 		await source.manager.loadLayers(); source.edit( 'Earlier backup' ); source.manager.pageOwnedCreation.lifecycle.flush();
 		const raw = Array.from( source.storage.records.values() )[ 0 ], scope = JSON.parse( raw ).scope;
 		new window.Layers.Editor.PageOwnedDraftStore( storage, 'a'.repeat( 32 ) ).write( scope, raw );
 		target = make( true, 2, storage ); await target.manager.loadLayers();
 		expect( confirm ).toHaveBeenCalled(); expect( target.manager.pageOwnedCreation.lifecycle.getStatus().ready ).toBe( false );
-		target.editor.dialogManager = { showSaveDiscardDialog: jest.fn( async () => 'discard' ) };
-		Editor.prototype.cancel.call( target.editor, true ); await Promise.resolve(); await Promise.resolve();
 		expect( target.editor.navigateBackToFileWithName ).toHaveBeenCalledTimes( 1 );
 		expect( Array.from( storage.records.values() ) ).toEqual( [ raw ] );
 		expect( target.api.postWithToken ).not.toHaveBeenCalled();
-	} finally { confirm.mockRestore(); if ( target ) target.close(); source.close(); }
+	} finally { confirm.mockRestore(); leave.mockRestore(); if ( target ) target.close(); source.close(); }
 } );
 it( 'runs the existing Save-and-Close choice only after durable saved ownership is installed', async () => {
 	const work = make();
@@ -349,13 +349,13 @@ it( 'cancels the initial canvas background loader before exact native creation s
 } );
 it( 'preserves late saved work during handoff recovery review without changing the other writer', async () => {
 	const source = make(), storage = localStorage(); let target, resolveReview;
-	const original = window.Layers.Editor.PageOwnedRecoveryDialog.prototype.confirm;
+	const original = window.Layers.Editor.PageOwnedRecoveryDialog.prototype.decide;
 	try {
 		await source.manager.loadLayers(); source.edit( 'Earlier saved draft' ); await source.manager.saveLayers();
 		const entry = Array.from( source.storage.records ).find( ( [ key, raw ] ) => JSON.parse( raw ).pdfDraft );
 		storage.records.set( entry[ 0 ], entry[ 1 ] );
 		target = make( true, 2, storage ); await target.manager.loadLayers(); target.edit( 'New first Save' );
-		window.Layers.Editor.PageOwnedRecoveryDialog.prototype.confirm = jest.fn( () => new Promise( resolve => { resolveReview = resolve; } ) );
+		window.Layers.Editor.PageOwnedRecoveryDialog.prototype.decide = jest.fn( () => new Promise( resolve => { resolveReview = resolve; } ) );
 		const saving = target.manager.saveLayers(); for ( let i = 0; i < 500 && !resolveReview; i++ ) await Promise.resolve();
 		expect( resolveReview ).toEqual( expect.any( Function ) ); target.edit( 'Late while reviewing saved draft' );
 		window.dispatchEvent( new Event( 'pagehide' ) );
@@ -363,9 +363,9 @@ it( 'preserves late saved work during handoff recovery review without changing t
 		const preserved = Array.from( storage.records ).filter( ( [ key, raw ] ) => key !== entry[ 0 ] && JSON.parse( raw ).pdfDraft );
 		expect( preserved ).toHaveLength( 1 );
 		expect( JSON.parse( preserved[ 0 ][ 1 ] ).editorState.layers[ 0 ].text ).toBe( 'Late while reviewing saved draft' );
-		resolveReview( false ); expect( await saving ).toMatchObject( { revisionId: 13, dirty: true, draftPersisted: false } );
+		resolveReview( 'continue' ); expect( await saving ).toMatchObject( { revisionId: 13, dirty: true, draftPersisted: false } );
 		expect( target.editor.layers[ 0 ].text ).toBe( 'Late while reviewing saved draft' );
-	} finally { window.Layers.Editor.PageOwnedRecoveryDialog.prototype.confirm = original; if ( target ) target.close(); source.close(); }
+	} finally { window.Layers.Editor.PageOwnedRecoveryDialog.prototype.decide = original; if ( target ) target.close(); source.close(); }
 } );
 it( 'verifies the saved writer rather than the selected recovery writer when persisting later work', async () => {
 	const work = make();

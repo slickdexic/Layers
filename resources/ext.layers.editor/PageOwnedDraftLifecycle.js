@@ -58,14 +58,7 @@
 				if ( candidate.publicationBlocked ) { ui.notifyBlocked(); }
 			}
 			if ( this.disposed || this.finalized ) { return; }
-			this.ready = true;
-			for ( const key of keys ) {
-				this.unsubscribers.push( bridge.editor.stateManager.subscribe( key, () => {
-					if ( this.finalized || this.disposed ) { return; }
-					clearTimeout( this.timer ); this.timer = setTimeout( () => this.flushDurably(), 1000 );
-				} ) );
-			}
-			window.addEventListener( 'pagehide', this.onPageHide );
+			this.start();
 		}
 
 		/**
@@ -152,7 +145,7 @@
 				if ( choice.selected < current.length ) { return { current: [ current[ choice.selected ] ] }; }
 				earlierSelected = true;
 				const plan = plans[ choice.selected - current.length ];
-				const restore = await ui.confirmRecovery( plan.preview ); guard();
+				const restore = await ui.confirmRecovery( plan.preview, plan.candidate ); guard();
 				if ( restore ) {
 					if ( typeof controller.revalidateRecovery === 'function' ) { await controller.revalidateRecovery( plan.candidate ); guard(); }
 					if ( pdf ) await controller.commitEarlierPdfCreationRecovery( plan.handle );
@@ -170,12 +163,13 @@
 		}
 
 		/** @return {Promise<void>} Authorization/exact revision loading must already have succeeded */
-		async initialize() {
+		async initialize( openSaved = false ) {
 			if ( typeof this.controller.initialize === 'function' ) {
 				const initializing = this.controller.initialize();
 				if ( initializing && typeof initializing.then === 'function' ) { await initializing; }
 			}
 			if ( this.disposed || this.finalized ) { return; }
+			if ( openSaved ) { this.start(); return; }
 			const pdf = earlierPdfCreationClients.has( this ), client = pdf ? earlierPdfCreationClients.get( this ) : earlierCreationClients.get( this );
 			const choice = client ? await this._chooseEarlierCreationRecovery( client, pdf ) : null;
 			if ( this.disposed || this.finalized || ( choice && choice.blocked ) ) { return; }
@@ -252,6 +246,12 @@
 					return;
 				}
 			}
+			this.start();
+		}
+
+		/** Start a complete editing lifecycle only after the recovery decision has finished. */
+		start() {
+			if ( this.disposed || this.finalized || this.ready ) { return; }
 			this.ready = true;
 			for ( const key of keys ) {
 				this.unsubscribers.push( this.bridge.editor.stateManager.subscribe( key, () => {

@@ -78,8 +78,9 @@
 			window.addEventListener( 'pagehide', record.onPageHide, true );
 			try {
 				await record.controller.review( {
+					openSaved: record.ui.openSaved === true,
 					choose: async previews => { check(); const result = await record.ui.choose( previews ); check(); return result; },
-					confirm: async preview => { check(); const result = await record.ui.confirm( preview ); check(); return result; }
+					confirm: async ( preview, source ) => { check(); const result = await record.ui.confirm( preview, source ); check(); return result; }
 				} ); check();
 				const status = record.controller.getLifecycleStatus();
 				if ( !status.ready || status.cancelled ) { notify( record, 'notifyBlocked' ); return false; }

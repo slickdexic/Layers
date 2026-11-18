@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Recovery choices
+- Replace Keep drafts unchanged with Continue draft, confirmed Discard draft and
+  open saved version, and Cancel returning to the page. Discard removes only the
+  reviewed backup; new editing, backups, Undo/Redo and Save start normally.
+- Keep other drafts and saved revisions intact, refuse changed backups, and
+  preserve interrupted-publication reconciliation checks.
+- Keep gradient controls active after native Save reorders equal object keys.
+
 ### Gradient editing
 - Keep gradient controls active after normal editor history capture so repeated
   presets, colour stops and linear/radial changes apply without reselection.

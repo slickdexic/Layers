@@ -3,7 +3,7 @@ const { setup, preparation, copy } = require( './fixtures/pdfCreationHost.js' );
 for ( const name of [ 'PageOwnedReadClient', 'PageOwnedPublishClient', 'PageOwnedSnapshotAdapter', 'PageOwnedPdfEditorReadClient',
 	'PageOwnedPdfCreationReadClient', 'PageOwnedPdfCreationDraftController', 'PageOwnedPdfCreationLifecycle',
 	'PageOwnedPdfCreationIntegration', 'PageOwnedDraftStore', 'PageOwnedDraftController', 'PageOwnedDraftLifecycle',
-	'PageOwnedRecoveryDialog', 'PageOwnedRevisionControl', 'PageOwnedNameControl', 'PageOwnedSummaryField' ] ) {
+	'PageOwnedRecoveryDialog', 'PageOwnedDraftRecoveryActions', 'PageOwnedRevisionControl', 'PageOwnedNameControl', 'PageOwnedSummaryField' ] ) {
 	require( '../../resources/ext.layers.editor/' + name + '.js' );
 }
 window.Layers.Editor.APIErrorHandler = class { setEnableSaveButtonCallback() {} destroy() {} };
@@ -119,7 +119,7 @@ it.each( [ 'throw', 'promise' ] )( 'retires creation subscriptions when installa
 
 it( 'shows recovered unsaved PDF work immediately after initial review', async () => {
  const slot = true;
- const source = make( slot ), confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'confirm' ).mockResolvedValue( true );
+ const source = make( slot ), confirm = jest.spyOn( window.Layers.Editor.PageOwnedRecoveryDialog.prototype, 'decide' ).mockResolvedValue( 'continue' );
  let target;
  try {
   await source.manager.loadLayers(); source.edit( 'Recovered second page' );

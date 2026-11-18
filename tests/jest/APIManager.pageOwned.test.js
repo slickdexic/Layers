@@ -11,6 +11,7 @@ require( '../../resources/ext.layers.editor/PageOwnedDraftStore.js' );
 require( '../../resources/ext.layers.editor/PageOwnedDraftController.js' );
 require( '../../resources/ext.layers.editor/PageOwnedDraftLifecycle.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRecoveryDialog.js' );
+require( '../../resources/ext.layers.editor/PageOwnedDraftRecoveryActions.js' );
 require( '../../resources/ext.layers.editor/PageOwnedRevisionControl.js' );
 require( '../../resources/ext.layers.editor/PageOwnedNameControl.js' );
 require( '../../resources/ext.layers.editor/PageOwnedSummaryField.js' );

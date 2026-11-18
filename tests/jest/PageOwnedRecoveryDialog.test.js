@@ -13,6 +13,18 @@ describe( 'PageOwnedRecoveryDialog', () => {
 	} );
 	afterEach( () => { view.dispose(); opener.remove(); } );
 
+	it( 'requires explicit Discard confirmation and returns to recovery when confirmation is cancelled', async () => {
+		const pending = view.decide( { editorState: { layers: [ { text: 'Draft' } ] } } );
+		const dialog = document.querySelector( 'dialog' ), buttons = dialog.querySelectorAll( 'button' );
+		expect( Array.from( buttons, button => button.textContent ) ).toEqual( [
+			'layers-page-draft-dialog-continue', 'layers-page-draft-dialog-discard-open', 'layers-page-draft-dialog-cancel-opening' ] );
+		buttons[ 1 ].click(); expect( document.activeElement ).toBe( buttons[ 2 ] );
+		expect( buttons[ 1 ].textContent ).toBe( 'layers-page-draft-dialog-discard' );
+		buttons[ 2 ].click(); expect( buttons[ 0 ].hidden ).toBe( false );
+		expect( buttons[ 1 ].textContent ).toBe( 'layers-page-draft-dialog-discard-open' );
+		buttons[ 1 ].click(); buttons[ 1 ].click(); expect( await pending ).toBe( 'discard' );
+	} );
+
 	it( 'renders markup as text and returns the selected index without modifying draft data', async () => {
 		const candidates = [ { editorState: { layers: [ { text: '<img src=x onerror=alert(1)>' } ] } },
 			{ editorState: { layers: [ { text: 'Second draft' } ] } } ];

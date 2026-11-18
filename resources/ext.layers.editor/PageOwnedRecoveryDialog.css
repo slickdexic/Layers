@@ -167,6 +167,10 @@
 	color: var( --color-inverted, #fff );
 }
 
+.layers-page-recovery button.layers-page-recovery-discard {
+	color: var( --color-destructive, #b32424 );
+}
+
 .layers-page-recovery button:disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
