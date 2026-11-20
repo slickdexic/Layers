@@ -368,6 +368,97 @@ test.describe( 'Canvas Rendering', () => {
 	} );
 } );
 
+test.describe( 'Gradient envelope pixels', () => {
+	test.beforeEach( async ( { page } ) => {
+		await page.setContent( '<!doctype html><html><body></body></html>' );
+		await setupMWMocks( page );
+		await loadScript( page, path.join( resourcesDir, 'ext.layers.shared/GradientRenderer.js' ) );
+		await loadScript( page, path.join( resourcesDir, 'ext.layers.shared/TextRenderer.js' ) );
+	} );
+
+	test( 'radial percentages, moved centres and zero produce the expected colours', async ( { page } ) => {
+		const samples = await page.evaluate( () => {
+			const canvas = document.createElement( 'canvas' ); canvas.width = 400; canvas.height = 300;
+			const ctx = canvas.getContext( '2d' ), renderer = new window.Layers.GradientRenderer( ctx );
+			const colors = [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ], samples = [];
+			for ( const [ radius, centerX, centerY ] of [ [ 0.5, 0.5, 0.5 ], [ 1, 0.5, 0.5 ], [ 2, 0.5, 0.5 ], [ 1, 0, 0 ], [ 1, 1, 1 ] ] ) {
+				ctx.clearRect( 0, 0, 400, 300 );
+				ctx.fillStyle = renderer.createGradient( { gradient: { type: 'radial', radius, centerX, centerY, colors } }, { x: 0, y: 0, width: 400, height: 300 } );
+				ctx.fillRect( 0, 0, 400, 300 );
+				for ( const [ x, y ] of [ [ 0, 0 ], [ 199, 149 ], [ 399, 299 ], [ 99, 74 ] ] ) {
+					const t = Math.min( 1, Math.hypot( x + 0.5 - centerX * 400, y + 0.5 - centerY * 300 ) / ( radius * 500 ) );
+					samples.push( { actual: Array.from( ctx.getImageData( x, y, 1, 1 ).data ), expected: [ 255 * ( 1 - t ), 0, 255 * t, 255 ] } );
+				}
+			}
+			ctx.clearRect( 0, 0, 400, 300 );
+			ctx.fillStyle = renderer.createGradient( { gradient: { type: 'radial', radius: 0,
+				colors: [ { offset: 1, color: 'rgba(0,0,255,0.25)' }, { offset: 0, color: '#f00' } ] } }, { x: 0, y: 0, width: 400, height: 300 } );
+			ctx.fillRect( 0, 0, 400, 300 );
+			samples.push( { actual: Array.from( ctx.getImageData( 200, 150, 1, 1 ).data ), expected: [ 0, 0, 255, 64 ] } );
+			return samples;
+		} );
+		for ( const sample of samples ) { sample.actual.forEach( ( value, index ) => expect( Math.abs( value - sample.expected[ index ] ) ).toBeLessThanOrEqual( 2 ) ); }
+	} );
+
+	test( 'radial Text paint follows alignment, rotation and zoom without changing its parameters', async ( { page } ) => {
+		const result = await page.evaluate( () => {
+			let samples = 0, maxError = 0;
+			for ( const align of [ 'left', 'center', 'right' ] ) for ( const rotation of [ 0, 37 ] ) for ( const zoom of [ 0.5, 1, 2 ] ) for ( const radius of [ 0, 0.5, 2 ] ) {
+				const canvas = document.createElement( 'canvas' ); canvas.width = 1200; canvas.height = 700;
+				const ctx = canvas.getContext( '2d' ); ctx.font = '48px Arial'; const width = ctx.measureText( 'GRADIENT TEXT' ).width;
+				ctx.translate( 600, 350 ); ctx.scale( zoom, zoom );
+				const gradient = { type: 'radial', radius, centerX: 0.125, centerY: 0.7325,
+					colors: [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ] };
+				const before = JSON.stringify( gradient ), renderer = new window.Layers.GradientRenderer( ctx ), create = renderer.createGradient.bind( renderer );
+				let bounds, inverse;
+				renderer.createGradient = ( layer, value, options ) => { bounds = value; inverse = ctx.getTransform().inverse(); return create( layer, value, options ); };
+				new window.Layers.TextRenderer( ctx, { gradientRenderer: renderer } ).draw( { text: 'GRADIENT TEXT',
+					x: align === 'center' ? 0 : align === 'right' ? width / 2 : -width / 2, y: 12,
+					fontSize: 48, fontFamily: 'Arial', textAlign: align, rotation, gradient } );
+				if ( JSON.stringify( gradient ) !== before ) throw new Error( 'Rendering changed gradient data' );
+				const data = ctx.getImageData( 0, 0, 1200, 700 ).data;
+				for ( let y = 0; y < 700; y += 7 ) for ( let x = 0; x < 1200; x += 7 ) {
+					const index = ( y * 1200 + x ) * 4; if ( data[ index + 3 ] !== 255 ) continue;
+					const p = inverse.transformPoint( { x: x + 0.5, y: y + 0.5 } );
+					const t = radius === 0 ? 1 : Math.min( 1, Math.hypot( p.x - bounds.x - bounds.width * gradient.centerX,
+						p.y - bounds.y - bounds.height * gradient.centerY ) / ( Math.hypot( bounds.width, bounds.height ) * radius ) );
+					maxError = Math.max( maxError, Math.abs( data[ index ] - 255 * ( 1 - t ) ), Math.abs( data[ index + 2 ] - 255 * t ) ); samples++;
+				}
+			}
+			return { samples, maxError };
+		} );
+		expect( result.samples ).toBeGreaterThan( 100 ); expect( result.maxError ).toBeLessThanOrEqual( 3 );
+	} );
+
+	test( 'wide Text vertical gradients reach both end colours at different font sizes', async ( { page } ) => {
+		const rows = await page.evaluate( () => {
+			const results = [];
+			for ( const fontSize of [ 36, 72, 108 ] ) {
+				const canvas = document.createElement( 'canvas' ); canvas.width = 1200; canvas.height = 200;
+				const ctx = canvas.getContext( '2d' ), text = 'GRADIENT TEXT', y = 150;
+				ctx.font = fontSize + 'px Arial'; const m = ctx.measureText( text ), h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+				new window.Layers.TextRenderer( ctx, { gradientRenderer: new window.Layers.GradientRenderer( ctx ) } ).draw( {
+					text, x: 20, y, fontSize, fontFamily: 'Arial', gradient: { type: 'linear', angle: 90,
+						colors: [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ] }
+				} );
+				for ( const t of [ 0.1, 0.9 ] ) {
+					const data = ctx.getImageData( 0, Math.round( y - m.actualBoundingBoxAscent + t * h ), canvas.width, 1 ).data;
+					const pixels = [];
+					for ( let x = 0; x < data.length; x += 4 ) { if ( data[ x + 3 ] > 250 ) pixels.push( [ data[ x ], data[ x + 2 ] ] ); }
+					results.push( { t, count: pixels.length, red: pixels.reduce( ( sum, p ) => sum + p[ 0 ], 0 ) / pixels.length,
+						blue: pixels.reduce( ( sum, p ) => sum + p[ 1 ], 0 ) / pixels.length } );
+				}
+			}
+			return results;
+		} );
+		for ( const row of rows ) {
+			expect( row.count ).toBeGreaterThan( 5 );
+			expect( row.t < 0.5 ? row.red : row.blue ).toBeGreaterThan( 200 );
+			expect( row.t < 0.5 ? row.blue : row.red ).toBeLessThan( 55 );
+		}
+	} );
+} );
+
 test.describe( 'Browser Compatibility', () => {
 	test( 'supports required APIs', async ( { page } ) => {
 		await page.goto( 'about:blank' );

@@ -12,7 +12,7 @@
  *   // For radial gradients:
  *   centerX: number (0-1, relative position),
  *   centerY: number (0-1, relative position),
- *   radius: number (0-1, relative to smallest dimension)
+ *   radius: number (0-2, relative to the full bounding-box diagonal)
  * }
  *
  * @module GradientRenderer
@@ -84,6 +84,7 @@
 	 * @param {Object} bounds - Bounding box { x, y, width, height }
 		 * @param {Object} [options] - Additional options
 		 * @param {number} [options.scale=1] - Scale factor
+		 * @param {boolean} [options.fitLinearToBounds=false] Fit plain Text transitions to their angle
 		 * @return {CanvasGradient|null} Canvas gradient or null if invalid
 		 */
 		createGradient( layer, bounds, options = {} ) {
@@ -108,8 +109,14 @@
 				let canvasGradient;
 
 				if ( gradient.type === 'linear' ) {
-					canvasGradient = this._createLinearGradient( gradient, x, y, width, height );
+					canvasGradient = this._createLinearGradient( gradient, x, y, width, height, options.fitLinearToBounds );
 				} else if ( gradient.type === 'radial' ) {
+					if ( gradient.radius === 0 ) {
+						const outer = [ ...gradient.colors ].sort( ( a, b ) => a.offset - b.offset ).pop().color;
+						canvasGradient = this.ctx.createLinearGradient( x, y, x + 1, y );
+						this._addColorStops( canvasGradient, [ { offset: 0, color: outer }, { offset: 1, color: outer } ] );
+						return canvasGradient;
+					}
 					canvasGradient = this._createRadialGradient( gradient, x, y, width, height );
 				} else {
 					return null;
@@ -136,16 +143,17 @@
 		 * @param {number} y - Y position
 		 * @param {number} width - Width
 		 * @param {number} height - Height
+		 * @param {boolean} fitToBounds Fit plain Text to the projected bounds
 		 * @return {CanvasGradient} Linear gradient
 		 */
-		_createLinearGradient( gradient, x, y, width, height ) {
-			const angle = ( gradient.angle || 0 ) * ( Math.PI / 180 );
+		_createLinearGradient( gradient, x, y, width, height, fitToBounds = false ) {
+			const angle = ( gradient.angle ?? ( fitToBounds ? 90 : 0 ) ) * ( Math.PI / 180 );
 			const centerX = x + width / 2;
 			const centerY = y + height / 2;
 
-			// Calculate gradient line based on angle
-			// The gradient should span the full bounding box
-			const diagonal = Math.sqrt( width * width + height * height ) / 2;
+			// Plain Text uses the envelope's projection onto this direction.
+			const diagonal = ( fitToBounds ? Math.abs( width * Math.cos( angle ) ) +
+				Math.abs( height * Math.sin( angle ) ) : Math.hypot( width, height ) ) / 2;
 
 			const x0 = centerX - Math.cos( angle ) * diagonal;
 			const y0 = centerY - Math.sin( angle ) * diagonal;
@@ -169,14 +177,13 @@
 			// Default center is at 50%, 50%
 			const relCenterX = gradient.centerX !== undefined ? gradient.centerX : 0.5;
 			const relCenterY = gradient.centerY !== undefined ? gradient.centerY : 0.5;
-			const relRadius = gradient.radius !== undefined ? gradient.radius : 0.5;
+			const relRadius = gradient.radius !== undefined ? gradient.radius : 0.7;
 
 			const centerX = x + width * relCenterX;
 			const centerY = y + height * relCenterY;
 
-			// Radius is relative to the smallest dimension
-			const minDim = Math.min( width, height );
-			const radius = minDim * relRadius;
+			// The full diagonal stays fixed when the centre moves within the envelope.
+			const radius = Math.hypot( width, height ) * relRadius;
 
 			// Inner radius is 0 (starts from center)
 			return this.ctx.createRadialGradient( centerX, centerY, 0, centerX, centerY, radius );

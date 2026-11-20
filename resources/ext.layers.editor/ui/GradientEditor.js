@@ -374,40 +374,48 @@
 		 * @private
 		 */
 		_buildRadialControls() {
-			// Radius control
-			const radiusRow = document.createElement( 'div' );
-			radiusRow.className = 'property-field';
+			this._buildRadialControl( 'radius', 'radius', msg( 'layers-gradient-radius', 'Radius' ), 2, 0.7 );
+			this._buildRadialControl( 'centerX', 'center-x', msg( 'layers-gradient-center-x', 'Center X' ), 1, 0.5 );
+			this._buildRadialControl( 'centerY', 'center-y', msg( 'layers-gradient-center-y', 'Center Y' ), 1, 0.5 );
+		}
 
-			const radiusLabel = document.createElement( 'label' );
-			radiusLabel.textContent = msg( 'layers-gradient-radius', 'Radius' );
-			radiusLabel.setAttribute( 'for', 'gradient-radius-input' );
-
-			const radiusInput = document.createElement( 'input' );
-			radiusInput.type = 'range';
-			radiusInput.id = 'gradient-radius-input';
-			radiusInput.min = 0.1;
-			radiusInput.max = 1.5;
-			radiusInput.step = 0.1;
-			radiusInput.value = ( this.currentGradient && this.currentGradient.radius ) || 0.7;
-			radiusInput.className = 'gradient-radius-slider';
-
-			const radiusValue = document.createElement( 'span' );
-			radiusValue.className = 'gradient-radius-value';
-			radiusValue.textContent = Math.round( radiusInput.value * 100 ) + '%';
-
-			this._addListener( radiusInput, 'input', ( e ) => {
-				const radius = parseFloat( e.target.value );
-				radiusValue.textContent = Math.round( radius * 100 ) + '%';
-				if ( this.currentGradient ) {
-					this.currentGradient.radius = radius;
-					this._notifyChange();
-				}
-			} );
-
-			radiusRow.appendChild( radiusLabel );
-			radiusRow.appendChild( radiusInput );
-			radiusRow.appendChild( radiusValue );
-			this.container.appendChild( radiusRow );
+		/** Build a labelled range and exact percentage entry without materialising omitted defaults. */
+		_buildRadialControl( key, name, text, maximum, fallback ) {
+			const row = document.createElement( 'div' );
+			row.className = 'property-field gradient-percent-field';
+			const id = 'gradient-' + name + '-' + gradientSelectCount;
+			const label = document.createElement( 'label' );
+			label.textContent = text; label.id = id + '-label'; label.htmlFor = id;
+			const range = document.createElement( 'input' );
+			range.type = 'range'; range.id = id; range.min = 0; range.max = maximum; range.step = 'any';
+			range.className = 'gradient-' + name + '-slider gradient-percent-slider';
+			const number = document.createElement( 'input' );
+			number.type = 'number'; number.min = 0; number.max = maximum * 100; number.step = 'any';
+			number.className = 'gradient-' + name + '-number gradient-percent-number';
+			number.setAttribute( 'aria-labelledby', label.id );
+			const unit = document.createElement( 'span' );
+			unit.id = id + '-unit'; unit.textContent = '%'; unit.className = 'gradient-percent-unit';
+			number.setAttribute( 'aria-describedby', unit.id );
+			const display = ( value, writeNumber = true ) => {
+				range.value = String( value );
+				const percentage = String( Math.round( value * 1e8 ) / 1e6 );
+				if ( writeNumber ) { number.value = percentage; }
+				range.setAttribute( 'aria-valuetext', percentage + '%' );
+			};
+			const current = () => this.currentGradient && this.currentGradient[ key ] !== undefined ?
+				this.currentGradient[ key ] : fallback;
+			const update = ( input, percentage ) => {
+				if ( input.value === '' || !Number.isFinite( input.valueAsNumber ) ) { return; }
+				const value = Math.max( 0, Math.min( maximum, input.valueAsNumber / ( percentage ? 100 : 1 ) ) );
+				// Keep the number's editing buffer, including a decimal point being typed.
+				display( value, input !== number );
+				if ( this.currentGradient ) { this.currentGradient[ key ] = value; this._notifyChange(); }
+			};
+			display( current() );
+			this._addListener( range, 'input', () => update( range, false ) );
+			this._addListener( number, 'input', () => update( number, true ) );
+			this._addListener( number, 'change', () => display( current() ) );
+			row.append( label, range, number, unit ); this.container.appendChild( row );
 		}
 
 		/**

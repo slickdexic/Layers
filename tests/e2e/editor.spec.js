@@ -273,6 +273,72 @@ describeEditor( 'Layers Editor', () => {
 	describeEditor( 'Save and Load', () => {
 		test.skip( process.env.CI !== 'true' || process.env.LAYERS_E2E_DISPOSABLE !== '1',
 			'Save journeys require the disposable CI fixture' );
+		test( 'radial diagonal radius and exact centres survive history, recovery and Save', async ( { page } ) => {
+			test.setTimeout( 120000 );
+			const initialSnapshot = await editorPage.readSnapshot(), errors = [];
+			let release = () => {};
+			page.on( 'pageerror', error => errors.push( error.message ) );
+			const ready = () => expect( page.getByRole( 'button', { name: 'Check saved page', exact: true } ) ).toBeVisible();
+			try {
+				await editorPage.openEditor(); await editorPage.selectTool( 'text' ); await editorPage.clickCanvas( 120, 250 );
+				await page.getByRole( 'textbox', { name: 'Type your text here...' } ).fill( 'GRADIENT TEXT' );
+				await page.getByRole( 'button', { name: 'OK', exact: true } ).click();
+				const id = await page.evaluate( () => window.layersEditorInstance.stateManager.get( 'layers' ).filter( layer => layer.type === 'text' ).at( -1 ).id );
+				const model = () => page.evaluate( selected => window.layersEditorInstance.stateManager.get( 'layers' ).find( layer => layer.id === selected ), id );
+				const select = () => page.locator( `.layer-item[data-layer-id="${ id }"] .layer-grab-area` ).click();
+				await select(); await page.locator( 'input[data-prop="fontSize"]' ).fill( '72' );
+				await page.locator( 'input[data-prop="fontSize"]' ).press( 'Tab' );
+				await expect.poll( async () => ( await model() ).fontSize ).toBe( 72 );
+				await page.locator( '.gradient-type-select' ).selectOption( 'radial' );
+				await page.locator( '.gradient-preset-swatch' ).nth( 0 ).click(); await editorPage.save();
+				const editNumber = async ( name, value ) => {
+					const input = page.locator( `.gradient-${ name }-number` );
+					await input.fill( '' ); await input.pressSequentially( value, { delay: 15 } ); await input.press( 'Tab' );
+				};
+				await editNumber( 'radius', '137.5' ); await editNumber( 'center-x', '12.5' ); await editNumber( 'center-y', '73.25' );
+				await expect.poll( async () => ( await model() ).gradient ).toMatchObject( { radius: 1.375, centerX: 0.125, centerY: 0.7325 } );
+				await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+				await page.locator( '.gradient-radius-slider' ).press( 'Home' );
+				await expect.poll( async () => ( await model() ).gradient.radius ).toBe( 0 );
+				await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+				// Use editor history; Ctrl+Z inside a numeric input belongs to that input.
+				await page.getByRole( 'button', { name: /^Undo:/ } ).click(); await expect.poll( async () => ( await model() ).gradient.radius ).toBe( 1.375 );
+				await page.getByRole( 'button', { name: /^Redo:/ } ).click(); await expect.poll( async () => ( await model() ).gradient.radius ).toBe( 0 );
+				expect( await page.evaluate( () => window.layersEditorInstance.apiManager.pageOwnedDrafts.flushDurably() ) ).toBe( true );
+				await page.reload(); await page.getByRole( 'button', { name: 'Continue draft', exact: true } ).click(); await ready();
+				await select(); await expect( page.locator( '.gradient-radius-number' ) ).toHaveValue( '0' );
+				await expect( page.locator( '.gradient-center-x-number' ) ).toHaveValue( '12.5' );
+				await expect( page.locator( '.gradient-center-y-number' ) ).toHaveValue( '73.25' );
+				await editorPage.save();
+				expect( ( await editorPage.readSnapshot() ).surfaces[ 0 ].layers.find( layer => layer.id === id ).gradient )
+					.toMatchObject( { radius: 0, centerX: 0.125, centerY: 0.7325 } );
+				await page.getByRole( 'button', { name: 'Close', exact: true } ).click();
+				await page.waitForFunction( () => window.mw?.config?.get( 'wgPageName' ) === 'Layers_browser_acceptance' );
+				await editorPage.openEditor(); await select();
+				await expect( page.locator( '.gradient-radius-number' ) ).toHaveValue( '0' );
+				await editNumber( 'radius', '200' ); await editNumber( 'center-x', '0' ); await editNumber( 'center-y', '100' );
+				let entered;
+				const held = new Promise( resolve => { release = resolve; } ), committed = new Promise( resolve => { entered = resolve; } );
+				await page.route( '**/api.php', async route => {
+					if ( new URLSearchParams( route.request().postData() || '' ).get( 'action' ) !== 'layerspublish' ) { await route.continue(); return; }
+					const response = await route.fetch(); entered(); await held; await route.fulfill( { response } );
+				} );
+				const saving = editorPage.save(); await committed;
+				await editNumber( 'center-y', '50' ); await expect.poll( async () => ( await model() ).gradient.centerY ).toBe( 0.5 );
+				// Deliberately let the 300 ms property-history timer fire while publication is pending.
+				await page.waitForTimeout( 600 ); release(); await saving;
+				await page.waitForFunction( () => !window.layersEditorInstance._updateLayerSaveTimer );
+				expect( await page.evaluate( () => window.layersEditorInstance.hasUnsavedChanges() ) ).toBe( true );
+				await page.getByRole( 'button', { name: /^Undo:/ } ).click(); await expect.poll( async () => ( await model() ).gradient.centerY ).toBe( 1 );
+				await page.getByRole( 'button', { name: /^Redo:/ } ).click(); await expect.poll( async () => ( await model() ).gradient.centerY ).toBe( 0.5 );
+				await page.unrouteAll( { behavior: 'wait' } );
+				await editorPage.save();
+				expect( ( await editorPage.readSnapshot() ).surfaces[ 0 ].layers.find( layer => layer.id === id ).gradient )
+					.toMatchObject( { radius: 2, centerX: 0, centerY: 0.5 } );
+				expect( errors ).toEqual( [] );
+			} finally { release(); await page.unrouteAll( { behavior: 'wait' } ); await editorPage.restoreSnapshot( initialSnapshot ); }
+		} );
+
 		test( 'gradient to Solid Color survives Undo, recovery and native Save', async ( { page } ) => {
 			test.setTimeout( 120000 );
 			const initialSnapshot = await editorPage.readSnapshot(), expected = [], errors = [];
@@ -407,7 +473,7 @@ describeEditor( 'Layers Editor', () => {
 					await expect.poll( () => page.locator( '.layers-canvas' ).evaluate( canvas => canvas.toDataURL() ) )
 						.not.toBe( linearPixels );
 					await page.locator( '.gradient-radius-slider' ).press( 'Home' );
-					await expect.poll( async () => ( await model( id ) ).gradient.radius ).toBe( 0.1 );
+					await expect.poll( async () => ( await model( id ) ).gradient.radius ).toBe( 0 );
 					await fillType.selectOption( 'linear' );
 					await page.locator( '.gradient-angle-slider' ).press( 'End' );
 					await expect.poll( async () => ( await model( id ) ).gradient.angle ).toBe( 360 );

@@ -1017,10 +1017,21 @@ class LayersEditor {
 				if ( this._updateLayerSaveTimer ) {
 					clearTimeout( this._updateLayerSaveTimer );
 				}
-				this._updateLayerSaveTimer = setTimeout( () => {
-					this._updateLayerSaveTimer = null;
-					this.saveState( 'Update layer' );
+				const bridge = this.apiManager && this.apiManager.pageOwnedBridge;
+				const timer = setTimeout( () => {
+					const record = () => {
+						if ( this._updateLayerSaveTimer !== timer ) { return; }
+						this._updateLayerSaveTimer = null;
+						if ( this.isDestroyed || this._closeCompleted || ( bridge && ( bridge.disposed ||
+							bridge !== ( this.apiManager && this.apiManager.pageOwnedBridge ) ||
+							bridge.session.getStatus().phase !== 'ready' ) ) ) { return; }
+						this.saveState( 'Update layer' );
+					};
+					// Publication freezes its history checkpoint; record newer edits once it settles.
+					if ( this._savePromise ) { this._savePromise.then( record, record ); }
+					else { record(); }
 				}, 300 );
+				this._updateLayerSaveTimer = timer;
 			}
 		} catch ( error ) {
 			if ( this.debug ) {

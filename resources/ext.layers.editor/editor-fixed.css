@@ -1718,8 +1718,9 @@ body.layers-editor-open .mw-body-content {
 
 /* Angle and radius sliders */
 .gradient-editor .gradient-angle-slider,
-.gradient-editor .gradient-radius-slider {
+.gradient-editor .gradient-percent-slider {
 	flex: 1;
+	min-width: 30px;
 	height: 6px;
 	border-radius: 3px;
 	background: linear-gradient( to right, #e0e0e0, #d0d0d0 );
@@ -1728,7 +1729,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 .gradient-editor .gradient-angle-slider::-webkit-slider-thumb,
-.gradient-editor .gradient-radius-slider::-webkit-slider-thumb {
+.gradient-editor .gradient-percent-slider::-webkit-slider-thumb {
 	appearance: none;
 	width: 16px;
 	height: 16px;
@@ -1745,6 +1746,26 @@ body.layers-editor-open .mw-body-content {
 	text-align: right;
 	font-size: 0.8em;
 	color: #666;
+}
+
+.gradient-editor .gradient-percent-field {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.gradient-editor .gradient-percent-field label {
+	flex: 0 0 64px;
+}
+
+.gradient-editor .gradient-percent-number {
+	width: 64px;
+	min-width: 0;
+	flex: 0 0 64px;
+}
+
+.gradient-editor .gradient-percent-unit {
+	flex: 0 0 auto;
 }
 
 /* Color stops editor */
@@ -3656,7 +3677,7 @@ body.layers-resize-cursor {
 	}
 
 	html.skin-theme-clientpref-night .gradient-editor .gradient-angle-slider,
-	html.skin-theme-clientpref-night .gradient-editor .gradient-radius-slider,
+	html.skin-theme-clientpref-night .gradient-editor .gradient-percent-slider,
 	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-offset {
 		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
 	}
@@ -4282,7 +4303,7 @@ body.layers-resize-cursor {
 	}
 
 	html.skin-theme-clientpref-os .gradient-editor .gradient-angle-slider,
-	html.skin-theme-clientpref-os .gradient-editor .gradient-radius-slider,
+	html.skin-theme-clientpref-os .gradient-editor .gradient-percent-slider,
 	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-offset {
 		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
 	}

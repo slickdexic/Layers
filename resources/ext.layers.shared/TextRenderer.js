@@ -322,7 +322,7 @@
 			const descent = textMetrics.actualBoundingBoxDescent ?? 0;
 			const gradient = this.gradientRenderer && this.gradientRenderer.createGradient( layer, {
 				x: left, y: y - ascent, width: Math.max( 1, textWidth ), height: Math.max( 1, ascent + descent )
-			} );
+			}, { fitLinearToBounds: true } );
 			this.ctx.fillStyle = gradient || layer.fill || layer.color || '#000000';
 			this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.fillOpacity );
 			this.ctx.fillText( text, x, y );

@@ -222,6 +222,8 @@
 	"layers-gradient-preset": "Label for gradient preset selector",
 	"layers-gradient-angle": "Property label for linear gradient angle in degrees",
 	"layers-gradient-radius": "Property label for radial gradient radius",
+	"layers-gradient-center-x": "Property label for radial gradient horizontal centre, a percentage from the left edge (0) to the right edge (100).",
+	"layers-gradient-center-y": "Property label for radial gradient vertical centre, a percentage from the top edge (0) to the bottom edge (100).",
 	"layers-gradient-colors": "Section label for gradient color stops editor",
 	"layers-gradient-add-stop": "Tooltip for button to add a new color stop to the gradient",
 	"layers-gradient-remove-stop": "Tooltip for button to remove a color stop from the gradient",

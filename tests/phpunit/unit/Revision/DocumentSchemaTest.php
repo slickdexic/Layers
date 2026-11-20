@@ -103,6 +103,17 @@ class DocumentSchemaTest extends \MediaWikiUnitTestCase {
 		}
 	}
 
+	public function testRadialEnvelopeRangeAndFractionalCentresRoundTripExactly(): void {
+		foreach ( [ [ 0, 0, 1 ], [ 0.5, 0.5, 0.5 ], [ 2, 1, 0 ], [ 1.375, 0.125, 0.7325 ] ] as [ $radius, $x, $y ] ) {
+			$doc = self::fixture();
+			$doc->surfaces[0]->layers[0]->gradient = (object)[ 'type' => 'radial',
+				'radius' => $radius, 'centerX' => $x, 'centerY' => $y, 'colors' => [
+					(object)[ 'offset' => 0, 'color' => '#f00' ], (object)[ 'offset' => 1, 'color' => '#00f' ]
+				] ];
+			$this->assertEquals( $doc, json_decode( ( new DocumentSchema() )->canonicalize( json_encode( $doc ) ) ) );
+		}
+	}
+
 	public function testLiteralLayerAndRichTextRoundTripWithoutChanges(): void {
 		$schema = new DocumentSchema();
 		foreach ( [ 'a<b>c', '<button>', '  &lt;b&gt; literal  ' ] as $text ) {

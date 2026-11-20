@@ -18,6 +18,11 @@
 - Keep gradient controls active after native Save reorders equal object keys.
 
 ### Gradient editing
+- Size radial gradients as 0–200% of the object's full envelope diagonal, with
+  precise Radius and Center X/Y percentages. Zero uses the outer stop's colour.
+- Fit plain Text linear gradients to their envelope at the selected angle.
+- Keep later property edits dirty and undoable when their history timer runs
+  during an active Save, without recording against an uncertain native base.
 - Save changes from a gradient back to Solid Color, including recovered edits
   and the explicit cleared-gradient value already held by open editors.
 - Keep gradient controls active after normal editor history capture so repeated

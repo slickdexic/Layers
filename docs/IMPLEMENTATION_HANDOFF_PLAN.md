@@ -1,3 +1,20 @@
+# Approved gradient envelope and centre controls — November 19, 2026
+
+The owner approved the [shared radial envelope and centre controls](TEXT_GRADIENT_SIZING_BEHAVIOUR_BRIEF.md).
+Radius uses 0–200% of the full local diagonal, zero paints the outer stop, and
+Center X/Y use exact 0–100% positions. Plain Text linear transitions fit their
+projected bounds. This advances FEAT-2, FEAT-3d and OPS-4. The existing storage
+format and strict publication checks retain the parameters without rewriting
+saved data. Existing radial gradients render with the approved new sizing.
+
+The real browser journey also exposed a property-history timer racing an active
+Save. A deterministic native-session regression failed against the prior timer.
+The corrected timer coalesces later edits and records them only after the same
+Save settles on a ready base. Later work stays dirty; uncertain bases remain
+held. This advances FEAT-4 and DATA-1. Browser verification deliberately holds a
+committed response, edits again, checks Undo/Redo and explicitly saves the newer
+work. Overall v1.8 release acceptance remains open.
+
 # Gradient-to-solid Save follow-up — November 18, 2026
 
 Owner testing found that switching an existing radial-gradient arrow to Solid

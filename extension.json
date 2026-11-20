@@ -1513,6 +1513,8 @@
 				"layers-gradient-preset",
 				"layers-gradient-angle",
 				"layers-gradient-radius",
+				"layers-gradient-center-x",
+				"layers-gradient-center-y",
 				"layers-gradient-colors",
 				"layers-gradient-add-stop",
 				"layers-gradient-remove-stop",

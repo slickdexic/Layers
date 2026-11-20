@@ -6,8 +6,8 @@
 	},
 	{
 		"resourceModule": "ext.layers.editor",
-		"maxSize": "2188 KB",
-		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. The budget allows 2 KB for undoable legacy recovery and 1 KB for visible Save-error handling; affected files add about 371 and 312 gzip bytes respectively when compressed separately. The approved v1.8 Help corrections add 2063 raw bytes (705 gzip bytes when this file is compressed separately); the editor-only limit adds 2 KB to account for this text. Reader budgets and charter timing targets are unchanged. Owner-approved folder transforms add about 28 KB of editor-only geometry, transaction and selection code; this reviewed allowance adds 30 KB. The November 18 Save/Close concurrency repair adds a reviewed 1 KB allowance. Reader limits and timing targets stay unchanged."
+		"maxSize": "2190 KB",
+		"note": "Full editor, raw source bytes. Includes generated ShapeLibraryData/EmojiLibraryIndex files. The budget allows 2 KB for undoable legacy recovery and 1 KB for visible Save-error handling; affected files add about 371 and 312 gzip bytes respectively when compressed separately. The approved v1.8 Help corrections add 2063 raw bytes (705 gzip bytes when this file is compressed separately); the editor-only limit adds 2 KB to account for this text. Reader budgets and charter timing targets are unchanged. Owner-approved folder transforms add about 28 KB of editor-only geometry, transaction and selection code; this reviewed allowance adds 30 KB. The November 18 Save/Close concurrency repair adds a reviewed 1 KB allowance. Reader limits and timing targets stay unchanged. The November 19 approved radial centre controls and property-history scheduling repair add a reviewed 2 KB editor allowance. Shared and reader limits stay unchanged; see docs/TEXT_GRADIENT_SIZING_BEHAVIOUR_BRIEF.md."
 	},
 	{
 		"resourceModule": "ext.layers.editor.pageOwned",

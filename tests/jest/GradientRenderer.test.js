@@ -157,8 +157,8 @@ describe( 'GradientRenderer', function () {
 			};
 			const layer = { gradient: gradient };
 			renderer.createGradient( layer, { x: 0, y: 0, width: 200, height: 100 } );
-			// centerX=0.5 → 100, centerY=0.5 → 50, radius=0.5*100=50
-			expect( mockCtx.createRadialGradient ).toHaveBeenCalledWith( 100, 50, 0, 100, 50, 50 );
+			// Omitted radius follows the existing 70% control default on the full diagonal.
+			expect( mockCtx.createRadialGradient ).toHaveBeenCalledWith( 100, 50, 0, 100, 50, Math.hypot( 200, 100 ) * 0.7 );
 		} );
 	} );
 

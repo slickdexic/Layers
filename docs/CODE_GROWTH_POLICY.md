@@ -95,3 +95,16 @@ Recovery now captures the loaded editor's witnesses before the decision and
 rebuilds the selected old timeline only after Continue. Its small bridge witness
 fits the existing page-owned budget. Total source, reader and timing ceilings
 are unchanged.
+
+## November 19 approved gradient envelope controls
+
+The owner approved the full-diagonal radial basis, 0–200% radius and Center X/Y
+sliders with numeric percentages. FEAT-2 and FEAT-3d require shared rendering,
+including zero-radius paint and plain Text linear projection. The editor bundle
+allowance increases by 2 KB to 2,190 KB for the compact shared percentage-control
+builder, labels and layout, plus property-history settlement after an active
+Save. The native regression reproduced an uncaught history refusal when that
+timer fired during publication. Eleven editor lines defer/coalesce the history
+step until the same Save settles, retain newer edits and keep uncertain bases
+held; its bounded ceiling becomes 2,627. Total handwritten source and
+shared/reader ceilings stay unchanged; shared rendering fits its existing budget.
