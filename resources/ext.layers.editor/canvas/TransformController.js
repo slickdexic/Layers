@@ -1188,50 +1188,33 @@ class TransformController {
 		};
 	}
 
-	/**
-	 * Clean up resources and state
-	 */
-	destroy() {
+	/** Cancel the unfinished preview before a two-finger navigation gesture. */
+	cancelPreview() {
 		this.groupTransform?.finish( true );
-		this.groupTransform = null;
-		// Cancel any pending transform events
+		const originals = Object.values( this.originalMultiLayerStates || {} );
+		if ( this.originalLayerState ) { originals.push( this.originalLayerState ); }
+		this.clearPreviewState();
+		for ( const original of originals ) {
+			const layer = this.manager.editor.getLayerById( original.id );
+			if ( !layer ) { continue; }
+			for ( const key of Object.keys( layer ) ) {
+				if ( !Object.prototype.hasOwnProperty.call( original, key ) ) { delete layer[ key ]; }
+			}
+			Object.assign( layer, this._cloneLayer( original ) );
+			this.emitTransforming( layer, true );
+		}
+	}
+
+	/** Clear scheduled callbacks before they can reapply a cancelled preview. */
+	clearPreviewState() {
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
-
-		// Cancel pending requestAnimationFrame callbacks
-		if ( this._resizeRafId !== null ) {
-			window.cancelAnimationFrame( this._resizeRafId );
-			this._resizeRafId = null;
+		for ( const name of [ 'resize', 'rotation', 'drag', 'arrowTip', 'angleDim', 'dimText' ] ) {
+			const key = '_' + name + 'RafId';
+			if ( this[ key ] !== null && this[ key ] !== undefined ) { window.cancelAnimationFrame( this[ key ] ); }
+			this[ key ] = null;
+			this[ '_' + name + 'RenderScheduled' ] = false;
 		}
-		if ( this._rotationRafId !== null ) {
-			window.cancelAnimationFrame( this._rotationRafId );
-			this._rotationRafId = null;
-		}
-		if ( this._dragRafId !== null ) {
-			window.cancelAnimationFrame( this._dragRafId );
-			this._dragRafId = null;
-		}
-		if ( this._arrowTipRafId !== null ) {
-			window.cancelAnimationFrame( this._arrowTipRafId );
-			this._arrowTipRafId = null;
-		}
-		if ( this._angleDimRafId !== null ) {
-			window.cancelAnimationFrame( this._angleDimRafId );
-			this._angleDimRafId = null;
-		}
-		if ( this._dimTextRafId !== null ) {
-			window.cancelAnimationFrame( this._dimTextRafId );
-			this._dimTextRafId = null;
-		}
-
-		// Clear RAF scheduling flags
-		this._resizeRenderScheduled = false;
-		this._rotationRenderScheduled = false;
-		this._dragRenderScheduled = false;
-		this._angleDimRenderScheduled = false;
-		this._dimTextRenderScheduled = false;
-
-		// Clear pending layer references for RAF callbacks
 		this._pendingResizeLayer = null;
 		this._pendingRotationLayer = null;
 		this._pendingDragLayerId = null;
@@ -1241,6 +1224,8 @@ class TransformController {
 		this.isRotating = false;
 		this.isDragging = false;
 		this.isArrowTipDragging = false;
+		this.isDimensionTextDragging = false;
+		this.isAngleDimensionTextDragging = false;
 		this.arrowTipLayerId = null;
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
@@ -1248,7 +1233,13 @@ class TransformController {
 		this.originalMultiLayerStates = null;
 		this.showDragPreview = false;
 
-		// Clear reference
+	}
+
+	/** Clean up resources and state. */
+	destroy() {
+		this.groupTransform?.finish( true );
+		this.groupTransform = null;
+		this.clearPreviewState();
 		this.manager = null;
 	}
 }

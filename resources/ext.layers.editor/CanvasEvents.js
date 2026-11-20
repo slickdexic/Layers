@@ -1,21 +1,14 @@
 ( function () {
 	'use strict';
 
-	/**
-	 * CanvasEvents
-	 * Handles DOM events for the CanvasManager
-	 *
-	 * @class CanvasEvents
-	 */
+	/** Editor input events; touch viewport gestures have their own controller. */
 	class CanvasEvents {
-		/**
-		 * Create a new CanvasEvents instance
-		 *
-		 * @param {CanvasManager} canvasManager
-		 */
 		constructor( canvasManager ) {
 			this.cm = canvasManager;
 			this.canvas = canvasManager.canvas;
+			const TouchNavigation = window.Layers?.Canvas?.TouchNavigationController ||
+				( typeof module !== 'undefined' && module.exports ? require( './canvas/TouchNavigationController.js' ) : null );
+			this.touchNavigationController = new TouchNavigation( this );
 			this.setup();
 		}
 
@@ -53,10 +46,11 @@
 			this.onTouchMove = this.handleTouchMove.bind( this );
 			this.onTouchEnd = this.handleTouchEnd.bind( this );
 
-			this.canvas.addEventListener( 'touchstart', this.onTouchStart, { passive: false } );
-			this.canvas.addEventListener( 'touchmove', this.onTouchMove, { passive: false } );
-			this.canvas.addEventListener( 'touchend', this.onTouchEnd, { passive: false } );
-			this.canvas.addEventListener( 'touchcancel', this.onTouchEnd, { passive: false } );
+			this.touchTarget = this.cm.container || this.canvas;
+			this.touchTarget.addEventListener( 'touchstart', this.onTouchStart, { passive: false } );
+			this.touchTarget.addEventListener( 'touchmove', this.onTouchMove, { passive: false } );
+			this.touchTarget.addEventListener( 'touchend', this.onTouchEnd, { passive: false } );
+			this.touchTarget.addEventListener( 'touchcancel', this.onTouchEnd, { passive: false } );
 		}
 
 		destroy() {
@@ -66,10 +60,10 @@
 			this.canvas.removeEventListener( 'wheel', this.onWheel );
 			this.canvas.removeEventListener( 'contextmenu', this.onContextMenu );
 			this.canvas.removeEventListener( 'dblclick', this.onDoubleClick );
-			this.canvas.removeEventListener( 'touchstart', this.onTouchStart );
-			this.canvas.removeEventListener( 'touchmove', this.onTouchMove );
-			this.canvas.removeEventListener( 'touchend', this.onTouchEnd );
-			this.canvas.removeEventListener( 'touchcancel', this.onTouchEnd );
+			this.touchTarget.removeEventListener( 'touchstart', this.onTouchStart );
+			this.touchTarget.removeEventListener( 'touchmove', this.onTouchMove );
+			this.touchTarget.removeEventListener( 'touchend', this.onTouchEnd );
+			this.touchTarget.removeEventListener( 'touchcancel', this.onTouchEnd );
 
 			if ( this.cm.container ) {
 				this.cm.container.removeEventListener( 'mousedown', this.onContainerMouseDown );
@@ -83,13 +77,7 @@
 			e.preventDefault();
 		}
 
-		/**
-		 * Handle clicks on the container (outside the canvas) to deselect layers
-		 * This enables the expected UX behavior where clicking outside the canvas
-		 * clears the current selection.
-		 *
-		 * @param {MouseEvent} e
-		 */
+		/** Deselect on blank workspace clicks, preserving child controls. */
 		handleContainerMouseDown( e ) {
 			const cm = this.cm;
 
@@ -202,6 +190,7 @@
 
 		handleMouseDown( e ) {
 			const cm = this.cm;
+			if ( this.touchNavigation ) { return; }
 
 			// If inline text editing is active, finish it first
 			// This allows clicking elsewhere to deselect properly
@@ -380,6 +369,7 @@
 
 				cm.panX = currentTranslateX + deltaX;
 				cm.panY = currentTranslateY + deltaY;
+				cm.zoomPanController?.userNavigated();
 
 				cm.lastPanPoint = { x: e.clientX, y: e.clientY };
 
@@ -656,15 +646,21 @@
 
 		handleTouchStart( e ) {
 			const cm = this.cm;
-			const touch = e.touches[ 0 ];
+			const touches = this.workspaceTouches( e ), touch = touches[ 0 ];
 			if ( !touch ) {
 				return;
 			}
 			cm.lastTouchPoint = { clientX: touch.clientX, clientY: touch.clientY };
+			e.preventDefault?.();
 
 			// Handle multi-touch gestures
-			if ( e.touches.length > 1 ) {
+			if ( touches.length > 1 ) {
 				this.handlePinchStart( e );
+				return;
+			}
+			if ( this.touchNavigation ) { return; }
+			if ( cm.container && e.target === cm.container ) {
+				this.handleContainerMouseDown( { target: cm.container } );
 				return;
 			}
 
@@ -687,17 +683,19 @@
 
 		handleTouchMove( e ) {
 			const cm = this.cm;
-			const touch = e.touches[ 0 ];
+			const touches = this.workspaceTouches( e ), touch = touches[ 0 ];
 			if ( !touch ) {
 				return;
 			}
 			cm.lastTouchPoint = { clientX: touch.clientX, clientY: touch.clientY };
+			e.preventDefault?.();
 
 			// Handle multi-touch gestures
-			if ( e.touches.length > 1 ) {
+			if ( touches.length > 1 ) {
 				this.handlePinchMove( e );
 				return;
 			}
+			if ( this.touchNavigation || ( cm.container && e.target === cm.container ) ) { return; }
 
 			// Convert touch to mouse event with modifier keys
 			const mouseEvent = {
@@ -716,6 +714,7 @@
 		}
 
 		handleTouchEnd( e ) {
+			if ( this.touchNavigationController.end( e ) ) { return; }
 			if ( e.type === 'touchcancel' && this.cm.transformController?.groupTransform?.finish( true ) ) {
 				return;
 			}
@@ -764,52 +763,10 @@
 			this.handleMouseUp( mouseEvent );
 		}
 
-		handlePinchStart( e ) {
-			const cm = this.cm;
-			if ( e.touches.length !== 2 ) {
-				return;
-			}
-
-			cm.isPinching = true;
-			const touch1 = e.touches[ 0 ];
-			const touch2 = e.touches[ 1 ];
-
-			cm.initialPinchDistance = Math.sqrt(
-				Math.pow( touch2.clientX - touch1.clientX, 2 ) +
-				Math.pow( touch2.clientY - touch1.clientY, 2 )
-			);
-			cm.initialZoom = cm.zoom;
-		}
-
-		handlePinchMove( e ) {
-			const cm = this.cm;
-			if ( !cm.isPinching || e.touches.length !== 2 ) {
-				return;
-			}
-
-			const touch1 = e.touches[ 0 ];
-			const touch2 = e.touches[ 1 ];
-
-			const currentDistance = Math.sqrt(
-				Math.pow( touch2.clientX - touch1.clientX, 2 ) +
-				Math.pow( touch2.clientY - touch1.clientY, 2 )
-			);
-
-			const scale = currentDistance / cm.initialPinchDistance;
-			let newZoom = cm.initialZoom * scale;
-
-			// Clamp zoom level
-			newZoom = Math.max( 0.1, Math.min( 5.0, newZoom ) );
-
-			cm.setZoom( newZoom );
-		}
-
-		handlePinchEnd() {
-			const cm = this.cm;
-			cm.isPinching = false;
-			cm.initialPinchDistance = null;
-			cm.initialZoom = null;
-		}
+		handlePinchStart( e ) { this.touchNavigationController.start( e ); }
+		handlePinchMove( e ) { this.touchNavigationController.move( e ); }
+		handlePinchEnd() { this.touchNavigationController.finish(); }
+		workspaceTouches( e ) { return this.touchNavigationController.touches( e ); }
 
 		handleDoubleTap() {
 			const cm = this.cm;

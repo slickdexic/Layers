@@ -5,13 +5,17 @@
 The working successor adds the owner-approved folder transforms, revised draft
 recovery choices, Save/Close sequencing repairs, repeatable gradient controls,
 plain Text gradient rendering, radial radius/centre controls and complete-PDF
-history restoration. See the [Unreleased changelog](../CHANGELOG.md#unreleased)
+history restoration. The approved viewport/touch repair fits the canvas to its
+workspace, centres toolbar zoom, preserves resize anchors and adds two-finger
+pan/pinch while retaining one-finger editing and desktop controls.
+See the [Unreleased changelog](../CHANGELOG.md#unreleased)
 for the complete changes. These changes are not in the immutable RC1 download.
 
 Owner testing on the maintained 8080 wiki passes normal editing, multi-page PDF
 Save/Download, rollback/restoration and printing, with good reported performance.
-Physical phone/tablet, manual accessibility and reference-performance disposition
-remain open, followed by final artifact/version and owner acceptance. The
+The owner accepts mobile usability limits as nonblocking for PC-focused 1.8;
+device recheck remains follow-up. Manual PC accessibility and reference-performance
+disposition remain open, followed by final artifact/version and owner acceptance. The
 [current status](CURRENT_STATUS.md) identifies the tested application commit;
 no stable release or new tag is declared here.
 

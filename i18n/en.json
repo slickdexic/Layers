@@ -494,6 +494,7 @@
 	"layers-help-tips-title": "Tips & Best Practices",
 	"layers-help-tips-workflow": "Efficient Workflow",
 	"layers-help-tips-keyboard": "Use keyboard shortcuts for faster tool switching.",
+	"layers-help-tips-touch": "Touch: use two fingers to pan or pinch the canvas to zoom. Use one finger to edit layers.",
 	"layers-help-tips-layer-names": "Give layers descriptive names by double-clicking their name in the panel.",
 	"layers-help-tips-groups": "Group related layers together (Ctrl+G) to move and edit them as a unit.",
 	"layers-help-tips-lock": "Lock layers you're finished with to prevent accidental changes.",

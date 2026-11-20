@@ -1,3 +1,18 @@
+# Owner tablet findings and PC priority — November 20, 2026
+
+Chrome on the owner's landscape Galaxy Tab S4 exposes poor initial canvas
+placement, zoom centring and touch panning. The owner accepts these mobile
+usability limits as nonblocking for PC-focused v1.8 and still wants a correction.
+The owner approved the [viewport/touch brief](EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md).
+The implemented repair advances UI-6/UI-8/UI-10 through padded/bordered fitting,
+centred toolbar zoom, resize anchor preservation and two-finger pan/pinch. Eight
+8080 image/slide/landscape-PDF/portrait-PDF browser cases pass, including subsequent
+one-finger editing and Undo/Redo with saved content unchanged. Three geometry
+regressions fail before the repair; broader checks and fixture replay are recorded
+in the brief. Owner device recheck remains pending; the specific original large
+gap's page/media is still unknown. Do not label physical tablet acceptance passed.
+Continue PC release qualification, manual accessibility and performance disposition.
+
 # Owner acceptance follow-up — November 20, 2026
 
 The owner confirms that the whole-PDF restore repair works well, reports good

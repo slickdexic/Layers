@@ -48,6 +48,7 @@ This is a minimum, not a full list (see Rule 1). Updating it is part of every ch
 
 | Area | What users have |
 | --- | --- |
+| **Canvas navigation** | The [November 20 approved repair](EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md) fits the padded workspace, centres toolbar zoom, preserves the viewport anchor on resize and supports two-finger pan/pinch over canvas/blank workspace. One-finger editing and desktop controls remain. Bounded native/browser checks pass; owner device recheck remains pending. |
 | **Tools** | All 17: Pointer, Text, Text Box, Callout, Marker, Dimension, Pen (freehand), Rectangle, Circle, Ellipse, Polygon, Star, Custom Shape (Shape Library, 1,385 shapes), Emoji picker (2,817), Image, Arrow, Line, with their keyboard shortcuts. The existing toolbar groups reflow when needed to keep controls reachable, preserving every control, its wording and order (owner-approved October 17; acceptance recorded separately). |
 | **Editing** | Selecting, multi-select, move, resize, rotate, align and distribute, smart guides and snapping, grouping and folders, lock and hide, layer order, zoom and pan, style presets, undo and redo, copy, cut, paste, duplicate, importing images, rich text, gradient and blur fills, shadows, glow, blend modes, 32 self-hosted fonts. Unexpected synchronous and asynchronous Save failures and Save validation errors show the existing message above the editor and preserve the open work (owner-approved October 29–30). |
 | **Gradient controls** | Radial Radius 0–200% of the full local-envelope diagonal, with slider/numeric Radius and Center X/Y percentages; 0% paints the outer stop. Shared editor/viewer/export rendering and plain Text linear projection follow the [owner-approved November 19 brief](TEXT_GRADIENT_SIZING_BEHAVIOUR_BRIEF.md). Presets and stored parameters remain available. |
@@ -64,6 +65,7 @@ Changes the owner has approved (the only removals allowed):
 
 | Date | Change | Where decided |
 | --- | --- | --- |
+| November 20, 2026 | Fit the editor canvas within its usable workspace, centre toolbar zoom, preserve the viewport centre on resize and add two-finger pan/pinch over the canvas/blank workspace. Retain one-finger editing and desktop controls; add the brief's touch Help sentence. | Owner approved the [viewport/touch brief](EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md): “Approve the follow-up brief”. Mobile usability remains a disclosed nonblocking 1.8 follow-up; owner device recheck is pending. |
 | November 19, 2026 | Offer the existing historical Restore this version action for PDF members removed by rollback and restore the complete selected PDF layer set in one native revision, preserving unrelated content and existing admission checks. | Owner approved the [whole-PDF restore brief](PDF_HISTORY_RESTORE_BEHAVIOUR_BRIEF.md): “Approve the whole-PDF restore fix”. |
 | November 19, 2026 | Radial radius is 0–200% of the full local-envelope diagonal, with Center X/Y controls and a solid outer colour at zero. Apply shared radial sizing and correct plain Text linear sizing across editor, viewer and exports. | Owner approved the [gradient sizing and centre brief](TEXT_GRADIENT_SIZING_BEHAVIOUR_BRIEF.md): “I agree with this proposal. Please implement it.” |
 | November 18, 2026 | Replace Keep drafts unchanged with Continue draft, confirmed Discard draft and open saved version, and Cancel returning to the page. Only the selected reviewed local backup is discarded; other drafts and saved history remain. | Owner approved the [revised recovery choices brief](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md): “Approve revised recovery flow”. |
@@ -215,6 +217,18 @@ The independent release must still satisfy these gates:
    keeping the distributable clean.
 7. Obtain the owner's acceptance of the Milestone 1 portions of section 7 on
    their wiki, then publish the independent version/tag and release.
+
+**Owner mobile-usability disposition, November 20, 2026:** after testing Chrome
+on a Galaxy Tab S4 in landscape, the owner reports misplaced canvas/large empty
+space, zoom-centre problems and impractical touch panning. PC usability remains
+the priority; the owner explicitly accepts these tablet/phone usability limits
+as nonblocking for 1.8 and asks that they be fixed. Record the failed/unfinished
+mobile experience honestly and retain UI-6/UI-8 follow-up work; do not mark it
+passed or remove existing capabilities. The owner also approved the
+[editor viewport/touch repair](EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md) with
+“Approve the follow-up brief”; bounded qualification and owner device recheck
+are recorded separately. This disposition does not waive
+PC accessibility, security, data integrity or performance requirements.
 
 The [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) records retained passes,
 unproved checks and owner decisions. Reuse valid evidence and close only missing

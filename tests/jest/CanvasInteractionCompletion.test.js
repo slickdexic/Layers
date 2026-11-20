@@ -1,6 +1,7 @@
 'use strict';
 
 const Events = require( '../../resources/ext.layers.editor/CanvasEvents.js' );
+const TouchNavigation = require( '../../resources/ext.layers.editor/canvas/TouchNavigationController.js' );
 const Drawing = require( '../../resources/ext.layers.editor/canvas/DrawingController.js' );
 const TextInput = require( '../../resources/ext.layers.editor/canvas/TextInputController.js' );
 const Host = require( '../../resources/ext.layers.editor/PageOwnedPdfCreationHost.js' );
@@ -18,6 +19,7 @@ describe( 'Completed canvas gestures release page-owned PDF editing', () => {
 		cm.showRulers = false;
 		events = Object.create( Events.prototype );
 		events.cm = cm;
+		events.touchNavigationController = new TouchNavigation( events );
 	} );
 
 	afterEach( () => work.close() );

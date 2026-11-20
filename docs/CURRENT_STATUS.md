@@ -7,7 +7,15 @@ annotated Download, rollback, restoration and printing work; performance feels
 good on the primary MediaWiki 1.45.3 wiki. These are scoped acceptance results,
 not final stable-release sign-off.
 
-Application commit `1335bf0eda134df4977d522f72f890b83b0208cd` passed
+The owner accepts reported Galaxy Tab S4 / Chrome landscape canvas/zoom/pan
+usability limits as nonblocking for PC-focused v1.8 and approved the
+[viewport/touch repair](https://github.com/slickdexic/Layers/blob/main/docs/EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md).
+The implementation passes eight 8080 image/slide/PDF browser cases with saved
+content unchanged; desktop navigation and later one-finger edits/Undo/Redo pass.
+Owner device recheck remains pending. Mobile usability is retained follow-up
+work rather than a release blocker in the owner's accepted scope.
+
+The preceding application baseline `1335bf0eda134df4977d522f72f890b83b0208cd` passed
 [CI](https://github.com/slickdexic/Layers/actions/runs/44658579333),
 [native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44658579450)
 and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44658579294).
@@ -15,7 +23,7 @@ Its clean reviewed package contains 2,964 verified files and is installed on
 MediaWiki 1.44.6. The native selection passes 258 tests / 2,126 assertions;
 original content/uploads remain intact and the reader/editor checks pass.
 Reference-performance disposition remains open;
-physical phone/tablet and manual accessibility results are pending. The owner
+manual PC accessibility results are pending. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 
@@ -81,9 +89,10 @@ assert every deployment or database combination has been tested.
   object caching disabled. [Recorded timings](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md)
   preserve all samples and limitations. Positive normal-use feedback does not
   waive the target or establish reference-device performance.
-- Complete applicable physical-device and manual accessibility acceptance.
-  Owner-reported printing passes; narrow emulation does not prove physical-device
-  behavior or screen-reader use.
+- Complete manual PC accessibility acceptance. Mobile usability limits are
+  owner-accepted as nonblocking, with device recheck retained as follow-up.
+  Printing passes in the owner's reported scope; emulation does not establish
+  screen-reader use or a physical-device pass.
 - Apply each site's backup/upgrade/recovery checks. Previously migrated pilot
   PDF naming needs its recorded disposition; no historical rewrite is included.
 - Record final owner acceptance and qualify the eventual stable artifact.

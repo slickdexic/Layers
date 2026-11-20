@@ -1,5 +1,28 @@
 # Layers 1.8 release acceptance
 
+## Owner tablet result and release disposition — November 20, 2026
+
+The owner tested Chrome on a Galaxy Tab S4 in landscape. Editing is challenging:
+the image opens far to the right with excessive space beside the properties
+panel, zoom does not centre in the usable workspace, button zoom is the only
+usable method, and touch panning feels impractical. This is an observed mobile
+usability defect, not a tablet pass. The exact page/media and browser viewport
+are not yet identified.
+
+The owner states that PC usability remains the focus and these tablet/phone
+usability limits are **not a release disqualifier**. This closes their release
+blocking status in that accepted scope; it does not close UI-6/UI-8 or waive PC
+accessibility, security, data integrity and performance. The
+[editor viewport/touch brief](EDITOR_VIEWPORT_TOUCH_BEHAVIOUR_BRIEF.md) was approved:
+“Approve the follow-up brief”. Its implemented repair passes eight 8080 browser
+cases across image, slide and both PDF orientations, with saved revisions/content
+unchanged. Real touch input covers pan/pinch and subsequent one-finger editing
+with Undo/Redo; desktop wheel/Space-drag and resize anchoring also pass. Initial
+geometry regressions fail against the prior code. Source quality/asset and size
+guards pass; the brief records the retained full-Jest result and corrected fixture
+replay. This is bounded emulation/native evidence, with owner device recheck and
+final artifact qualification separate. Physical phone results are not claimed.
+
 ## Owner confirmation and device testing — November 20, 2026
 
 After the complete-PDF restore repair, the owner confirms that restoration works

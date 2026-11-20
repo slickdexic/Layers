@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Editor viewport and touch navigation
+- Fit the full canvas, including its border, inside the padded usable workspace.
+  Prevent intrinsic canvas size from widening the editor beyond its screen space.
+- Centre toolbar zoom in that workspace and preserve the viewed content point
+  when the workspace resizes. Fit recentres even when its zoom already fits.
+- Support two-finger pan/pinch on the canvas or blank workspace, cancelling only
+  unfinished previews and leaving navigation out of layer history. Retain
+  one-finger editing, desktop mouse/keyboard controls and saved coordinates.
+- Add the approved touch Help sentence. Owner device recheck remains follow-up;
+  mobile usability limitations are accepted as nonblocking for PC-focused 1.8.
+
 ### PDF history restoration
 - Offer Restore this version after rollback removes PDF page members. Restore
   the complete saved PDF layer set in one native revision, preserving page text

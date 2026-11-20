@@ -55,8 +55,11 @@ include credentials or private content in bug reports.
 - **Page-owned policy A applies.** Readable page-owned layer text remains
   searchable after its referenced file is hidden. Restrict the page revision
   itself to restrict that text. Media delivery still refuses unavailable sources.
-- Reference reader latency, full physical-device/keyboard/screen-reader and
-  owner acceptance remain open. Automated tests do not substitute for those checks.
+- Reference reader latency, manual PC keyboard/screen-reader and final owner
+  acceptance remain open. The owner accepts mobile usability limitations as
+  nonblocking for PC-focused 1.8; the approved viewport/touch repair has bounded
+  native/browser checks, with owner device recheck retained as follow-up.
+  Automated tests do not substitute for manual accessibility acceptance.
 - Exact-commit hosted CI passed and the v1.8rc1 GitHub prerelease is published.
   Final stable acceptance and broader search-backend qualification remain separate.
   Main may include later Unreleased documentation/help corrections; the RC1

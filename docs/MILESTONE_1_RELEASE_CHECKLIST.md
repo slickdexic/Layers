@@ -5,8 +5,11 @@
 The owner confirms normal editing, multi-page PDF Save, annotated Download,
 rollback, complete-PDF restoration and printing on the primary 8080 wiki, with
 good performance. Approved private-LAN access now enables physical phone/tablet
-testing on that same wiki. Reference-performance disposition, physical-device
-and manual accessibility acceptance remain open; final artifact/version and
+testing on that same wiki. The owner subsequently reports canvas/zoom/pan issues
+on a landscape Galaxy Tab S4 / Chrome and accepts mobile usability limits as
+nonblocking for PC-focused 1.8. The approved viewport/touch repair passes eight
+bounded 8080 browser cases; owner device recheck remains follow-up.
+Reference-performance disposition and manual PC accessibility remain open; final artifact/version and
 owner release acceptance follow. The [current status](CURRENT_STATUS.md) and
 [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) supersede dated candidate counts
 below while preserving their original evidence. The public RC1 archive is

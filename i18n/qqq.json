@@ -990,6 +990,7 @@
 	"layers-help-tips-title": "Heading for the tips section",
 	"layers-help-tips-workflow": "Category heading for workflow tips",
 	"layers-help-tips-keyboard": "Tip about using keyboard shortcuts",
+	"layers-help-tips-touch": "Editor Help tip explaining two-finger canvas navigation and one-finger layer editing.",
 	"layers-help-tips-layer-names": "Tip about naming layers descriptively",
 	"layers-help-tips-groups": "Tip about grouping related layers",
 	"layers-help-tips-lock": "Tip about locking background layers",

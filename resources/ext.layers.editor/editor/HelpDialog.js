@@ -573,6 +573,7 @@
 				<h4>${msg( 'layers-help-tips-workflow', 'Efficient Workflow' )}</h4>
 				<ul>
 					<li>${msg( 'layers-help-tips-keyboard', 'Use keyboard shortcuts for faster tool switching.' )}</li>
+					<li>${msg( 'layers-help-tips-touch', 'Touch: use two fingers to pan or pinch the canvas to zoom. Use one finger to edit layers.' )}</li>
 					<li>${msg( 'layers-help-tips-layer-names', 'Give layers descriptive names by double-clicking their name in the panel.' )}</li>
 					<li>${msg( 'layers-help-tips-groups', 'Group related layers together (Ctrl+G) to move and edit them as a unit.' )}</li>
 					<li>${msg( 'layers-help-tips-lock', 'Lock layers you\'re finished with to prevent accidental changes.' )}</li>

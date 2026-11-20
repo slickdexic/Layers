@@ -29,6 +29,7 @@ describe('ZoomPanController', () => {
         const mockContainer = document.createElement('div');
         mockContainer.style.width = '1000px';
         mockContainer.style.height = '700px';
+        mockContainer.style.padding = '20px';
         Object.defineProperty(mockContainer, 'clientWidth', { value: 1000 });
         Object.defineProperty(mockContainer, 'clientHeight', { value: 700 });
         mockContainer.appendChild(mockCanvas);
@@ -197,18 +198,17 @@ describe('ZoomPanController', () => {
 
             zoomPanController.resetZoom();
 
-            expect(mockCanvasManager.panX).toBe(0);
-            expect(mockCanvasManager.panY).toBe(0);
-            expect(zoomPanController.smoothZoomTo).toHaveBeenCalledWith(1.0);
+            expect(zoomPanController.smoothZoomTo).toHaveBeenCalledWith(1.0, undefined, { x: 0, y: 0 });
             expect(mockCanvasManager.userHasSetZoom).toBe(true);
         });
 
-        test('should update toolbar display', () => {
-            zoomPanController.smoothZoomTo = jest.fn();
-
+        test('should update toolbar display when the reset completes', () => {
+            const now = jest.spyOn(performance, 'now').mockReturnValue(0);
             zoomPanController.resetZoom();
-
+            now.mockReturnValue(500);
+            zoomPanController.animateZoom();
             expect(mockEditor.toolbar.updateZoomDisplay).toHaveBeenCalledWith(100);
+            now.mockRestore();
         });
     });
 

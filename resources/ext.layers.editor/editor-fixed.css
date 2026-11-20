@@ -397,6 +397,7 @@ body.layers-editor-open .mw-body-content {
 
 .layers-content {
 	flex: 1;
+	min-width: 0;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
@@ -406,6 +407,7 @@ body.layers-editor-open .mw-body-content {
 
 .layers-main {
 	flex: 1 1 auto;
+	min-width: 0;
 	display: flex;
 	overflow: hidden;
 	min-height: 0; /* enable proper flexbox scrolling behavior */
@@ -1926,6 +1928,7 @@ body.layers-editor-open .mw-body-content {
 
 .layers-canvas-container {
 	flex: 1;
+	min-width: 0;
 	overflow: hidden;
 	background: #e9ecef;
 	display: flex;
@@ -1936,6 +1939,7 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layers-canvas {
+	flex: none;
 	border: 2px solid #6c757d;
 	background: #fff;
 	box-shadow: 0 8px 32px rgba( 0, 0, 0, 0.2 );

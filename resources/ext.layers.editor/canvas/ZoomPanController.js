@@ -1,436 +1,261 @@
-/**
- * ZoomPanController - Handles zoom and pan operations for the canvas
- *
- * Extracted from CanvasManager.js to reduce file size and improve maintainability.
- * This module manages all zoom (in/out/fit/reset) and pan (drag) operations.
- *
- * @module canvas/ZoomPanController
- */
+/** Canvas display geometry and navigation; saved layer coordinates never change. */
 ( function () {
 	'use strict';
-
-	/**
-	 * ZoomPanController - Manages zoom and pan operations
-	 *
-	 * @class
-	 */
 	class ZoomPanController {
-		/**
-		 * Create a new ZoomPanController instance
-		 *
-		 * @param {Object} canvasManager Reference to parent CanvasManager
-		 */
 		constructor( canvasManager ) {
 			this.manager = canvasManager;
-
-			// Zoom state (references manager properties for backwards compatibility)
-			// These getters/setters allow gradual migration while maintaining state in manager
 			this.minZoom = 0.1;
-			this.maxZoom = 5.0;
-
-			// Smooth zoom animation properties
+			this.maxZoom = 5;
 			this.isAnimatingZoom = false;
-			this.zoomAnimationDuration = 300; // milliseconds
+			this.zoomAnimationDuration = 300;
 			this.zoomAnimationStartTime = 0;
-			this.zoomAnimationStartZoom = 1.0;
-			this.zoomAnimationTargetZoom = 1.0;
-			this.animationFrameId = null; // Track rAF for cleanup
-		}
-
-		/**
-		 * Get current zoom level
-		 *
-		 * @return {number} Current zoom level
-		 */
-		getZoom() {
-			return this.manager.zoom;
-		}
-
-		/**
-		 * Get current pan offset
-		 *
-		 * @return {{x: number, y: number}} Current pan offset
-		 */
-		getPan() {
-			return {
-				x: this.manager.panX,
-				y: this.manager.panY
+			this.zoomAnimationStartZoom = 1;
+			this.zoomAnimationTargetZoom = 1;
+			this.animationFrameId = null;
+			this.fitted = !canvasManager.userHasSetZoom;
+			this.resizeFrame = null;
+			this.onResize = () => {
+				if ( this.resizeFrame === null ) {
+					this.resizeFrame = requestAnimationFrame( () => {
+						this.resizeFrame = null;
+						this.manager?.resizeCanvas();
+					} );
+				}
 			};
+			const container = canvasManager.container || canvasManager.canvas.parentNode;
+			if ( typeof ResizeObserver === 'function' && container ) {
+				this.observer = new ResizeObserver( this.onResize );
+				this.observer.observe( container );
+			}
+			window.visualViewport?.addEventListener( 'resize', this.onResize );
 		}
 
-		/**
-		 * Zoom in by a fixed increment
-		 */
-		zoomIn() {
-			const targetZoom = this.manager.zoom + 0.2;
-			this.smoothZoomTo( targetZoom );
-			this.manager.userHasSetZoom = true;
+		getZoom() { return this.manager.zoom; }
+		getPan() { return { x: this.manager.panX, y: this.manager.panY }; }
+		clamp( zoom ) { return Math.max( this.minZoom, Math.min( this.maxZoom, zoom ) ); }
+		style( element ) { return element.nodeType === 1 ? getComputedStyle( element ) : {}; }
+
+		/** Visible padded workspace, independent of the image's intrinsic width. */
+		viewport() {
+			const container = this.manager.container || this.manager.canvas.parentNode;
+			if ( !container ) { return null; }
+			const rect = container.getBoundingClientRect?.() || { left: 0, top: 0 };
+			const style = this.style( container ), n = key => parseFloat( style[ key ] ) || 0;
+			const left = rect.left + ( container.clientLeft || 0 ) + n( 'paddingLeft' );
+			const top = rect.top + ( container.clientTop || 0 ) + n( 'paddingTop' );
+			const width = Math.max( 0, container.clientWidth - n( 'paddingLeft' ) - n( 'paddingRight' ) );
+			const height = Math.max( 0, container.clientHeight - n( 'paddingTop' ) - n( 'paddingBottom' ) );
+			return { left, top, width, height, x: left + width / 2, y: top + height / 2 };
 		}
 
-		/**
-		 * Zoom out by a fixed increment
-		 */
-		zoomOut() {
-			const targetZoom = this.manager.zoom - 0.2;
-			this.smoothZoomTo( targetZoom );
-			this.manager.userHasSetZoom = true;
+		/** The untransformed border box and its layout origin. */
+		geometry() {
+			const cm = this.manager, canvas = cm.canvas, viewport = this.viewport();
+			const style = this.style( canvas ), n = key => parseFloat( style[ key ] ) || 0;
+			const width = canvas.offsetWidth || ( parseFloat( canvas.style.width ) || canvas.width ) +
+				n( 'borderLeftWidth' ) + n( 'borderRightWidth' );
+			const height = canvas.offsetHeight || ( parseFloat( canvas.style.height ) || canvas.height ) +
+				n( 'borderTopWidth' ) + n( 'borderBottomWidth' );
+			const rect = canvas.getBoundingClientRect();
+			return { width, height,
+				x: rect.width ? rect.left - cm.panX : ( viewport?.x || 0 ) - width / 2,
+				y: rect.height ? rect.top - cm.panY : ( viewport?.y || 0 ) - height / 2 };
 		}
 
-		/**
-		 * Set zoom level with clamping and user flag
-		 *
-		 * @param {number} newZoom New zoom level
-		 */
-		setZoom( newZoom ) {
-			this.manager.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
-			this.manager.userHasSetZoom = true;
+		pointAtClient( point ) {
+			const g = this.geometry(), cm = this.manager;
+			return { x: ( point.x - g.x - cm.panX ) / cm.zoom,
+				y: ( point.y - g.y - cm.panY ) / cm.zoom };
+		}
 
-			this.updateCanvasTransform();
+		panForPoint( zoom, point, client ) {
+			const g = this.geometry();
+			return { x: client.x - g.x - point.x * zoom, y: client.y - g.y - point.y * zoom };
+		}
 
-			// Update status zoom percent
-			if ( this.manager.editor && typeof this.manager.editor.updateStatus === 'function' ) {
-				this.manager.editor.updateStatus( { zoomPercent: this.manager.zoom * 100 } );
+		rememberViewport() {
+			const v = this.viewport();
+			if ( v?.width > 0 && v.height > 0 ) {
+				const g = this.geometry(), p = this.pointAtClient( v );
+				this.anchor = { x: p.x / g.width, y: p.y / g.height };
 			}
 		}
 
-		/**
-		 * Set zoom directly without triggering user zoom flag (for animations)
-		 *
-		 * @param {number} newZoom New zoom level
-		 */
-		setZoomDirect( newZoom ) {
-			this.manager.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, newZoom ) );
+		resizeCanvas() {
+			const cm = this.manager, canvas = cm.canvas, v = this.viewport();
+			if ( !v?.width || !v.height ) { return; }
+			this.stopAnimation();
+			const style = this.style( canvas ), n = key => parseFloat( style[ key ] ) || 0;
+			const borderX = n( 'borderLeftWidth' ) + n( 'borderRightWidth' );
+			const borderY = n( 'borderTopWidth' ) + n( 'borderBottomWidth' );
+			const scale = Math.min( ( v.width - borderX ) / canvas.width,
+				( v.height - borderY ) / canvas.height );
+			if ( !( scale > 0 ) ) { return; }
+			canvas.style.width = Math.floor( canvas.width * scale ) + 'px';
+			canvas.style.height = Math.floor( canvas.height * scale ) + 'px';
+			const g = this.geometry(), anchor = this.anchor || { x: 0.5, y: 0.5 };
+			if ( this.fitted || !cm.userHasSetZoom ) { cm.zoom = 1; }
+			const pan = this.panForPoint( cm.zoom,
+				{ x: anchor.x * g.width, y: anchor.y * g.height }, v );
+			cm.panX = this.fitted ? v.x - g.x - g.width / 2 : pan.x;
+			cm.panY = this.fitted ? v.y - g.y - g.height / 2 : pan.y;
+			cm.viewportBounds = { x: 0, y: 0, width: canvas.width, height: canvas.height };
 			this.updateCanvasTransform();
-			if ( this.manager.editor && typeof this.manager.editor.updateStatus === 'function' ) {
-				this.manager.editor.updateStatus( { zoomPercent: this.manager.zoom * 100 } );
-			}
 		}
 
-		/**
-		 * Update the canvas CSS transform from current pan/zoom state
-		 */
+		zoomIn() { this.smoothZoomTo( this.manager.zoom + 0.2 ); this.userNavigated(); }
+		zoomOut() { this.smoothZoomTo( this.manager.zoom - 0.2 ); this.userNavigated(); }
+		userNavigated() { this.fitted = false; this.manager.userHasSetZoom = true; }
+
+		setZoom( zoom ) {
+			this.stopAnimation();
+			this.setZoomDirect( zoom );
+			this.userNavigated();
+		}
+
+		setZoomDirect( zoom, pan ) {
+			zoom = this.clamp( zoom );
+			const v = this.viewport();
+			pan = pan || ( v ? this.panForPoint( zoom, this.pointAtClient( v ), v ) : this.getPan() );
+			this.manager.zoom = zoom;
+			this.manager.panX = pan.x;
+			this.manager.panY = pan.y;
+			this.updateCanvasTransform();
+			this.manager.editor?.updateStatus?.( { zoomPercent: zoom * 100 } );
+		}
+
 		updateCanvasTransform() {
-			// Update zoom display in toolbar
-			if ( this.manager.editor && this.manager.editor.toolbar ) {
-				this.manager.editor.toolbar.updateZoomDisplay( Math.round( this.manager.zoom * 100 ) );
-			}
-			if ( this.manager.editor && typeof this.manager.editor.updateZoomReadout === 'function' ) {
-				this.manager.editor.updateZoomReadout( Math.round( this.manager.zoom * 100 ) );
-			}
-
-			// Apply CSS transform for zoom and pan
-			this.manager.canvas.style.transform = 'translate(' + this.manager.panX + 'px, ' +
-				this.manager.panY + 'px) scale(' + this.manager.zoom + ')';
-			this.manager.canvas.style.transformOrigin = '0 0';
-
-			// The inline text editor is a DOM overlay anchored to the canvas rect,
-			// so it has to be re-anchored whenever that rect moves.
-			const inlineEditor = this.manager.inlineTextEditor;
-			if ( inlineEditor && typeof inlineEditor.reposition === 'function' ) {
-				inlineEditor.reposition();
-			}
+			const cm = this.manager;
+			cm.editor?.toolbar?.updateZoomDisplay( Math.round( cm.zoom * 100 ) );
+			cm.editor?.updateZoomReadout?.( Math.round( cm.zoom * 100 ) );
+			cm.canvas.style.transform = 'translate(' + cm.panX + 'px, ' + cm.panY + 'px) scale(' + cm.zoom + ')';
+			cm.canvas.style.transformOrigin = '0 0';
+			cm.inlineTextEditor?.reposition?.();
+			this.rememberViewport();
 		}
 
-		/**
-		 * Reset zoom to 100% and center pan
-		 */
 		resetZoom() {
-			this.manager.panX = 0;
-			this.manager.panY = 0;
-			this.manager.userHasSetZoom = true;
-
-			// Smoothly animate back to 100% zoom
-			this.smoothZoomTo( 1.0 );
-
-			if ( this.manager.editor && this.manager.editor.toolbar ) {
-				this.manager.editor.toolbar.updateZoomDisplay( 100 );
-			}
-			if ( this.manager.editor && typeof this.manager.editor.updateZoomReadout === 'function' ) {
-				this.manager.editor.updateZoomReadout( 100 );
-			}
-			if ( this.manager.editor && typeof this.manager.editor.updateStatus === 'function' ) {
-				this.manager.editor.updateStatus( { zoomPercent: 100 } );
-			}
+			const v = this.viewport(), g = this.geometry();
+			this.userNavigated();
+			this.smoothZoomTo( 1, undefined, v ?
+				this.panForPoint( 1, { x: g.width / 2, y: g.height / 2 }, v ) : { x: 0, y: 0 } );
 		}
 
-		/**
-		 * Smoothly animate zoom to a target level
-		 *
-		 * @param {number} targetZoom Target zoom level
-		 * @param {number} [duration] Animation duration in milliseconds
-		 */
-		smoothZoomTo( targetZoom, duration ) {
-			// Clamp target zoom to valid range
-			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
-			duration = duration || this.zoomAnimationDuration;
+		stopAnimation() {
+			if ( this.animationFrameId !== null ) { cancelAnimationFrame( this.animationFrameId ); }
+			this.animationFrameId = null;
+			this.isAnimatingZoom = false;
+		}
 
-			// If already at target zoom or very close, don't animate
-			if ( Math.abs( this.manager.zoom - targetZoom ) < 0.01 ) {
-				return;
-			}
-
-			// P2.19 FIX: Cancel any in-progress animation before starting a new one
-			// This prevents multiple animation loops running simultaneously
-			if ( this.animationFrameId ) {
-				cancelAnimationFrame( this.animationFrameId );
-				this.animationFrameId = null;
-			}
-
+		/** Interpolating pan with scale preserves the same anchored content throughout. */
+		smoothZoomTo( target, duration, pan ) {
+			target = this.clamp( target );
+			if ( !pan && Math.abs( this.manager.zoom - target ) < 0.01 ) { return; }
+			this.stopAnimation();
+			const v = this.viewport();
+			this.animationStartPan = this.getPan();
+			this.animationTargetPan = pan || ( v ?
+				this.panForPoint( target, this.pointAtClient( v ), v ) : this.getPan() );
 			this.isAnimatingZoom = true;
 			this.zoomAnimationStartTime = performance.now();
 			this.zoomAnimationStartZoom = this.manager.zoom;
-			this.zoomAnimationTargetZoom = targetZoom;
-			// P3-213 FIX: Use local duration for this animation only;
-			// don't overwrite the instance default for future calls.
-			this.currentAnimationDuration = duration;
-
+			this.zoomAnimationTargetZoom = target;
+			this.currentAnimationDuration = duration || this.zoomAnimationDuration;
 			this.animateZoom();
 		}
 
-		/**
-		 * Animation frame function for smooth zooming
-		 */
 		animateZoom() {
-			if ( !this.isAnimatingZoom ) {
-				return;
-			}
-
-			const currentTime = performance.now();
-			const elapsed = currentTime - this.zoomAnimationStartTime;
+			if ( !this.isAnimatingZoom ) { return; }
 			const duration = this.currentAnimationDuration || this.zoomAnimationDuration;
-			const progress = Math.min( elapsed / duration, 1.0 );
-
-			// Use easing function for smooth animation (ease-out cubic)
-			const easedProgress = 1 - Math.pow( 1 - progress, 3 );
-
-			// Calculate current zoom level
-			const currentZoom = this.zoomAnimationStartZoom +
-				( this.zoomAnimationTargetZoom - this.zoomAnimationStartZoom ) * easedProgress;
-
-			this.setZoomDirect( currentZoom );
-
-			if ( progress < 1.0 ) {
-				// Continue animation - store frame ID for cleanup
+			const progress = Math.min( ( performance.now() - this.zoomAnimationStartTime ) / duration, 1 );
+			const eased = 1 - Math.pow( 1 - progress, 3 );
+			const zoom = this.zoomAnimationStartZoom +
+				( this.zoomAnimationTargetZoom - this.zoomAnimationStartZoom ) * eased;
+			const from = this.animationStartPan || this.getPan(), to = this.animationTargetPan || from;
+			this.setZoomDirect( zoom, { x: from.x + ( to.x - from.x ) * eased,
+				y: from.y + ( to.y - from.y ) * eased } );
+			if ( progress < 1 ) {
 				this.animationFrameId = requestAnimationFrame( () => this.animateZoom() );
 			} else {
-				// Animation complete
 				this.isAnimatingZoom = false;
 				this.animationFrameId = null;
-				this.setZoomDirect( this.zoomAnimationTargetZoom );
 			}
 		}
 
-		/**
-		 * Fit canvas to window size
-		 */
 		fitToWindow() {
-			const canvas = this.manager.canvas;
-			if ( !canvas ) {
-				return;
-			}
-
-			// Use the CSS display size as reference since resizeCanvas() already
-			// scales the canvas to fit the container at zoom=1.0.
-			// The CSS transform scale() is applied on top of that CSS size.
-			// Final visual size = cssSize * zoom, so zoom = targetSize / cssSize.
-			const cssWidth = parseFloat( canvas.style.width ) || canvas.width;
-			const cssHeight = parseFloat( canvas.style.height ) || canvas.height;
-
-			if ( !cssWidth || !cssHeight ) {
-				return;
-			}
-
-			const container = canvas.parentNode;
-			if ( !container ) {
-				return;
-			}
-			const containerWidth = container.clientWidth - 40; // padding
-			const containerHeight = container.clientHeight - 40;
-
-			const scaleX = containerWidth / cssWidth;
-			const scaleY = containerHeight / cssHeight;
-			let targetZoom = Math.min( scaleX, scaleY );
-
-			// Clamp to zoom limits
-			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
-
-			// Reset pan position
-			this.manager.panX = 0;
-			this.manager.panY = 0;
+			if ( !this.manager.canvas ) { return; }
+			const v = this.viewport();
+			if ( !v?.width || !v.height ) { return; }
+			const g = this.geometry(), zoom = this.clamp( Math.min( v.width / g.width, v.height / g.height ) );
 			this.manager.userHasSetZoom = true;
-
-			// Animate to fit zoom level
-			this.smoothZoomTo( targetZoom );
-
-			if ( this.manager.editor && this.manager.editor.toolbar ) {
-				this.manager.editor.toolbar.updateZoomDisplay( Math.round( targetZoom * 100 ) );
-			}
+			this.fitted = true;
+			this.smoothZoomTo( zoom, undefined,
+				this.panForPoint( zoom, { x: g.width / 2, y: g.height / 2 }, v ) );
 		}
 
-		/**
-		 * Zoom to fit all layers in the viewport
-		 */
 		zoomToFitLayers() {
-			if ( !this.manager.editor || this.manager.editor.layers.length === 0 ) {
-				this.fitToWindow(); // Fall back to fitting canvas
-				return;
-			}
-
-			// Calculate bounding box of all layers
+			const layers = this.manager.editor?.layers || [];
 			let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-			let hasVisibleLayers = false;
-
-			for ( let i = 0; i < this.manager.editor.layers.length; i++ ) {
-				const layer = this.manager.editor.layers[ i ];
-				if ( !layer.visible ) {
-					continue; // Skip invisible layers
-				}
-
-				hasVisibleLayers = true;
-				const layerBounds = this.manager.getLayerBounds( layer );
-				if ( layerBounds ) {
-					minX = Math.min( minX, layerBounds.left );
-					minY = Math.min( minY, layerBounds.top );
-					maxX = Math.max( maxX, layerBounds.right );
-					maxY = Math.max( maxY, layerBounds.bottom );
+			for ( const layer of layers ) {
+				if ( !layer.visible ) { continue; }
+				const bounds = this.manager.getLayerBounds( layer );
+				if ( bounds ) {
+					minX = Math.min( minX, bounds.left ); minY = Math.min( minY, bounds.top );
+					maxX = Math.max( maxX, bounds.right ); maxY = Math.max( maxY, bounds.bottom );
 				}
 			}
-
-			if ( !hasVisibleLayers ) {
-				this.fitToWindow(); // Fall back to fitting canvas
-				return;
-			}
-
-			// Add some padding around the content
-			const padding = 50;
-			const contentWidth = ( maxX - minX ) + ( padding * 2 );
-			const contentHeight = ( maxY - minY ) + ( padding * 2 );
-
-			const container = this.manager.canvas.parentNode;
-			if ( !container ) {
-				return;
-			}
-			const containerWidth = container.clientWidth - 40;
-			const containerHeight = container.clientHeight - 40;
-
-			// P2-212 FIX: Convert content dimensions from buffer pixels to CSS
-			// display pixels. resizeCanvas() sets canvas.style.width/height differently
-			// from canvas.width/height, and the CSS transform operates in CSS space.
-			const cssW = parseFloat( this.manager.canvas.style.width ) || this.manager.canvas.width;
-			const cssH = parseFloat( this.manager.canvas.style.height ) || this.manager.canvas.height;
-			const rx = cssW / this.manager.canvas.width;
-			const ry = cssH / this.manager.canvas.height;
-			const contentCSSWidth = contentWidth * rx;
-			const contentCSSHeight = contentHeight * ry;
-
-			const scaleX = containerWidth / contentCSSWidth;
-			const scaleY = containerHeight / contentCSSHeight;
-			let targetZoom = Math.min( scaleX, scaleY );
-
-			// Clamp to zoom limits
-			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
-
-			// Center the content (convert to CSS space)
-			const centerX = ( ( minX + maxX ) / 2 ) * rx;
-			const centerY = ( ( minY + maxY ) / 2 ) * ry;
-			const canvasCenterX = cssW / 2;
-			const canvasCenterY = cssH / 2;
-
-			this.manager.panX = ( canvasCenterX - centerX ) * targetZoom;
-			this.manager.panY = ( canvasCenterY - centerY ) * targetZoom;
-			this.manager.userHasSetZoom = true;
-
-			// Animate to fit zoom level
-			this.smoothZoomTo( targetZoom );
+			if ( !Number.isFinite( minX ) ) { this.fitToWindow(); return; }
+			const v = this.viewport();
+			if ( !v ) { return; }
+			const g = this.geometry(), rx = g.width / this.manager.canvas.width,
+				ry = g.height / this.manager.canvas.height;
+			const zoom = this.clamp( Math.min( v.width / ( ( maxX - minX + 100 ) * rx ),
+				v.height / ( ( maxY - minY + 100 ) * ry ) ) );
+			this.userNavigated();
+			this.smoothZoomTo( zoom, undefined, this.panForPoint( zoom,
+				{ x: ( minX + maxX ) * rx / 2, y: ( minY + maxY ) * ry / 2 }, v ) );
 		}
 
-		/**
-		 * Public zoom helper used by external handlers (wheel/pinch)
-		 *
-		 * @param {number} delta Positive to zoom in, negative to zoom out (in zoom units)
-		 * @param {{x: number, y: number}} point Buffer-pixel canvas coordinate under the cursor to anchor zoom around
-		 */
 		zoomBy( delta, point ) {
-			const target = Math.max( this.minZoom, Math.min( this.maxZoom, this.manager.zoom + delta ) );
-			if ( target === this.manager.zoom ) {
-				return;
-			}
-			// Convert buffer-pixel canvas coordinates to CSS display coordinates.
-			// resizeCanvas() sets canvas.style.width/height to fit the container while
-			// keeping canvas.width/height at the image's native pixel dimensions, so these
-			// two coordinate spaces usually differ. The CSS transform
-			// translate(panX,panY) scale(zoom) operates on CSS display units, so the
-			// anchor point must be converted before computing screen position.
-			const cssW = parseFloat( this.manager.canvas.style.width ) || this.manager.canvas.width;
-			const cssH = parseFloat( this.manager.canvas.style.height ) || this.manager.canvas.height;
-			const rx = cssW / this.manager.canvas.width;
-			const ry = cssH / this.manager.canvas.height;
-			const cx = point.x * rx;
-			const cy = point.y * ry;
-			// Anchor zoom around the point (in CSS display space)
-			const screenX = this.manager.panX + this.manager.zoom * cx;
-			const screenY = this.manager.panY + this.manager.zoom * cy;
-			this.manager.zoom = target;
-			this.manager.panX = screenX - this.manager.zoom * cx;
-			this.manager.panY = screenY - this.manager.zoom * cy;
-			this.manager.userHasSetZoom = true;
-			this.updateCanvasTransform();
+			const zoom = this.clamp( this.manager.zoom + delta );
+			if ( zoom === this.manager.zoom ) { return; }
+			const g = this.geometry();
+			const p = { x: point.x * g.width / this.manager.canvas.width,
+				y: point.y * g.height / this.manager.canvas.height };
+			const client = { x: g.x + this.manager.panX + p.x * this.manager.zoom,
+				y: g.y + this.manager.panY + p.y * this.manager.zoom };
+			this.navigateAt( zoom, p, client );
 		}
 
-		/**
-		 * Set pan position
-		 *
-		 * @param {number} x X offset
-		 * @param {number} y Y offset
-		 */
+		navigateAt( zoom, point, client ) {
+			this.stopAnimation();
+			zoom = this.clamp( zoom );
+			this.setZoomDirect( zoom, this.panForPoint( zoom, point, client ) );
+			this.userNavigated();
+		}
+
 		setPan( x, y ) {
-			this.manager.panX = x;
-			this.manager.panY = y;
+			this.stopAnimation();
+			this.manager.panX = x; this.manager.panY = y;
+			this.userNavigated();
 			this.updateCanvasTransform();
 		}
+		panBy( dx, dy ) { this.setPan( this.manager.panX + dx, this.manager.panY + dy ); }
 
-		/**
-		 * Pan by a delta amount
-		 *
-		 * @param {number} dx X delta
-		 * @param {number} dy Y delta
-		 */
-		panBy( dx, dy ) {
-			this.manager.panX += dx;
-			this.manager.panY += dy;
-			this.updateCanvasTransform();
-		}
-
-		/**
-		 * Clean up resources
-		 */
 		destroy() {
-			// Cancel any pending animation frame to prevent memory leak
-			if ( this.animationFrameId ) {
-				cancelAnimationFrame( this.animationFrameId );
-				this.animationFrameId = null;
-			}
-
-			// Clear panning state
+			this.stopAnimation();
+			if ( this.resizeFrame !== null ) { cancelAnimationFrame( this.resizeFrame ); }
+			this.observer?.disconnect();
+			window.visualViewport?.removeEventListener( 'resize', this.onResize );
 			this.isPanning = false;
 			this.panStart = null;
-			this.isAnimatingZoom = false;
-
-			// Clear reference
 			this.manager = null;
 		}
 	}
-
-	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
 		window.Layers.Canvas = window.Layers.Canvas || {};
 		window.Layers.Canvas.ZoomPanController = ZoomPanController;
 	}
-
-	// Export for Node.js/Jest testing
-	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = ZoomPanController;
-	}
-
+	if ( typeof module !== 'undefined' && module.exports ) { module.exports = ZoomPanController; }
 }() );

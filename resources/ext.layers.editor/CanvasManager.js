@@ -1766,53 +1766,45 @@ class CanvasManager {
 		this.redraw();
 	}
 
-	/**
-	 * Resize canvas to match container size while maintaining aspect ratio.
-	 * Updates viewport bounds for layer culling.
-	 */
+	/** Resize the canvas display without changing saved layer coordinates. */
 	resizeCanvas () {
-		const container = this.container || ( this.canvas && this.canvas.parentNode );
+		if ( this.zoomPanController?.resizeCanvas ) {
+			this.zoomPanController.resizeCanvas();
+			return;
+		}
+		const container = this.container || this.canvas?.parentNode;
 		if ( !container || !this.canvas ) {
 			return;
 		}
-
-		// Get container dimensions (with padding accounted for)
+		// Compatibility fit for hosts without the viewport controller.
 		const containerWidth = container.clientWidth || 800;
 		const containerHeight = container.clientHeight || 600;
 
-		// Get the canvas logical dimensions (image size)
 		const canvasWidth = this.canvas.width || 800;
 		const canvasHeight = this.canvas.height || 600;
 
-		// Calculate aspect-ratio-preserving CSS dimensions
-		// The canvas should fit within the container while preserving aspect ratio
 		const canvasAspect = canvasWidth / canvasHeight;
 		const containerAspect = containerWidth / containerHeight;
 
 		let cssWidth, cssHeight;
 		if ( canvasAspect > containerAspect ) {
-			// Canvas is wider than container - constrain by width
 			cssWidth = containerWidth;
 			cssHeight = containerWidth / canvasAspect;
 		} else {
-			// Canvas is taller than container - constrain by height
 			cssHeight = containerHeight;
 			cssWidth = containerHeight * canvasAspect;
 		}
 
-		// Apply CSS dimensions to maintain aspect ratio
 		this.canvas.style.width = Math.round( cssWidth ) + 'px';
 		this.canvas.style.height = Math.round( cssHeight ) + 'px';
 
 		if ( !this.userHasSetZoom ) {
-			// Reset logical zoom if user hasn't set zoom manually
 			this.zoom = 1.0;
 			if ( this.zoomPanController && typeof this.zoomPanController.updateCanvasTransform === 'function' ) {
 				this.zoomPanController.updateCanvasTransform();
 			}
 		}
 
-		// Update viewport bounds used for layer culling
 		this.viewportBounds = this.viewportBounds || { x: 0, y: 0, width: 0, height: 0 };
 		this.viewportBounds.width = this.canvas.width;
 		this.viewportBounds.height = this.canvas.height;
