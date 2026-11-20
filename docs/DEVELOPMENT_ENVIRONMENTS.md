@@ -62,6 +62,42 @@ the extension itself acquires no Docker dependency.
 - Reuse the maintained services for HTTP/browser acceptance and bounded cache or
   restart checks. Coordinate any interruption of a wiki the owner is using.
 
+## Browser acceptance configuration
+
+`tests/e2e/fixtures.js` reads the file named by `LAYERS_ACCEPTANCE_CONFIG`.
+This is a private operator file, not a file supplied by the extension. Keep one
+configuration per maintained wiki, outside served checkouts and version control.
+The maintained Windows primary-wiki location is
+`%LOCALAPPDATA%\Layers\acceptance\mediawiki-145.json`. Other environments may use
+any private path supplied through the environment variable.
+
+The file has this shape; the account and password below are placeholders:
+
+```json
+{
+  "base": "http://localhost:8080",
+  "username": "dedicated-test-editor",
+  "password": "store-the-real-password-only-in-this-private-file"
+}
+```
+
+Use the wiki's dedicated test editor and only the rights required by the selected
+synthetic fixtures. Do not put credentials in commands, reports or packages.
+For example, PowerShell can select the existing configuration and list tests
+without editing wiki content:
+
+```powershell
+$env:LAYERS_ACCEPTANCE_CONFIG = Join-Path $env:LOCALAPPDATA 'Layers\acceptance\mediawiki-145.json'
+npx playwright test --list
+```
+
+Individual native browser suites require explicitly provisioned synthetic owners
+and may need additional fixture variables documented in their headers. Review
+that scope before running them; ordinary saved pages are not write-test fixtures.
+The legacy `%TEMP%\layers-original-session.json` lookup is a fallback, not the
+maintained configuration location. Keep 8080 primary tests and 8082 installed
+compatibility tests identified separately.
+
 ## Private working material and HTTP access
 
 The owner approved private-LAN access to the existing primary wiki on November
