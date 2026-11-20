@@ -1,5 +1,52 @@
 # Layers 1.8 release acceptance
 
+## Owner confirmation and device testing — November 20, 2026
+
+After the complete-PDF restore repair, the owner confirms that restoration works
+well and performance feels good on the maintained 8080 wiki. The owner also
+reports that printing works. This advances HIST-3/HIST-4, TYPES-4, UI-10 and PERF
+within those reported journeys; it does not waive the reference performance
+budgets or establish screen-reader and physical-device acceptance.
+
+The owner approved private-LAN access to the existing primary wiki for phone and
+tablet testing. Both localhost and the LAN origin pass reader/editor checks;
+seven checked owning pages retain their exact revisions and slot hashes. This
+is development-environment configuration, not an extension runtime requirement.
+Physical phone/tablet and keyboard/screen-reader results remain pending.
+
+## Installed successor compatibility — November 20, 2026
+
+The clean reviewed application package at `1335bf0e` is installed on the existing
+MediaWiki 1.44.6 compatibility wiki. All 2,964 files and executable modes match
+the archive, with the existing private-path HTTP guard preserved. The native
+release selection passes **258 tests / 2,126 assertions** on PHP 8.3.33 / MySQL.
+Its original nine pages, sixteen revisions, fifteen table witnesses and retained
+upload checksums are unchanged; teardown leaves zero isolated test tables.
+Service mounts, ports, environment and restart policy are preserved, and the
+primary and other version/database services are unchanged by this installation.
+
+The first native invocation omitted the documented MySQL normal-test-table flag
+and completed 258 tests / 1,576 assertions with 32 errors from core's temporary
+table reopening limitation. The corrected command uses `PHPUNIT_USE_NORMAL_TABLES=1`
+and the standard teardown extension; no runtime correction or weakened assertion
+was used. A read-only browser check confirms the saved reader pixel and a ready
+editor with no console errors. Its first observer looked for the original image
+after the viewer replaced it; selecting the rendered host completes the check.
+These results advance HIST, DATA and OPS-2/OPS-3 in this recorded compatibility
+scope, without claiming full physical-device or final release acceptance.
+
+## Reader budget remains open — November 20, 2026
+
+The unchanged benchmark records five installed-1.44 observations of 315.1–328.8 ms
+against the 300 ms target. Primary-1.45 fresh-browser observations take 8.7–9.5 s
+with object caching disabled and source on the shared development mount. A plain
+page without Layers module/read requests also spends 6.0 s in MediaWiki startup.
+The [complete performance record](PAGE_HISTORY_PERFORMANCE.md) retains all
+samples, earlier failed observers and reference limitations. Identity, pixel and
+request/error checks pass; performance assertions fail. Positive owner feedback
+does not erase these measurements. Reference qualification/disposition remains a
+release gate; no cache setting, runtime behavior or threshold is changed here.
+
 ## Owner editing and whole-PDF restore checkpoint — November 19, 2026
 
 The owner approved the gradient presentation and reports no further issues in
@@ -432,12 +479,12 @@ review. Final dependency, documentation, artifact and exact-commit checks remain
 | Page ownership, native Save/history/diff/restore and owner isolation | **Recorded passes:** [1.44 native journeys](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md), [whole-PDF Import](PDF_IMPORT_NATIVE_ACCEPTANCE.md) and retained image/slide journeys. The [candidate evidence map](PAGE_HISTORY_RELEASE_EVIDENCE.md) ties retained results to current source: four existing ordinary edits on 1.45 match recent changes/contributions; eight migration revisions on 1.44 match those feeds, with six watchlist matches. | Complete remaining intended-wiki HIST scenarios and applicable notification acceptance. The watchlist check covers migration revisions; Echo is absent on that wiki and no notification delivery is claimed. Close only missing or affected checks. |
 | Import, first-Save attribution, recovery and refusal preservation | **Recorded passes:** whole-PDF Import/Undo/Redo, saved handoff, complete recovery, stale Save, reconciliation and lost-success-reply handling. | Reuse the recorded desktop and narrow-layout results; reconcile only missing supported-version/device combinations. |
 | Upgrade and recovery | **Recorded passes:** [1.5.95/MySQL rehearsal and current-candidate migration check](UPGRADING.md#current-candidate-migration-check--october-25-2026), fresh 1.44 installation, and [intended-wiki data/application read restoration](INTENDED_WIKI_RECOVERY_CHECKPOINT.md#application-level-restore--october-26-2026) on 1.45.3. Restored native/HTTP image, slide and PDF reads pass with all 66 persistent-table witnesses and 7,832 retained uploads unchanged. Temporary services were removed. Migration sources match the retained fresh rehearsal; the current rerun adds zero revisions. | Reconcile the retained upgrade/recovery with the final release artifact and review earlier pilot data without relabeling or repair. Operators still preserve their own matching private configuration/software before cutover; reconstructed test settings do not constitute that backup. A new fresh database transition or exhaustive restored-site/browser check was not claimed. |
-| Viewer, Download and Print | **Recorded passes:** inspected exports, exact historical-source viewing, and [complete 1.44 PDF Download/native Print preparation](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md#complete-pdf-download-and-native-print-preparation--october-25-2026). Both pages retain saved layers; Print and Download composites match byte for byte. | Obtain the applicable manual Print/export owner acceptance. The headless check does not qualify the operating-system dialog, physical pagination or paper output. Retain earlier observer failures without repeating that stalled loop. |
+| Viewer, Download and Print | **Recorded passes:** owner testing passes multi-page PDF Save, annotated Download and printing on 8080. Inspected exports, exact historical-source viewing, and [complete 1.44 PDF Download/native Print preparation](MEDIAWIKI_144_NATIVE_ACCEPTANCE.md#complete-pdf-download-and-native-print-preparation--october-25-2026) retain their bounded evidence. Both pages retain saved layers; Print and Download composites match byte for byte. | Owner printing passes in the reported scope; physical paper/pagination and every device/export combination are not independently claimed. Retain earlier observer failures without repeating that stalled loop. |
 | Supported UI, touch and accessibility | **Partial:** [phone-viewer panning](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification), the owner-approved [bounded toolbar](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) and [revision-check bar](REVISION_CHECK_BAR.md) pass their recorded browser scopes. The bar retains its action and fits image/slide/PDF editors in tested light/dark desktop, tablet and narrow layouts. | Finish remaining tablet-touch editing, physical-device and manual accessibility acceptance. Browser emulation is not physical-device sign-off. Phone editing is not required. |
-| Security, privacy and data integrity | **Recorded engineering review:** [HTTP roles/visibility/lifecycle and native Save admission](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md); the [candidate review](PAGE_HISTORY_SECURITY_REVIEW.md) now covers request/access/admission, validation/output, bounds, I/O, configuration/logging and dependencies. Import quotas, renderer text interpretation and SVG resource lookup are corrected; locked npm and PHP audits are clear at this checkpoint. | Reconcile final source/artifact consistency and recheck dated dependency results at the release cut. Reopen affected checks after changes and fix/retest release-blocking findings. No open high/critical finding or known data-loss defect may ship; this is not independent penetration-test or owner acceptance. |
-| Performance | **Recorded installed-desktop passes / reader misses retained:** [asset and editor-entry checks](PAGE_HISTORY_PERFORMANCE.md#installed-asset-and-editor-entry-checks--october-27-2026) measure 102,129 gzip bytes of Layers modules, none on the plain page, and all fifteen warm image/slide/PDF editor openings at 800–930 ms, below three seconds. The latest [installed 1.44 reader recheck](PAGE_HISTORY_PERFORMANCE.md#installed-144-candidate-recheck--large-image-correction) measured 295.1–335.4 ms; three of five visits exceeded the 300 ms target. Earlier observations and withdrawn experiments remain retained. | Investigate the reader misses and applicable cold-server/reference-device/media checks without changing controls or weakening read admission. These are representative desktop observations, not physical-device or blanket PDF acceptance. Source/assets are local; retained private data/configuration storage and reference hardware remain explicit limits. Keep environment costs distinct from product defects and obtain owner disposition of unproved limits. |
-| Package and documentation | **Recorded candidate package pass / final cut pending:** the independently verified `5d13e58` archive contains 2,903 exact public files and is installed on the 1.44 wiki. Primary guides, upgrade instructions and [draft release notes](RELEASE_NOTES_1_8.md) are refreshed. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. The candidate still reports manifest 1.5.95; it is not a released 1.8 build. Private captures, credentials, configuration and database exports stay local. |
-| Owner acceptance | **Pending.** | Complete the Milestone 1 portions of charter scenarios S1–S7 on the intended wiki. Search, Cargo and new link portions belong to their later milestones. Record acceptance of the release scope and remaining disclosed limits. |
+| Security, privacy and data integrity | **Recorded engineering review:** [HTTP roles/visibility/lifecycle and native Save admission](MILESTONE_1_HTTP_PRIVACY_ACCEPTANCE.md); the [successor review](PAGE_HISTORY_SECURITY_REVIEW.md) reconciles subsequent gradient, recovery/Save and PDF restore changes. Composer and production npm audits are clear; 16 moderate development-tool package entries remain documented. No open high/critical finding is identified in the reviewed scope. | Recheck dated dependency results and final source/artifact consistency at the cut. Reopen affected checks after changes and fix/retest release-blocking findings. No open high/critical finding or known data-loss defect may ship; this is not independent penetration-test or owner acceptance. |
+| Performance | **Recorded passes / reader misses retained:** existing server Save/history, asset and editor-entry observations remain valid in their recorded scopes, and owner feedback is positive. The [successor reader checks](PAGE_HISTORY_PERFORMANCE.md) record 315.1–328.8 ms on installed 1.44 against 300 ms. Primary shared-mount/cache-disabled fresh-browser visits take 8.7–9.5 s; its plain page also spends 6.0 s in startup without Layers requests. | Qualify/dispose of reference-device, cold-server and applicable media limits without changing the target or weakening admission. Different fixtures and development configurations do not establish controlled attribution. Retain every timing and obtain owner disposition of unproved limits. |
+| Package and documentation | **Recorded candidate package pass / final cut pending:** the independently verified `1335bf0e` archive contains 2,964 exact public files and is installed on 1.44, with 258 native tests / 2,126 assertions and original data intact. Primary guides, upgrade instructions and [release notes](RELEASE_NOTES_1_8.md) distinguish the working successor from immutable RC1. | Regenerate and verify the exact versioned release artifact after acceptance and version/tag assignment. Keep the [native regression package](NATIVE_REGRESSION_TESTING.md) and [asset/notice inventory](SHIPPED_ASSET_AUDIT.md) intact. Manifest remains 1.8.0-rc.1; no stable release is declared. Private captures, credentials, configuration and database exports stay local. |
+| Owner acceptance | **Partial:** normal editing, gradients, multi-page PDF Save/Download, rollback/complete restoration, printing and good responsiveness are confirmed on 8080. | Finish applicable physical-device/manual accessibility and remaining Milestone 1 scenarios on the intended wiki, then record final release-scope acceptance. Search, Cargo and new links retain their later milestones. |
 | Final release cut | **Pending.** | Freeze the reviewed artifact, run required gates and exact-commit CI, confirm version/tag with the owner and publish the independent release. Preserve a consistent upgrade/rollback reference. |
 
 The October 27 [server/filesystem investigation](PAGE_HISTORY_PERFORMANCE.md#server-and-linked-filesystem-investigation--october-27-2026)

@@ -17,7 +17,9 @@ Keep readers and editors restricted through migration and successful search
 cleanup; an edit-only freeze is insufficient. Use the
 [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
 
-**Updated November 8, 2026.** Published testing candidate **v1.8rc1** reports
+**Updated November 20, 2026.** The working successor includes the owner-confirmed
+gradient, recovery/Save and complete-PDF restore repairs. The owner also reports
+good performance and successful printing on 8080. The published testing candidate **v1.8rc1** reports
 **1.8.0-rc.1**. Final stable Milestone 1 acceptance remains open. The
 [1.8 acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) separates its remaining checks
 from the broader 2.0 roadmap. Start with
@@ -32,8 +34,8 @@ from the broader 2.0 roadmap. Start with
 | Supported versions/devices | Recorded desktop/narrow results and [six native Minerva phone-viewer checks](PHONE_VIEWER_ACCEPTANCE.md) do not cover every supported physical device or assistive technology. Tablet editing and manual acceptance remain open. |
 | Phone viewer touch panning | **Corrected in bounded browser scope:** the owner-approved [accessible repair](PHONE_VIEWER_ACCEPTANCE.md#approved-correction-and-bounded-verification) passes six native image/slide/PDF light/dark cases. Finger and mouse translation, Pan buttons, keyboard/focus, PDF shortcuts and actual browser pinch pass. Physical-device and manual accessibility acceptance remain open. |
 | Viewer toolbar with enlarged text | **Corrected in bounded browser scope:** the owner-approved [bounded toolbar](VIEWER_TOOLBAR_LAYOUT_ACCEPTANCE.md) preserves a normal 14px UI base and caps toolbar height at 96px or one quarter of the viewer. Native label/focus/scroll/Fit and narrow/landscape/enlarged-text checks pass. Physical-device and manual accessibility acceptance remain open. |
-| Viewer/export/Print | The approved PNG/PDF choices and whole-PDF assembly have bounded checks. Reuse inspected complete artifacts in their recorded scope. Remaining 1.44/device/export combinations and OS/physical Print acceptance are not claimed. Legacy cached server export is a separate path with its own fidelity limits. |
-| Security/data | HTTP, token/method, owner/source visibility, roles/protection/revocation and retained-row preservation checks are partial release evidence. The full current implementation still needs its relevant security/data review; older audits do not certify new boundaries. |
+| Viewer/export/Print | The owner passes multi-page PDF Save, annotated Download, rollback/restore and printing on 8080. Bounded artifact and browser checks retain their recorded scope; not every device/export combination is qualified. Legacy cached server export is a separate path with its own fidelity limits. |
+| Security/data | The [successor review](PAGE_HISTORY_SECURITY_REVIEW.md) identifies no open high/critical finding in its recorded scope. Composer and production npm audits are clear; 16 moderate development-tool package entries remain assessed and documented. Relevant native/HTTP evidence is retained where source is unchanged; final artifact qualification remains separate. |
 | Cache visibility | All `layersread` responses are private with maximum age zero, including anonymous bindings and failures. `LayersBindingReadMaxAge` is a retained compatibility setting. Exact PDF delivery has separate no-store checks; previously delivered bytes cannot be recalled. |
 | Payload/source support | Native snapshots are bounded at 2 MiB, 100 members, 100 layers per member, 1000 total layers and 4096-pixel canvases, with strict embedded-image validation. Local exact-source availability and MediaWiki media-handler requirements still apply; unsupported sources must be refused rather than substituted. |
 | Performance | The measured 100-layer server Save/history budget passes on the documented local fixture. Remaining browser-paint, device/reference-load and other charter performance combinations stay open; no blanket cold-cache claim is made. |

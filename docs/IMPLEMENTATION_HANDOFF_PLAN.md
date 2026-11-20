@@ -1,3 +1,13 @@
+# Owner acceptance follow-up — November 20, 2026
+
+The owner confirms that the whole-PDF restore repair works well, reports good
+performance, and passes printing on the maintained 8080 wiki. This advances
+HIST-3/HIST-4, TYPES-4, UI-10 and PERF in that reported scope. Private-LAN access
+to the same wiki is owner-approved and reader/editor checks pass, enabling the
+remaining physical phone/tablet checks. Keyboard/screen-reader acceptance and
+reference performance disposition remain open. Continue the Milestone 1 release
+checks; later 2.0 functionality is not a prerequisite.
+
 # PDF history restore finding — November 19, 2026
 
 Owner testing passes multi-page PDF Save, annotated Download and native rollback.

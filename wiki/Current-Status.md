@@ -1,7 +1,26 @@
 # Current release status
 
-Updated November 8, 2026. **[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
-is published for testing**, manifest **1.8.0-rc.1**, commit
+Updated November 20, 2026. The working successor includes the approved gradient
+controls/sizing, local draft recovery and Save/Close repairs, and complete-PDF
+history restoration. The owner confirms normal editing, multi-page PDF Save,
+annotated Download, rollback, restoration and printing work; performance feels
+good on the primary MediaWiki 1.45.3 wiki. These are scoped acceptance results,
+not final stable-release sign-off.
+
+Application commit `1335bf0eda134df4977d522f72f890b83b0208cd` passed
+[CI](https://github.com/slickdexic/Layers/actions/runs/44658579333),
+[native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44658579450)
+and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44658579294).
+Its clean reviewed package contains 2,964 verified files and is installed on
+MediaWiki 1.44.6. The native selection passes 258 tests / 2,126 assertions;
+original content/uploads remain intact and the reader/editor checks pass.
+Reference-performance disposition remains open;
+physical phone/tablet and manual accessibility results are pending. The owner
+approved LAN access to the same primary wiki for device testing. Docker remains
+only the development/test environment.
+
+The published testing download remains **[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)**,
+published November 8, 2026, manifest **1.8.0-rc.1**, commit
 `cfdf8f2bd31b1d9616871e769317b52c64aba0bd`. It uses the qualified internal rc.3
 application code. Internal rc.1–rc.3 were local test builds, not earlier public
 releases. Publication was November 7 locally / November 8 UTC.
@@ -56,12 +75,15 @@ assert every deployment or database combination has been tested.
 
 ## Remaining before final stable 1.8
 
-- Resolve the retained reference-performance measurement: 312.4 ms from image
-  load to layer paint against the 300 ms target. Normal-use owner feedback is
-  positive; slow forced reloads also affect plain pages. No general current
-  Layers-specific slowdown or blanket performance waiver is established.
-- Complete applicable physical-device, manual accessibility and OS/physical
-  Print acceptance. Narrow emulation and Print preparation do not prove these.
+- Resolve reference-performance qualification/disposition. The current installed
+  1.44 reader records 315.1–328.8 ms against 300 ms; the primary development lane
+  has much larger fresh-browser delays and also slow plain-page startup with
+  object caching disabled. [Recorded timings](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md)
+  preserve all samples and limitations. Positive normal-use feedback does not
+  waive the target or establish reference-device performance.
+- Complete applicable physical-device and manual accessibility acceptance.
+  Owner-reported printing passes; narrow emulation does not prove physical-device
+  behavior or screen-reader use.
 - Apply each site's backup/upgrade/recovery checks. Previously migrated pilot
   PDF naming needs its recorded disposition; no historical rewrite is included.
 - Record final owner acceptance and qualify the eventual stable artifact.

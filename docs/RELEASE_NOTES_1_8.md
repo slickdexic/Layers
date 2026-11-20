@@ -1,8 +1,25 @@
 # Layers v1.8rc1 release notes
 
+## Unreleased successor — November 20, 2026
+
+The working successor adds the owner-approved folder transforms, revised draft
+recovery choices, Save/Close sequencing repairs, repeatable gradient controls,
+plain Text gradient rendering, radial radius/centre controls and complete-PDF
+history restoration. See the [Unreleased changelog](../CHANGELOG.md#unreleased)
+for the complete changes. These changes are not in the immutable RC1 download.
+
+Owner testing on the maintained 8080 wiki passes normal editing, multi-page PDF
+Save/Download, rollback/restoration and printing, with good reported performance.
+Physical phone/tablet, manual accessibility and reference-performance disposition
+remain open, followed by final artifact/version and owner acceptance. The
+[current status](CURRENT_STATUS.md) identifies the tested application commit;
+no stable release or new tag is declared here.
+
+## Published v1.8rc1
+
 Published November 7, 2026 locally / November 8 UTC. The immutable release is
-[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1); later main
-documentation/editor-help updates are Unreleased.
+[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1); later
+working-source changes are Unreleased.
 
 This is the first public **Layers 1.8 release candidate**, intended for testing. The extension reports **1.8.0-rc.1**. It includes the fixes qualified in the internal rc.3 build; internal candidate numbers were not earlier public releases.
 

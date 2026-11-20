@@ -1,5 +1,59 @@
 # Page-history performance
 
+## Recorded successor reader checks — November 20, 2026
+
+Application commit `1335bf0e` uses the unchanged read-only native benchmark:
+one recorded warm-up, then five fresh browser contexts with empty browser caches
+and a warm server. Exact wiki/page/revision, expected painted pixel, same-origin
+GET admission and browser-error checks pass. Chromium is 145.0.7632.6. All
+observations remain recorded before evaluating the unchanged 300 ms target.
+
+| Lane and fixture | Warm-up (ms) | Five measured image-to-layer observations (ms) | Result |
+| --- | --- | --- | --- |
+| Installed MediaWiki 1.44.6, authenticated retained image fixture | 347.4 | 326.5, 327.8, 323.8, 328.8, 315.1 | Five misses |
+| Primary MediaWiki 1.45.3, authenticated dedicated 100-layer image fixture | 8788.0 | 8727.9, 8952.4, 8910.9, 9207.4, 9395.7 | Five misses |
+| Same primary fixture, anonymous | 9713.4 | 9264.3, 9323.8, 9242.7, 9528.9, 9104.3 | Five misses |
+
+The primary wiki uses the shared working-source mount and has object caching
+disabled (`MainCacheType = CACHE_NONE`); it does not meet the charter's reference
+conditions. Its first measured authenticated visit loads the image at 1811 ms,
+receives MediaWiki startup at 6994.7 ms, receives the combined scripts at 9763.8 ms,
+finishes the authorized layer read at 10489.1 ms and paints at 10538.9 ms.
+Startup itself takes 5535.9 ms, the large combined response 2763.8 ms and the read
+688.7 ms. These observations locate the waiting phases; they do not alone prove
+the cost of a particular extension or storage component.
+
+A separate fresh authenticated context opens the primary wiki's plain main page
+without requesting any Layers module or `layersread` response. MediaWiki startup
+takes **6018.9 ms** there; total load reaches 8979.2 ms. This single diagnostic
+control supports a substantial shared startup/environment contribution to the
+primary delay, without proving that every additional layer-page cost is shared.
+It is not a reference benchmark or a budget waiver.
+
+On the installed 1.44 fixture, the first measured image loads at 881.9 ms,
+startup completes at 971.6 ms, combined scripts at 1081.7 ms, the authorized
+read at 1193.3 ms and paint at 1208.4 ms. The read takes 78.5 ms. Different
+fixtures, core versions, settings and storage make this a comparison of two
+development lanes, not controlled attribution to MediaWiki versions or Layers.
+The installed extension is local, but retained private data and reference
+hardware limitations remain explicit. Neither lane establishes a reference pass.
+
+Two earlier primary runs also failed, reporting first measured samples of
+8285.2 ms authenticated and 7765.4 ms anonymous. Their list reporter did not
+persist the buffered timing attachment, so the remaining individual timings
+are not claimed. The separately labelled runs above retain every attachment;
+no sample or threshold was removed to obtain a pass. Reference qualification
+and owner disposition remain open. This advances Milestone 1 / PERF-0/PERF-2
+through measured evidence, not a performance acceptance or runtime change.
+
+## Owner observation — November 20, 2026
+
+After testing multi-page PDF edits, downloads, rollback and the corrected whole-PDF
+restore flow on 8080, the owner reports that performance feels good. Editor
+opening was also reported much faster after the recovery/Save repairs. This is
+positive normal-use evidence for Milestone 1 / PERF-3 and HIST-4, without device
+specifications or measured timings. The reference budgets remain unchanged.
+
 ## Owner observation — November 7, 2026
 
 The owner reports that ordinary page loads are fast and the earlier performance

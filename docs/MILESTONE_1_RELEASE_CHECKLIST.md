@@ -1,5 +1,18 @@
 # Milestone 1 / Layers 1.8 release checklist
 
+## Working successor checkpoint — November 20, 2026
+
+The owner confirms normal editing, multi-page PDF Save, annotated Download,
+rollback, complete-PDF restoration and printing on the primary 8080 wiki, with
+good performance. Approved private-LAN access now enables physical phone/tablet
+testing on that same wiki. Reference-performance disposition, physical-device
+and manual accessibility acceptance remain open; final artifact/version and
+owner release acceptance follow. The [current status](CURRENT_STATUS.md) and
+[acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) supersede dated candidate counts
+below while preserving their original evidence. The public RC1 archive is
+unchanged. This advances Milestone 1 / HIST, TYPES, DATA, SEC and OPS closeout;
+later 2.0 features do not hold up this release.
+
 ## Published v1.8rc1 checkpoint — November 8, 2026
 
 The owner-authorized testing prerelease [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)

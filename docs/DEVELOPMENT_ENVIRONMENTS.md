@@ -64,6 +64,18 @@ the extension itself acquires no Docker dependency.
 
 ## Private working material and HTTP access
 
+The owner approved private-LAN access to the existing primary wiki on November
+20 for physical phone/tablet testing. Its operator configuration retains the
+localhost binding and adds the private interface only. Request hosts are
+allowlisted so MediaWiki generates URLs for the origin being used; unknown hosts
+are refused. Existing media-handler tools were preserved when only the web
+service was recreated. Reader/editor and harmless private-path checks pass on
+both origins, and the checked page revisions and slot hashes are unchanged.
+This local configuration and any private environment checkpoint image are not
+extension artifacts or deployment dependencies. Keep credentials and settings
+outside public packages; preserve the existing HTTP guard when recreating the
+test service. A successful check from this PC still needs a real device check.
+
 A checkout mounted into a web server is a served directory, even when its files
 are ignored by Git. Wiki read permissions do not automatically protect static
 logs, local Markdown documents or development artifacts in that directory.

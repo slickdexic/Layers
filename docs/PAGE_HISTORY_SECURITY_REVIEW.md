@@ -1,5 +1,47 @@
 # Page-history release security review
 
+## Successor candidate review — November 20, 2026
+
+This checkpoint advances Milestone 1 / SEC-2, SEC-3, SEC-4, SEC-6 and SEC-7 for
+application commit `1335bf0eda134df4977d522f72f890b83b0208cd`. The bounded review
+of the subsequent gradient, draft recovery, Save sequencing and whole-PDF
+restore changes identifies no open high or critical finding. It reuses earlier
+native authorization evidence where source is unchanged; it is not a new claim
+that every endpoint was independently exercised.
+
+The request APIs, service wiring, publication service, owner/history access,
+source-version resolver, migration and SQL sources remain identical to the
+published candidate. The PDF restore planner still passes through the existing
+native publisher and its source, authorization and stale-base checks. Its native
+regressions cover complete-group restoration, unrelated-content preservation,
+ambiguous/colliding members and invalid source associations. Gradient validation
+retains strict rejection of malformed non-null values while accepting the
+explicit no-gradient value. Recovery and Save repairs preserve uncertain-save
+holds and selected-draft identity rather than bypassing publication checks.
+
+Fresh locked audits supersede the October zero-warning npm result below:
+
+- Composer reports no advisories or abandoned packages.
+- The production npm graph reports zero vulnerabilities; shipped asset checks
+  pass, including the pinned PDF bundle.
+- The full development graph reports 16 moderate package entries, zero high
+  and zero critical. These arise from two underlying advisories:
+  [glob cancellation](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) and
+  [minimatch pattern amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+
+The affected glob/minimatch instances belong to the Jest/lint toolchain and are
+excluded from the extension package. Layers does not expose their pattern
+processing as a wiki endpoint; maintained CLI patterns are trusted source.
+No relevant AbortSignal or `optimizationLevel` configuration is used by Layers.
+The advisories' fixed major versions exceed the affected tools' dependency
+ranges, so no forced transitive override is applied. Retain these development
+warnings for upstream remediation and recheck at the final cut. This assessment
+does not classify them as resolved or promise absence of unknown vulnerabilities.
+
+The clean reviewed archive contains 2,964 files, each matching its Git blob and
+executable mode. Private wiki settings, credentials, captures, dependency trees
+and local development images remain outside that archive.
+
 **Review checkpoint:** October 26, 2026. Opened at `57daa35` and reconciled with
 the subsequent accepted changes below. The independent 1.8 source/evidence
 security review is complete within the recorded scope, including corrected
@@ -7,7 +49,7 @@ literal text and custom-shape SVG resource admission. This advances SEC-2, SEC-3
 Milestone 1; it does not qualify later 2.0 features or declare the release accepted.
 The [release ledger](RELEASE_1_8_ACCEPTANCE.md) remains authoritative.
 
-**Current dependency result:** the compatible toolchain update below brings
+**October 26 dependency result:** the compatible toolchain update below brings
 the full locked npm audit to zero known vulnerabilities, with shipped runtime
 assets unchanged. The locked PHP dependency audit also reports no advisories
 or abandoned packages. Recheck both at the final release cut.
