@@ -218,8 +218,8 @@ describe( 'GradientRenderer', () => {
 
 			renderer.createGradient( layer, bounds );
 			// Default center is 0.5, 0.5 -> 50, 50 with 100x100 bounds
-			// Default radius is 0.5 (50% of max dimension = 50)
-			expect( ctx.createRadialGradient ).toHaveBeenCalledWith( 50, 50, 0, 50, 50, 50 );
+			// Omitted radius matches the 70% UI default, relative to the full diagonal.
+			expect( ctx.createRadialGradient ).toHaveBeenCalledWith( 50, 50, 0, 50, 50, Math.hypot( 100, 100 ) * 0.7 );
 		} );
 
 		it( 'should handle invalid color gracefully', () => {
