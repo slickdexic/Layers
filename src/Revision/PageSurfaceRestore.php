@@ -10,7 +10,7 @@ use MediaWiki\Title\Title;
 use MediaWiki\Title\TitleFactory;
 use Wikimedia\Rdbms\IDBAccessObject;
 
-/** Makes an earlier version of one drawing current again; the page text and other drawings are kept. */
+/** Restore one layer set, including every stored PDF page, while preserving the rest of its owner. */
 final class PageSurfaceRestore {
 	private PageOwnedScope $scope;
 	private TitleFactory $titles;
@@ -56,7 +56,7 @@ final class PageSurfaceRestore {
 	}
 
 	/**
-	 * Publish the current drawings with one surface replaced by its earlier version. No automatic retry.
+	 * Publish the current snapshot with one layer set restored. No automatic retry.
 	 * @param string $ownerText
 	 * @param int $revisionId Earlier revision to copy the drawing from
 	 * @param string $surfaceId
@@ -116,15 +116,21 @@ final class PageSurfaceRestore {
 		if ( !$current || $current->getId() !== $baseRevisionId ) {
 			throw new \DomainException( 'layers-edit-conflict' );
 		}
+		$historical = self::decode( $access->read( $owner, $revisionId, $authority )->getText() );
 		$restored = null;
-		foreach ( self::decode( $access->read( $owner, $revisionId, $authority )->getText() )->surfaces as $surface ) {
+		foreach ( $historical->surfaces as $surface ) {
 			if ( $surface->id === $surfaceId ) {
 				$restored = $surface;
 			}
 		}
 		$document = self::decode( $access->read( $owner, $baseRevisionId, $authority )->getText() );
+		if ( $restored && $restored->kind === 'pdf' ) {
+			$document->surfaces = self::restorePdf( $document->surfaces, $historical->surfaces, $restored );
+			return [ 'json' => JsonSnapshotCodec::encode( $document ),
+				'label' => $restored->label, 'pageId' => $current->getPageId() ];
+		}
 		foreach ( $document->surfaces as $index => $surface ) {
-			// A drawing removed since, or already identical, has nothing to restore.
+			// Image and slide restoration retain their existing single-surface behaviour.
 			if ( $restored && $surface->id === $surfaceId &&
 				JsonSnapshotCodec::encode( $surface ) !== JsonSnapshotCodec::encode( $restored )
 			) {
@@ -134,6 +140,64 @@ final class PageSurfaceRestore {
 			}
 		}
 		throw new \DomainException( 'layers-restore-unavailable' );
+	}
+
+	/**
+	 * Replace the exact historical PDF group; keep unrelated members and their relative order.
+	 * @param \stdClass[] $current
+	 * @param \stdClass[] $historical
+	 * @param \stdClass $selected Historical member, including one now absent from the owner
+	 * @return \stdClass[]
+	 */
+	private static function restorePdf( array $current, array $historical, \stdClass $selected ): array {
+		$key = LayerSetIdentity::key( $selected );
+		$wanted = self::pdfSet( $historical, $key );
+		$existing = self::pdfSet( $current, $key );
+		if ( JsonSnapshotCodec::encode( (object)$wanted ) === JsonSnapshotCodec::encode( (object)$existing ) ) {
+			throw new \DomainException( 'layers-restore-unavailable' );
+		}
+		$result = [];
+		$pending = $wanted;
+		foreach ( $current as $surface ) {
+			if ( isset( $existing[$surface->id] ) ) {
+				if ( isset( $pending[$surface->id] ) ) {
+					$result[] = $pending[$surface->id];
+					unset( $pending[$surface->id] );
+				}
+			} else {
+				// A historical ID retained by a renamed/different set must not rename or overwrite it.
+				if ( isset( $wanted[$surface->id] ) ) {
+					throw new \DomainException( 'layers-restore-unavailable' );
+				}
+				$result[] = $surface;
+			}
+		}
+		return array_merge( $result, array_values( $pending ) );
+	}
+
+	/**
+	 * Resolve one existing file/name identity without guessing across ambiguous legacy members.
+	 * @param \stdClass[] $surfaces
+	 * @param string $key
+	 * @return \stdClass[] Members keyed by ID
+	 */
+	private static function pdfSet( array $surfaces, string $key ): array {
+		$members = [];
+		$pages = [];
+		$label = null;
+		foreach ( $surfaces as $surface ) {
+			if ( LayerSetIdentity::key( $surface ) !== $key ) {
+				continue;
+			}
+			if ( $surface->kind !== 'pdf' || isset( $pages[$surface->source->page] ) ||
+				( $label !== null && $surface->label !== $label ) ) {
+				throw new \DomainException( 'layers-restore-unavailable' );
+			}
+			$label = $surface->label;
+			$pages[$surface->source->page] = true;
+			$members[$surface->id] = $surface;
+		}
+		return $members;
 	}
 
 	/**

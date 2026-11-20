@@ -1,3 +1,19 @@
+# PDF history restore finding — November 19, 2026
+
+Owner testing passes multi-page PDF Save, annotated Download and native rollback.
+Read-only 8080 inspection confirms that the historical Restore this version
+action is absent when rollback removed the selected page member. The restore
+planner also replaces a single member rather than the complete PDF layer set.
+This leaves HIST-3/HIST-4, TYPES-4 and DATA-1 acceptance open. The
+[whole-PDF restoration brief](PDF_HISTORY_RESTORE_BEHAVIOUR_BRIEF.md) is approved:
+“Approve the whole-PDF restore fix”. Complete-set restoration now uses
+the existing action and native publisher. Native checks pass 14 tests /
+131 assertions after five prior-planner failures. The permanent 8080 history
+journey restores the whole group in one revision, preserves later unrelated
+work and downloads a byte-identical annotated PDF. Its exact baseline is
+restored. DeleteMe007 remains a read-only diagnostic source; the missing action
+is now present there. Remaining overall v1.8 acceptance stays open.
+
 # Approved gradient envelope and centre controls — November 19, 2026
 
 The owner approved the [shared radial envelope and centre controls](TEXT_GRADIENT_SIZING_BEHAVIOUR_BRIEF.md).

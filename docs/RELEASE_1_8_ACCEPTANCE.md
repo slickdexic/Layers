@@ -1,5 +1,24 @@
 # Layers 1.8 release acceptance
 
+## Owner editing and whole-PDF restore checkpoint — November 19, 2026
+
+The owner approved the gradient presentation and reports no further issues in
+basic editor testing. Multi-page PDF editing, Save, annotated Download, history
+viewing and native rollback also pass in the owner's reported 8080 testing.
+These are scoped owner observations, not final stable-release acceptance.
+
+That testing exposed a missing Restore action after rollback removed newly
+annotated PDF members. The owner approved the
+[complete-set restore correction](PDF_HISTORY_RESTORE_BEHAVIOUR_BRIEF.md).
+The native planner/form selection passes 14 tests / 131 assertions; five
+regressions fail against the prior planner. A permanent isolated 8080 browser
+journey restores all members in exactly one revision, preserves later unrelated
+work, reopens the viewer and downloads a byte-identical annotated PDF. It also
+checks redundant/anonymous actions and restores its exact fixture baseline.
+The owner's page is inspected read-only; its rollback remains current and the
+historical Restore action is now present. Exact-commit hosted results accompany
+the implementation checkpoint; the remaining release gates below stay open.
+
 ## Published v1.8rc1 checkpoint — November 8, 2026
 
 The owner-authorized testing prerelease [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)

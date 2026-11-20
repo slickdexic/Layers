@@ -11,6 +11,8 @@
       <file>core/ApiLayersReadTest.php</file>
       <file>core/PageOwnedHistoryHooksTest.php</file>
       <file>core/HistoryUndoToolsTest.php</file>
+      <file>core/PageSurfaceRestoreTest.php</file>
+      <file>core/WholePdfHistoryRestoreTest.php</file>
       <file>core/PageOwnedDiffHooksTest.php</file>
       <file>core/PageOwnedPilotTest.php</file>
       <file>core/PagePdfEditorReadServiceTest.php</file>

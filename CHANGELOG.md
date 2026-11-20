@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### PDF history restoration
+- Offer Restore this version after rollback removes PDF page members. Restore
+  the complete saved PDF layer set in one native revision, preserving page text
+  and other layer sets, with unchanged source, permission and conflict checks.
+
 ### Save and Close
 - Share an active Save between toolbar, keyboard and Close. Close waits through
   publication and the final backup, avoiding a second Save and a false unsaved
