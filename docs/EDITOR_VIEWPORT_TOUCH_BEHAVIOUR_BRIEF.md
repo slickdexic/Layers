@@ -65,6 +65,18 @@ failed before opening the editor (assertion import), then used extra CDP coordin
 scaling and an unfocused Space shortcut; corrected observers pass without changing
 the application or relaxing geometric assertions. Original outputs remain local.
 
+Two additional native 8080 checks confirm that a second finger restores a live
+pending rectangle drag and that fingers starting on blank portrait-PDF workspace
+pan without changing layers, history or saved content. The installed 1.44.6
+package matches all 2,968 file hashes/modes; its desktop/tablet navigation checks
+pass on the pinned existing fixture. All fifteen original content-table witnesses,
+nine pages, sixteen revisions and retained uploads remain unchanged. The primary
+and other services are unchanged by that compatibility installation. Exact-code
+[CI](https://github.com/slickdexic/Layers/actions/runs/44763165868) passes 338
+suites / 19,263 JavaScript tests; native and browser workflows also pass. This
+supersedes the local fixture error as the complete hosted result while retaining
+the original local failure and corrected replay.
+
 Before closing the repair, show initial/Fit/zoom screenshots and verify image,
 slide and portrait/landscape PDF geometry in desktop and tablet-sized workspaces.
 Exercise actual touch events for pinch, two-finger translation, cancellation and

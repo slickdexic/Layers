@@ -13,6 +13,13 @@ in the brief. Owner device recheck remains pending; the specific original large
 gap's page/media is still unknown. Do not label physical tablet acceptance passed.
 Continue PC release qualification, manual accessibility and performance disposition.
 
+The reviewed `69f0d828` package is installed on 1.44.6 with 2,968 verified files,
+preserved original content/uploads and passing desktop/tablet viewport checks.
+Two additional 8080 cases cover live-preview cancellation and blank-workspace
+panning. All three exact-code CI workflows pass, with 338 JavaScript suites /
+19,263 tests. These are scoped engineering passes; owner device recheck and the
+remaining PC release gates are separate.
+
 # Owner acceptance follow-up — November 20, 2026
 
 The owner confirms that the whole-PDF restore repair works well, reports good

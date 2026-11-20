@@ -15,13 +15,16 @@ content unchanged; desktop navigation and later one-finger edits/Undo/Redo pass.
 Owner device recheck remains pending. Mobile usability is retained follow-up
 work rather than a release blocker in the owner's accepted scope.
 
-The preceding application baseline `1335bf0eda134df4977d522f72f890b83b0208cd` passed
-[CI](https://github.com/slickdexic/Layers/actions/runs/44658579333),
-[native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44658579450)
-and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44658579294).
-Its clean reviewed package contains 2,964 verified files and is installed on
-MediaWiki 1.44.6. The native selection passes 258 tests / 2,126 assertions;
-original content/uploads remain intact and the reader/editor checks pass.
+Application commit `69f0d8283a7fec5e0fe98e7ecac5b22d7fa55a2f` passed
+[CI](https://github.com/slickdexic/Layers/actions/runs/44763165868),
+[native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44763166270)
+and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44763166158).
+Hosted JavaScript checks pass 338 suites / 19,263 tests. Its clean reviewed
+package contains 2,968 verified files and is installed on MediaWiki 1.44.6;
+desktop/tablet viewport and normal reader/editor checks pass there. All fifteen
+content-table witnesses and retained uploads remain intact. No PHP backend
+changed; the preceding local 258-test / 2,126-assertion native result retains
+its scope alongside the new exact-commit native CI pass.
 Reference-performance disposition remains open;
 manual PC accessibility results are pending. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
