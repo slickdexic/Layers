@@ -1,6 +1,8 @@
 # PC editor keyboard and layer-list accessibility
 
-**Status:** proposed November 21, 2026; awaiting owner approval before implementation.
+**Status:** approved November 21, 2026: “Approve the PC accessibility brief”.
+Implemented and verified in bounded native/browser scope. Manual screen-reader
+acceptance remains open.
 Advances UI-3 and preserves the PC interface required by the 1.8 release gate.
 
 ## What people experience
@@ -62,9 +64,37 @@ explains the nested-control limitation. Its
 [modal-dialog guidance](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
 describes isolation of underlying content and dialog focus handling.
 
-Before calling the repair complete, verify forward/reverse focus traversal,
-skip links, nested dialogs, close/reopen cleanup, layer selection and controls,
-and Undo/Redo on native image/slide/PDF editors. Repeat axe in light/dark themes,
-including the PDF counter's normal, annotated and unsaved states,
-retain unchanged saved-content witnesses, and show the owner the resulting
-screens. A real manual screen-reader pass remains a separate release check.
+## Implemented verification — November 21
+
+Eight native 8080 editor cases pass: light/dark image, slide and PDF in Vector
+2022, plus both PDF themes in legacy Vector. They check forward/reverse Tab,
+skip-link wrapping, Help/colour-picker focus and Escape return, named selection
+and visibility controls, and actual visibility edits with keyboard Undo/Redo. Multiword rename cancellation
+and visible focus on name/Canvas controls also pass. The slide
+journey additionally checks Cancel retaining edits, explicit Discard, restored
+wiki keyboard access and reopening the exact saved copy. No Save occurs; every
+saved revision/slot remains unchanged with no page/request errors. Axe reports
+no serious/critical finding in these recorded editor scopes. PDF counter checks
+cover normal, annotated and unsaved states; deliberately restoring the old dark
+blue fails the contrast observer. Screens in light/dark were shown to the owner.
+An additional native desktop viewport case preserves wheel zoom, Space-drag and
+resize anchors. Prior six viewer checks retain their scope.
+
+The full local selection passes 337 suites / 19,254 tests. After the final
+keyboard changes, all 17 affected suites pass 1,116 tests. The Windows discovery
+wrapper changes only absolute test globs; hosted exact-code checks remain
+separate. Source lint, styles/messages, asset registration and unchanged reader/
+growth limits pass. The reviewed editor-only source allowance is documented in
+[the growth policy](CODE_GROWTH_POLICY.md); no charter timing limit changes.
+
+Retained failures include outdated role/dependency fixtures, a newly exposed
+colour-preview swatch missing its accessibility role, both global shortcut handlers closing the editor on Help
+Escape, and legacy Vector lacking dark Codex colour tokens. Those findings are
+corrected. Keyboard rename cancellation also exposed a default display name
+ending in a space being committed on Cancel; cancellation now preserves exact
+layer data, keeps its key out of global handlers and uses the textbox role while
+editing. A focus observer now waits for the existing CSS transition before
+checking the unchanged two-pixel requirement. One Close observer initially expected a lowercase dialog instead of
+the existing `alertdialog` named “Unsaved Changes”; correcting it changes no
+product behavior. These checks establish no manual screen-reader or stable
+release acceptance.

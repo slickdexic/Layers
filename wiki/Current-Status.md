@@ -15,7 +15,7 @@ content unchanged; desktop navigation and later one-finger edits/Undo/Redo pass.
 Owner device recheck remains pending. Mobile usability is retained follow-up
 work rather than a release blocker in the owner's accepted scope.
 
-Application commit `69f0d8283a7fec5e0fe98e7ecac5b22d7fa55a2f` passed
+The preceding viewport application commit `69f0d8283a7fec5e0fe98e7ecac5b22d7fa55a2f` passed
 [CI](https://github.com/slickdexic/Layers/actions/runs/44763165868),
 [native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44763166270)
 and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44763166158).
@@ -29,9 +29,14 @@ Reference-performance disposition remains open. The owner has not yet performed
 PC keyboard/screen-reader tests. Automated native inspection finds background
 wiki Tab stops, nested layer-control accessibility violations and low dark-theme
 PDF page-counter contrast. Six viewer theme/media checks pass automated axe and
-keyboard focus checks, preserving saved content. The
+keyboard focus checks, preserving saved content. The owner-approved
 [PC repair brief](https://github.com/slickdexic/Layers/blob/main/docs/PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md)
-awaits approval, with no repair or manual screen-reader pass claimed. The owner
+is implemented: eight native editor cases pass across media, themes and Vector
+skins, including dialog focus/Escape, layer edits/Undo/Redo, counter contrast and
+Cancel/Discard/reopen, with saved revisions unchanged. The final affected local
+replay passes 17 suites / 1,116 tests after a 337-suite / 19,254-test full run.
+Screens were shown; exact-code CI/package qualification and a real manual
+screen-reader pass remain separate. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 

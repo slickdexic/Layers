@@ -38,6 +38,7 @@
 		 * @param {HTMLElement} [config.scrollContainer] Scrollable container for virtualization
 		 */
 		constructor( config ) {
+			this.updateAccessibility = window.Layers.UI.updateLayerItemAccessibility;
 			this.layerList = config.layerList;
 			this.msg = config.msg || ( ( key, fallback ) => fallback || key );
 			this.getSelectedLayerId = config.getSelectedLayerId || ( () => null );
@@ -248,12 +249,11 @@
 				item.classList.add( 'layer-item-child' );
 			}
 
-			// ARIA attributes for listbox option
-			item.setAttribute( 'role', 'option' );
+			// A row contains independent controls, so it is not a listbox option.
+			item.setAttribute( 'role', 'listitem' );
 			const selectedIds = this.getSelectedLayerIds();
 			const isSelected = selectedIds.includes( String( layer.id ) ) ||
 				selectedIds.includes( layer.id );
-			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
@@ -280,7 +280,15 @@
 			name.contentEditable = 'false';
 			name.style.cursor = 'pointer';
 			name.setAttribute( 'role', 'button' );
+			name.setAttribute( 'tabindex', '0' );
 			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
+			name.addEventListener( 'keydown', ( event ) => {
+				if ( name.contentEditable === 'true' ) { return; }
+				if ( event.key === 'Enter' || event.key === ' ' ) {
+					event.preventDefault(); event.stopPropagation();
+					name.click();
+				}
+			} );
 
 			// Lock toggle
 			const lockBtn = this._createLockButton( layer, t );
@@ -293,6 +301,7 @@
 			item.appendChild( name );
 			item.appendChild( lockBtn );
 			item.appendChild( deleteBtn );
+			this.updateAccessibility( item, layer, layerName, isSelected, t );
 
 			return item;
 		}
@@ -465,7 +474,6 @@
 			const selectedIds = this.getSelectedLayerIds();
 			const isSelected = selectedIds.includes( String( layer.id ) ) ||
 				selectedIds.includes( layer.id );
-			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
@@ -513,6 +521,7 @@
 				}
 				lockBtn.appendChild( this._createLockIcon( !!layer.locked ) );
 			}
+			this.updateAccessibility( item, layer, layerName, isSelected, t );
 		}
 
 		/**

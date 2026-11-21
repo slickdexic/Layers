@@ -548,6 +548,8 @@
 		}
 
 		handleKeyDown( e ) {
+			if ( e.target && e.target.closest &&
+				e.target.closest( '[role="dialog"], [role="alertdialog"], [role="menu"]' ) ) { return; }
 			const cm = this.cm;
 			// Don't handle keys when typing in input fields
 			if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {

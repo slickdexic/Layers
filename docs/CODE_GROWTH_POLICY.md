@@ -108,3 +108,17 @@ timer fired during publication. Eleven editor lines defer/coalesce the history
 step until the same Save settles, retain newer edits and keep uncertain bases
 held; its bounded ceiling becomes 2,627. Total handwritten source and
 shared/reader ceilings stay unchanged; shared rendering fits its existing budget.
+
+## November 21 approved PC accessibility repair
+
+The owner approved the PC accessibility brief (UI-3). Review keeps the focus
+boundary and shared layer-control naming/state in two small editor-only modules.
+They isolate the underlying wiki, admit body-mounted dialogs/menus, restore
+focus and original background attributes, and expose independent layer controls.
+Theme-aware PDF counter colours retain the existing labels and status meanings.
+The measured editor grows from 2,190.0 KB to approximately 2,197.9 KB of raw
+source; its bounded allowance rises by 9 KB to 2,199 KB. This is an explicit
+feature allowance rather than an automatic baseline refresh. Handwritten source
+remains within 116,500 lines and existing per-file ceilings; reader/shared,
+page-owned-editor and charter timing limits stay unchanged. Native ResourceLoader,
+keyboard, theme/contrast and content-preservation checks remain required.

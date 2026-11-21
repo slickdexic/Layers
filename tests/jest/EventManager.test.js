@@ -42,6 +42,16 @@ describe( 'EventManager', () => {
 		eventManager = new EventManager( mockEditor );
 	} );
 
+	test.each( [ 'dialog', 'alertdialog', 'menu' ] )( 'leaves %s shortcuts with the active widget', role => {
+		const widget = document.createElement( 'div' ); widget.setAttribute( 'role', role );
+		const target = document.createElement( 'button' ); widget.appendChild( target );
+		for ( const [ key, options ] of [ [ 'Escape', {} ], [ 'Delete', {} ], [ 's', { ctrlKey: true } ] ] ) {
+			eventManager.handleKeyDown( createKeyEvent( key, { ...options, target } ) );
+		}
+		expect( mockEditor.cancel ).not.toHaveBeenCalled(); expect( mockEditor.deleteSelected ).not.toHaveBeenCalled();
+		expect( mockEditor.save ).not.toHaveBeenCalled();
+	} );
+
 	afterEach( () => {
 		if ( eventManager ) {
 			// Clear listeners manually to avoid errors with mock targets

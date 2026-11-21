@@ -2,7 +2,15 @@
 
 > **Current guidance:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas rendering does not automatically provide a readable or searchable transcript. Current page-owned layer-text search is included after migration and cleanup; accessible transcript acceptance remains separate work; see the [charter](PROJECT_CHARTER.md).
 
-**Last Updated:** February 2026
+**Last Updated:** November 21, 2026
+
+The [approved PC repair](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md) now isolates
+editor focus while retaining body-mounted dialogs/menus, exposes separate named
+layer controls with selection/toggle states, and corrects PDF counter contrast.
+Eight native editor theme/media/skin cases pass in the recorded scope, including
+Undo/Redo, Cancel/Discard and reopen. Manual screen-reader acceptance remains
+open. Historical checklists and counts later in this guide retain their dates;
+they are not current certification.
 
 This document describes the accessibility features of the Layers extension and provides guidance for contributors to maintain and improve accessibility compliance.
 
@@ -45,8 +53,8 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | Spinner/loading | `aria-live="polite"` | Announces loading state changes |
 | Icons (decorative) | `aria-hidden="true"` | Hides decorative SVG icons |
 | Range sliders | `aria-label` | Describes slider purpose |
-| Layer list | `role="listbox"` | Identifies list as selection widget |
-| Layer items | `role="option"`, `aria-selected` | Marks selectable list items |
+| Layer list | `role="list"` | Groups rows containing independent controls |
+| Layer items | `role="listitem"`; selection button `aria-pressed` | Keeps the controls and selection state accessible |
 | Modal dialogs | `role="dialog"`, `aria-labelledby` | Identifies accessible dialogs |
 
 ### Keyboard Navigation

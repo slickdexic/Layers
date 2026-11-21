@@ -1,6 +1,6 @@
 # Layers v1.8rc1 release notes
 
-## Unreleased successor — November 20, 2026
+## Unreleased successor — November 21, 2026
 
 The working successor adds the owner-approved folder transforms, revised draft
 recovery choices, Save/Close sequencing repairs, repeatable gradient controls,
@@ -8,6 +8,11 @@ plain Text gradient rendering, radial radius/centre controls and complete-PDF
 history restoration. The approved viewport/touch repair fits the canvas to its
 workspace, centres toolbar zoom, preserves resize anchors and adds two-finger
 pan/pinch while retaining one-finger editing and desktop controls.
+The approved PC accessibility repair isolates editor focus, retains dialog/menu
+shortcut ownership, exposes independent named layer controls/selection state,
+adds keyboard activation to the existing Canvas name and corrects PDF counter
+contrast across both Vector skins and themes. Automated qualification does not
+replace the pending manual screen-reader pass.
 See the [Unreleased changelog](../CHANGELOG.md#unreleased)
 for the complete changes. These changes are not in the immutable RC1 download.
 

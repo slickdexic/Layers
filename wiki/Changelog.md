@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### PC editor accessibility
+- Keep keyboard focus within the full-screen editor and its body-mounted dialogs
+  and menus, restoring wiki access on Close. Dialog keys no longer trigger editor
+  commands behind Help, colour pickers or other active widgets.
+- Expose layer rows as a list of separately named controls, with selection and
+  toggle states available to assistive technology. Make the existing Canvas name
+  keyboard operable and retain layer controls through Undo/Redo and rebuilding.
+- Correct PDF page-counter contrast in light/dark Vector and Vector 2022 while
+  keeping annotation-blue/unsaved-red status and existing wording. Remove the
+  accessibility test's former nested-control exception. Manual screen-reader
+  acceptance remains separate from automated checks.
+
 ### Editor viewport and touch navigation
 - Fit the full canvas, including its border, inside the padded usable workspace.
   Prevent intrinsic canvas size from widening the editor beyond its screen space.

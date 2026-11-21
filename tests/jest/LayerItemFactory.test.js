@@ -43,6 +43,8 @@ describe('LayerItemFactory', () => {
             }
         };
 
+        window.Layers.UI.updateLayerItemAccessibility = require('../../resources/ext.layers.editor/ui/LayerItemAccessibility.js');
+
         mockConfig = {
             msg: jest.fn((key, fallback) => fallback),
             getSelectedLayerId: jest.fn(() => null),
@@ -57,6 +59,7 @@ describe('LayerItemFactory', () => {
     });
 
     describe('constructor', () => {
+
         test('should create factory with config', () => {
             expect(factory.config).toBe(mockConfig);
             expect(factory.msg).toBe(mockConfig.msg);
@@ -271,6 +274,19 @@ describe('LayerItemFactory', () => {
     });
 
     describe('createLayerItem', () => {
+        test('activates the name by keyboard but leaves Space available for editing', () => {
+            const name = factory.createLayerItem({ id: 'name', type: 'rectangle' }, 0).querySelector('.layer-name');
+            const click = jest.fn();
+            name.addEventListener('click', click);
+            name.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+            expect(click).toHaveBeenCalledTimes(1);
+            name.contentEditable = 'true';
+            const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+            name.dispatchEvent(event);
+            expect(event.defaultPrevented).toBe(false);
+            expect(click).toHaveBeenCalledTimes(1);
+        });
+
         test('should create layer item with correct class and data attributes', () => {
             const layer = { id: 'layer1', type: 'rectangle' };
             const item = factory.createLayerItem(layer, 0);
@@ -281,28 +297,28 @@ describe('LayerItemFactory', () => {
             expect(item.draggable).toBe(true);
         });
 
-        test('should set ARIA role="option" attribute', () => {
+        test('should set ARIA role="listitem" attribute', () => {
             const layer = { id: 'layer1', type: 'rectangle' };
             const item = factory.createLayerItem(layer, 0);
 
-            expect(item.getAttribute('role')).toBe('option');
+            expect(item.getAttribute('role')).toBe('listitem');
         });
 
-        test('should set aria-selected=false when not selected', () => {
+        test('should set selection button unpressed when not selected', () => {
             mockConfig.getSelectedLayerIds.mockReturnValue([]);
             const layer = { id: 'layer1', type: 'rectangle' };
             const item = factory.createLayerItem(layer, 0);
 
-            expect(item.getAttribute('aria-selected')).toBe('false');
+            expect(item.querySelector('.layer-grab-area').getAttribute('aria-pressed')).toBe('false');
             expect(item.classList.contains('selected')).toBe(false);
         });
 
-        test('should set aria-selected=true and add selected class when selected', () => {
+        test('should set selection button pressed and add selected class when selected', () => {
             mockConfig.getSelectedLayerIds.mockReturnValue(['layer1']);
             const layer = { id: 'layer1', type: 'rectangle' };
             const item = factory.createLayerItem(layer, 0);
 
-            expect(item.getAttribute('aria-selected')).toBe('true');
+            expect(item.querySelector('.layer-grab-area').getAttribute('aria-pressed')).toBe('true');
             expect(item.classList.contains('selected')).toBe(true);
         });
 
@@ -339,7 +355,7 @@ describe('LayerItemFactory', () => {
 
             expect(visibilityBtn).not.toBeNull();
             expect(visibilityBtn.type).toBe('button');
-            expect(visibilityBtn.getAttribute('aria-label')).toBe('Toggle visibility');
+            expect(visibilityBtn.getAttribute('aria-label')).toBe('Toggle visibility - Rectangle');
         });
 
         test('should create name element with contentEditable disabled by default', () => {
@@ -360,7 +376,7 @@ describe('LayerItemFactory', () => {
 
             expect(lockBtn).not.toBeNull();
             expect(lockBtn.type).toBe('button');
-            expect(lockBtn.getAttribute('aria-label')).toBe('Toggle lock');
+            expect(lockBtn.getAttribute('aria-label')).toBe('Toggle lock - Rectangle');
         });
 
         test('should create delete button', () => {
@@ -370,7 +386,7 @@ describe('LayerItemFactory', () => {
 
             expect(deleteBtn).not.toBeNull();
             expect(deleteBtn.type).toBe('button');
-            expect(deleteBtn.getAttribute('aria-label')).toBe('Delete layer');
+            expect(deleteBtn.getAttribute('aria-label')).toBe('Delete layer - Rectangle');
         });
 
         test('should create grab SVG with circles', () => {
@@ -406,7 +422,7 @@ describe('LayerItemFactory', () => {
             mockConfig.getSelectedLayerIds.mockReturnValue(['layer1']);
             factory.updateLayerItem(item, layer, 0);
 
-            expect(item.getAttribute('aria-selected')).toBe('true');
+            expect(item.querySelector('.layer-grab-area').getAttribute('aria-pressed')).toBe('true');
             expect(item.classList.contains('selected')).toBe(true);
         });
 
@@ -415,7 +431,7 @@ describe('LayerItemFactory', () => {
             mockConfig.getSelectedLayerIds.mockReturnValue([]);
             factory.updateLayerItem(item, layer, 0);
 
-            expect(item.getAttribute('aria-selected')).toBe('false');
+            expect(item.querySelector('.layer-grab-area').getAttribute('aria-pressed')).toBe('false');
             expect(item.classList.contains('selected')).toBe(false);
         });
 
@@ -515,7 +531,7 @@ describe('LayerItemFactory', () => {
             
             const event = {
                 key: 'ArrowUp',
-                preventDefault: jest.fn()
+                preventDefault: jest.fn(), stopPropagation: jest.fn()
             };
             handler(event);
 
@@ -531,7 +547,7 @@ describe('LayerItemFactory', () => {
             
             const event = {
                 key: 'ArrowDown',
-                preventDefault: jest.fn()
+                preventDefault: jest.fn(), stopPropagation: jest.fn()
             };
             handler(event);
 
@@ -547,7 +563,7 @@ describe('LayerItemFactory', () => {
             
             const event = {
                 key: 'Enter',
-                preventDefault: jest.fn()
+                preventDefault: jest.fn(), stopPropagation: jest.fn()
             };
             handler(event);
 

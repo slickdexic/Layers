@@ -62,6 +62,7 @@ describe( 'LayerPanel Extended', () => {
 
 		// Load LayerListRenderer for layer list rendering
 		const LayerListRenderer = require( '../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
+		window.Layers.UI.updateLayerItemAccessibility = require('../../resources/ext.layers.editor/ui/LayerItemAccessibility.js');
 		window.Layers.UI.LayerListRenderer = LayerListRenderer;
 
 		// Load FolderOperationsController for folder operations

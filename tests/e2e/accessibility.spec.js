@@ -491,20 +491,8 @@ test( 'UI-3 automated accessibility checks on Layers screens with axe-core in li
 		// A screen whose elements were not found was not audited; that is a failure, not a pass.
 		expect( allAuditReports.filter( ( r ) => r.warning ).map( ( r ) => `${ r.screen } (${ r.mode })` ) ).toEqual( [] );
 
-		// Known open violations, tracked in the charter (UI-3) and fixed in the design pass. Each entry
-		// must still occur: when it is fixed, this list fails until the entry is removed.
-		const KNOWN_OPEN = [
-			// Layer rows are listbox options holding their own buttons; they need the grid pattern.
-			{ rule: 'nested-interactive', html: 'class="layer-item' }
-		];
-		const isKnown = ( v ) => KNOWN_OPEN.some( ( k ) => k.rule === v.rule &&
-			v.nodes.every( ( n ) => n.html.includes( k.html ) ) );
-		for ( const known of KNOWN_OPEN ) {
-			expect( criticalOrSeriousViolations.some( ( v ) => v.rule === known.rule ),
-				`Known violation ${ known.rule } no longer occurs: remove it from KNOWN_OPEN` ).toBe( true );
-		}
-		const unexpected = criticalOrSeriousViolations.filter( ( v ) => !isKnown( v ) );
-		expect( unexpected.map( ( v ) => `${ v.screen } (${ v.mode }): ${ v.rule }` ),
+		// The approved layer-list repair removes the former nested-control exception.
+		expect( criticalOrSeriousViolations.map( ( v ) => `${ v.screen } (${ v.mode }): ${ v.rule }` ),
 			'Critical or serious accessibility violations; see the console report' ).toEqual( [] );
 
 	} finally {

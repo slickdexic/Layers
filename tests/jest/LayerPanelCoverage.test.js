@@ -259,6 +259,8 @@ describe( 'LayerPanel Coverage Extension', () => {
 
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'layer1', { name: 'New Layer Name' } );
 			expect( mockEditor.saveState ).toHaveBeenCalledWith( 'Rename Layer' );
+			nameElement.dispatchEvent( new Event( 'blur' ) );
+			expect( mockEditor.updateLayer ).toHaveBeenCalledTimes( 1 );
 		} );
 
 		it( 'should not save if name unchanged', () => {
@@ -304,7 +306,7 @@ describe( 'LayerPanel Coverage Extension', () => {
 
 		it( 'should revert on Escape key', () => {
 			const nameElement = document.createElement( 'span' );
-			nameElement.textContent = 'Original Name';
+			nameElement.textContent = 'Original Name ';
 			nameElement.contentEditable = true;
 			document.body.appendChild( nameElement );
 
@@ -315,12 +317,16 @@ describe( 'LayerPanel Coverage Extension', () => {
 
 			// Change name then press Escape
 			nameElement.textContent = 'Changed Name';
-			const keydownEvent = new KeyboardEvent( 'keydown', { key: 'Escape' } );
+			const keydownEvent = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true, cancelable: true } );
 			nameElement.dispatchEvent( keydownEvent );
 
 			// Escape restores original and blurs
-			expect( nameElement.textContent ).toBe( 'Original Name' );
+			expect( nameElement.textContent ).toBe( 'Original Name ' );
 			expect( nameElement.blur ).toHaveBeenCalled();
+			expect( keydownEvent.defaultPrevented ).toBe( true );
+			nameElement.dispatchEvent( new Event( 'blur' ) );
+			expect( mockEditor.updateLayer ).not.toHaveBeenCalled();
+			expect( nameElement.getAttribute( 'role' ) ).toBe( 'button' );
 		} );
 	} );
 

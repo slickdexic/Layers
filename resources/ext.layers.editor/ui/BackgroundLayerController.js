@@ -127,8 +127,7 @@
 			item.dataset.layerId = '__background__';
 
 			// ARIA attributes - use "Canvas" for slides, "Background Image" for images
-			item.setAttribute( 'role', 'option' );
-			item.setAttribute( 'aria-selected', 'false' );
+			item.setAttribute( 'role', 'listitem' );
 			const label = isSlide ?
 				t( 'layers-slide-canvas-layer', 'Canvas' ) :
 				t( 'layers-background-layer', 'Background Image' );
@@ -164,6 +163,17 @@
 			const name = document.createElement( 'span' );
 			name.className = 'layer-name canvas-name';
 			name.textContent = t( 'layers-slide-canvas-layer', 'Canvas' );
+			name.setAttribute( 'role', 'button' );
+			name.tabIndex = 0;
+			name.setAttribute( 'aria-pressed', String( !!( this.editor && this.editor.stateManager &&
+				this.editor.stateManager.get( 'canvasLayerSelected' ) ) ) );
+			const activateCanvas = ( event ) => {
+				if ( event.key === 'Enter' || event.key === ' ' ) {
+					event.preventDefault(); event.stopPropagation(); this.selectCanvasLayer();
+				}
+			};
+			if ( this.addTargetListener ) { this.addTargetListener( name, 'keydown', activateCanvas ); }
+			else { name.addEventListener( 'keydown', activateCanvas ); }
 			name.style.cssText = 'font-weight: 600; flex: 1;';
 
 			// Opacity slider container
@@ -221,10 +231,13 @@
 			if ( item ) {
 				// Remove selection from other items
 				const allItems = this.layerList.querySelectorAll( '.layer-item' );
-				allItems.forEach( ( i ) => i.classList.remove( 'selected' ) );
+				allItems.forEach( ( i ) => {
+					i.classList.remove( 'selected' );
+					i.querySelector( '.layer-grab-area' )?.setAttribute( 'aria-pressed', 'false' );
+				} );
 				// Add selection to canvas item
 				item.classList.add( 'selected' );
-				item.setAttribute( 'aria-selected', 'true' );
+				item.querySelector( '.canvas-name' )?.setAttribute( 'aria-pressed', 'true' );
 			}
 		}
 
@@ -352,6 +365,7 @@
 			// Use span instead of button - this is now display-only
 			const swatchDisplay = document.createElement( 'span' );
 			swatchDisplay.className = 'layer-background-color-swatch';
+			swatchDisplay.setAttribute( 'role', 'img' );
 			swatchDisplay.title = t( 'layers-canvas-color-preview', 'Canvas color (edit in Properties panel)' );
 			swatchDisplay.setAttribute( 'aria-label', t( 'layers-canvas-color-preview', 'Canvas color' ) );
 			// Use red diagonal stripe for transparent (matching ColorPickerDialog exactly)

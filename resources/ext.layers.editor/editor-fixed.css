@@ -451,7 +451,7 @@ body.layers-editor-open .mw-body-content {
 	padding: 0 6px;
 	text-align: center;
 	font-size: 0.85em;
-	color: #54595d;
+	color: var( --layers-text-primary, var( --color-base, #54595d ) );
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	user-select: none;
@@ -470,12 +470,12 @@ body.layers-editor-open .mw-body-content {
 
 /* A page that already carries annotations, and one with unsaved work. */
 .page-nav-group.page-has-layers .toolbar-page-display {
-	color: #36c;
+	color: var( --layers-counter-accent, var( --color-progressive, #36c ) );
 	font-weight: bold;
 }
 
 .page-nav-group.page-is-dirty .toolbar-page-display {
-	color: #b32424;
+	color: var( --layers-error, var( --color-destructive, #b32424 ) );
 	font-weight: bold;
 }
 
@@ -2131,6 +2131,11 @@ body.layers-editor-open .mw-body-content {
 	box-shadow: 0 0 0 2px rgba( 33, 150, 243, 0.2 );
 }
 
+.layer-name:focus-visible {
+	outline: 2px solid var( --layers-counter-accent, var( --color-progressive, #36c ) );
+	outline-offset: 1px;
+}
+
 /* Text Input Modal */
 
 .text-input-overlay {
@@ -3244,6 +3249,7 @@ body.layers-resize-cursor {
 		--layers-text-muted: #72777d;
 		--layers-accent: #36c;
 		--layers-accent-hover: #447ff5;
+		--layers-counter-accent: #8aafff;
 		--layers-error: #ff6b6b;
 		--layers-success: #4caf50;
 		--layers-warning: #ffc107;
@@ -3884,6 +3890,7 @@ body.layers-resize-cursor {
 		--layers-text-muted: #72777d;
 		--layers-accent: #36c;
 		--layers-accent-hover: #447ff5;
+		--layers-counter-accent: #8aafff;
 		--layers-error: #ff6b6b;
 		--layers-success: #4caf50;
 		--layers-warning: #ffc107;

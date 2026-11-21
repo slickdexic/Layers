@@ -24,6 +24,7 @@ const mockIconFactory = {
 window.Layers = window.Layers || {};
 window.Layers.UI = window.Layers.UI || {};
 window.Layers.UI.IconFactory = mockIconFactory;
+window.Layers.UI.updateLayerItemAccessibility = require('../../resources/ext.layers.editor/ui/LayerItemAccessibility.js');
 window.IconFactory = mockIconFactory;
 window.LayersConstants = {
 	LAYER_TYPES: {
@@ -265,7 +266,7 @@ describe( 'LayerListRenderer', () => {
 			const layer = { id: 'layer_1', type: 'text', text: 'Hello', name: 'My Layer' };
 			const item = renderer.createLayerItem( layer, 0 );
 
-			expect( item.getAttribute( 'role' ) ).toBe( 'option' );
+			expect( item.getAttribute( 'role' ) ).toBe( 'listitem' );
 			expect( item.getAttribute( 'aria-label' ) ).toBe( 'My Layer' );
 		} );
 
@@ -276,7 +277,7 @@ describe( 'LayerListRenderer', () => {
 			const item = renderer.createLayerItem( layer, 0 );
 
 			expect( item.classList.contains( 'selected' ) ).toBe( true );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'true' );
+			expect( item.querySelector( '.layer-grab-area' ).getAttribute( 'aria-pressed' ) ).toBe( 'true' );
 		} );
 
 		test( 'should use layer name when provided', () => {

@@ -6,9 +6,14 @@ nested-control axe findings on layer/Canvas rows, plus low dark-theme PDF counte
 contrast. Six viewer theme/media checks pass axe, Tab containment and Escape
 return; three dark editor audits retain the known role finding. Saved content
 is unchanged; this is automated evidence, not a screen-reader pass. Advances UI-3. The
-[bounded repair brief](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md) awaits owner
-approval before changing focus or controls. Continue unaffected performance and
-release checks; do not mark PC accessibility accepted or waived.
+[bounded repair brief](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md) is owner-approved
+and implemented. Eight native editor theme/media/skin cases pass, including
+dialog Escape, layer edits/Undo/Redo, counter contrast, Cancel/Discard and reopen,
+with saved content unchanged. A native desktop viewport regression also passes.
+The full local selection passes 337 suites / 19,254 tests; final affected replay
+passes 17 suites / 1,116 tests. Screens were shown. Continue exact-code CI/package
+qualification, manual screen-reader and performance disposition; do not mark
+overall PC accessibility accepted or waived.
 
 # Owner tablet findings and PC priority — November 20, 2026
 

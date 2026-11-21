@@ -57,6 +57,7 @@ describe( 'LayerListRenderer', () => {
 	} );
 
 	beforeEach( () => {
+		window.Layers.UI.updateLayerItemAccessibility = require('../../../resources/ext.layers.editor/ui/LayerItemAccessibility.js');
 		mockLayerList = document.createElement( 'div' );
 		mockMsg = jest.fn( ( key, fallback ) => fallback || key );
 		mockGetSelectedLayerId = jest.fn( () => null );
@@ -247,24 +248,24 @@ describe( 'LayerListRenderer', () => {
 			expect( item.draggable ).toBe( true );
 		} );
 
-		it( 'should set ARIA role to option', () => {
+		it( 'should set ARIA role to listitem', () => {
 			const layer = { id: '1', type: 'rectangle' };
 			const item = renderer.createLayerItem( layer, 0 );
-			expect( item.getAttribute( 'role' ) ).toBe( 'option' );
+			expect( item.getAttribute( 'role' ) ).toBe( 'listitem' );
 		} );
 
-		it( 'should set aria-selected to false when not selected', () => {
+		it( 'should set selection button state to false when not selected', () => {
 			mockGetSelectedLayerIds.mockReturnValue( [] );
 			const layer = { id: '1', type: 'rectangle' };
 			const item = renderer.createLayerItem( layer, 0 );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'false' );
+			expect( item.querySelector( '.layer-grab-area' ).getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 
-		it( 'should set aria-selected to true when selected', () => {
+		it( 'should set selection button state to true when selected', () => {
 			mockGetSelectedLayerIds.mockReturnValue( [ '1' ] );
 			const layer = { id: '1', type: 'rectangle' };
 			const item = renderer.createLayerItem( layer, 0 );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'true' );
+			expect( item.querySelector( '.layer-grab-area' ).getAttribute( 'aria-pressed' ) ).toBe( 'true' );
 		} );
 
 		it( 'should add selected class when selected', () => {
@@ -446,17 +447,17 @@ it( 'should create name element that is not editable by default', () => {
 			expect( item.dataset.index ).toBe( '3' );
 		} );
 
-		it( 'should update aria-selected when selected', () => {
+		it( 'should update selection button state when selected', () => {
 			mockGetSelectedLayerIds.mockReturnValue( [ '1' ] );
 			renderer.updateLayerItem( item, layer, 0 );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'true' );
+			expect( item.querySelector( '.layer-grab-area' ).getAttribute( 'aria-pressed' ) ).toBe( 'true' );
 		} );
 
-		it( 'should update aria-selected when deselected', () => {
-			item.setAttribute( 'aria-selected', 'true' );
+		it( 'should update selection button state when deselected', () => {
+			item.querySelector( '.layer-grab-area' ).setAttribute( 'aria-pressed', 'true' );
 			mockGetSelectedLayerIds.mockReturnValue( [] );
 			renderer.updateLayerItem( item, layer, 0 );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'false' );
+			expect( item.querySelector( '.layer-grab-area' ).getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 
 		it( 'should add selected class when selected', () => {

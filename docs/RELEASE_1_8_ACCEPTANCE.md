@@ -11,7 +11,7 @@ the listbox issue is already recorded in the charter's UI-3 baseline. All 100
 recorded Tab presses leave layer data and saved revision/slots unchanged, with
 no page/request errors. Automated inspection does not establish a manual
 screen-reader pass. The bounded [PC accessibility brief](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md)
-is proposed for owner approval; no repair is implemented yet. Additional
+was approved: “Approve the PC accessibility brief”. Additional baseline
 dark-theme image/slide/PDF editor audits reproduce the layer-role issue and find
 2.71:1 PDF page-counter contrast. The brief also proposes theme-aware counter
 colours. Six light/dark image/slide/PDF viewer checks report no axe violations,
@@ -20,6 +20,14 @@ All nine additional cases preserve saved content and have no page/request errors
 Their first observer waited for a hidden overlay action before focusing its
 host; the corrected observer passes without changing product behavior. Retain
 that failure separately; these results do not qualify manual screen-reader use.
+The implemented repair now passes eight native editor cases across image/slide/
+PDF, both themes and both Vector skins. Keyboard traversal, Help/colour-picker
+focus and Escape, layer controls, actual edits/Undo/Redo, Canvas activation and
+counter contrast pass with saved content unchanged. Cancel/Discard and reopen
+also pass. The old dark colour deliberately fails the contrast observer; desktop
+viewport navigation retains its native pass. The brief records retained failures,
+the 337-suite / 19,254-test full local run and final 17-suite / 1,116-test replay.
+This advances UI-3 in the verified scope, without a manual screen-reader pass.
 Reference-performance disposition and final release acceptance remain open.
 
 ## Owner tablet result and release disposition — November 20, 2026

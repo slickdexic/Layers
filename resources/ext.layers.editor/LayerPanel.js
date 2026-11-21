@@ -578,7 +578,7 @@
 					const canvasItem = this.layerList && this.layerList.querySelector( '.background-layer-item' );
 					if ( canvasItem ) {
 						canvasItem.classList.remove( 'selected' );
-						canvasItem.setAttribute( 'aria-selected', 'false' );
+						canvasItem.querySelector( '.canvas-name' )?.setAttribute( 'aria-pressed', 'false' );
 					}
 				}
 				this.renderLayerList();
@@ -1021,7 +1021,7 @@
 			// Layer list
 			this.layerList = document.createElement( 'div' );
 			this.layerList.className = 'layers-list';
-			this.layerList.setAttribute( 'role', 'listbox' );
+			this.layerList.setAttribute( 'role', 'list' );
 			this.layerList.setAttribute( 'aria-label', this.msg( 'layers-panel-title', 'Layers' ) );
 
 			// LOW-8 FIX: Add aria-live region for screen reader announcements
@@ -1031,7 +1031,7 @@
 			this.ariaLiveRegion.className = 'layers-sr-only';
 			// Visually hidden but accessible to screen readers
 			this.ariaLiveRegion.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
-			// A listbox may only contain options, so the announcer sits beside the list.
+			// Keep announcements beside the list rather than making them another row.
 			sidebarInner.appendChild( this.ariaLiveRegion );
 
 			const emptyState = document.createElement( 'div' );
@@ -1936,6 +1936,8 @@
 
 			// Enable contentEditable for editing
 			nameElement.contentEditable = 'true';
+			nameElement.setAttribute( 'role', 'textbox' );
+			nameElement._cancelNameEdit = false;
 			nameElement.style.cursor = 'text';
 			nameElement.focus();
 
@@ -1946,20 +1948,11 @@
 			selection.removeAllRanges();
 			selection.addRange( range );
 
-			// Prevent adding duplicate listeners
-			if ( nameElement._hasEditListeners ) {
-				// Update original name for existing listeners so Escape
-				// reverts to the CURRENT name, not the first-ever name
-				nameElement.dataset.originalName = nameElement.textContent;
-				return;
-			}
+			// Capture this edit's exact display name even when reusing listeners.
+			nameElement.dataset.originalName = nameElement.textContent;
+			if ( nameElement._hasEditListeners ) { return; }
 			nameElement._hasEditListeners = true;
-
-			const originalName = nameElement.textContent;
 			const maxLength = 100;
-
-			// Store original name for persistent listeners to reference
-			nameElement.dataset.originalName = originalName;
 
 			// Use EventTracker-aware addTargetListener for proper cleanup
 			this.addTargetListener( nameElement, 'input', () => {
@@ -1975,22 +1968,24 @@
 				}
 			} );
 			this.addTargetListener( nameElement, 'blur', () => {
+				if ( nameElement.contentEditable !== 'true' ) { return; }
 				const savedOriginal = nameElement.dataset.originalName || '';
 				const newName = nameElement.textContent.trim();
-				if ( newName && newName !== savedOriginal ) {
+				if ( !nameElement._cancelNameEdit && newName && newName !== savedOriginal ) {
 					this.editor.updateLayer( layerId, { name: newName } );
 					this.editor.saveState( 'Rename Layer' );
 				}
 				// Disable contentEditable when done editing
 				nameElement.contentEditable = 'false';
+				nameElement.setAttribute( 'role', 'button' );
 				nameElement.style.cursor = 'pointer';
 				// Do NOT reset _hasEditListeners — listeners are reusable
 			} );
 			this.addTargetListener( nameElement, 'keydown', ( e ) => {
-				if ( e.key === 'Enter' ) {
-					nameElement.blur();
-				} else if ( e.key === 'Escape' ) {
-					nameElement.textContent = nameElement.dataset.originalName || '';
+				if ( e.key === 'Enter' || e.key === 'Escape' ) {
+					e.preventDefault(); e.stopPropagation();
+					nameElement._cancelNameEdit = e.key === 'Escape';
+					if ( nameElement._cancelNameEdit ) { nameElement.textContent = nameElement.dataset.originalName || ''; }
 					nameElement.blur();
 				}
 			} );

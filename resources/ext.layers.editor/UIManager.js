@@ -126,6 +126,8 @@
 		this.editor.$toolbar = $( this.toolbarContainer );
 
 		this.setupRevisionControls();
+		const EditorFocusBoundary = getClass( 'UI.EditorFocusBoundary', 'EditorFocusBoundary' );
+		this.focusBoundary = EditorFocusBoundary ? new EditorFocusBoundary( this.container ) : null;
 
 		// SECURITY FIX: Use mw.log instead of console.log
 		if ( mw.log && mw.config.get( 'wgLayersDebug' ) ) {
@@ -570,6 +572,7 @@
 	}
 
 	destroy() {
+		if ( this.focusBoundary ) { this.focusBoundary.destroy(); this.focusBoundary = null; }
 		// Cancel all tracked timeouts to prevent memory leaks
 		if ( this.activeTimeouts ) {
 			this.activeTimeouts.forEach( ( timeoutId ) => {

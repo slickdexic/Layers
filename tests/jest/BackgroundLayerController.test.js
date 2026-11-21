@@ -293,8 +293,8 @@ describe( 'BackgroundLayerController', () => {
 		it( 'should include ARIA attributes', () => {
 			const item = controller.createBackgroundLayerItem();
 
-			expect( item.getAttribute( 'role' ) ).toBe( 'option' );
-			expect( item.getAttribute( 'aria-selected' ) ).toBe( 'false' );
+			expect( item.getAttribute( 'role' ) ).toBe( 'listitem' );
+			expect( item.hasAttribute( 'aria-selected' ) ).toBe( false );
 			expect( item.getAttribute( 'aria-label' ) ).toBe( 'Background Image' );
 		} );
 
@@ -706,7 +706,7 @@ describe( 'BackgroundLayerController', () => {
 
 			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
 			expect( bgItem.classList.contains( 'selected' ) ).toBe( true );
-			expect( bgItem.getAttribute( 'aria-selected' ) ).toBe( 'true' );
+			expect( bgItem.querySelector( '.canvas-name' ).getAttribute( 'aria-pressed' ) ).toBe( 'true' );
 		} );
 
 		it( 'should remove selected class from other layer items', () => {

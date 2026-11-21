@@ -146,6 +146,24 @@ stylesheet, font, PDF worker and synthetic image assets remain available.
 All generated canaries and the temporary flat-file fixture are removed afterward.
 This creates no additional wiki, database clone, container or web port.
 
+## Opt-in PC editor accessibility checks
+
+`tests/e2e/editor-accessibility.spec.js` uses the existing private
+`LAYERS_ACCEPTANCE_CONFIG`. Also set `LAYERS_ACCESSIBILITY_OWNER` to an already
+provisioned synthetic owning page beginning `Layers_`, and
+`LAYERS_ACCESSIBILITY_SURFACE` to its exact saved surface ID. Optional
+`LAYERS_ACCESSIBILITY_SKIN` accepts `vector-2022` (default) or `vector`.
+Run the spec through the maintained Playwright CLI with `--project=chromium
+--workers=1` and an output directory outside the served checkout.
+
+After authentication its browser admits same-origin GET traffic only. It checks
+keyboard traversal, dialogs, layer controls, rename cancellation and Undo/Redo;
+PDFs additionally exercise all counter states and a deliberate contrast failure.
+The slide journey tests Cancel/Discard of its own isolated local edits and
+reopens the saved copy. It never invokes Save and compares every saved slot and
+revision before/after. Preserve the JSON receipts/screenshots with private test
+evidence. This is automated qualification, not a manual screen-reader pass.
+
 ## Retired environments
 
 The former task-specific wiki containers are retired. Their unique test data and

@@ -653,7 +653,7 @@ describe('LayerPanel', () => {
                 editor: mockEditor
             });
 
-            expect(panel.layerList.getAttribute('role')).toBe('listbox');
+            expect(panel.layerList.getAttribute('role')).toBe('list');
         });
     });
 

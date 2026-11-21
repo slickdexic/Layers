@@ -44,6 +44,7 @@
 		 * @param {Function} [config.getLayerDepth] Function to get nesting depth of a layer
 		 */
 		constructor( config ) {
+			this.updateAccessibility = getClass( 'UI.updateLayerItemAccessibility', 'layersUpdateLayerItemAccessibility' );
 			this.config = config || {};
 			this.msg = config.msg || ( ( key, fallback ) => fallback );
 			this.getSelectedLayerId = config.getSelectedLayerId || ( () => null );
@@ -200,11 +201,10 @@
 				item.classList.add( 'layer-item-child' );
 			}
 
-			// ARIA attributes for listbox option
-			item.setAttribute( 'role', 'option' );
+			// A row contains independent controls, so it is not a listbox option.
+			item.setAttribute( 'role', 'listitem' );
 			const selectedIds = this.getSelectedLayerIds();
 			const isSelected = selectedIds.includes( layer.id );
-			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
@@ -235,6 +235,7 @@
 			this.addTargetListener( grabArea, 'keydown', ( e ) => {
 				if ( e.key === 'ArrowUp' || e.key === 'ArrowDown' ) {
 					e.preventDefault();
+					e.stopPropagation();
 					const direction = e.key === 'ArrowUp' ? -1 : 1;
 					this.onMoveLayer( layer.id, direction );
 				}
@@ -290,11 +291,13 @@
 			name.setAttribute( 'role', 'button' );
 			name.setAttribute( 'tabindex', '0' );
 			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
-			// Keyboard activation for rename — mirrors dblclick behavior
+			// Use the existing name-click action for keyboard activation.
 			name.addEventListener( 'keydown', ( e ) => {
+				if ( name.contentEditable === 'true' ) { return; }
 				if ( e.key === 'Enter' || e.key === ' ' ) {
 					e.preventDefault();
-					name.dispatchEvent( new MouseEvent( 'dblclick', { bubbles: true } ) );
+					e.stopPropagation();
+					name.click();
 				}
 			} );
 
@@ -319,6 +322,7 @@
 			item.appendChild( name );
 			item.appendChild( lockBtn );
 			item.appendChild( deleteBtn );
+			this.updateAccessibility( item, layer, layerName, isSelected, t );
 			return item;
 		}
 
@@ -395,7 +399,6 @@
 			// Update ARIA attributes
 			const selectedIds = this.getSelectedLayerIds();
 			const isSelected = selectedIds.includes( layer.id );
-			item.setAttribute( 'aria-selected', isSelected ? 'true' : 'false' );
 			const layerName = layer.name || this.getDefaultLayerName( layer );
 			item.setAttribute( 'aria-label', layerName );
 
@@ -480,6 +483,7 @@
 				}
 				lockBtn.appendChild( this.createLockIcon( !!layer.locked ) );
 			}
+			this.updateAccessibility( item, layer, layerName, isSelected, t );
 		}
 	}
 
