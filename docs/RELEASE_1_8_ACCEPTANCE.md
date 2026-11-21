@@ -28,6 +28,13 @@ also pass. The old dark colour deliberately fails the contrast observer; desktop
 viewport navigation retains its native pass. The brief records retained failures,
 the 337-suite / 19,254-test full local run and final 17-suite / 1,116-test replay.
 This advances UI-3 in the verified scope, without a manual screen-reader pass.
+Application `64e03968` passes all three exact-code CI workflows, including
+340 JavaScript suites / 19,279 tests. Its 2,974-file qualification package
+matches Git and installed 1.44.6 hashes/modes. Four installed image-editor
+theme/skin cases pass with exact reader pixels, focus/dialog handling, rename
+cancellation and axe. All fifteen content-table witnesses, nine pages, sixteen
+revisions and three uploads remain unchanged; no other service/configuration is
+changed. The brief links the exact-code gates and records their limits.
 Reference-performance disposition and final release acceptance remain open.
 
 ## Owner tablet result and release disposition — November 20, 2026

@@ -98,3 +98,23 @@ checking the unchanged two-pixel requirement. One Close observer initially expec
 the existing `alertdialog` named “Unsaved Changes”; correcting it changes no
 product behavior. These checks establish no manual screen-reader or stable
 release acceptance.
+
+Application `64e03968989eaccb829abb6c05fba3d20b5ba541` passes exact-code
+[CI](https://github.com/slickdexic/Layers/actions/runs/44955746151),
+[native MediaWiki](https://github.com/slickdexic/Layers/actions/runs/44955746223)
+and [browser](https://github.com/slickdexic/Layers/actions/runs/44955746089) gates;
+hosted JavaScript passes 340 suites / 19,279 tests. Its qualification archive's
+2,974 files and executable modes match Git and the installed 1.44.6 package.
+Four installed image-editor theme/skin checks pass exact reader pixels, focus/
+dialog handling, rename cancellation and axe. All fifteen content-table witnesses,
+nine pages, sixteen revisions and three retained uploads remain exact; the HTTP
+guard and public assets pass, with other services/configuration preserved.
+This extends the recorded compatibility scope, not manual accessibility acceptance.
+
+The existing disposable MediaWiki editor CI job also runs the dedicated light/
+dark keyboard/axe journey on a separate seeded owning page. Its text deliberately
+has a default display name ending in a space, retaining the cancellation
+regression. Credentials come from the existing generated CI account; the seeder
+checks the disposable wiki's identity before writing. Reports are kept separately
+from the existing editor suite. This adds UI-3/OPS-4 continuous coverage without
+running CI against the maintained wiki or creating another local environment.

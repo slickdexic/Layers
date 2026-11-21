@@ -7,7 +7,8 @@ const path = require( 'path' );
 const fs = require( 'fs' );
 const owner = process.env.LAYERS_ACCESSIBILITY_OWNER, surface = process.env.LAYERS_ACCESSIBILITY_SURFACE;
 const skin = process.env.LAYERS_ACCESSIBILITY_SKIN || 'vector-2022';
-test.skip( !getAcceptanceConfig() || !owner || !surface, 'Requires an explicit synthetic accessibility fixture' );
+const server = getAcceptanceConfig()?.base || process.env.MW_SERVER;
+test.skip( !server || !owner || !surface, 'Requires an explicit synthetic accessibility fixture' );
 
 async function audit( page, root, rules ) {
 	return page.evaluate( async ( { selector, selectedRules } ) => {
@@ -23,7 +24,7 @@ async function audit( page, root, rules ) {
 for ( const theme of [ 'light', 'dark' ] ) {
 	test( `PC editor accessibility: ${ theme } keyboard, dialogs, layer controls and contrast`, async ( { loggedInPage: page, context }, testInfo ) => {
 		test.setTimeout( 180000 );
-		const base = new URL( getAcceptanceConfig().base ).origin;
+		const base = new URL( server ).origin;
 		expect( [ 'localhost', '127.0.0.1' ] ).toContain( new URL( base ).hostname );
 		expect( owner ).toMatch( /^Layers[_ ]/ );
 		expect( [ 'vector', 'vector-2022' ] ).toContain( skin );

@@ -11,9 +11,13 @@ and implemented. Eight native editor theme/media/skin cases pass, including
 dialog Escape, layer edits/Undo/Redo, counter contrast, Cancel/Discard and reopen,
 with saved content unchanged. A native desktop viewport regression also passes.
 The full local selection passes 337 suites / 19,254 tests; final affected replay
-passes 17 suites / 1,116 tests. Screens were shown. Continue exact-code CI/package
-qualification, manual screen-reader and performance disposition; do not mark
-overall PC accessibility accepted or waived.
+passes 17 suites / 1,116 tests. Screens were shown. Application `64e03968` now
+passes all three exact-code CI workflows (340 JavaScript suites / 19,279 tests).
+Its 2,974-file package matches the installed 1.44.6 copy; four theme/skin browser
+cases pass with all retained content/uploads and unrelated services unchanged.
+Continue manual screen-reader and reference-performance qualification/disposition,
+then final owner release acceptance/version/tag. Do not mark overall PC
+accessibility accepted or waived, or reopen unchanged engineering checks.
 
 # Owner tablet findings and PC priority — November 20, 2026
 

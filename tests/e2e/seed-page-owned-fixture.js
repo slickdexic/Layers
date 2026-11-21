@@ -23,6 +23,7 @@ const assert = require( 'assert' );
 		const login = await post( { action: 'login', lgname: user, lgpassword: password, lgtoken: loginToken } );
 		if ( login.login?.result !== 'Success' ) { throw new Error( 'CI login failed' ); }
 		const info = await get( { action: 'query', meta: 'siteinfo', siprop: 'general' } );
+		if ( info.query?.general?.sitename !== 'Layers Test Wiki' ) { throw new Error( 'Disposable CI wiki identity does not match' ); }
 		if ( info.query?.general?.layerspagehistorymigrated !== true ) { throw new Error( 'Migration is not complete' ); }
 		const csrf = ( await get( { action: 'query', meta: 'tokens', type: 'csrf' } ) ).query.tokens.csrftoken;
 		const owner = 'Layers_browser_acceptance';
@@ -42,6 +43,25 @@ const assert = require( 'assert' );
 		}
 		const read = await get( { action: 'layersread', owner, revid: published.layerspublish.revid } );
 		assert.deepStrictEqual( read.layersread?.snapshot, snapshot, 'Disposable layer-set verification failed' );
+		// Keep accessibility edits independent of the existing editor suite's fixture.
+		const accessibilityOwner = 'Layers_accessibility_ci';
+		const accessibilityCreated = await post( { action: 'edit', title: accessibilityOwner, createonly: 1,
+			text: 'Dedicated automated accessibility fixture.\n\n{{#Slide:Keyboard checks}}',
+			summary: 'Create disposable accessibility fixture', token: csrf } );
+		if ( accessibilityCreated.error || accessibilityCreated.edit?.result !== 'Success' || !accessibilityCreated.edit.newrevid ) {
+			throw new Error( 'Could not create the disposable accessibility owner' );
+		}
+		const accessibilitySnapshot = { schemaVersion: 1, surfaces: [ { id: 'pc-accessibility', kind: 'slide', label: 'Keyboard checks',
+			canvas: { width: 400, height: 200, backgroundColor: '#ffffff', backgroundVisible: true, backgroundOpacity: 1 },
+			layers: [ { id: 'ci-text', type: 'text', text: 'Keyboard layer name test', x: 20, y: 40, fontSize: 20, fill: '#000000' } ] } ] };
+		const accessibilityPublished = await post( { action: 'layerspublish', owner: accessibilityOwner,
+			baserevid: accessibilityCreated.edit.newrevid, data: JSON.stringify( accessibilitySnapshot ),
+			summary: 'Seed disposable accessibility layer set', token: csrf } );
+		if ( accessibilityPublished.error || accessibilityPublished.layerspublish?.result !== 'Success' || !accessibilityPublished.layerspublish.revid ) {
+			throw new Error( 'Could not publish the disposable accessibility layer set' );
+		}
+		const accessibilityRead = await get( { action: 'layersread', owner: accessibilityOwner, revid: accessibilityPublished.layerspublish.revid } );
+		assert.deepStrictEqual( accessibilityRead.layersread?.snapshot, accessibilitySnapshot, 'Accessibility fixture verification failed' );
 		console.log( 'Disposable page-owned slide fixture created and verified.' );
 	} finally { await api.dispose(); }
 } )().catch( error => { console.error( error.message ); process.exitCode = 1; } );

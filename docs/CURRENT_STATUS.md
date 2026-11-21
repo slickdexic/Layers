@@ -15,18 +15,20 @@ content unchanged; desktop navigation and later one-finger edits/Undo/Redo pass.
 Owner device recheck remains pending. Mobile usability is retained follow-up
 work rather than a release blocker in the owner's accepted scope.
 
-The preceding viewport application commit `69f0d8283a7fec5e0fe98e7ecac5b22d7fa55a2f` passed
-[CI](https://github.com/slickdexic/Layers/actions/runs/44763165868),
-[native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44763166270)
-and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44763166158).
-Hosted JavaScript checks pass 338 suites / 19,263 tests. Its clean reviewed
-package contains 2,968 verified files and is installed on MediaWiki 1.44.6;
-desktop/tablet viewport and normal reader/editor checks pass there. All fifteen
-content-table witnesses and retained uploads remain intact. No PHP backend
-changed; the preceding local 258-test / 2,126-assertion native result retains
-its scope alongside the new exact-commit native CI pass.
+Qualified application commit `64e03968989eaccb829abb6c05fba3d20b5ba541` passed
+[CI](https://github.com/slickdexic/Layers/actions/runs/44955746151),
+[native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44955746223)
+and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44955746089).
+Hosted JavaScript checks pass 340 suites / 19,279 tests. Its clean qualification
+package contains 2,974 verified files and is installed on MediaWiki 1.44.6.
+Four installed image-editor theme/skin cases pass reader pixels, keyboard/dialog
+focus, rename cancellation and axe, preserving saved content. All fifteen
+content-table witnesses, nine pages, sixteen revisions and three retained uploads
+remain exact. Ports, mounts, environment and the other four services are unchanged.
+No PHP backend changed; the preceding local native result retains its scope
+alongside the new exact-commit native CI pass. Primary 8080 runs the same repair.
 Reference-performance disposition remains open. The owner has not yet performed
-PC keyboard/screen-reader tests. Automated native inspection finds background
+PC keyboard/screen-reader tests. Baseline automated native inspection found background
 wiki Tab stops, nested layer-control accessibility violations and low dark-theme
 PDF page-counter contrast. Six viewer theme/media checks pass automated axe and
 keyboard focus checks, preserving saved content. The owner-approved
@@ -35,8 +37,7 @@ is implemented: eight native editor cases pass across media, themes and Vector
 skins, including dialog focus/Escape, layer edits/Undo/Redo, counter contrast and
 Cancel/Discard/reopen, with saved revisions unchanged. The final affected local
 replay passes 17 suites / 1,116 tests after a 337-suite / 19,254-test full run.
-Screens were shown; exact-code CI/package qualification and a real manual
-screen-reader pass remain separate. The owner
+Screens were shown; a real manual screen-reader pass remains open. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 

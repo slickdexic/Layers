@@ -163,6 +163,11 @@ The slide journey tests Cancel/Discard of its own isolated local edits and
 reopens the saved copy. It never invokes Save and compares every saved slot and
 revision before/after. Preserve the JSON receipts/screenshots with private test
 evidence. This is automated qualification, not a manual screen-reader pass.
+The existing disposable CI editor job supplies its generated `MW_SERVER`/
+`MW_USERNAME`/`MW_PASSWORD` environment instead of a private acceptance file and
+runs both themes against `Layers_accessibility_ci`, separate from its other
+editor fixture. Never run the CI seeder against a maintained wiki; it verifies
+the expected disposable site identity before writing.
 
 ## Retired environments
 
