@@ -1,6 +1,6 @@
 # Current release status
 
-Updated November 20, 2026. The working successor includes the approved gradient
+Updated November 21, 2026. The working successor includes the approved gradient
 controls/sizing, local draft recovery and Save/Close repairs, and complete-PDF
 history restoration. The owner confirms normal editing, multi-page PDF Save,
 annotated Download, rollback, restoration and printing work; performance feels
@@ -25,8 +25,13 @@ desktop/tablet viewport and normal reader/editor checks pass there. All fifteen
 content-table witnesses and retained uploads remain intact. No PHP backend
 changed; the preceding local 258-test / 2,126-assertion native result retains
 its scope alongside the new exact-commit native CI pass.
-Reference-performance disposition remains open;
-manual PC accessibility results are pending. The owner
+Reference-performance disposition remains open. The owner has not yet performed
+PC keyboard/screen-reader tests. Automated native inspection finds background
+wiki Tab stops, nested layer-control accessibility violations and low dark-theme
+PDF page-counter contrast. Six viewer theme/media checks pass automated axe and
+keyboard focus checks, preserving saved content. The
+[PC repair brief](https://github.com/slickdexic/Layers/blob/main/docs/PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md)
+awaits approval, with no repair or manual screen-reader pass claimed. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 

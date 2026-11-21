@@ -1,5 +1,27 @@
 # Layers 1.8 release acceptance
 
+## PC accessibility follow-up — November 21, 2026
+
+The owner reports keyboard-only/screen-reader testing **not yet performed**.
+This is an open acceptance check, not a waiver or a failed owner test. A read-only
+native Chromium inspection on the maintained 8080 wiki finds that Tab reaches
+the wiki's navigation/search jump links underneath the editor. Axe also reports
+serious nested-control violations on an ordinary layer row and the Canvas row;
+the listbox issue is already recorded in the charter's UI-3 baseline. All 100
+recorded Tab presses leave layer data and saved revision/slots unchanged, with
+no page/request errors. Automated inspection does not establish a manual
+screen-reader pass. The bounded [PC accessibility brief](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md)
+is proposed for owner approval; no repair is implemented yet. Additional
+dark-theme image/slide/PDF editor audits reproduce the layer-role issue and find
+2.71:1 PDF page-counter contrast. The brief also proposes theme-aware counter
+colours. Six light/dark image/slide/PDF viewer checks report no axe violations,
+retain forward/reverse Tab within the viewer and return to the opener on Escape.
+All nine additional cases preserve saved content and have no page/request errors.
+Their first observer waited for a hidden overlay action before focusing its
+host; the corrected observer passes without changing product behavior. Retain
+that failure separately; these results do not qualify manual screen-reader use.
+Reference-performance disposition and final release acceptance remain open.
+
 ## Owner tablet result and release disposition — November 20, 2026
 
 The owner tested Chrome on a Galaxy Tab S4 in landscape. Editing is challenging:

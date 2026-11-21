@@ -1,5 +1,28 @@
 # Page-history performance
 
+## Reviewed viewport candidate follow-up — November 21, 2026
+
+The retained installed-1.44.6 check of application commit `69f0d828` uses the
+same unchanged benchmark, fixture, browser and 300 ms target described below.
+Warm-up is **482.3 ms**; its five measured visits are **315.2, 297.8, 298.4,
+296.8 and 315.6 ms**. Exact identity/pixel and request/error checks pass. Two
+samples miss the budget, so the run fails; it is not repeated until green.
+
+Reviewing the retained trace places measured startup at 101.6–112.2 ms, the
+combined script response at 98.2–109.1 ms, script-end-to-read dispatch at
+30.4–33.5 ms, the authorized read at 72.0–81.9 ms and subsequent paint at
+7.7–9.9 ms. These phases overlap other requests and are not additive measures
+of extension CPU cost. The existing lightweight read dependency is present;
+this review does not reintroduce the withdrawn transport-callback experiment.
+The observations establish no causal change from the preceding candidate.
+
+The installed extension has local code storage, while retained private data and
+reference-hardware limitations remain. The primary 8080 wiki is still the
+owner's latest-code testing environment; the separate compatibility measurement
+does not redirect their testing to 8082. Reference qualification/disposition
+remains open under PERF-0/PERF-2 and the Milestone 1 release gate. No settings,
+runtime source or budget are changed by this evidence review.
+
 ## Recorded successor reader checks — November 20, 2026
 
 Application commit `1335bf0e` uses the unchanged read-only native benchmark:

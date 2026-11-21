@@ -1,3 +1,15 @@
+# PC accessibility follow-up — November 21, 2026
+
+The owner has not yet tested PC keyboard-only navigation or a screen reader.
+Read-only native 8080 inspection confirms background-wiki Tab stops and serious
+nested-control axe findings on layer/Canvas rows, plus low dark-theme PDF counter
+contrast. Six viewer theme/media checks pass axe, Tab containment and Escape
+return; three dark editor audits retain the known role finding. Saved content
+is unchanged; this is automated evidence, not a screen-reader pass. Advances UI-3. The
+[bounded repair brief](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md) awaits owner
+approval before changing focus or controls. Continue unaffected performance and
+release checks; do not mark PC accessibility accepted or waived.
+
 # Owner tablet findings and PC priority — November 20, 2026
 
 Chrome on the owner's landscape Galaxy Tab S4 exposes poor initial canvas
