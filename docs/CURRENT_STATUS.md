@@ -1,5 +1,11 @@
 # Current release status
 
+Candidate `ee6759ed` is installed on MediaWiki 1.44.6 at port 8082.
+All 2,975 package files match the installation. Twelve Chromium checks passed
+for draft retention and keyboard access across images, slides and saved PDFs.
+The retained wiki content and uploads matched the pre-install checks.
+[Installed verification](https://github.com/slickdexic/Layers/blob/main/docs/RELEASE_1_8_ACCEPTANCE.md#installed-1446-candidate--november-22-2026)
+
 Updated November 21, 2026. The working successor includes the approved gradient
 controls/sizing, local draft recovery and Save/Close repairs, and complete-PDF
 history restoration. The owner confirms normal editing, multi-page PDF Save,
@@ -20,14 +26,16 @@ Qualified application commit `64e03968989eaccb829abb6c05fba3d20b5ba541` passed
 [native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/44955746223)
 and [browser tests](https://github.com/slickdexic/Layers/actions/runs/44955746089).
 Hosted JavaScript checks pass 340 suites / 19,279 tests. Its clean qualification
-package contains 2,974 verified files and is installed on MediaWiki 1.44.6.
+package contained 2,974 verified files and was the preceding MediaWiki 1.44.6 installation.
 Four installed image-editor theme/skin cases pass reader pixels, keyboard/dialog
 focus, rename cancellation and axe, preserving saved content. All fifteen
 content-table witnesses, nine pages, sixteen revisions and three retained uploads
 remain exact. Ports, mounts, environment and the other four services are unchanged.
 No PHP backend changed; the preceding local native result retains its scope
 alongside the new exact-commit native CI pass. Primary 8080 runs the same repair.
-Reference-performance disposition remains open. The owner has not yet performed
+The owner accepts USB-backed wiki timings as nonblocking for stable 1.8.
+The 300 ms PERF-2 target applies on the reference install, where performance
+remains unverified until measured. The owner has not yet performed
 PC keyboard/screen-reader tests. Baseline automated native inspection found background
 wiki Tab stops, nested layer-control accessibility violations and low dark-theme
 PDF page-counter contrast. Six viewer theme/media checks pass automated axe and
@@ -97,13 +105,11 @@ assert every deployment or database combination has been tested.
 
 ## Remaining before final stable 1.8
 
-- Resolve reference-performance qualification/disposition. The current installed
-  1.44 reader records 315.1–328.8 ms against 300 ms; the primary development lane
-  has much larger fresh-browser delays and also slow plain-page startup with
-  object caching disabled. [Recorded timings](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md)
-  preserve all samples and limitations. Positive normal-use feedback does not
-  waive the target or establish reference-device performance.
-- Complete manual PC accessibility acceptance. Mobile usability limits are
+- The release notes record the owner’s PERF-2 decision. The
+  installed 1.44.6 run on `69f0d828` had two of five visits exceed 300 ms.
+  Report reference performance as unverified until measured on the reference
+  install. [Recorded timings](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_HISTORY_PERFORMANCE.md)
+- Complete the manual screen-reader pass. Mobile usability limits are
   owner-accepted as nonblocking, with device recheck retained as follow-up.
   Printing passes in the owner's reported scope; emulation does not establish
   screen-reader use or a physical-device pass.

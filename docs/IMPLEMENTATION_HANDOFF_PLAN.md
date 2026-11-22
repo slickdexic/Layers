@@ -1,5 +1,17 @@
 # PC accessibility follow-up — November 21, 2026
 
+Engineering ran a [keyboard-only check](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md#agent-keyboard-only-check-on-the-maintained-wiki--november-21-2026)
+on 8080. Reader entry, viewer focus, Help and layer visibility Undo/Redo passed.
+Both pickers pass keyboard replay in the light and dark 8080 slide editor.
+On a slide, image and saved PDF, the reviewed backup survives a failed
+navigation and is removed after the saved editor opens successfully.
+[Recovery verification](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md#failed-destination-after-confirmed-discard--november-21-2026)
+The final working checkout passed all 340 JavaScript suites (19,289 tests).
+Candidate `ee6759ed` passed the installed 1.44.6 replay on November 22.
+The [release ledger](RELEASE_1_8_ACCEPTANCE.md#installed-1446-candidate--november-22-2026)
+records all twelve browser checks and the data-preservation results.
+Continue with manual screen-reader acceptance and final owner release review.
+
 The owner has not yet tested PC keyboard-only navigation or a screen reader.
 Read-only native 8080 inspection confirms background-wiki Tab stops and serious
 nested-control axe findings on layer/Canvas rows, plus low dark-theme PDF counter
@@ -15,8 +27,10 @@ passes 17 suites / 1,116 tests. Screens were shown. Application `64e03968` now
 passes all three exact-code CI workflows (340 JavaScript suites / 19,279 tests).
 Its 2,974-file package matches the installed 1.44.6 copy; four theme/skin browser
 cases pass with all retained content/uploads and unrelated services unchanged.
-Continue manual screen-reader and reference-performance qualification/disposition,
-then final owner release acceptance/version/tag. Do not mark overall PC
+The owner accepts USB-backed wiki timings as nonblocking for stable 1.8. Carry
+the 300 ms PERF-2 reference-install target and unverified reference status
+into the release notes. Continue manual screen-reader qualification, then
+final owner release acceptance/version/tag. Do not mark overall PC
 accessibility accepted or waived, or reopen unchanged engineering checks.
 
 # Owner tablet findings and PC priority — November 20, 2026

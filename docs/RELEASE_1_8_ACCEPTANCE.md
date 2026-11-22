@@ -1,6 +1,55 @@
 # Layers 1.8 release acceptance
 
+## Installed 1.44.6 candidate — November 22, 2026
+
+Candidate `ee6759ed` advances HIST-4, DATA-1, UI-3 and OPS-3. It includes
+application `3251c1a1` and a test-only follow-up for native recovery-dialog
+shortcuts. The qualification archive contains 2,975 regular files. Each file
+matches its Git blob, and installed file hashes and permissions match the
+archive. Its SHA-256 is
+`39de38ac90948bc0ce941146e5bab5aa917c04fe39fc7708c307839a4eccb0cb`.
+
+The extracted archive passed all 340 JavaScript suites and 19,289 tests.
+Packaged assets, source growth, bundle size, lint and style checks passed.
+ESLint reported six warnings in existing code and tests.
+
+The maintained 8082 wiki used its existing core, accounts, uploads and database.
+Its HTTP guard returned 403 for harmless marker paths under all three protected
+directories. The two other version wikis and both database services retained
+their original container identities, image IDs and start times.
+
+Twelve Chromium checks passed. Vector 2022 covered an image, a slide and a
+saved PDF. Vector also covered the image. Each ran light and dark keyboard
+checks and a confirmed discard with an injected HTTP 503. The backup remained
+byte-for-byte intact after the failed navigation, and a healthy reopen removed
+the reviewed backup. The fixture's saved revision and slot hashes stayed
+identical. The private test harness pinned the existing wiki, account, page,
+revision and surfaces while retaining the candidate's browser assertions.
+
+All fifteen content-table checks, nine pages, sixteen revisions and three
+uploads matched the pre-install record after the final replay. Manual
+screen-reader acceptance remains open. USB-backed timings are nonblocking
+for stable 1.8, and the 300 ms reference-install target remains unverified.
+
+## Stable 1.8 reader performance decision — November 21, 2026
+
+The owner accepts the USB-backed development wiki timings as nonblocking for
+stable 1.8. The 300 ms image-load-to-layer-paint target applies on the reference
+install. Reference performance remains unverified until measured there. The
+installed 1.44.6 run on `69f0d828` retained two misses in five measured visits.
+Cold-server and media coverage retain their recorded limits. The other
+performance budgets continue to apply to their respective workflows.
+[PERF-2 evidence](PAGE_HISTORY_PERFORMANCE.md)
+
 ## PC accessibility follow-up — November 21, 2026
+
+Engineering ran a [keyboard-only check](PC_EDITOR_ACCESSIBILITY_BEHAVIOUR_BRIEF.md#agent-keyboard-only-check-on-the-maintained-wiki--november-21-2026)
+on 8080. Reader entry, viewer focus, Help and layer visibility Undo/Redo passed.
+Both pickers pass keyboard replay in the light and dark 8080 slide editor.
+On a slide, image and saved PDF, the reviewed backup survives a failed
+navigation and is removed after the saved editor opens successfully.
+[Recovery verification](KEEP_DRAFTS_EDITING_BEHAVIOUR_BRIEF.md#failed-destination-after-confirmed-discard--november-21-2026)
+The November 22 installed replay is recorded above. Manual screen-reader acceptance remains open.
 
 The owner reports keyboard-only/screen-reader testing **not yet performed**.
 This is an open acceptance check, not a waiver or a failed owner test. A read-only
@@ -35,7 +84,7 @@ theme/skin cases pass with exact reader pixels, focus/dialog handling, rename
 cancellation and axe. All fifteen content-table witnesses, nine pages, sixteen
 revisions and three uploads remain unchanged; no other service/configuration is
 changed. The brief links the exact-code gates and records their limits.
-Reference-performance disposition and final release acceptance remain open.
+Final release acceptance remains open.
 
 ## Owner tablet result and release disposition — November 20, 2026
 

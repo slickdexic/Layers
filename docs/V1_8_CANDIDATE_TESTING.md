@@ -55,8 +55,11 @@ include credentials or private content in bug reports.
 - **Page-owned policy A applies.** Readable page-owned layer text remains
   searchable after its referenced file is hidden. Restrict the page revision
   itself to restrict that text. Media delivery still refuses unavailable sources.
-- Reference reader latency, manual PC keyboard/screen-reader and final owner
-  acceptance remain open. The owner accepts mobile usability limitations as
+- USB-backed wiki reader timings are nonblocking for stable 1.8. The 300 ms
+  image-load-to-layer-paint target applies on the reference install, where it
+  remains unverified. Engineering verified picker focus and recovery shortcuts
+  on 8080 and on candidate `ee6759ed` installed on 8082. The manual
+  screen-reader pass and final owner acceptance remain open. The owner accepts mobile usability limitations as
   nonblocking for PC-focused 1.8; the approved viewport/touch repair has bounded
   native/browser checks, with owner device recheck retained as follow-up.
   Automated tests do not substitute for manual accessibility acceptance.
