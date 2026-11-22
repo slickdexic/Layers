@@ -378,8 +378,13 @@
 					this.setChildrenVisibility( layer.children, newVisibility );
 				}
 
+				const state = this.editor.stateManager;
+				const layers = state ? state.get( 'layers' ) || [] : [];
+				// Notify draft subscribers once, after the entire group has changed.
+				if ( state ) {
+					state.set( 'layers', layers );
+				}
 				if ( this.editor.canvasManager ) {
-					const layers = this.editor.stateManager ? this.editor.stateManager.get( 'layers' ) || [] : [];
 					this.editor.canvasManager.renderLayers( layers );
 				}
 				this.renderLayerList();

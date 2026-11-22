@@ -254,6 +254,8 @@ describe( 'FolderOperationsController', () => {
 			expect( folder.visible ).toBe( false );
 			expect( child1.visible ).toBe( false );
 			expect( child2.visible ).toBe( false );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledTimes( 1 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', mockLayers );
 		} );
 
 		it( 'should call renderLayerList after toggling', () => {

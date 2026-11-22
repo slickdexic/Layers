@@ -37,6 +37,7 @@
 				const priorFocus = document.activeElement;
 				const dialog = document.createElement( 'dialog' );
 				dialog.className = 'layers-page-recovery';
+				dialog.setAttribute( 'aria-modal', 'true' );
 				const title = document.createElement( 'h2' );
 				title.id = 'layers-page-recovery-' + ++sequence;
 				title.textContent = this.message( 'layers-page-draft-dialog-title' );

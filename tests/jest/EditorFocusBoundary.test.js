@@ -59,6 +59,45 @@ describe( 'editor keyboard boundary', () => {
 		picker.lastChild.focus(); tab(); expect( document.activeElement ).toBe( picker.firstChild );
 		picker.remove(); await tick(); expect( document.activeElement ).toBe( root.lastChild );
 	} );
+	test.each( [ 'EmojiPickerPanel', 'ShapeLibraryPanel' ] )(
+		'%s wraps Tab in both directions and restores its opener on Escape and Close',
+		async ( pickerName ) => {
+			mw.message = key => ( { text: () => key } );
+			window.Layers.EmojiLibrary = { getCategories: () => [] };
+			window.Layers.ShapeLibrary = {
+				getCategories: () => [], isCategoryLoaded: () => true, getShapesByCategory: () => []
+			};
+			require( '../../resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js' );
+			require( '../../resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js' );
+			const picker = new window.Layers[ pickerName ]();
+			const opener = root.lastChild;
+			try {
+				for ( const dismissal of [ 'Escape', 'Close' ] ) {
+					// The toolbar module may finish loading after focus moves to another control.
+					root.firstChild.focus();
+					picker.open( opener );
+					await tick();
+					expect( document.activeElement ).toBe( picker.searchInput );
+					const closeButton = picker.panel.querySelector( 'button' );
+					closeButton.focus();
+					expect( tab( true ).defaultPrevented ).toBe( true );
+					expect( document.activeElement ).toBe( picker.searchInput );
+					expect( tab().defaultPrevented ).toBe( true );
+					expect( document.activeElement ).toBe( closeButton );
+					if ( dismissal === 'Escape' ) {
+						closeButton.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } ) );
+					} else {
+						closeButton.click();
+					}
+					await tick();
+					expect( picker.isOpen ).toBe( false );
+					expect( document.activeElement ).toBe( opener );
+				}
+			} finally {
+				picker.destroy();
+			}
+		}
+	);
 	test( 'keeps a body-mounted menu reachable and restores its origin', async () => {
 		root.lastChild.focus(); const menu = dialog( 'layers-context-menu', 'menu' ); await tick();
 		expect( document.activeElement ).toBe( menu.firstChild );

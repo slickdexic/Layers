@@ -29,7 +29,7 @@
 		 */
 		handleKeyboardShortcuts( e ) {
 		if ( e.target && e.target.closest &&
-			e.target.closest( '[role="dialog"], [role="alertdialog"], [role="menu"]' ) ) { return; }
+			e.target.closest( 'dialog, [role="dialog"], [role="alertdialog"], [role="menu"]' ) ) { return; }
 		// Don't handle shortcuts when typing in input fields
 		if ( e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true' ) {
 			return;

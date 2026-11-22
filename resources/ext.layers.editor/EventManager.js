@@ -84,7 +84,7 @@ class EventManager {
 	handleKeyDown( e ) {
 		// An open dialog/menu owns its shortcuts, including Escape and Delete.
 		if ( e.target && e.target.closest &&
-			e.target.closest( '[role="dialog"], [role="alertdialog"], [role="menu"]' ) ) { return; }
+			e.target.closest( 'dialog, [role="dialog"], [role="alertdialog"], [role="menu"]' ) ) { return; }
 		// Ignore if user is typing in an input field
 		if ( this.isInputElement( e.target ) ) {
 			return;

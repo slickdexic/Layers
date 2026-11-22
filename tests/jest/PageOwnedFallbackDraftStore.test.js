@@ -14,7 +14,11 @@ test.each( [ 'local', 'database', 'both', 'different' ] )( 'explicit discard rem
 	const reader = new Fallback( storage, second, true, adapter ); await reader.initialize( scope );
 	const choice = reader.listCandidates( scope ).find( value => location === 'database' ? typeof value === 'object' : value === writer );
 	reader.selectRecovery( choice ); const plan = reader.prepareRecoveryDiscard( scope );
-	local.set( 'unrelated', 'keep' ); await plan.preflight(); await plan.discard();
+	local.set( 'unrelated', 'keep' ); await plan.preflight();
+	const receipt = await plan.receipt();
+	const destination = new Fallback( storage, 'c'.repeat( 32 ), true, adapter );
+	await destination.initialize( scope );
+	await destination.finishRecoveryDiscard( receipt, () => {} );
 	expect( local.has( key ) ).toBe( false ); expect( local.get( 'unrelated' ) ).toBe( 'keep' );
 	expect( db.records.get( key ) ).toBe( location === 'different' ? raw( 'other copy' ) : undefined );
 } );
@@ -34,6 +38,20 @@ test( 'discard refuses a database backup changed since review and preserves its 
 	reader.selectRecovery( reader.listCandidates( scope )[ 0 ] ); const plan = reader.prepareRecoveryDiscard( scope );
 	db.records.set( key, raw( 'newer work' ) ); await expect( plan.preflight() ).rejects.toThrow();
 	await expect( plan.discard() ).rejects.toThrow(); expect( db.records.get( key ) ).toBe( raw( 'newer work' ) );
+} );
+
+test( 'a changed duplicate during navigation keeps both copies and requires another review', async () => {
+	const { adapter, storage, local, db, key } = setup();
+	const reviewed = raw( 'original' ), newer = raw( 'newer edit in another tab' );
+	local.set( key, reviewed ); db.records.set( key, reviewed );
+	const reader = new Fallback( storage, second, true, adapter );
+	await reader.initialize( scope ); reader.selectRecovery( writer );
+	const receipt = await reader.prepareRecoveryDiscard( scope ).receipt();
+	db.records.set( key, newer );
+	const destination = new Fallback( storage, 'c'.repeat( 32 ), true, adapter );
+	await destination.initialize( scope );
+	await expect( destination.finishRecoveryDiscard( receipt, () => {} ) ).rejects.toThrow();
+	expect( local.get( key ) ).toBe( reviewed ); expect( db.records.get( key ) ).toBe( newer );
 } );
 
 function setup() {

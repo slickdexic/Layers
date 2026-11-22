@@ -1,5 +1,12 @@
 # Page-history performance
 
+## Stable 1.8 owner decision — November 21, 2026
+
+The owner accepts the USB-backed development wiki timings as nonblocking for
+stable 1.8. The 300 ms PERF-2 target still applies on the reference install.
+Reference performance remains unverified until measured there. The recorded
+samples below retain their original outcomes. [Charter release gate](PROJECT_CHARTER.md#32-independent-page-history-release)
+
 ## Reviewed viewport candidate follow-up — November 21, 2026
 
 The retained installed-1.44.6 check of application commit `69f0d828` uses the
@@ -19,9 +26,8 @@ The observations establish no causal change from the preceding candidate.
 The installed extension has local code storage, while retained private data and
 reference-hardware limitations remain. The primary 8080 wiki is still the
 owner's latest-code testing environment; the separate compatibility measurement
-does not redirect their testing to 8082. Reference qualification/disposition
-remains open under PERF-0/PERF-2 and the Milestone 1 release gate. No settings,
-runtime source or budget are changed by this evidence review.
+does not redirect their testing to 8082. Reference qualification was open at
+this checkpoint. The run used the existing settings, runtime source and budget.
 
 ## Recorded successor reader checks — November 20, 2026
 
@@ -97,7 +103,6 @@ after its image loads. The retained rc.1 benchmark's 312.4 ms sample against
 erases that measurement nor changes the target; it narrows the remaining work
 to attribution/reference-measurement disposition and does not imply continuing
 visible problems in ordinary use. No new benchmark was run for this entry.
-
 
 ## Installed 1.44 candidate recheck — large-image correction
 

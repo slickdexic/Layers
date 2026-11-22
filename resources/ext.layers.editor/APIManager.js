@@ -495,9 +495,9 @@
 					this.pageOwnedSummaryField = new classes.PageOwnedSummaryField( ( key ) => mw.msg( key ) );
 					this.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
 				}
+				return recovery.finishSavedOpen( store );
 			}
-			return state;
-		} );
+		} ).then( () => state );
 	}
 
 	/**

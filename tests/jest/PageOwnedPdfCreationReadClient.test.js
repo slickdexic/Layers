@@ -120,7 +120,7 @@ describe( 'Missing PDF creation native read client', () => {
 	it.each( [ 'model', 'transport' ] )( 'loads the %s in MediaWiki script mode without relative require', async component => {
 		const forbidden = jest.fn( () => { throw new Error( 'Relative require is unavailable in script modules' ); } );
 		const sandbox = vm.createContext( { window: {}, module: { exports: {} }, require: forbidden } );
-		for ( const file of [ 'PageOwnedSnapshotAdapter', 'PageOwnedPdfWorkingSet', 'PageOwnedPdfCreationTransaction', 'PageOwnedPdfCreationReadClient' ] ) {
+		for ( const file of [ 'PageOwnedSnapshotAdapter', 'Sha256', 'PageOwnedPdfWorkingSet', 'PageOwnedPdfCreationTransaction', 'PageOwnedPdfCreationReadClient' ] ) {
 			vm.runInContext( fs.readFileSync( path.join( __dirname, '../../resources/ext.layers.editor/', file + '.js' ), 'utf8' ), sandbox );
 		}
 		vm.runInContext( 'const fixture = JSON.parse(' + JSON.stringify( JSON.stringify( preparation( 1 ) ) ) + ');' +

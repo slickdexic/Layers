@@ -220,6 +220,11 @@ The independent release must still satisfy these gates:
 7. Obtain the owner's acceptance of the Milestone 1 portions of section 7 on
    their wiki, then publish the independent version/tag and release.
 
+**November 21, 2026 owner decision on PERF-2.** The USB-backed development
+wiki timings are nonblocking for stable 1.8. The 300 ms image-load-to-layer-paint
+target still applies on the section 5.3 reference install. Reference performance
+remains unverified until measured there. This decision concerns PERF-2 only.
+
 **Owner mobile-usability disposition, November 20, 2026:** after testing Chrome
 on a Galaxy Tab S4 in landscape, the owner reports misplaced canvas/large empty
 space, zoom-centre problems and impractical touch panning. PC usability remains

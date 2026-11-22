@@ -118,3 +118,48 @@ regression. Credentials come from the existing generated CI account; the seeder
 checks the disposable wiki's identity before writing. Reports are kept separately
 from the existing editor suite. This adds UI-3/OPS-4 continuous coverage without
 running CI against the maintained wiki or creating another local environment.
+
+## Agent keyboard-only check on the maintained wiki — November 21, 2026
+
+An agent used Edge 158.0.4370.33, Vector 2022 and the dedicated test account on
+MediaWiki 1.45.3 (8080). After sign-in, the browser admitted only same-origin
+GET requests. All control activation and focus movement used keypresses. DOM
+reads observed focus and layer state. Both journeys preserved the saved revision
+ID and all slot hashes, and the request guard recorded no errors.
+
+- On a synthetic owning page, Tab reached **View full size**. Enter opened the
+  viewer. Focus stayed inside for 21 forward and 21 reverse Tabs, and Escape
+  returned focus to the invoking button. **Edit layers** opened the editor
+  using Tab and Enter.
+- In the slide editor, Help kept focus during forward and reverse Tab and
+  returned focus to Help on Escape. Space on a layer's visibility control
+  changed its state. Undo, Redo and a final Undo each reproduced the expected
+  complete layer state.
+- Both Emoji and Shape Library opened from their toolbar buttons with Enter.
+  Two presses of Shift+Tab from each picker's initial focus reached **Check
+  saved page** behind the open picker. After tabbing back into the picker and
+  pressing Escape, Emoji left focus on the document body. Shape Library left
+  focus on its hidden Close button. Both failed the approved focus behavior.
+
+Engineering owns keyboard-only replay after the picker repairs. Include the
+draft recovery dialog's Escape and Save shortcut routing found during review.
+The charter's manual screen-reader pass remains open under UI-3.
+
+## Repair and keyboard replay on 8080
+
+Emoji and Shape Library now identify their open panels as modal and keep their
+invoking toolbar button for focus return. Native draft recovery also participates
+in the editor's modal focus boundary. The document, canvas and toolbar
+shortcuts defer to the native dialog.
+
+Light and dark Chromium journeys on the maintained 1.45.3 wiki open both
+pickers through the keyboard, wait for items to appear, cross their Tab boundaries in both directions
+and return to the invoking button on Escape. In draft recovery, Delete and
+Ctrl+S on the confirmation's Cancel button leave the decision intact. Escape
+returns to the recovery choices with Cancel focused. The first repair replay
+caught forward Tab stuck on Cancel in the native dialog. Declaring that dialog
+modal to the editor's existing focus boundary corrected the failure.
+
+The tests run on synthetic content, check the saved revision and slots, and
+exercise the existing Help, colour dialog, layer visibility and Undo/Redo.
+The separate manual screen-reader pass remains open.

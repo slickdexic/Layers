@@ -37,6 +37,7 @@
 
 		this.isOpen = false;
 		this.isDestroyed = false;
+		this.opener = null;
 
 		// Bound event handlers for cleanup
 		this._boundEscapeHandler = null;
@@ -783,8 +784,9 @@
 
 	/**
 	 * Open the panel
+	 * @param {HTMLElement} [opener] Invoking control to focus after dismissal
 	 */
-	open() {
+	open( opener = document.activeElement ) {
 		// Don't open if destroyed
 		if ( this.isDestroyed ) {
 			return;
@@ -796,7 +798,11 @@
 			return;
 		}
 
+		if ( !this.isOpen ) {
+			this.opener = opener;
+		}
 		this.isOpen = true;
+		this.panel.setAttribute( 'aria-modal', 'true' );
 		this.overlay.style.display = 'block';
 		this.panel.style.display = 'flex';
 
@@ -818,7 +824,12 @@
 		}
 		if ( this.panel ) {
 			this.panel.style.display = 'none';
+			this.panel.removeAttribute( 'aria-modal' );
 		}
+		if ( this.opener && this.opener.isConnected ) {
+			this.opener.focus();
+		}
+		this.opener = null;
 	}
 
 	/**
@@ -878,6 +889,7 @@
 		this.searchInput = null;
 		this.categoryList = null;
 		this.shapeGrid = null;
+		this.opener = null;
 		this.onSelect = null;
 		this.options = null;
 		}

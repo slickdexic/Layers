@@ -52,7 +52,8 @@
 				}
 				this.host = new this.classes.PageOwnedPdfCreationHost( this.editor, this.preparation, { reader: this.reader, publisher: this.publisher } );
 				if ( !await this.host.load() ) throw unavailable(); this.alive();
-				this.controller = new this.classes.PageOwnedPdfCreationDraftController( this.host, this.store(), this.identity, { retainPublicationAttempt: true } );
+				const store = this.store();
+				this.controller = new this.classes.PageOwnedPdfCreationDraftController( this.host, store, this.identity, { retainPublicationAttempt: true } );
 				await this.controller.initialize(); this.alive();
 				// Preserve ordinary creation recovery. Only complete Import backups require the Import host before review.
 				for ( const candidate of this.controller.listCandidates() ) {
@@ -79,7 +80,9 @@
 					this.manager.pageOwnedSummaryField.mount( header, header.querySelector( '.layers-header-right' ) );
 				}
 				if ( header && this.classes.PageOwnedWholePdfImportCatalogClient ) this.mountImport( header );
-				return this.host.getLiveState();
+				const state = this.host.getLiveState();
+				if ( this.lifecycle.getStatus().ready ) await recovery.finishSavedOpen( store );
+				return state;
 			} finally { this.operation = null; if ( !this.editor.isDestroyed ) this.editor.stateManager.set( 'isLoading', false ); }
 		}
 

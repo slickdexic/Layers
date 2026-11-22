@@ -42,8 +42,9 @@ describe( 'EventManager', () => {
 		eventManager = new EventManager( mockEditor );
 	} );
 
-	test.each( [ 'dialog', 'alertdialog', 'menu' ] )( 'leaves %s shortcuts with the active widget', role => {
-		const widget = document.createElement( 'div' ); widget.setAttribute( 'role', role );
+	test.each( [ 'dialog', 'alertdialog', 'menu', 'native dialog' ] )( 'leaves %s shortcuts with the active widget', role => {
+		const widget = document.createElement( role === 'native dialog' ? 'dialog' : 'div' );
+		if ( role !== 'native dialog' ) widget.setAttribute( 'role', role );
 		const target = document.createElement( 'button' ); widget.appendChild( target );
 		for ( const [ key, options ] of [ [ 'Escape', {} ], [ 'Delete', {} ], [ 's', { ctrlKey: true } ] ] ) {
 			eventManager.handleKeyDown( createKeyEvent( key, { ...options, target } ) );

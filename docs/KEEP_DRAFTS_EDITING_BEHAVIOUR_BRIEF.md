@@ -83,6 +83,28 @@ The same journey exposed gradient comparisons treating native object-key
 ordering as a change after Save. The repair compares values independently of
 key order and retains the guards against changed gradients and detached controls.
 
+## Failed destination after confirmed Discard — November 21, 2026
+
+HIST-4 and DATA-1 require the reviewed backup to survive failure to open the
+saved editor. The source now leaves the draft in its original store through
+navigation. A one-use, tab-scoped record identifies the exact destination,
+reviewed writer, storage locations and content digest. The ready destination
+checks the reviewed copies again before removing them. A different draft from
+the same writer or another tab stays available for review. The handoff carries
+fixed-size digests even for large IndexedDB backups.
+
+The maintained 8080 regression toggles an existing layer's visibility with
+the keyboard in a slide, an image and a saved PDF. It waits for the timed
+backup before reloading and confirming Discard. The PDF check exposed that
+visibility edits mutated the layer without notifying draft subscribers.
+The visibility control now sends one layer update after applying the change
+to the layer and any affected children. After a successful preliminary request, the
+test returns HTTP 503 for the destination document. The backup survives
+byte-for-byte. A healthy reopen and a second confirmation load the saved
+state and remove the reviewed copy. The saved revision and slot hashes match
+throughout. The test also covers Escape inside discard confirmation and
+checks that the editor issues no content writes.
+
 ## Basis for the recommendation
 
 Microsoft Word's documented recovery flow allows opening recovered work,

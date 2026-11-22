@@ -122,3 +122,9 @@ feature allowance rather than an automatic baseline refresh. Handwritten source
 remains within 116,500 lines and existing per-file ceilings; reader/shared,
 page-owned-editor and charter timing limits stay unchanged. Native ResourceLoader,
 keyboard, theme/contrast and content-preservation checks remain required.
+
+The November 21 recovery follow-up advances DATA-1 and HIST-4. The page-owned
+editor uses a compact content digest to identify the reviewed backup across
+navigation and checks its storage locations again after editor initialization.
+The page-owned editor's raw-source allowance increases from 935 KB to 937 KB
+for this change. The picker and keyboard changes fit the existing editor limit.

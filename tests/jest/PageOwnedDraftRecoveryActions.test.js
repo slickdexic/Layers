@@ -15,6 +15,7 @@ function setup( decisions ) {
 	const editor = { config: { pageOwned: { owner: 'Owner', surfaceId: 'slide', revisionId: 12 } }, uiManager: { container: document.createElement( 'div' ) } };
 	editor.stateManager = new State( editor ); editor.stateManager.set( 'layers', [] );
 	const api = { get: jest.fn().mockResolvedValue( { query: { pages: [ { revisions: [ { revid: 13 } ] } ] } } ), postWithToken: jest.fn() };
+	editor.hasUnsavedChanges = () => false;
 	const manager = { editor, api }, controller = { getRecoveryScope: () => ( { ...scope } ),
 		prepareRecoveryDiscard: () => reader.prepareRecoveryDiscard( scope ) };
 	const dialog = { decide: jest.fn() }; for ( const decision of decisions ) dialog.decide.mockResolvedValueOnce( decision );
@@ -36,16 +37,55 @@ test( 'Continue keeps the exact source and does not load or publish a saved repl
 	expect( ctx.api.postWithToken ).not.toHaveBeenCalled(); expect( ctx.leave ).not.toHaveBeenCalled();
 } );
 
-test( 'confirmed Discard deletes only its selected backup and grants one exact saved-editor continuation', async () => {
+test( 'confirmed Discard retains the backup through navigation, then retires it only after successful startup', async () => {
 	const ctx = setup( [ 'discard' ] ); ctx.local.setItem( 'unrelated', 'keep' );
 	new Store( ctx.local, 'c'.repeat( 32 ) ).write( scope, ctx.raw );
 	expect( await ctx.actions.confirm( {} ) ).toBe( false );
-	expect( ctx.source.read( scope ) ).toBeNull(); expect( ctx.local.getItem( 'unrelated' ) ).toBe( 'keep' );
-	expect( ctx.local.values.size ).toBe( 2 ); expect( ctx.api.postWithToken ).not.toHaveBeenCalled();
+	expect( ctx.source.read( scope ) ).toBe( ctx.raw ); expect( ctx.api.postWithToken ).not.toHaveBeenCalled();
 	const target = new URL( ctx.leave.mock.calls[ 0 ][ 0 ] ); expect( target.searchParams.get( 'revid' ) ).toBe( '13' );
 	window.history.replaceState( {}, '', target.pathname + target.search ); ctx.editor.config.pageOwned.revisionId = 13;
-	expect( ctx.actions.consumeSavedOpen() ).toBe( true ); expect( ctx.actions.consumeSavedOpen() ).toBe( false );
+	const destination = new Actions( ctx.actions.manager, ctx.actions.controller, ctx.dialog );
+	expect( destination.consumeSavedOpen() ).toBe( true ); expect( destination.consumeSavedOpen() ).toBe( false );
+	expect( ctx.source.read( scope ) ).toBe( ctx.raw );
+	await destination.finishSavedOpen( new Store( ctx.local, second ) );
+	expect( ctx.source.read( scope ) ).toBeNull();
+	expect( ctx.local.values.size ).toBe( 2 ); expect( ctx.local.getItem( 'unrelated' ) ).toBe( 'keep' );
 } );
+
+test( 'destination refuses a different version of the reviewed backup and returns to recovery', async () => {
+	const ctx = setup( [ 'discard' ] );
+	await ctx.actions.confirm( {} );
+	const target = new URL( ctx.leave.mock.calls[ 0 ][ 0 ] );
+	window.history.replaceState( {}, '', target.pathname + target.search ); ctx.editor.config.pageOwned.revisionId = 13;
+	const destination = new Actions( ctx.actions.manager, ctx.actions.controller, ctx.dialog );
+	const leave = jest.spyOn( destination, 'leave' ).mockImplementation( () => {} );
+	expect( destination.consumeSavedOpen() ).toBe( true );
+	const replacement = ctx.raw.replace( 'unsaved', '更新' );
+	ctx.source.write( scope, replacement );
+	await destination.finishSavedOpen( new Store( ctx.local, second ) );
+	expect( ctx.source.read( scope ) ).toBe( replacement );
+	expect( leave ).toHaveBeenCalledWith( target.href );
+} );
+
+test.each( [ 'different wiki', 'different surface', 'different path', 'destroyed editor' ] )(
+	'%s preserves the reviewed copy after a confirmed departure', async mismatch => {
+		const ctx = setup( [ 'discard' ] );
+		await ctx.actions.confirm( {} );
+		const target = new URL( ctx.leave.mock.calls[ 0 ][ 0 ] );
+		window.history.replaceState( {}, '', mismatch === 'different path' ? '/another-editor' : target.pathname + target.search );
+		ctx.editor.config.pageOwned.revisionId = 13;
+		const destination = new Actions( ctx.actions.manager, { getRecoveryScope: () => ( { ...scope,
+			wiki: mismatch === 'different wiki' ? 'another' : scope.wiki,
+			surfaceId: mismatch === 'different surface' ? 'other' : scope.surfaceId } ) }, ctx.dialog );
+		expect( destination.consumeSavedOpen() ).toBe( mismatch === 'destroyed editor' );
+		ctx.editor.isDestroyed = true;
+		if ( mismatch === 'destroyed editor' ) {
+			await expect( destination.finishSavedOpen( ctx.reader ) ).rejects.toThrow();
+		} else {
+			await destination.finishSavedOpen( ctx.reader );
+		}
+		expect( ctx.source.read( scope ) ).toBe( ctx.raw );
+	} );
 
 test( 'Cancel returns to the owning page and preserves every backup without a publication request', async () => {
 	const ctx = setup( [ 'cancel' ] ), before = Array.from( ctx.local.values );
@@ -74,7 +114,7 @@ test( 'refused native saved-editor entry preserves the draft and permits Cancel'
 	expect( ctx.leave ).toHaveBeenCalledWith( '/wiki/Owner' ); expect( ctx.session.values.size ).toBe( 0 );
 } );
 
-test( 'navigation failure rolls deletion back without overwriting other records', async () => {
+test( 'a synchronous navigation failure preserves the reviewed draft', async () => {
 	const ctx = setup( [ 'discard', 'cancel' ] ); ctx.leave.mockImplementationOnce( () => { throw new Error( 'navigation failed' ); } );
 	expect( await ctx.actions.confirm( {} ) ).toBe( false ); expect( ctx.source.read( scope ) ).toBe( ctx.raw );
 	expect( ctx.session.values.size ).toBe( 0 );
@@ -89,7 +129,7 @@ test( 'late work during the decision is preserved and refuses the stale action',
 	expect( ctx.editor.stateManager.get( 'layers' )[ 0 ].text ).toBe( 'newer work' );
 } );
 
-test( 'rollback still restores the backup when clearing the saved-open intent fails', async () => {
+test( 'the backup survives even when clearing a failed navigation intent fails', async () => {
 	const ctx = setup( [ 'discard', 'cancel' ] );
 	ctx.leave.mockImplementationOnce( () => { ctx.session.removeItem = () => { throw new Error( 'session storage failed' ); }; throw new Error( 'navigation failed' ); } );
 	expect( await ctx.actions.confirm( {} ) ).toBe( false ); expect( ctx.source.read( scope ) ).toBe( ctx.raw );

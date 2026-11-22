@@ -30,6 +30,7 @@
 			this.currentCategory = null;
 			this.searchTimeout = null;
 			this.isOpen = false;
+			this.opener = null;
 			this.thumbnailObserver = null;
 
 			// Bound event handlers for cleanup
@@ -39,13 +40,15 @@
 
 		/**
 		 * Open the emoji picker panel
+		 * @param {HTMLElement} [opener] Invoking control to focus after dismissal
 		 */
-		open() {
+		open( opener = document.activeElement ) {
 			if ( this.isOpen ) {
 				this.close();
 				return;
 			}
 
+			this.opener = opener;
 			this.createPanel();
 			this.isOpen = true;
 
@@ -86,6 +89,10 @@
 				this._boundOverlayClickHandler = null;
 			}
 			this.isOpen = false;
+			if ( this.opener && this.opener.isConnected ) {
+				this.opener.focus();
+			}
+			this.opener = null;
 		}
 
 		/**
@@ -134,6 +141,7 @@
 			this.panel = document.createElement( 'div' );
 			this.panel.className = 'layers-emoji-picker';
 			this.panel.setAttribute( 'role', 'dialog' );
+			this.panel.setAttribute( 'aria-modal', 'true' );
 			this.panel.setAttribute( 'aria-label', mw.message( 'layers-emoji-picker-title' ).text() || 'Emoji Picker' );
 			this.panel.style.cssText = `
 				position: fixed;

@@ -321,7 +321,7 @@ describe( 'Explicit new-PDF creation editor host', () => {
 	it( 'loads in MediaWiki script mode without a relative CommonJS import', () => {
 		const forbidden = jest.fn( () => { throw new Error( 'Relative imports unavailable' ); } );
 		const sandbox = vm.createContext( { window: {}, module: { exports: {} }, require: forbidden } );
-		for ( const file of [ 'PageOwnedSnapshotAdapter', 'PageOwnedPdfWorkingSet', 'PageOwnedPdfCreationTransaction', 'StateManager', 'HistoryManager', 'PageOwnedPdfCreationHost' ] ) {
+		for ( const file of [ 'PageOwnedSnapshotAdapter', 'Sha256', 'PageOwnedPdfWorkingSet', 'PageOwnedPdfCreationTransaction', 'StateManager', 'HistoryManager', 'PageOwnedPdfCreationHost' ] ) {
 			vm.runInContext( fs.readFileSync( path.join( __dirname, '../../resources/ext.layers.editor', file + '.js' ), 'utf8' ), sandbox );
 		}
 		vm.runInContext( 'const native = JSON.parse(' + JSON.stringify( JSON.stringify( preparation( false, 2, 1 ) ) ) + ');', sandbox );

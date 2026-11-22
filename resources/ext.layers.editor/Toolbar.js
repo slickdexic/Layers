@@ -851,7 +851,7 @@
 					} );
 				}
 
-				this.shapeLibraryPanel.open();
+				this.shapeLibraryPanel.open( this._shapeLibraryButton );
 			} ).catch( ( error ) => {
 				mw.log.error( 'Failed to load shape library module:', error );
 			} );
@@ -924,7 +924,7 @@
 					} );
 				}
 
-				this.emojiPickerPanel.open();
+				this.emojiPickerPanel.open( this._emojiPickerButton );
 			} ).catch( ( error ) => {
 				mw.log.error( 'Failed to load emoji picker module:', error );
 			} );

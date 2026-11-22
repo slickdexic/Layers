@@ -72,6 +72,42 @@
 	class PageOwnedDraftStore {
 		static unpack( raw ) { return unpackDraft( raw ); }
 
+		readReviewedCopy( key, local ) { return local ? this._read( key ) : null; }
+
+		// Keep the tab handoff small even for large IndexedDB drafts. Hash exact UTF-16
+		// code units (including lone surrogates) in an explicit byte order.
+		static async discardReceipt( scope, writer, raw, local, database ) {
+			const bytes = new Uint8Array( raw.length * 2 );
+			const view = new DataView( bytes.buffer );
+			for ( let i = 0; i < raw.length; i++ ) { view.setUint16( i * 2, raw.charCodeAt( i ) ); }
+			let digest;
+			if ( window.crypto && window.crypto.subtle ) {
+				const result = await window.crypto.subtle.digest( 'SHA-256', bytes );
+				digest = Array.from( new Uint8Array( result ), byte => byte.toString( 16 ).padStart( 2, '0' ) ).join( '' );
+			} else {
+				const sha256 = typeof module !== 'undefined' && module.require ?
+					module.require( './Sha256.js' ) : window.Layers.Editor.sha256;
+				digest = sha256( bytes );
+			}
+			return { scope, writer: writer ?? null, local, database, digest };
+		}
+
+		/** Prepare the same copies again from current storage in the destination editor. */
+		async finishRecoveryDiscard( receipt, guard ) {
+			const { scope, writer, local, database, digest } = receipt;
+			const key = this._recordKey( this._validateAndBuildKey( scope ), writer ?? undefined );
+			const stored = this.readReviewedCopy( key, local );
+			if ( typeof stored !== 'string' ) { throw failure( 'layers-draft-record-changed' ); }
+			const plan = this.prepareRecoveryDiscard( scope, writer, unpackDraft( stored ) );
+			const current = await plan.receipt();
+			guard();
+			if ( current.digest !== digest || current.local !== local || current.database !== database ) {
+				throw failure( 'layers-draft-record-changed' );
+			}
+			await plan.preflight();
+			await plan.discard( guard );
+		}
+
 		/** Capture the exact selected backup; explicit confirmation is supplied by the caller. */
 		prepareRecoveryDiscard( scope, writer = this._readWriterId, expected ) {
 			if ( writer !== undefined && writer !== null && ( typeof writer !== 'string' || !/^[a-f0-9]{32}$/.test( writer ) ) ) {
@@ -93,7 +129,8 @@
 				if ( read( key ) !== raw ) { throw failure( 'layers-draft-storage-failed' ); }
 			};
 			const preflight = () => { check(); if ( read( key ) !== raw ) { throw failure( 'layers-draft-record-changed' ); } };
-			return Object.freeze( { restore, preflight, discard: ( guard = () => {} ) => {
+			const receipt = () => PageOwnedDraftStore.discardReceipt( scope, writer, unpackDraft( raw ), true, false );
+			return Object.freeze( { restore, preflight, receipt, discard: ( guard = () => {} ) => {
 				guard(); check();
 				if ( read( key ) !== raw || typeof storage.removeItem !== 'function' ) { throw failure( 'layers-draft-storage-failed' ); }
 				try {

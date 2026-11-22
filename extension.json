@@ -352,6 +352,7 @@
 				"PageOwnedReadClient.js",
 				"PageOwnedPublishClient.js",
 				"PageOwnedSnapshotAdapter.js",
+				"Sha256.js",
 				"PageOwnedPdfWorkingSet.js",
 				"PageOwnedEditorSession.js",
 				"PageOwnedPdfEditorReadClient.js",

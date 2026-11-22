@@ -5,6 +5,8 @@
 	const fail = code => Object.assign( new Error( code || 'layers-draft-storage-failed' ), { code: code || 'layers-draft-storage-failed' } );
 	const pending = new WeakMap(), selections = new WeakMap(), earlier = new WeakMap();
 	class PageOwnedFallbackDraftStore extends Store {
+		readReviewedCopy( key, local ) { return local ? this._read( key ) : this.cached.get( key ); }
+
 		/** Delete just the reviewed record, including an identical duplicate in the other store. */
 		prepareRecoveryDiscard( scope, writer = this._readWriterId, expected ) {
 			const selected = selections.get( writer );
@@ -15,9 +17,9 @@
 			const local = matches( this._read( key ) ) ? super.prepareRecoveryDiscard( scope, writer, raw ) : null;
 			const saved = this.cached.get( key ), database = matches( saved ) ? saved : null;
 			if ( !local && database === null ) throw fail();
-			const rollback = async () => {
+			const rollback = async ( restoreLocal = true ) => {
 				let error;
-				if ( local ) { try { local.restore(); } catch ( failure ) { error = failure; } }
+				if ( local && restoreLocal ) { try { local.restore(); } catch ( failure ) { error = failure; } }
 				if ( database !== null ) {
 					try {
 						const current = await this.database.read( key );
@@ -33,18 +35,21 @@
 				if ( database !== null && await this.database.read( key ) !== database ) throw fail( 'layers-draft-record-changed' );
 				if ( local ) local.preflight();
 			};
-			return Object.freeze( { restore: rollback, preflight, discard: async ( guard = () => {} ) => {
-				if ( this.busy ) throw fail(); guard(); this.busy = true; let removed = false;
+			const receipt = () => Store.discardReceipt( scope, writer, raw, Boolean( local ), database !== null );
+			return Object.freeze( { restore: rollback, preflight, receipt, discard: async ( guard = () => {} ) => {
+				if ( this.busy ) throw fail(); guard(); this.busy = true; let removed = false, localRemoved = false;
 				try {
 					if ( database !== null ) {
 						guard();
 						try { await this.database.change( [ { key, before: database, after: null } ] ); removed = true; }
 						catch ( error ) { removed = error.committed === true; throw error; }
 					}
-					guard(); if ( local ) local.discard( guard ); guard();
+					guard();
+					if ( local ) { local.discard( guard ); localRemoved = true; }
+					guard();
 					if ( database !== null ) this.cached.delete( key );
 				} catch ( error ) {
-					if ( removed ) await rollback();
+					if ( removed || localRemoved ) await rollback( localRemoved );
 					throw error;
 				} finally { this.busy = false; }
 			} } );

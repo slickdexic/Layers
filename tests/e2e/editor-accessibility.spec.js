@@ -21,6 +21,85 @@ async function audit( page, root, rules ) {
 	}, { selector: root, selectedRules: rules } );
 }
 
+// Observe focus, but reach the control using the browser's normal Tab order.
+async function tabTo( page, control ) {
+	for ( let step = 0; step < 250; step++ ) {
+		if ( await control.evaluate( node => document.activeElement === node ) ) {
+			return;
+		}
+		await page.keyboard.press( 'Tab' );
+	}
+	await expect( control ).toBeFocused();
+}
+
+test( 'confirmed draft discard survives a failed destination and completes on a healthy reopen', async ( { loggedInPage: page, context }, testInfo ) => {
+	test.setTimeout( 240000 );
+	const base = new URL( server ).origin;
+	expect( [ 'localhost', '127.0.0.1' ] ).toContain( new URL( base ).hostname );
+	expect( owner ).toMatch( /^Layers[_ ]/ );
+	const editorUrl = base + '/index.php?' + new URLSearchParams( {
+		title: 'Special:EditLayersPage', owner, surface, revid: 'current', useskin: skin
+	} );
+	const snapshot = async () => {
+		const response = await context.request.get( base + '/api.php', { params: {
+			action: 'query', titles: owner, prop: 'revisions', rvprop: 'ids|slotsha1', rvslots: '*', format: 'json', formatversion: 2
+		} } );
+		const data = await response.json();
+		return data.query.pages[ 0 ].revisions[ 0 ];
+	};
+	const before = await snapshot();
+	const errors = [];
+	let failNextEditorNavigation = false;
+	await page.route( '**/*', route => {
+		const request = route.request(), url = new URL( request.url() );
+		if ( url.origin !== base || request.method() !== 'GET' ) {
+			errors.push( request.method() + ' ' + url.pathname );
+			return route.abort();
+		}
+		if ( failNextEditorNavigation && request.isNavigationRequest() && url.searchParams.get( 'title' ) === 'Special:EditLayersPage' ) {
+			failNextEditorNavigation = false;
+			return route.fulfill( { status: 503, contentType: 'text/html', body: '<p>Test editor unavailable</p>' } );
+		}
+		return route.continue();
+	} );
+	const ready = page.getByRole( 'button', { name: 'Check saved page', exact: true } );
+	await page.goto( editorUrl ); await ready.waitFor( { timeout: 90000 } );
+	const visibility = page.locator( '.layer-item:not(.background-layer-item) .layer-visibility' ).first();
+	const initial = await visibility.getAttribute( 'aria-pressed' );
+	await tabTo( page, visibility ); await page.keyboard.press( 'Space' );
+	await expect( visibility ).not.toHaveAttribute( 'aria-pressed', initial );
+	const backups = () => page.evaluate( () => Object.fromEntries( Object.entries( localStorage )
+		.filter( ( [ key ] ) => key.startsWith( 'layers-page-owned-draft-v1:' ) ) ) );
+	await expect.poll( async () => Object.keys( await backups() ) ).toHaveLength( 1 );
+	await page.reload();
+	const decision = page.getByRole( 'button', { name: 'Discard draft and open saved version', exact: true } );
+	const discard = page.getByRole( 'button', { name: 'Discard draft', exact: true } );
+	const cancel = page.getByRole( 'button', { name: 'Cancel', exact: true } );
+	await decision.waitFor( { timeout: 90000 } );
+	const reviewed = await backups();
+	expect( Object.keys( reviewed ) ).toHaveLength( 1 );
+	await tabTo( page, decision ); await page.keyboard.press( 'Enter' );
+	await expect( cancel ).toBeFocused();
+	await page.keyboard.press( 'Delete' ); await page.keyboard.press( 'Control+s' ); await page.keyboard.press( 'Escape' );
+	await expect( decision ).toBeVisible();
+	await expect( cancel ).toBeFocused();
+	await page.locator( 'dialog.layers-page-recovery' ).screenshot( { path: testInfo.outputPath( 'recovery.png' ) } );
+	const confirm = async () => {
+		await tabTo( page, decision ); await page.keyboard.press( 'Enter' );
+		await expect( cancel ).toBeFocused();
+		await page.keyboard.press( 'Shift+Tab' ); await expect( discard ).toBeFocused();
+		await page.keyboard.press( 'Enter' );
+	};
+	failNextEditorNavigation = true;
+	await confirm(); await expect( page.getByText( 'Test editor unavailable', { exact: true } ) ).toBeVisible( { timeout: 60000 } );
+	expect( await backups() ).toEqual( reviewed );
+	await page.goto( editorUrl ); await decision.waitFor( { timeout: 90000 } ); await confirm();
+	await ready.waitFor( { timeout: 90000 } );
+	await expect.poll( async () => ( await backups() )[ Object.keys( reviewed )[ 0 ] ] ).toBeUndefined();
+	await expect( visibility ).toHaveAttribute( 'aria-pressed', initial );
+	expect( await snapshot() ).toEqual( before ); expect( errors ).toEqual( [] );
+} );
+
 for ( const theme of [ 'light', 'dark' ] ) {
 	test( `PC editor accessibility: ${ theme } keyboard, dialogs, layer controls and contrast`, async ( { loggedInPage: page, context }, testInfo ) => {
 		test.setTimeout( 180000 );
@@ -64,6 +143,27 @@ for ( const theme of [ 'light', 'dark' ] ) {
 			expect( await page.evaluate( () => !!document.activeElement.closest( '.layers-help-dialog' ) ) ).toBe( true );
 		}
 		await page.keyboard.press( 'Escape' ); await expect( help ).toBeFocused();
+		for ( const [ buttonClass, dialogClass ] of [
+			[ '.shape-library-button', '.layers-shape-library-panel' ],
+			[ '.emoji-picker-button', '.layers-emoji-picker' ]
+		] ) {
+			const opener = page.locator( buttonClass ), picker = page.locator( dialogClass );
+			await tabTo( page, opener );
+			await page.keyboard.press( 'Enter' );
+			await expect( picker ).toBeVisible( { timeout: 30000 } );
+			await expect( picker.locator( '.layers-shape-library-item, .layers-emoji-picker-item' ).first() )
+				.toBeVisible( { timeout: 30000 } );
+			for ( const key of [ 'Shift+Tab', 'Shift+Tab', 'Tab', 'Tab' ] ) {
+				await page.keyboard.press( key );
+				expect( await picker.evaluate( node => node.contains( document.activeElement ) ) ).toBe( true );
+			}
+			if ( theme === 'light' ) {
+				await picker.screenshot( { path: testInfo.outputPath( dialogClass.slice( 1 ) + '.png' ) } );
+			}
+			await page.keyboard.press( 'Escape' );
+			await expect( picker ).toBeHidden();
+			await expect( opener ).toBeFocused();
+		}
 		const colour = page.locator( '.color-display-button.stroke-color' ); await colour.focus(); await page.keyboard.press( 'Enter' );
 		await expect( page.locator( '.color-picker-dialog' ) ).toBeVisible();
 		for ( let i = 0; i < 12; i++ ) {

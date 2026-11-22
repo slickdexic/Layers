@@ -1,6 +1,6 @@
 # Layers v1.8rc1 release notes
 
-## Unreleased successor — November 21, 2026
+## Unreleased successor — November 22, 2026
 
 The working successor adds the owner-approved folder transforms, revised draft
 recovery choices, Save/Close sequencing repairs, repeatable gradient controls,
@@ -11,16 +11,20 @@ pan/pinch while retaining one-finger editing and desktop controls.
 The approved PC accessibility repair isolates editor focus, retains dialog/menu
 shortcut ownership, exposes independent named layer controls/selection state,
 adds keyboard activation to the existing Canvas name and corrects PDF counter
-contrast across both Vector skins and themes. Automated qualification does not
-replace the pending manual screen-reader pass.
+contrast across both Vector skins and themes. Emoji and Shape Library keep keyboard
+focus inside the open picker and return focus to its toolbar button on Escape.
+Confirming Discard keeps the reviewed backup until the saved editor opens
+successfully. Changing a layer's visibility also triggers a timed backup.
 See the [Unreleased changelog](../CHANGELOG.md#unreleased)
 for the complete changes. These changes are not in the immutable RC1 download.
 
 Owner testing on the maintained 8080 wiki passes normal editing, multi-page PDF
 Save/Download, rollback/restoration and printing, with good reported performance.
 The owner accepts mobile usability limits as nonblocking for PC-focused 1.8;
-device recheck remains follow-up. Manual PC accessibility and reference-performance
-disposition remain open, followed by final artifact/version and owner acceptance. The
+device recheck remains follow-up. For stable 1.8 the owner accepts timings on
+the USB-backed development wikis as nonblocking. The 300 ms image-load-to-layer-paint
+target applies to the reference install, where performance remains unverified.
+The manual screen-reader pass and final artifact/version and owner acceptance remain open. The
 [current status](CURRENT_STATUS.md) identifies the tested application commit;
 no stable release or new tag is declared here.
 

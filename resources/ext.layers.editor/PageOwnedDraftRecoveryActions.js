@@ -29,17 +29,49 @@
 			this.departing = false;
 		}
 
-		/** One-tab, one-use continuation after a confirmed discard; never authorizes deletion or publication. */
+		/** Only an exact native destination can consume this tab's pending confirmation. */
 		consumeSavedOpen() {
 			try {
 				const storage = window.sessionStorage, raw = storage.getItem( intentKey );
 				if ( raw === null ) return false;
 				const value = JSON.parse( raw ), scope = this.controller.getRecoveryScope(), current = this.editor.config.pageOwned;
-				if ( value.path !== window.location.pathname + window.location.search ) return false;
 				storage.removeItem( intentKey );
-				return storage.getItem( intentKey ) === null && value.wiki === scope.wiki && value.user === scope.user &&
-					value.owner === scope.owner && value.surfaceId === scope.surfaceId && value.revisionId === current.revisionId;
+				if ( storage.getItem( intentKey ) !== null || value.path !== window.location.pathname + window.location.search ||
+					value.wiki !== scope.wiki || value.user !== scope.user ||
+					value.owner !== scope.owner || value.surfaceId !== scope.surfaceId || value.revisionId !== current.revisionId ) return false;
+				// Older versions already retired their reviewed copy before navigating.
+				if ( value.receipt === undefined ) return true;
+				const receipt = value.receipt, source = receipt.scope;
+				if ( !source || source.wiki !== scope.wiki || source.user !== scope.user || source.owner !== scope.owner ||
+					source.baseRevisionId > current.revisionId || !/^[0-9a-f]{64}$/.test( receipt.digest ) ||
+					( receipt.writer !== null && !/^[0-9a-f]{32}$/.test( receipt.writer ) ) ) return false;
+				this.pendingDiscard = value;
+				return true;
 			} catch ( error ) { return false; }
+		}
+
+		/** Called only after the authorized editor, its draft lifecycle and its controls are ready. */
+		async finishSavedOpen( store ) {
+			const pending = this.pendingDiscard;
+			if ( !pending ) return;
+			this.pendingDiscard = null;
+			const guard = () => {
+				if ( this.manager.editor !== this.editor || this.editor.isDestroyed || this.editor._closeCompleted ||
+					this.disposed || this.departing ) throw failed();
+				const scope = this.controller.getRecoveryScope(), current = this.editor.config.pageOwned;
+				if ( current.readOnly || current.revisionId !== pending.revisionId || scope.surfaceId !== pending.surfaceId ||
+					scope.wiki !== pending.wiki || scope.owner !== pending.owner || scope.user !== pending.user ) throw failed();
+			};
+			try {
+				guard();
+				await store.finishRecoveryDiscard( pending.receipt, guard );
+			} catch ( error ) {
+				guard();
+				mw.notify( mw.msg( 'layers-page-draft-failed' ), { type: 'error' } );
+				// Re-enter normal review with the retained backup. Keep any new edits
+				// made here while the storage transaction was settling.
+				if ( !this.editor.hasUnsavedChanges() ) this.leave( window.location.href );
+			}
 		}
 
 		leave( url ) {
@@ -112,17 +144,17 @@
 			const init = configuration( await result.text() ); guard();
 			const current = init && init.pageOwned;
 			if ( !current || current.readOnly || current.owner !== scope.owner || !current.surfaceId || current.revisionId !== revision ) throw failed();
+			const receipt = await plan.receipt();
+			await plan.preflight(); guard();
 			const storage = window.sessionStorage, intent = JSON.stringify( { path: url.pathname + url.search,
-				wiki: scope.wiki, user: scope.user, owner: scope.owner, surfaceId: current.surfaceId, revisionId: revision } );
+				wiki: scope.wiki, user: scope.user, owner: scope.owner, surfaceId: current.surfaceId, revisionId: revision, receipt } );
 			storage.setItem( intentKey, intent ); if ( storage.getItem( intentKey ) !== intent ) throw failed();
-			let removed = false;
 			try {
-				await plan.discard( guard ); removed = true; guard(); this.leave( url.href );
+				this.leave( url.href );
 			} catch ( error ) {
 				this.departing = false; this.editor._closeCompleted = false;
 				if ( this.editor.uiManager && this.editor.uiManager.container ) this.editor.uiManager.container.inert = false;
-				try { if ( storage.getItem( intentKey ) === intent ) storage.removeItem( intentKey ); }
-				finally { if ( removed ) await plan.restore(); }
+				if ( storage.getItem( intentKey ) === intent ) storage.removeItem( intentKey );
 				throw error;
 			}
 		}

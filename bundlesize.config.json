@@ -11,8 +11,8 @@
 	},
 	{
 		"resourceModule": "ext.layers.editor.pageOwned",
-		"maxSize": "935 KB",
-		"note": "Page-owned editor module, raw source bytes. November 18 review permits 15 KB for the owner-approved Continue/Discard/Cancel flow, exact selected-record deletion across local storage and IndexedDB, guarded saved-version loading and fresh-editor continuation. Reader/shared limits stay unchanged. See docs/CODE_GROWTH_POLICY.md."
+		"maxSize": "937 KB",
+		"note": "Page-owned editor module, raw source bytes. November 18 review permits 15 KB for the owner-approved recovery choices. November 21 adds 2 KB of budget for verifying the reviewed backup in the ready destination before deleting it. See docs/CODE_GROWTH_POLICY.md."
 	},
 	{
 		"resourceModule": "ext.layers.shared",
