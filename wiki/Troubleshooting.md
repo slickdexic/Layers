@@ -41,7 +41,7 @@ embed, shown on hover, keyboard focus or tap.
 
 1. Confirm the exact wiki and page. Different hosts or ports can be different
    installations with different data and extension code. Check `Special:Version`
-   and the installed commit/tag. v1.8rc2 reports 1.8.0-rc.2; main can include newer Unreleased work.
+   and the installed commit or tag. Layers 1.8 reports 1.8.0. The RC2 testing package reports 1.8.0-rc.2.
 2. Confirm Layers is loaded and the embed is saved. Check migration completion,
    including on a fresh empty wiki. Running the updater alone is not completion.
 3. Check this page's embed name. After completion, `layerset=on` means

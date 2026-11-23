@@ -1,5 +1,255 @@
 # Layers 1.8 release acceptance
 
+## Stable 1.8.0 preparation — November 23, 2026
+
+Advances Milestone 1, UI-3, UI-6, DATA-1 and OPS-3. The preparation branch
+carries application candidate `8a962fe0` with stable version metadata and
+release documentation. Published RC2 remains the preceding public checkpoint.
+Exact-commit CI and installed-package verification remain pending at this
+preparation checkpoint.
+
+The preceding application archive passed all 19,293 Jest tests across 340
+suites, code-growth and ResourceLoader bundle limits, and shipped asset checks.
+Four installed Chromium cases passed on MediaWiki 1.44.6 and the working wiki
+replayed the affected keyboard, contrast and folder workflows on 1.45.3.
+**Layer actions** offers same-parent reordering with a click, tap or keyboard.
+The browser replay verified focus, status, Undo/Redo, locked descendants and
+menu bounds at 400% zoom. The recorded Windows Narrator/Edge PC walkthrough
+includes the successful PDF paging speech pass on 1.45.3.
+
+### Evidence for the intended-wiki decision
+
+- Review the retained 1.5.95/MySQL migration rehearsal on 1.44.6 alongside
+  the 1.45.3 restoration of the already-migrated intended wiki. The restore
+  preserved native and HTTP reads for images, slides and PDFs, 66 persistent
+  table witnesses and 7,832 uploads. Compare the final package to the rehearsed
+  migration and recovery code. The owner records S7 acceptance or authorizes
+  a fresh rehearsal from an appropriate pre-migration copy.
+- Retain the three pilot PDF groups with their current names while the owner
+  decides their disposition. The ten affected members matched preserved
+  payloads and source versions apart from names. A later repair requires a
+  review of exact references and separately approved native publication.
+- Use the remaining [Milestone 1 owner scenarios](PROJECT_CHARTER.md#7-acceptance-scenarios-for-the-project-owner)
+  to close uncovered ownership, history, isolation, recovery and permissions
+  workflows before final sign-off.
+- Keep reader and editor access restricted through successful migration,
+  search cleanup and verification during any upgrade. The tested upgrade
+  starting path and rollback procedure are in the [upgrade guide](UPGRADING.md).
+
+The reported USB timings and mobile usability issues retain their owner-approved
+release dispositions. The 300 ms reference-install result remains unverified.
+The intended-wiki decision and stable publication are separate from artifact
+preparation.
+
+## Layer actions and dark toolbar labels — November 23, 2026
+
+Advances UI-3, UI-6 and OPS-3. The approved **Layer actions** button sits
+beside **Add folder**. Its menu opens by click, tap, Enter or Space.
+**Move up** and **Move down** change the selected layer's position among
+its siblings. Folders move with their contents. Successful moves retain
+selection, focus the moved row and announce the existing status. A selection
+hidden by the layer filter keeps focus on the opener. Boundary positions,
+locked layers, folders with locked descendants, the background and multiple
+selections are protected. Undo and Redo use the existing layer history.
+
+The Rectangle, Arrow and Text toolbar labels now use the existing secondary
+text color in both explicit dark mode and automatic dark mode. On 8080,
+the three Playwright cases passed, including nine day, night and automatic
+dark tool-state contrast checks. The menu was exercised with mouse,
+keyboard and an emulated touch tap at 320 × 256 CSS pixels. Escape, focus,
+the move announcements, Undo/Redo and the saved revision and slot hashes
+passed.
+
+Local candidate `8a962fe0adc4040f9c01a430c5013b6a990bedfb` retains the RC2
+manifest version for qualification. The 2,975-file archive matches its
+Git blobs and executable modes. Its SHA-256 is
+`b7488a608230052ec70d9affceaa992659f02bc3289edf23b4f63c547e7a363c`.
+Sharing the toolbar and Help SVG wrappers preserves all 50 generated icon
+strings byte for byte. The editor module uses 2,250,427 of 2,251,776 allowed
+raw bytes. Handwritten JavaScript totals 116,500 lines against the unchanged
+116,500-line limit. The exact archive passed the full JavaScript gate with
+340 Jest suites, 19,293 tests, 94.17% statement coverage, and all configured
+bundle and shipped asset checks.
+
+The installed 8082 package matched all 2,975 file hashes and executable
+modes. Four Playwright cases passed using the retained slide fixture,
+including the new actions, both contrast cases and recovery after a failed
+destination. On both maintained wikis, a browser-only folder test verified
+sibling boundaries, membership, a locked descendant, one-step Undo/Redo,
+row focus and menu bounds at actual 400% browser zoom. The Playwright touch
+case used emulation.
+
+The 8082 pre- and post-install records matched for fifteen content tables,
+three uploads and all other services. Harmless requests under `tmp/`,
+`acceptance/` and `.git/` returned HTTP 403. The candidate remains local.
+Click-only moves between folders and broader WCAG qualification remain open.
+
+## Approved keyboard disclosure and compact layouts — November 23, 2026
+
+Advances UI-3, UI-6, UI-10 and OPS-3. The owner replied “I trust your
+recommendations. Please take these items” to the recommendation to repair
+Shape Library keyboard access and the editor and recovery layouts.
+
+- **Shape Library.** **ISO 7010 Safety Signs** is a keyboard-focusable disclosure.
+  Enter, Space and a pointer click toggle the same category. The expanded state
+  is exposed, focus stays on the heading, and Escape returns to the picker
+  button. Category names, order, search and shapes are retained.
+- **Editor.** The compact editor scrolls its existing controls and workspace.
+  Tab reaches **Save**, **Add folder** and the other tested controls. Focused controls
+  scroll back into view when the viewport shrinks. Controls suppressed by the
+  selected tool are skipped by keyboard navigation.
+- **Recovery.** In a short viewport, one scroll area contains the heading,
+  review and existing choices. Focus remains exposed when the viewport shrinks
+  and when Escape returns from discard confirmation. The 8080 regression
+  retained the same draft bytes through a simulated HTTP 503 and removed only
+  the reviewed local draft after a successful reopen. Saved revision and slot
+  hashes matched.
+
+On MediaWiki 1.45.3, all three Playwright accessibility and recovery cases
+passed, including both desktop themes. A separate Chromium replay at actual
+200% and 400% browser zoom (640 × 512 and 320 × 256 CSS pixels) exercised
+keyboard focus, Save, the layer panel and recovery on the slide fixture.
+PDF focus and status also passed. In the exact candidate archive, all nine
+focused Jest suites passed (819 tests).
+
+Local candidate `6a1f0bb95ffc6515ab21d0b73dbde0b2bac2d349` is installed on
+the maintained MediaWiki 1.44.6 wiki. The 2,975 extension files match the
+archive and Git blobs by digest and mode. The archive SHA-256 is
+`9c29b0806b5e024d0ed56e093263bb04b136f280b4bcac9e092660444070e048`.
+The installed browser replay passed the Shape Library disclosure, the PDF
+page-turn status and focus checks, and the editor and recovery keyboard tests
+at actual 200% and 400% zoom. All 41 focus stops in the compact slide editor
+remained visible when focused. The PDF editor with Rectangle selected exposed
+all 45 compact focus stops, including its active style controls. **Home**
+scrolled to the recovery heading, and Tab exposed all choices and both
+discard-confirmation buttons. Escape preserved the existing draft bytes.
+
+Fifteen content tables, nine pages, sixteen revisions and three uploads
+matched the pre-install receipt. The other four services retained their
+container identities, images and start times. Harmless HTTP marker requests
+under `tmp/`, `acceptance/` and `.git/` returned 403.
+
+The follow-up reproduced dark-mode toolbar contrast and verified the existing
+layer reordering entry points. Independent text resizing and broader UI-3
+qualification remain open.
+[Findings and behavior brief](#toolbar-contrast-and-layer-actions--behavior-brief)
+
+### Toolbar contrast and layer actions — behavior brief
+
+Owner approved November 23, 2026 (“I approve”). Advances UI-3 and UI-6. The editor uses the same
+saved layer sets and publishes layer order through the normal **Save** path.
+Readers see the order recorded in the revision they are viewing.
+
+**Toolbar labels.** On the installed 1.44.6 wiki in Vector 2022 and the 1.45.3
+working wiki in Vector, axe measured 3.22:1 for **Stroke Color**, **Fill Color**,
+**Stroke Width** and **Font Size** in the Rectangle, Arrow and Text tool states.
+This reproduces in explicit night mode and automatic mode with a dark system
+preference. Day mode measures 5.74:1. Use the existing secondary text color
+for these toolbar labels in both dark modes. That color measures 6.14:1 against
+the current toolbar background. Keep the label text, layout, controls and
+system high-contrast palette. Verify contrast with the controls displayed for
+each tool. [WCAG 2.2 Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+
+**Layer actions.** Add a compact button next to **Add folder** in the Layers
+panel, named **Layer actions**. With one layer or folder selected, a click,
+tap, Enter or Space opens its menu. The first two entries are **Move up** and
+**Move down**, followed by the existing layer actions in their current order.
+The menu stays inside the viewport and scrolls if needed. Escape closes it
+and returns focus to its opener. All existing panel controls remain reachable
+in the compact layout. Keep the existing right-click and keyboard controls.
+
+Each move places the selected layer one position higher or lower among its
+siblings in the current folder or at the top level. A folder moves with its
+contents. First and last positions disable the corresponding command. The
+background, locked layers, folders containing locked layers and multiple
+selections cannot use the new move commands. The panel keeps the selection,
+moves focus to the reordered row and announces the existing move status.
+One Undo reverses the move and Redo reapplies it. Dragging and keyboard
+shortcuts retain their present folder and lock behavior.
+
+On 8082, Arrow Down on the layer handle moved a layer one row, retained
+focus and was reversed by Undo. The saved revision and slot hashes matched.
+Right-click on the same row opened no Layers menu. The normal ResourceLoader
+editor registers the listener only in the fallback row handler. The visible
+button gives desktop and touch users a direct route. This change covers
+ordering within a folder or at the top level. Click-only transfers between
+folders remain open. Qualify ordinary rows, folders, locked and boundary
+cases, Undo/Redo, keyboard focus, narrow zoom, and a touch tap.
+[WCAG 2.2 Dragging Movements](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html)
+
+## Installed PDF repair and accessibility audit — November 23, 2026
+
+Advances UI-3, UI-6, UI-10 and OPS-3. Local candidate
+`ae910d71c2ddf10be27861a0c216a7c9046fccc1` adds the approved PDF toolbar repair
+and focused regression to published RC2 (`8c27833d`). The 2,975 extension files
+match the Git blobs and installed 8082 bytes and permissions. The archive's
+SHA-256 is
+`93b26dfd5a173cc18304861e731bb0655489aa060fcf5ee731a8254b2fce1862`.
+All 535 tests in the three focused Jest suites passed from the archive.
+
+In Chromium on the installed MediaWiki 1.44.6 candidate at port 8082 and the
+MediaWiki 1.45.3 working wiki at port 8080, Enter moved PDF focus to the
+available direction at each boundary. The status region changed once per
+turn, to **Page 2 / 2** and then **Page 1 / 2**. Saved revision IDs and slot
+hashes matched. Actual speech passed in Windows Narrator with Edge on 8080.
+The 8082 speech rerun could not complete because Edge could not be activated
+for Narrator input.
+
+The 8082 install and replay preserved the digests of fifteen content tables,
+nine pages, sixteen revisions and three uploads. The 8082 service retained
+its environment, mounts and port bindings. The 8080 and 8081 web services
+and both database services retained their container identities, image IDs and
+start times. Harmless HTTP marker requests returned 403 under `tmp/`,
+`acceptance/` and `.git/`.
+
+| Workflow | Result on both maintained wikis | WCAG 2.2 criterion assessed |
+| --- | --- | --- |
+| Shape Library category browsing | Pointer clicks collapse and expand **ISO 7010 Safety Signs**. The category heading does not receive Tab focus and exposes no disclosure role or state. | 2.1.1 Keyboard, 4.1.2 Name, Role, Value |
+| Slide editor at a narrow viewport | At 320 × 256 CSS pixels, focus reached **Save Changes**, **Add folder** and other controls outside the visible viewport. At 640 × 512, the hit-test also flagged the color and stroke-width controls for investigation. | 1.4.10 Reflow, 2.4.11 Focus Not Obscured (Minimum) |
+| Draft recovery at a narrow viewport | At 320 × 256, the choices left a 20-pixel-tall review area and **Cancel** was offscreen on one Tab stop. The discard confirmation buttons remained reachable. Escape returned to the choices and the local draft bytes matched. | 1.4.10 Reflow, 2.4.11 Focus Not Obscured (Minimum) |
+| Full-size viewer | After zooming in, **Pan down** moved the media with a click. All 12 controls in the Tab cycle were exposed at both sizes. Escape returned focus to **View full size**. Tested an image on 8082 and a PDF on 8080. | 2.4.11 Focus Not Obscured (Minimum), 2.5.7 Dragging Movements |
+| Layer reordering | The source exposes drag-and-drop and keyboard reordering. The inspected layer row and context menu expose no single-pointer reorder command. | 2.5.7 Dragging Movements |
+
+Viewport tests used fixed CSS-pixel dimensions in Chromium. Browser zoom,
+text resize and the remaining complete user journeys require separate checks.
+The editor canvas and viewer assign some Ctrl/Command zoom shortcuts to media
+zoom. Test browser zoom from the browser menu and with focus in those widgets.
+Existing numeric transform properties give a pointer alternative to dragging
+for supported layer transforms. The Rectangle source requires a minimum size
+from the gesture, and the live probe produced no layer with either input.
+An observed creation path and a keyboard equivalent still need verification.
+The applicable assessment sources are
+[Keyboard](https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html),
+[Reflow](https://www.w3.org/WAI/WCAG22/Understanding/reflow.html),
+[Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html)
+and [Dragging Movements](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html).
+
+### Proposed behavior for owner review
+
+The owner approved the first two repairs, whose results are recorded above.
+Layer reordering remains a proposal.
+
+- **Shape Library (UI-3).** Make **ISO 7010 Safety Signs** a keyboard-focusable
+  disclosure with visible focus and an announced expanded or collapsed state.
+  Enter, Space and pointer click toggle the same list. Focus stays on the
+  heading while toggling. Keep the current heading text, search, category
+  order and shape choices. No removal or new wording is proposed.
+- **Editor and recovery at high zoom or in small windows (UI-3, UI-6, UI-10).**
+  Keep the editor's actions and panel controls reachable by scrolling, and
+  bring the whole focused control into view. When the recovery dialog cannot
+  fit its heading, review and actions, allow the whole dialog to scroll so
+  all three remain reachable. Keep the desktop arrangement at roomier sizes.
+  Keep the existing action names and order, discard confirmation, Escape
+  behavior and draft retention. No control or wording would be removed.
+- **Layer reordering (UI-3, UI-6).** Add **Move up** and **Move down** to the
+  existing layer context menu. Each moves the selected layer one step using
+  the same folder and ordering rules as the current keyboard action. Keep
+  drag-and-drop and the keyboard shortcuts. Keep focus on the moved layer
+  after the menu closes.
+
+These are scoped findings for the 1.8 release. Full UI-3 conformance, the
+remaining screen-reader combinations and stable release sign-off remain open.
+
 ## Installed 1.44.6 candidate — November 22, 2026
 
 Candidate `ee6759ed` advances HIST-4, DATA-1, UI-3 and OPS-3. It includes

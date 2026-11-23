@@ -39,9 +39,9 @@ the private override/settings out of the public extension package. The same
 generic [HTTP guard](DEVELOPMENT_HTTP_GUARD.htaccess) protects the test image;
 the extension itself acquires no Docker dependency.
 
-November 22 installed candidate: the maintained 1.44.6 wiki on 8082 runs
-local candidate `ee6759ed`. All 2,975 package files match the installed
-bytes and permissions. The 8082 HTTP guard and prior images are retained.
+The November 23 application checkpoint on the maintained 1.44.6 wiki
+qualifies `8a962fe0`. All 2,975 package files matched the installed bytes and
+permissions. The HTTP guard and prior images are retained.
 See the [1.8 acceptance record](RELEASE_1_8_ACCEPTANCE.md).
 
 ## Work on the maintained wikis

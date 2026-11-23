@@ -1,6 +1,6 @@
 # Layers for MediaWiki
 
-## Search in the 1.8 candidate
+## Search in Layers 1.8
 
 After completed migration and search cleanup, MediaWiki's normal search includes
 eligible text from the current owning page's layer sets, including slides and
@@ -22,11 +22,11 @@ cleanup; an edit-only freeze is insufficient. Use the
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
-Add layers to **images and PDF pages**, or build **standalone slides** without a background file. In the page-history candidate, a layer set belongs to its wiki page and file or slide. Saving creates a native revision of the owning page; uploaded originals remain separate.
+Add layers to **images and PDF pages**, or build **standalone slides** without a background file. A layer set belongs to its wiki page and file or slide. Saving creates a native revision of the owning page; uploaded originals remain separate.
 
-> **Version:** 1.8.0-rc.2 (November 22, 2026) — testing candidate; not a production release.
+> **Version:** 1.8.0 (November 23, 2026) — page ownership and native revision history.
 
-[v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2) adds safer draft recovery, keyboard focus fixes, complete-PDF history restoration and editor navigation refinements. Final stable acceptance remains open. Layers 1.8 requires MediaWiki 1.44 or newer and the PHP and database versions required by that MediaWiki release. See the [candidate testing guide](docs/V1_8_CANDIDATE_TESTING.md).
+Layers 1.8 includes draft recovery, complete-PDF history restoration and accessibility improvements for the editor. It requires MediaWiki 1.44 or newer and the PHP and database versions required by that MediaWiki release. See the [1.8 release notes](docs/RELEASE_NOTES_1_8.md) and [GitHub Releases](https://github.com/slickdexic/Layers/releases).
 
 > **Upgrade prerequisite:** Page-owned embed selection starts after the documented migration records completion, including on a fresh wiki with no legacy layer sets. Until then, legacy lookup remains active and public legacy operation is not qualified for this release. Keep readers and editors restricted until migration and search cleanup succeed. Follow the [upgrade guide](docs/UPGRADING.md); do not delete retained legacy data or change completion records manually.
 
@@ -51,7 +51,7 @@ Add layers to **images and PDF pages**, or build **standalone slides** without a
 | PDF | Use the owning page's **Edit layers** overlay; navigate PDF pages inside the editor | `[[File:Manual.pdf|page=2|600px|layerset=annotations]]` |
 | Standalone slide | Save the embed on its owning page, then use **Edit layers** | `{{#Slide: SafetyProcedure | size=800x600}}` |
 
-These examples describe the candidate after migration completion. Create or save the named layer set through its overlay. `layerset=on` selects Default; explicit names select that owner's set for the file. `layerset=none` or `off` hides layers. The older `layers=` spelling remains supported. Equal names on different owners or files are independent. Every page of one PDF layer set keeps the same visible name.
+These examples apply after migration completes. Create or save the named layer set through its overlay. `layerset=on` selects Default; explicit names select that owner's set for the file. `layerset=none` or `off` hides layers. The older `layers=` spelling remains supported. Equal names on different owners or files are independent. Every page of one PDF layer set keeps the same visible name.
 
 For slides, `canvas=1200x800` specifies creation dimensions and `size=800x600` controls display size. `noedit` hides an edit button; it does not revoke editing permission.
 

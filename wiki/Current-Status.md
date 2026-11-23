@@ -1,5 +1,15 @@
 # Current release status
 
+## Stable preparation — November 23, 2026
+
+The 1.8.0 preparation branch carries the reviewed `8a962fe0` application and
+stable version and documentation updates. The latest published testing download
+at this checkpoint is [v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2).
+See the [1.8 release notes](https://github.com/slickdexic/Layers/blob/codex/v1.8-successor/docs/RELEASE_NOTES_1_8.md)
+and the [qualification record](https://github.com/slickdexic/Layers/blob/codex/v1.8-successor/docs/RELEASE_1_8_ACCEPTANCE.md).
+Final Milestone 1 owner acceptance and stable tag confirmation are pending.
+
+
 Candidate `ee6759ed` is installed on MediaWiki 1.44.6 at port 8082.
 All 2,975 package files match the installation. Twelve Chromium checks passed
 for draft retention and keyboard access across images, slides and saved PDFs.

@@ -1,8 +1,15 @@
 # Release guide
 
-The Layers 1.8 testing release uses tag `v1.8rc2` and manifest `1.8.0-rc.2`.
-The release page identifies the exact source and provides the archive and its
-checksum. Track final stable acceptance in the [release ledger](RELEASE_1_8_ACCEPTANCE.md).
+Updated November 23, 2026. The current public testing candidate is
+**v1.8rc2**, manifest **1.8.0-rc.2**, at
+`8c27833d41d8c127ccdc8ed2df4fd8d4a6f35703`. Both published candidate
+tags and archives are retained as dated testing packages.
+[v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2) · [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
+
+The **1.8.0** stable cut is being prepared. Use the acceptance ledger to
+reconcile the selected artifact with retained application evidence. Hosted
+checks on the exact release commit, final owner acceptance, and release
+publication remain pending. [Acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) · [Prepared release notes](RELEASE_NOTES_1_8.md)
 
 ## Before tagging
 
@@ -11,6 +18,10 @@ checksum. Track final stable acceptance in the [release ledger](RELEASE_1_8_ACCE
 - Run `npm test`, `npm run test:php`, `npm run test:phpunit`, and `npm run check:docs` from a clean checkout with installed development dependencies.
 - Run relevant live-wiki/E2E scenarios against dedicated test content, including images, standalone slides and PDFs. Record skipped coverage and environment limits.
 - Verify backups/migration instructions and export-cache compatibility notes.
+- For 1.8, verify that the upgrade procedure keeps ordinary reader and editor
+  access restricted through migration, search-index cleanup and verification.
+  Preserve the legacy recovery rows, retained source media and a working
+  rollback path. [Upgrade procedure](UPGRADING.md)
 - For security changes, backport to the supported LTS branch or record the explicit decision in improvement_plan.md. Verify that branch independently.
 
 ## Version and documentation
@@ -21,6 +32,15 @@ Do not rewrite dated audit headers or historical changelog entries to carry the 
 
 ## Publication
 
-Commit and push the tested release state. Create a tag/release only when requested or authorized for that release. Publish wiki source pages through the separate wiki repository, preserving remote-only content, then verify its HEAD and source parity. Mediawiki.org source files require a separate on-site publishing action; repository edits do not update that site automatically.
+Commit and push the tested release state. Require the final hosted checks and
+owner acceptance before publishing the stable release. Build and independently
+verify the extension-only archive and its SHA-256 checksum from the exact
+accepted commit. Create a tag and release only when authorized for that
+release. [Package preparation](RELEASE_PREPARATION.md) · [Owner acceptance gates](PROJECT_CHARTER.md#32-independent-page-history-release)
 
-After publication, record the branch/tag, commit, checks and known limitations. Avoid statements such as complete audit compliance, identical exports or all features supported unless the corresponding acceptance tests and implementation establish them.
+Publish wiki source pages separately, preserving remote-only content and
+verifying their published content. Mediawiki.org source files require a
+separate on-site publishing action.
+
+After publication, record the branch, tag, commit, checks and known
+limitations. Describe qualification in the tested scope.
