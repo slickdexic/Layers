@@ -1527,8 +1527,7 @@
 		/**
 		 * Create the page navigation group for multi-page files (PDF).
 		 *
-		 * Only rendered when the file has more than one page. Prev/next buttons
-		 * navigate the editor to the adjacent page (guarding unsaved changes).
+		 * Only shown for files with more than one page.
 		 */
 		createPageNavGroup() {
 			const editor = this.editor;
@@ -1536,7 +1535,6 @@
 			if ( pageCount <= 1 ) {
 				return;
 			}
-			const currentPage = ( editor && editor.page ) || 1;
 			const t = this.msg.bind( this );
 
 			const navGroup = document.createElement( 'div' );
@@ -1549,21 +1547,17 @@
 			prevBtn.textContent = '‹';
 			prevBtn.title = t( 'layers-page-prev', 'Previous page' );
 			prevBtn.setAttribute( 'aria-label', t( 'layers-page-prev', 'Previous page' ) );
-			prevBtn.disabled = currentPage <= 1;
 
 			const label = document.createElement( 'span' );
 			label.className = 'toolbar-page-display';
-			label.setAttribute( 'aria-live', 'polite' );
-			label.textContent = t( 'layers-page-indicator', 'Page $1 / $2' )
-				.replace( '$1', String( currentPage ) )
-				.replace( '$2', String( pageCount ) );
+			label.setAttribute( 'role', 'status' );
+			label.setAttribute( 'aria-atomic', 'true' );
 
 			const nextBtn = document.createElement( 'button' );
 			nextBtn.className = 'toolbar-button page-nav-button page-next-button';
 			nextBtn.textContent = '›';
 			nextBtn.title = t( 'layers-page-next', 'Next page' );
 			nextBtn.setAttribute( 'aria-label', t( 'layers-page-next', 'Next page' ) );
-			nextBtn.disabled = currentPage >= pageCount;
 
 			const track = ( el, handler ) => {
 				if ( editor && editor.eventTracker && editor.eventTracker.addEventListener ) {
@@ -1572,10 +1566,7 @@
 					el.addEventListener( 'click', handler );
 				}
 			};
-			// Read the page at click time, not from the closure. `currentPage`
-			// above is the page the toolbar was built on, and since page turns
-			// happen in place the toolbar is not rebuilt - a captured value left
-			// Next permanently navigating to page 2.
+			// Read the current page at click time because the toolbar survives page turns.
 			track( prevBtn, () => {
 				if ( editor && typeof editor.navigateToPage === 'function' ) {
 					editor.navigateToPage( ( editor.page || 1 ) - 1 );
@@ -1633,7 +1624,6 @@
 			if ( unsaved.length ) {
 				text += ' •';
 			}
-			els.label.textContent = text;
 
 			const annotatedList = annotated.length ?
 				annotated.join( ', ' ) :
@@ -1648,8 +1638,18 @@
 			}
 			els.label.title = title;
 
-			els.prev.disabled = currentPage <= 1;
-			els.next.disabled = currentPage >= pageCount;
+			const atStart = currentPage <= 1, atEnd = currentPage >= pageCount;
+			const active = document.activeElement;
+			const available = atStart && !atEnd && active === els.prev ? els.next :
+				atEnd && !atStart && active === els.next ? els.prev : null;
+			// Transfer focus before disabling the focused button.
+			if ( available ) {
+				available.disabled = false;
+				available.focus();
+			}
+			els.prev.disabled = atStart;
+			els.next.disabled = atEnd;
+			if ( els.label.textContent !== text ) { els.label.textContent = text; }
 		}
 
 		createActionGroup() {

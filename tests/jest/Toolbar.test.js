@@ -4249,6 +4249,44 @@ describe( 'Toolbar', function () {
 			expect( el.querySelector( '.page-prev-button' ).disabled ).toBe( false );
 		} );
 
+		test( 'keeps focus in page navigation and announces each new page once', () => {
+			const { tb, editor, el } = pagedToolbar();
+			jest.spyOn( tb, 'msg' ).mockImplementation( ( _key, fallback ) => fallback );
+			const { prev, next, label } = tb.pageNavEls;
+			const updates = new MutationObserver( () => {} );
+			updates.observe( label, { childList: true } );
+			try {
+				expect( label.getAttribute( 'role' ) ).toBe( 'status' );
+				expect( label.getAttribute( 'aria-atomic' ) ).toBe( 'true' );
+				next.focus();
+				editor.page = 2;
+				tb.updatePageNavState();
+				expect( document.activeElement ).toBe( next );
+				expect( label.textContent ).toBe( 'Page 2 / 11' );
+				tb.updatePageNavState();
+				expect( updates.takeRecords() ).toHaveLength( 1 );
+
+				editor.page = 11;
+				tb.updatePageNavState();
+				expect( document.activeElement ).toBe( prev );
+				expect( next.disabled ).toBe( true );
+				editor.page = 1;
+				tb.updatePageNavState();
+				expect( document.activeElement ).toBe( next );
+				expect( prev.disabled ).toBe( true );
+
+				const outside = document.createElement( 'button' );
+				el.appendChild( outside );
+				outside.focus();
+				editor.page = 11;
+				tb.updatePageNavState();
+				expect( document.activeElement ).toBe( outside );
+			} finally {
+				updates.disconnect();
+				el.remove();
+			}
+		} );
+
 		test( 'is not rendered for a single-page file', () => {
 			const editor = Object.assign( {}, mockEditor, { page: 1, pageCount: 1 } );
 			const el = document.createElement( 'div' );
