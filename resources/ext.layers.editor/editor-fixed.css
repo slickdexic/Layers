@@ -2784,25 +2784,6 @@ body.layers-editor-open .mw-body-content {
 	}
 }
 
-/* Scroll the editor when its header, toolbar and workspace need more room. */
-@media ( max-height: 520px ), ( max-width: 768px ) {
-	.layers-editor {
-		overflow-y: auto;
-		scroll-padding-block: 4px;
-	}
-
-	.layers-content {
-		min-height: 12rem;
-	}
-}
-
-@media ( max-width: 768px ) {
-	/* Reserve room for both the stacked layer panel and canvas. */
-	.layers-content {
-		min-height: 22rem;
-	}
-}
-
 /* Security-focused utility classes to avoid direct style manipulation */
 body.layers-resize-cursor {
 	cursor: row-resize;
@@ -2995,9 +2976,26 @@ body.layers-resize-cursor {
 	text-decoration: underline;
 }
 
+/* Scroll the editor when its header, toolbar and workspace need more room. */
 @media ( max-height: 520px ), ( max-width: 768px ) {
+	.layers-editor {
+		overflow-y: auto;
+		scroll-padding-block: 4px;
+	}
+
+	.layers-content {
+		min-height: 12rem;
+	}
+
 	.layers-skip-links {
 		position: fixed;
+	}
+}
+
+@media ( max-width: 768px ) {
+	/* Reserve room for both the stacked layer panel and canvas. */
+	.layers-content {
+		min-height: 22rem;
 	}
 }
 
