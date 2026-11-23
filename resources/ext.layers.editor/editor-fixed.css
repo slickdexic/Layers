@@ -503,6 +503,7 @@ body.layers-editor-open .mw-body-content {
 
 .style-group.context-aware .context-hidden {
 	opacity: 0;
+	visibility: hidden;
 	max-width: 0;
 	margin: 0;
 	padding: 0;
@@ -2783,6 +2784,25 @@ body.layers-editor-open .mw-body-content {
 	}
 }
 
+/* Scroll the editor when its header, toolbar and workspace need more room. */
+@media ( max-height: 520px ), ( max-width: 768px ) {
+	.layers-editor {
+		overflow-y: auto;
+		scroll-padding-block: 4px;
+	}
+
+	.layers-content {
+		min-height: 12rem;
+	}
+}
+
+@media ( max-width: 768px ) {
+	/* Reserve room for both the stacked layer panel and canvas. */
+	.layers-content {
+		min-height: 22rem;
+	}
+}
+
 /* Security-focused utility classes to avoid direct style manipulation */
 body.layers-resize-cursor {
 	cursor: row-resize;
@@ -2973,6 +2993,17 @@ body.layers-resize-cursor {
 .layers-skip-link:focus {
 	color: #fff;
 	text-decoration: underline;
+}
+
+@media ( max-height: 520px ), ( max-width: 768px ) {
+	.layers-skip-links {
+		position: fixed;
+	}
+}
+
+.layers-shape-library-parent:focus-visible {
+	outline: 2px solid var( --layers-accent-hover, #36c );
+	outline-offset: -2px;
 }
 
 /* Reduced Motion Accessibility Support

@@ -84,6 +84,34 @@ test( 'confirmed draft discard survives a failed destination and completes on a 
 	await expect( decision ).toBeVisible();
 	await expect( cancel ).toBeFocused();
 	await page.locator( 'dialog.layers-page-recovery' ).screenshot( { path: testInfo.outputPath( 'recovery.png' ) } );
+	const desktop = page.viewportSize();
+	for ( const viewport of [ { width: 640, height: 512 }, { width: 320, height: 256 } ] ) {
+		await page.setViewportSize( viewport );
+		await expect( cancel ).toBeFocused();
+		await expect( cancel ).toBeInViewport( { ratio: 1 } );
+	}
+	const proceed = page.getByRole( 'button', { name: 'Continue draft', exact: true } );
+	await page.keyboard.press( 'Shift+Tab' );
+	await expect( decision ).toBeFocused();
+	await expect( decision ).toBeInViewport( { ratio: 1 } );
+	await page.keyboard.press( 'Shift+Tab' );
+	await expect( proceed ).toBeFocused();
+	await expect( proceed ).toBeInViewport( { ratio: 1 } );
+	await page.keyboard.press( 'Tab' );
+	await expect( decision ).toBeFocused();
+	await page.keyboard.press( 'Tab' );
+	await expect( cancel ).toBeFocused();
+	await expect( cancel ).toBeInViewport( { ratio: 1 } );
+	await page.keyboard.press( 'Shift+Tab' );
+	await page.keyboard.press( 'Enter' );
+	await expect( cancel ).toBeFocused();
+	await expect( cancel ).toBeInViewport( { ratio: 1 } );
+	await page.keyboard.press( 'Escape' );
+	await expect( decision ).toBeVisible();
+	await expect( cancel ).toBeFocused();
+	await expect( cancel ).toBeInViewport( { ratio: 1 } );
+	expect( await backups() ).toEqual( reviewed );
+	await page.setViewportSize( desktop );
 	const confirm = async () => {
 		await tabTo( page, decision ); await page.keyboard.press( 'Enter' );
 		await expect( cancel ).toBeFocused();
@@ -136,6 +164,19 @@ for ( const theme of [ 'light', 'dark' ] ) {
 				expect( await page.evaluate( () => !!document.activeElement.closest( '.layers-editor' ) ) ).toBe( true );
 			}
 		}
+		const desktop = page.viewportSize();
+		const save = page.getByRole( 'button', { name: 'Save', exact: true } );
+		await tabTo( page, save );
+		await page.setViewportSize( { width: 320, height: 256 } );
+		await expect( save ).toBeFocused();
+		await expect( save ).toBeInViewport( { ratio: 1 } );
+		await skip.focus();
+		await tabTo( page, save );
+		await expect( save ).toBeInViewport( { ratio: 1 } );
+		const addFolder = page.getByRole( 'button', { name: 'Add folder', exact: true } );
+		await tabTo( page, addFolder );
+		await expect( addFolder ).toBeInViewport( { ratio: 1 } );
+		await page.setViewportSize( desktop );
 		const help = page.locator( '.help-button' ); await help.focus(); await page.keyboard.press( 'Enter' );
 		await expect( page.locator( '.layers-help-dialog' ) ).toBeVisible();
 		for ( let i = 0; i < 20; i++ ) {
@@ -153,6 +194,17 @@ for ( const theme of [ 'light', 'dark' ] ) {
 			await expect( picker ).toBeVisible( { timeout: 30000 } );
 			await expect( picker.locator( '.layers-shape-library-item, .layers-emoji-picker-item' ).first() )
 				.toBeVisible( { timeout: 30000 } );
+			if ( buttonClass === '.shape-library-button' ) {
+				const category = picker.getByRole( 'button', { name: /ISO 7010 Safety Signs/ } );
+				await tabTo( page, category );
+				await expect( category ).toHaveAttribute( 'aria-expanded', 'true' );
+				await page.keyboard.press( 'Enter' );
+				await expect( category ).toHaveAttribute( 'aria-expanded', 'false' );
+				await expect( category ).toBeFocused();
+				await page.keyboard.press( 'Space' );
+				await expect( category ).toHaveAttribute( 'aria-expanded', 'true' );
+				await expect( category ).toBeFocused();
+			}
 			for ( const key of [ 'Shift+Tab', 'Shift+Tab', 'Tab', 'Tab' ] ) {
 				await page.keyboard.press( key );
 				expect( await picker.evaluate( node => node.contains( document.activeElement ) ) ).toBe( true );
@@ -164,13 +216,19 @@ for ( const theme of [ 'light', 'dark' ] ) {
 			await expect( picker ).toBeHidden();
 			await expect( opener ).toBeFocused();
 		}
-		const colour = page.locator( '.color-display-button.stroke-color' ); await colour.focus(); await page.keyboard.press( 'Enter' );
+		const colour = page.locator( '.color-display-button.stroke-color' );
+		await expect( colour ).toBeHidden();
+		await page.keyboard.press( 'r' );
+		await expect( colour ).toBeVisible();
+		await tabTo( page, colour ); await page.keyboard.press( 'Enter' );
 		await expect( page.locator( '.color-picker-dialog' ) ).toBeVisible();
 		for ( let i = 0; i < 12; i++ ) {
 			await page.keyboard.press( i < 6 ? 'Tab' : 'Shift+Tab' );
 			expect( await page.evaluate( () => !!document.activeElement.closest( '.color-picker-dialog' ) ) ).toBe( true );
 		}
 		await page.keyboard.press( 'Escape' ); await expect( colour ).toBeFocused();
+		await page.keyboard.press( 'v' );
+		await expect( colour ).toBeHidden();
 		await page.addScriptTag( { path: path.resolve( 'node_modules/axe-core/axe.min.js' ) } );
 		const violations = await audit( page, '.layers-editor' );
 		expect( violations.filter( v => [ 'critical', 'serious' ].includes( v.impact ) ) ).toEqual( [] );

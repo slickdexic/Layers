@@ -10,7 +10,8 @@
 	max-width: calc( 100vw - 32px );
 	max-height: calc( 100vh - 32px );
 	max-height: calc( 100dvh - 32px );
-	overflow: hidden;
+	overflow: auto;
+	scroll-padding-block: 5px;
 	padding: 0;
 	border: 1px solid var( --recovery-border );
 	border-radius: 16px;
@@ -203,5 +204,18 @@
 
 	.layers-page-recovery button {
 		width: 100%;
+	}
+}
+
+/* Keep the heading, review and actions in one scroll area in short windows. */
+@media ( max-height: 36em ) {
+	.layers-page-recovery-content {
+		flex-shrink: 0;
+		overflow: visible;
+	}
+
+	.layers-page-recovery pre {
+		max-height: none;
+		overflow: visible;
 	}
 }

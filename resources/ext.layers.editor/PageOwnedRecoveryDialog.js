@@ -110,9 +110,16 @@
 						candidate.earlierCreation ? 'layers-page-draft-dialog-earlier' :
 							candidate.publicationBlocked ? 'layers-page-draft-blocked' : 'layers-page-draft-dialog-local' );
 				};
+				const revealFocus = () => {
+					const focused = document.activeElement;
+					if ( focused !== dialog && dialog.contains( focused ) ) {
+						focused.scrollIntoView?.( { block: 'nearest' } );
+					}
+				};
 				const finish = ( result ) => {
 					if ( result === null && onCancel ) { onCancel( Number( select.value ) ); }
 					this.close = null;
+					window.removeEventListener( 'resize', revealFocus );
 					dialog.close();
 					dialog.remove();
 					if ( priorFocus && priorFocus.isConnected ) {
@@ -125,7 +132,10 @@
 				const cancelAction = () => {
 					if ( confirmingDiscard ) {
 						confirmingDiscard = false; content.hidden = false; intro.hidden = false; discardText.hidden = true; accept.hidden = false;
-						discard.textContent = this.message( 'layers-page-draft-dialog-discard-open' ); cancel.focus();
+						discard.textContent = this.message( 'layers-page-draft-dialog-discard-open' );
+						cancel.focus();
+						// Restoring the review moves Cancel even when it already has focus.
+						revealFocus();
 					} else { finish( decisions ? 'cancel' : null ); }
 				};
 				cancel.addEventListener( 'click', cancelAction );
@@ -148,6 +158,7 @@
 				try {
 					dialog.showModal();
 					( confirm ? cancel : select ).focus();
+					window.addEventListener( 'resize', revealFocus );
 				} catch ( error ) {
 					this.close = null;
 					dialog.remove();
