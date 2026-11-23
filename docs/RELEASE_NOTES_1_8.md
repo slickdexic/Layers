@@ -1,11 +1,12 @@
 # Layers 1.8.0 release notes
 
-## Stable release preparation — November 23, 2026
+## Published v1.8 — November 23, 2026
 
-Layers 1.8.0 is the independent page-ownership and native revision-history
-release. These notes are prepared for the stable cut. Hosted checks on the
-exact release commit, final owner acceptance and publication remain pending.
-[Current acceptance record](RELEASE_1_8_ACCEPTANCE.md)
+[Layers 1.8](https://github.com/slickdexic/Layers/releases/tag/v1.8) is the
+stable page-ownership and native revision-history release. The extension
+reports 1.8.0. The public archive and checksum matched the qualified commit
+0c2c6b0e920c3a558a538552530cf2ba16275f73.
+[Acceptance record](RELEASE_1_8_ACCEPTANCE.md)
 
 ### What’s new
 

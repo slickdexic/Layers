@@ -1,15 +1,15 @@
 # Release guide
 
-Updated November 23, 2026. The current public testing candidate is
-**v1.8rc2**, manifest **1.8.0-rc.2**, at
-`8c27833d41d8c127ccdc8ed2df4fd8d4a6f35703`. Both published candidate
-tags and archives are retained as dated testing packages.
-[v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2) · [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
+Updated November 23, 2026. [Layers 1.8](https://github.com/slickdexic/Layers/releases/tag/v1.8)
+is the current stable release, manifest **1.8.0**, at
+0c2c6b0e920c3a558a538552530cf2ba16275f73.
+The [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) records the exact
+archive verification, hosted gates and installed qualification. See the
+[release notes](RELEASE_NOTES_1_8.md) for upgrade requirements and known limits.
 
-The **1.8.0** stable cut is being prepared. Use the acceptance ledger to
-reconcile the selected artifact with retained application evidence. Hosted
-checks on the exact release commit, final owner acceptance, and release
-publication remain pending. [Acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) · [Prepared release notes](RELEASE_NOTES_1_8.md)
+The [RC2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2) and
+[RC1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1) tags and
+archives are retained as dated testing packages.
 
 ## Before tagging
 

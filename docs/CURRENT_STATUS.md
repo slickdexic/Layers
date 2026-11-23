@@ -1,16 +1,27 @@
 # Current release status
 
-## Stable preparation — November 23, 2026
+## Published v1.8 — November 23, 2026
 
-The 1.8.0 preparation branch carries the reviewed `8a962fe0` application and
-stable version and documentation updates. The latest published testing download
-at this checkpoint is [v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2).
-See the [1.8 release notes](https://github.com/slickdexic/Layers/blob/codex/v1.8-successor/docs/RELEASE_NOTES_1_8.md)
-and the [qualification record](https://github.com/slickdexic/Layers/blob/codex/v1.8-successor/docs/RELEASE_1_8_ACCEPTANCE.md).
-Final Milestone 1 owner acceptance and stable tag confirmation are pending.
+[Layers 1.8](https://github.com/slickdexic/Layers/releases/tag/v1.8) is the
+current stable release. The extension reports 1.8.0 and requires MediaWiki
+1.44 or newer. The published archive and checksum match the qualified
+package at **0c2c6b0e**. All three hosted workflows passed. The exact
+archive also passed installed browser checks on MediaWiki 1.44.6 and
+preserved the test wiki's saved content and uploads.
 
+Follow [[Installation]] and the
+[upgrade guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md)
+before upgrading. Keep readers and editors restricted until migration,
+search index cleanup and verification are complete. The scoped Windows
+Narrator walkthrough and spoken PDF page-turn retest passed. Broader
+accessibility and physical-device coverage remain follow-up.
 
-Candidate `ee6759ed` is installed on MediaWiki 1.44.6 at port 8082.
+## Earlier qualification checkpoints
+
+The following records preserve the scope and results of earlier candidate
+checks.
+
+Candidate `ee6759ed` was installed on MediaWiki 1.44.6 at port 8082.
 All 2,975 package files match the installation. Twelve Chromium checks passed
 for draft retention and keyboard access across images, slides and saved PDFs.
 The retained wiki content and uploads matched the pre-install checks.
@@ -55,7 +66,7 @@ is implemented: eight native editor cases pass across media, themes and Vector
 skins, including dialog focus/Escape, layer edits/Undo/Redo, counter contrast and
 Cancel/Discard/reopen, with saved revisions unchanged. The final affected local
 replay passes 17 suites / 1,116 tests after a 337-suite / 19,254-test full run.
-Screens were shown; a real manual screen-reader pass remains open. The owner
+The manual screen-reader pass was pending at that checkpoint. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 

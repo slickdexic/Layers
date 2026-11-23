@@ -1,5 +1,34 @@
 # Layers 1.8 release acceptance
 
+## Published v1.8 — November 23, 2026
+
+Advances Milestone 1, DATA-1 and OPS-3. The owner directed publication of
+stable v1.8 after reviewing the release recommendation. GitHub published
+[Layers 1.8](https://github.com/slickdexic/Layers/releases/tag/v1.8) on
+November 23, 2026, at 17:07 UTC. Tag v1.8 resolves to
+0c2c6b0e920c3a558a538552530cf2ba16275f73, manifest 1.8.0.
+
+The published extension archive and checksum matched the verified local
+files after a fresh public download. The archive SHA-256 is
+afe946f3fb8085471705cfec329f5220f938047bcd1dc5b1dd68f373f18747a9.
+All 2,975 files matched the tagged Git blobs and modes in the package
+qualification. The exact package ran on the maintained MediaWiki 1.44.6
+wiki and preserved its saved content and uploads.
+
+[CI](https://github.com/slickdexic/Layers/actions/runs/45220154765) passed
+19,293 JavaScript tests and 1,716 standalone PHP tests with one skip.
+[Native MediaWiki](https://github.com/slickdexic/Layers/actions/runs/45220155639)
+passed 258 tests. [Browser tests](https://github.com/slickdexic/Layers/actions/runs/45220154834)
+passed 18 smoke tests, 23 editor tests with one skip, and four native
+editor accessibility tests. [Release-triggered wiki sync](https://github.com/slickdexic/Layers/actions/runs/45224102947)
+passed, and all 22 managed pages matched the tagged source after that run.
+
+The release decision uses the combined evidence from a fresh 1.5.95
+migration on MediaWiki 1.44.6/MySQL and a recovery exercise of the already
+migrated intended wiki on MediaWiki 1.45.3. The three older pilot PDF groups
+retain their existing names. The 300 ms reference installation target
+remains unverified under the owner's earlier performance disposition.
+
 ## Stable 1.8.0 preparation — November 23, 2026
 
 Advances Milestone 1, UI-3, UI-6, DATA-1 and OPS-3. The preparation branch

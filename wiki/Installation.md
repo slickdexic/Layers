@@ -3,8 +3,8 @@
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
 Layers 1.8 has manifest **1.8.0**. For the stable release, obtain the archive
-and `SHA256SUMS` from [GitHub Releases](https://github.com/slickdexic/Layers/releases).
-Verify the checksum and follow the [migration and search cleanup guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md)
+and `SHA256SUMS` from [the v1.8 release](https://github.com/slickdexic/Layers/releases/tag/v1.8).
+Verify the checksum and follow the [migration and search cleanup guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md)
 before reopening readers.
 
 ## Requirements and branches
@@ -28,8 +28,7 @@ git clone https://github.com/slickdexic/Layers.git
 git -C Layers checkout --detach v1.8
 ```
 
-Use the exact stable tag after publication. In a rehearsal before publication,
-install the reviewed 1.8.0 package and verify its checksum and commit.
+For an archive installation, verify its SHA-256 checksum before extracting it.
 
 For an existing compatible 1.43 wiki, select the separate `REL1_43` branch. Do not copy main's JavaScript onto a different branch's PHP files.
 
@@ -50,7 +49,7 @@ This creates/migrates **`layer_sets`**. Use the updater rather than executing an
 ## Complete page-history setup
 
 The updater creates database structures; it does not complete the legacy-to-page
-migration. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md) to refresh discovery,
+migration. Follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md) to refresh discovery,
 review the dry run and apply the unscoped migration. A fresh wiki with no legacy
 sets also needs the empty migration to record completion. Verify
 `layerspagehistorymigrated: true` through siteinfo before testing page-owned embeds.
@@ -70,7 +69,7 @@ An editor opening alone does not verify publication, revision history or permiss
 The fully rehearsed Layers starting release is **1.5.95** on MediaWiki 1.44.6
 with MySQL. This is a tested starting point, not an enforced technical minimum.
 Rehearse an older installation's actual data before choosing its upgrade route;
-see the [upgrade coverage](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADE_PATH_ACCEPTANCE.md).
+see the [upgrade coverage](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADE_PATH_ACCEPTANCE.md).
 
 Back up the database, uploads and configuration. Record the current branch/commit
 and review the target's changelog. From a clean Layers checkout:
@@ -80,7 +79,7 @@ git fetch --tags origin
 git checkout --detach v1.8
 ```
 
-Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
+Run the MediaWiki updater again, then repeat the save/view checks. To move shared layer sets and slides into page history, follow the [upgrade guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md): refresh links, dry-run the migration, commit it, and undo it if needed. Avoid forcing a pull over local modifications. If the schema has changed, rolling code back alone may not be sufficient; restore from a compatible backup when necessary.
 
 The post-1.5.95 fixes bind server export cache files to their source title and preserve creator identity. Regenerate old cached exports. Legacy sets with missing historical creator evidence require `layers-admin` for delete/rename. No schema migration was introduced by those particular fixes.
 
