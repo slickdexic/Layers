@@ -36,8 +36,8 @@ a substitute for that rehearsal. See [test coverage](UPGRADE_PATH_ACCEPTANCE.md)
 
 A new installation needs no previous Layers version. It still runs the updater
 and the unscoped migration completion step below, even when there is no legacy
-data to copy. The 1.8 manifest/version tag is assigned at release cut; current
-acceptance uses exact Git candidates rather than the provisional version label.
+data to copy. For RC2 use tag `v1.8rc2` and verify that `Special:Version` reports
+`1.8.0-rc.2`.
 
 | Requirement | What to prepare |
 | --- | --- |
@@ -328,12 +328,12 @@ quota refusal. Older editor code cannot read that compact format: recover or
 save those drafts with the updated editor before rolling back. Existing
 uncompacted drafts remain supported.
 
-The post-RC1 working source includes the owner-approved IndexedDB fallback for
+RC2 includes the owner-approved IndexedDB fallback for
 backups that cannot fit in localStorage even after compaction. Older versions
 cannot discover those IndexedDB drafts. Before rollback, explicitly recover and
 save them with the updated editor; preserve the browser profile and site data.
 Use the same browser profile and wiki origin where the drafts were made. This
-applies to builds with the IndexedDB fallback, introduced after v1.8rc1.
+applies to builds that include the IndexedDB fallback.
 
 New search features, Cargo and layer-object links remain later milestones.
 Cleanup of the existing search index is a required part of this ownership

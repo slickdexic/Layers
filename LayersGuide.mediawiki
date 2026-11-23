@@ -1,7 +1,7 @@
 '''Layers is a MediaWiki extension. Docker is only one development/test environment, not a runtime dependency.'''
 
 = Layers user guide =
-The published testing candidate is '''v1.8rc1''' (manifest '''1.8.0-rc.1'''). It includes page ownership, native revision history and current page-owned text search after migration and cleanup. Final stable acceptance remains separate; see the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 release and limitations]. This repository file is a publication source, not proof of a mediawiki.org update.
+The testing candidate is '''v1.8rc2''' (manifest '''1.8.0-rc.2'''). It includes page ownership, native revision history and current page-owned text search after migration and cleanup. Final stable acceptance remains separate; see the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc2 release and limitations]. This repository file is a publication source, not proof of a mediawiki.org update.
 
 == Complete setup first ==
 Follow [https://github.com/slickdexic/Layers/blob/main/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.
@@ -60,16 +60,16 @@ For slides, the first argument names the saved page-owned slide. Migrated varian
 
 Use the editor's keyboard help for its commands. Common commands include Ctrl+Z for Undo, Ctrl+Y or Ctrl+Shift+Z for Redo, 0 to fit, +/- to zoom and Space-drag to pan. Text fields can own keyboard input.
 
-'''Unreleased folder controls (after v1.8rc1):''' Select a folder row to move, rotate or proportionally scale its nested layers together. Drag inside its box to move; use the rotation handle or four corner handles. Shift snaps rotation to 15 degrees; Alt scales around the center. Hidden members move with the group. Unlock the folder, its ancestors and every member first. Escape cancels a gesture; Undo reverses one completed gesture. A scale-limit failure changes no members. Select a child row to edit it separately. On PDFs this affects only the active page. Save retains the result in normal page history.
+'''Folder controls:''' Select a folder row to move, rotate or proportionally scale its nested layers together. Drag inside its box to move; use the rotation handle or four corner handles. Shift snaps rotation to 15 degrees; Alt scales around the center. Hidden members move with the group. Unlock the folder, its ancestors and every member first. Escape cancels a gesture; Undo reverses one completed gesture. A scale-limit failure changes no members. Select a child row to edit it separately. On PDFs this affects only the active page. Save retains the result in normal page history.
 
 Native Save publishes the '''complete owner snapshot in one atomic page revision''', including the whole edited PDF group and unrelated sets. It is not independent page-by-page shared storage. Use the owning page's native history to view/compare earlier saved content and the available restoration workflows. Historical content retains its saved source identity; a reupload must not silently replace it.
 
 == Preserve work on a refusal or uncertain Save ==
 Keep the editor and local drafts intact. A stale/uncertain Save is not permission to repeat publication blindly. Use the existing '''Check'''/reconciliation flow to establish the outcome. An empty HTTP 200 body is not proof of success. Preserve newer local work when the earlier Save succeeded.
 
-Local draft '''Review'''/'''Restore''' needs explicit confirmation and remains local until Save succeeds. Cancellation/refusal preserves the applicable backups and current work. Do not clear browser storage, substitute another revision/file/PDF page, or split the complete Save into partial member writes.
+Choose '''Continue draft''' to reopen reviewed local edits. Only Save creates a page revision. '''Cancel''' returns to the page with the backup intact. Confirmed '''Discard draft and open saved version''' removes the reviewed backup after the saved editor opens successfully.
 
-'''Unreleased local-draft fallback (after v1.8rc1):''' The working source uses IndexedDB when ordinary and compact localStorage backups cannot fit, and waits for a verified backup before Save. Review and Restore keep their explicit choices. Preserve the same browser profile and site data. If neither store can hold the backup, keep the editor open and read the warning. Browser acceptance of this fallback remains in progress.
+'''Local-draft storage:''' Layers waits for a verified backup before Save and uses IndexedDB if the backup cannot fit in localStorage after compaction. Keep the same browser profile and wiki origin. If storage fails, keep the editor open and read the warning.
 
 == Permissions, history and limits ==
 Native editing requires ordinary read/edit authority on the '''owner''', <code>editlayers</code>, readable sources and fresh revision/source checks. Blocks, protection, native CSRF handling and quotas apply. A listing, preview or previous successful read is not lasting authorization.

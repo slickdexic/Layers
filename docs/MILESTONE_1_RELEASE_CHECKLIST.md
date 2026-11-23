@@ -9,12 +9,18 @@ testing on that same wiki. The owner subsequently reports canvas/zoom/pan issues
 on a landscape Galaxy Tab S4 / Chrome and accepts mobile usability limits as
 nonblocking for PC-focused 1.8. The approved viewport/touch repair passes eight
 bounded 8080 browser cases; owner device recheck remains follow-up.
-Reference-performance disposition and manual PC accessibility remain open; final artifact/version and
-owner release acceptance follow. The [current status](CURRENT_STATUS.md) and
+At this checkpoint, reference-performance disposition and manual PC
+accessibility were open. The November 21 owner decision makes USB-backed
+reader timings nonblocking. Reference-install performance remains unverified,
+and manual screen-reader acceptance and stable sign-off remain open. The [current status](CURRENT_STATUS.md) and
 [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) supersede dated candidate counts
 below while preserving their original evidence. The public RC1 archive is
 unchanged. This advances Milestone 1 / HIST, TYPES, DATA, SEC and OPS closeout;
 later 2.0 features do not hold up this release.
+
+The [RC2 release notes](RELEASE_NOTES_1_8.md) describe the second public
+testing candidate. The [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) tracks
+the remaining stable 1.8 checks.
 
 ## Published v1.8rc1 checkpoint — November 8, 2026
 

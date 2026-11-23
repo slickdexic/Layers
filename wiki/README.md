@@ -19,7 +19,7 @@ GitHub's wiki is a separate repository: pushing main does not by itself prove wi
 Use `[[Page Name]]` for wiki navigation and standard Markdown for external links. When linking from a wiki page to repository files, use full GitHub URLs rather than `../docs/...`, which resolves inside the separate wiki repository.
 
 Current guides link to maintained `main` documentation; immutable release
-references use `v1.8rc1` or its exact commit. Main pushes that change wiki pages
+references use the selected release tag or its exact commit. Main pushes that change wiki pages
 and published releases trigger synchronization. Verify the actual remote wiki
 contents afterward; workflow success alone is not a content comparison.
 

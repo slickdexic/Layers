@@ -66,18 +66,21 @@ Page turns preserve pending work. Save publishes the complete owner snapshot in
 one native revision. If Save refuses, keep the editor open and resolve the
 reported condition. Review local drafts before explicitly restoring them.
 
-## Local draft storage fallback (Unreleased)
+## Recover local layer edits
 
-The working source also includes a browser-draft fallback for local storage
-exhaustion. Save waits for a verified backup; Review and Restore still require
-your explicit choice. Keep the same browser profile and site data so its local
-drafts remain available. If both stores are full, keep the editor open and read
-the warning. This fallback is not in the v1.8rc1 archive; browser acceptance is
-still in progress.
+If the editor offers recovery, review the backup and choose **Continue draft**,
+**Discard draft and open saved version**, or **Cancel**. Continuing keeps the
+edits local until Save succeeds. Confirmed Discard removes only the reviewed
+backup after the saved editor opens. Cancel preserves the backup and returns
+to the page.
 
-## Edit a folder together (Unreleased)
+Save requires a verified backup. If localStorage cannot hold it even after
+compaction, Layers uses IndexedDB. Keep the same browser profile and wiki
+origin. If storage fails, leave the editor open and read the warning.
 
-In the working source after v1.8rc1, select the folder row to show one box around
+## Edit a folder together
+
+Select the folder row to show one box around
 its layers, including nested folders. Drag inside the box to move them together,
 use the rotation handle to rotate about their shared center, or drag a corner to
 scale proportionally. Shift snaps rotation to 15 degrees; Alt scales about the

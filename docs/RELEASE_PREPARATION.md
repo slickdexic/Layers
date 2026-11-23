@@ -1,5 +1,9 @@
 # Layers 1.8 / Milestone 1 release preparation
 
+The [RC2 release notes](RELEASE_NOTES_1_8.md) describe the second public
+testing candidate. The [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) tracks
+the remaining stable 1.8 checks.
+
 ## Published v1.8rc1 checkpoint — November 8, 2026
 
 The owner-authorized testing prerelease [v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)

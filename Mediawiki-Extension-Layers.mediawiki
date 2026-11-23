@@ -10,12 +10,12 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.8.0-rc.1
-|update          = 2026-11-07
-|download        = [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 v1.8rc1 testing candidate]
+|version         = 1.8.0-rc.2
+|update          = 2026-11-22
+|download        = [https://github.com/slickdexic/Layers/releases/tag/v1.8rc2 v1.8rc2 testing candidate]
 
-|readme          = [https://github.com/slickdexic/Layers/blob/v1.8rc1/README.md README]
-|changelog       = [https://github.com/slickdexic/Layers/blob/v1.8rc1/CHANGELOG.md CHANGELOG]
+|readme          = [https://github.com/slickdexic/Layers/blob/v1.8rc2/README.md README]
+|changelog       = [https://github.com/slickdexic/Layers/blob/v1.8rc2/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
 |mediawiki       = >= 1.44.0
@@ -55,7 +55,7 @@
 
 
 == Current candidate and release status ==
-The published testing candidate is '''v1.8rc1''' (manifest '''1.8.0-rc.1'''), with passing exact-commit automated checks. Final stable 1.8 acceptance remains separate. See the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc1 release notes] for verification and known limits. Editing this source file does not publish it to mediawiki.org.
+The testing candidate is '''v1.8rc2''' (manifest '''1.8.0-rc.2'''). Final stable 1.8 acceptance remains separate. See the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc2 release notes] for verification and known limits. Editing this source file does not publish it to mediawiki.org.
 
 The candidate stores layer sets in the '''owning page's native revision history''' after migration completion. A layer set belongs to one page and one file or slide. Equal names on different owners or files are independent. A PDF has one visible set name across all its pages; the page number selects an internal member, not a different set name.
 
@@ -111,9 +111,9 @@ For an older compatible 1.43 wiki, check the separate <code>REL1_43</code> branc
 From MediaWiki's <code>extensions</code> directory:
 <syntaxhighlight lang="bash">
 git clone https://github.com/slickdexic/Layers.git
-git -C Layers checkout --detach v1.8rc1
+git -C Layers checkout --detach v1.8rc2
 </syntaxhighlight>
-Use tag v1.8rc1 for this testing release; main may contain later Unreleased work. Verify the selected commit and release checks.
+Use tag v1.8rc2 for this testing release; main may contain later Unreleased work. Verify the selected commit and release checks.
 
 Add to <code>LocalSettings.php</code>:
 <syntaxhighlight lang="php">

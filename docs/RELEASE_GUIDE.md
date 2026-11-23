@@ -1,10 +1,8 @@
 # Release guide
 
-Updated November 8, 2026. The published testing candidate is **v1.8rc1**,
-manifest **1.8.0-rc.1**, at `cfdf8f2bd31b1d9616871e769317b52c64aba0bd`.
-The tag and downloadable archive are immutable. Later documentation/help fixes
-on main are Unreleased until another candidate is explicitly published.
-A documentation refresh is not a new version release.
+The Layers 1.8 testing release uses tag `v1.8rc2` and manifest `1.8.0-rc.2`.
+The release page identifies the exact source and provides the archive and its
+checksum. Track final stable acceptance in the [release ledger](RELEASE_1_8_ACCEPTANCE.md).
 
 ## Before tagging
 

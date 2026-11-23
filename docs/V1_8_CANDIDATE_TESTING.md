@@ -1,28 +1,20 @@
-# Layers v1.8rc1 public release candidate
+# Layers v1.8rc2 public release candidate
 
-Cut November 7, 2026 at the project owner's request. Advances Milestone 1,
-HIST-1–HIST-4, DATA-1–DATA-4 and OPS-1–OPS-3. This is a concrete testing
-candidate, not a declaration that the production release gate has passed.
+Layers v1.8rc2 reports `1.8.0-rc.2`. It advances Milestone 1,
+HIST-4, DATA-1, UI-3 and OPS-3. In addition to RC1's page ownership and native
+history, exercise the recovery, keyboard, PDF restoration and editor changes in
+the [release notes](RELEASE_NOTES_1_8.md).
 
 ## What to test
 
-Use the maintained development wiki at `http://localhost:8080` to test the latest
-working source on MediaWiki 1.45. The maintained MediaWiki 1.44 wiki at
-`http://localhost:8082` checks the separately installed candidate package for
-compatibility. Check its build receipt before assuming it includes a later
-development fix. Port 8081 retains its older build.
-The public package's version is `1.8.0-rc.1`, tagged `v1.8rc1`. It uses the
-qualified local rc.3 code; local rc.1–rc.3 were internal builds, not earlier
-public releases. The accompanying build receipt identifies
-the exact source commit, archive hash and verified installed files.
+On the development host, port 8080 runs the current checkout on MediaWiki 1.45.3.
+Port 8082 runs the separately installed candidate used for 1.44.6 compatibility
+testing. Its receipt identifies the exact build and installed files. For a
+separate installation, use the [v1.8rc2 release](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2).
 
-Internal rc.2 exposed a MediaWiki 1.44 event-registration defect during installed testing.
-Internal rc.3 supports both core event names and keeps public-search test permissions
-explicit. Use the latest build receipt for qualification; rc.2 did not pass.
-
-Use synthetic or non-sensitive content for candidate testing. Existing test
-content/accounts are retained. No wiki migration,
-test-data replacement or core upgrade is part of this candidate installation.
+Use synthetic or non-sensitive content for candidate testing. The maintained
+compatibility wiki retains its existing core, content and accounts. Follow the
+upgrade guide for a separate test installation.
 
 1. **Images:** open an owning page, choose Edit layers, change a layer and Save.
    Reopen it, check native page history/diff, view the earlier revision and Undo.
@@ -34,10 +26,13 @@ test-data replacement or core upgrade is part of this candidate installation.
    selected-page alignment and the old saved source after a file reupload.
 4. **Recovery/conflicts:** in two tabs, save in one then try to save stale work
    in the other. The refusal must preserve work. Exercise the existing Check
-   saved page and draft recovery actions; check that no duplicate revision appears.
+   saved page and draft recovery actions. With a synthetic draft, confirm Discard
+   and check that the saved editor opens without creating a page revision.
 5. **Access and devices:** confirm anonymous readers get View but no unauthorized
    Edit action. Try keyboard navigation, a phone viewer and tablet editing in
-   light/dark themes. Record physical Print and screen-reader results separately.
+   light/dark themes. Open Emoji and Shape Library with the keyboard, use Tab and
+   Shift+Tab inside each, then confirm Escape returns focus to its toolbar button.
+   Record physical Print and screen-reader results separately.
 
 For each failure record the candidate version, page URL, browser/device,
 reproduction steps, expected/actual result and whether Save completed. Do not
@@ -58,15 +53,13 @@ include credentials or private content in bug reports.
 - USB-backed wiki reader timings are nonblocking for stable 1.8. The 300 ms
   image-load-to-layer-paint target applies on the reference install, where it
   remains unverified. Engineering verified picker focus and recovery shortcuts
-  on 8080 and on candidate `ee6759ed` installed on 8082. The manual
-  screen-reader pass and final owner acceptance remain open. The owner accepts mobile usability limitations as
-  nonblocking for PC-focused 1.8; the approved viewport/touch repair has bounded
+  on 8080 and on the qualification build installed on 8082. The manual
+  screen-reader pass and final owner acceptance remain open. The owner accepts
+  mobile usability limitations as nonblocking for PC-focused 1.8; the approved viewport/touch repair has bounded
   native/browser checks, with owner device recheck retained as follow-up.
   Automated tests do not substitute for manual accessibility acceptance.
-- Exact-commit hosted CI passed and the v1.8rc1 GitHub prerelease is published.
-  Final stable acceptance and broader search-backend qualification remain separate.
-  Main may include later Unreleased documentation/help corrections; the RC1
-  tag and downloadable archive remain unchanged.
+- See the release page for exact-commit checks and archive details. The
+  [acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) records stable-release gates.
 
 ## Package and installation
 

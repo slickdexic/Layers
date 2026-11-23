@@ -2,7 +2,13 @@
 
 ## Unreleased
 
+## [1.8.0-rc.2] - 2026-11-22
+
+Second public Layers 1.8 testing candidate, tagged **v1.8rc2**.
+
 ### PC editor accessibility
+- Keep Tab and Shift+Tab inside Emoji and Shape Library. Escape returns focus
+  to the toolbar button. Native recovery dialogs handle their own keys.
 - Keep keyboard focus within the full-screen editor and its body-mounted dialogs
   and menus, restoring wiki access on Close. Dialog keys no longer trigger editor
   commands behind Help, colour pickers or other active widgets.
@@ -40,7 +46,8 @@
 ### Recovery choices
 - Replace Keep drafts unchanged with Continue draft, confirmed Discard draft and
   open saved version, and Cancel returning to the page. Discard removes only the
-  reviewed backup; new editing, backups, Undo/Redo and Save start normally.
+  reviewed backup after the saved editor successfully opens. A failed navigation
+  leaves the backup available. Layer visibility changes trigger a timed backup.
 - Keep other drafts and saved revisions intact, refuse changed backups, and
   preserve interrupted-publication reconciliation checks.
 - Keep gradient controls active after native Save reorders equal object keys.
@@ -72,7 +79,6 @@
 - Shift snaps rotation to 15 degrees; Alt scales from the center. Existing arrow
   shortcuts move the folder, Alt+Left/Right rotates, and Ctrl/Command+Arrow scales
   it proportionally. Scale limits reject the whole gesture without distortion.
-- This is working-source follow-up, not part of the immutable v1.8rc1 archive.
 
 ### Save feedback
 - Allow a verified localStorage backup when an earlier IndexedDB backup cannot
@@ -86,8 +92,7 @@
   cannot fit. Await commit and exact verification before publication; recover
   through the existing explicit choices, preserve other writers' drafts, and
   await asynchronous Close cleanup. Ordinary and PDF first-Save paths retain
-  known publication outcomes when a later backup fails. Browser acceptance is
-  still open; this is not part of the v1.8rc1 archive.
+  known publication outcomes when a later backup fails.
 - Verify the actual compact backup written during the PDF first-Save handoff,
   avoiding a false failure when quota requires lossless packing.
 - Show the existing localized draft-storage guidance instead of an internal error
@@ -102,7 +107,6 @@
   Import explanation; correct Pen, shape-library count, default selection and
   narrow-screen panel guidance. Include Import Image and stop advertising the
   unimplemented M/G/J shortcuts. Existing editor actions are unchanged.
-- These changes follow the immutable v1.8rc1 tag and are not included in its archive.
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 

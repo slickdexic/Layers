@@ -1,6 +1,6 @@
 # Architecture overview
 
-Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The published testing candidate is v1.8rc1, with manifest 1.8.0-rc.1. Final stable 1.8 acceptance remains separate. See [[Current Status]] for acceptance limits.
+Reviewed for the page-history candidate. After migration completion, image, PDF and slide layer sets are owned by a wiki page and saved in that page's native revision history. The testing candidate is v1.8rc2, with manifest 1.8.0-rc.2. Final stable 1.8 acceptance remains separate. See [[Current Status]] for acceptance limits.
 
 ## Data and authority
 

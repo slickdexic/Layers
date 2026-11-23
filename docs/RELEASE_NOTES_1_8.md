@@ -1,8 +1,8 @@
-# Layers v1.8rc1 release notes
+# Layers 1.8 release notes
 
-## Unreleased successor — November 22, 2026
+## v1.8rc2 — November 22, 2026
 
-The working successor adds the owner-approved folder transforms, revised draft
+This testing prerelease adds the owner-approved folder transforms, revised draft
 recovery choices, Save/Close sequencing repairs, repeatable gradient controls,
 plain Text gradient rendering, radial radius/centre controls and complete-PDF
 history restoration. The approved viewport/touch repair fits the canvas to its
@@ -15,8 +15,7 @@ contrast across both Vector skins and themes. Emoji and Shape Library keep keybo
 focus inside the open picker and return focus to its toolbar button on Escape.
 Confirming Discard keeps the reviewed backup until the saved editor opens
 successfully. Changing a layer's visibility also triggers a timed backup.
-See the [Unreleased changelog](../CHANGELOG.md#unreleased)
-for the complete changes. These changes are not in the immutable RC1 download.
+See the [RC2 changelog](../CHANGELOG.md#180-rc2---2026-11-22) for the complete changes.
 
 Owner testing on the maintained 8080 wiki passes normal editing, multi-page PDF
 Save/Download, rollback/restoration and printing, with good reported performance.
@@ -24,15 +23,19 @@ The owner accepts mobile usability limits as nonblocking for PC-focused 1.8;
 device recheck remains follow-up. For stable 1.8 the owner accepts timings on
 the USB-backed development wikis as nonblocking. The 300 ms image-load-to-layer-paint
 target applies to the reference install, where performance remains unverified.
-The manual screen-reader pass and final artifact/version and owner acceptance remain open. The
-[current status](CURRENT_STATUS.md) identifies the tested application commit;
-no stable release or new tag is declared here.
+The manual screen-reader pass and final owner acceptance remain open.
+
+Download `Layers-v1.8rc2.tar.gz` with `SHA256SUMS` and verify the archive
+before installation. Layers requires MediaWiki 1.44 or newer and the PHP and
+database versions required by the chosen core. PDF annotations require working
+MediaWiki PDF thumbnails. Keep reader and editor access restricted through
+migration, search cleanup and verification. Follow the [upgrade guide](UPGRADING.md)
+and the [candidate testing checklist](V1_8_CANDIDATE_TESTING.md).
 
 ## Published v1.8rc1
 
 Published November 7, 2026 locally / November 8 UTC. The immutable release is
-[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1); later
-working-source changes are Unreleased.
+[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1).
 
 This is the first public **Layers 1.8 release candidate**, intended for testing. The extension reports **1.8.0-rc.1**. It includes the fixes qualified in the internal rc.3 build; internal candidate numbers were not earlier public releases.
 

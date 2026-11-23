@@ -4,7 +4,16 @@ Reviewed November 8, 2026 against published **v1.8rc1**
 (`cfdf8f2bd31b1d9616871e769317b52c64aba0bd`) and this documentation/help
 follow-up. Advances Milestone 1 / OPS-1–OPS-2 and HIST-4–HIST-5.
 
-## Scope
+## RC2 documentation refresh
+
+The RC2 cut updates the installation and upgrade instructions, release notes,
+changelog, active repository and GitHub wiki guides, and MediaWiki publication
+sources. The guides distinguish the page-owned recovery choices, show how to use
+the toolbar-only tools, and preserve the owner-approved PERF-2 disposition.
+The [known limits](KNOWN_ISSUES.md) describe the wording that remains in the
+editor's approved Help. The link and mirror checks use the candidate file list.
+
+## Scope of the November 8 audit
 
 The [complete inventory](DOCUMENTATION_INVENTORY.md) lists **260** public
 Markdown/MediaWiki documents. Structural validation covers **207 maintained or

@@ -4,20 +4,18 @@ Layers is a MediaWiki extension for editable layers on images, PDF pages and
 standalone slides. It preserves uploaded originals. Docker is only a
 possible development/test environment, not a runtime requirement.
 
-**Public release candidate: v1.8rc1, November 7, 2026.** The page-history candidate
-reports 1.8.0-rc.1 in its manifest and uses the qualified internal rc.3 code.
-Tagged 1.5.95 uses older shared storage. Follow [[Installation]] and the
-[upgrade procedure](https://github.com/slickdexic/Layers/blob/v1.8rc1/docs/UPGRADING.md),
+**Public release candidate: v1.8rc2.** It includes safer draft recovery, keyboard
+focus fixes and editor improvements for page-owned layer sets. Tagged 1.5.95
+uses older shared storage. Follow [[Installation]] and the
+[upgrade procedure](https://github.com/slickdexic/Layers/blob/v1.8rc2/docs/UPGRADING.md),
 including migration and search cleanup before reopening readers.
-The independent page-history release targets Layers **1.8**; it has not yet
-been accepted as a production release. See the candidate testing guide in the
-package's `docs/V1_8_CANDIDATE_TESTING.md`. Current page-owned layer text is
-searchable after migration and cleanup; Cargo and layer links continue toward 2.0.
+See the [candidate testing guide](https://github.com/slickdexic/Layers/blob/v1.8rc2/docs/V1_8_CANDIDATE_TESTING.md)
+for the remaining stable 1.8 acceptance checks.
 
 | Current manifest and tagged baseline | Value |
 | --- | --- |
-| **Manifest version** | 1.8.0-rc.1 |
-| **Release date for this version** | November 7, 2026 |
+| **Manifest version** | 1.8.0-rc.2 |
+| **Release date for this version** | November 22, 2026 |
 
 ## What the candidate does
 
@@ -63,7 +61,7 @@ author wikitext. Slide `noedit` hides the edit overlay without changing rights.
 ## Delivery order
 
 Milestone 1 is page ownership/native history with existing capabilities intact.
-It remains open for the release matrix and owner acceptance. Current page-owned text search is included in v1.8rc1. Broader search
+Stable acceptance remains open. Page-owned text search is included after migration. Broader search
 acceptance, Cargo readiness, Cargo integration and on-page object links remain
 in the charter order. Those later milestones do not hold up page ownership, and object links
 will not be active in the lightbox.

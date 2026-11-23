@@ -8,6 +8,9 @@ applicable charter criteria. Owner direction November 7: deliver a v1.8 testing
 candidate. Owner direction November 7: commit/push and publish the first public
 candidate **v1.8rc1**, manifest **1.8.0-rc.1**, using qualified internal rc.3 code.
 This authorizes a prerelease; final production acceptance remains separate.
+**Owner direction November 22:** publish the second public testing release as
+**v1.8rc2**, manifest **1.8.0-rc.2**, after the documentation, exact-code CI and
+package verification. Stable release acceptance remains open.
 **Owner priority amendment:** October 11, 2026. The five milestones in section 3.1
 set the current work order and commit/push targets. They supersede earlier work
 orders and estimates; dated evidence remains a record of what was proved then.

@@ -148,7 +148,7 @@ Line:      │ Simple single-line pointer
 - Same as Text Box (font, alignment, padding, etc.)
 - Multi-line text with word wrap
 
-### Marker Tool (M)
+### Marker tool
 
 Add numbered or lettered markers for step-by-step labeling.
 Auto-numbers sequentially — great for instructions, diagrams,
@@ -188,7 +188,7 @@ Letter styles map values 1–26 → A–Z and values > 26 → AA, AB, etc.
 - Arrow size scales automatically with marker size
 
 **Usage:**
-1. Press `M` or select **Marker** from the Annotation dropdown
+1. Select **Marker** from the Annotation dropdown
 2. Click on the canvas to place a marker (auto-numbered)
 3. Keep clicking to place sequential markers
 4. Optionally enter custom values (e.g., "1A", "1.1")
@@ -588,7 +588,7 @@ Images are stored as base64 data URLs. The maximum size is configurable:
 | Highlight area | Rectangle (R) with semi-transparent fill |
 | Blur background | Any shape with `fill: blur` |
 | Freehand annotation | Pen (P) |
-| Step-by-step labels | Marker (M) |
+| Step-by-step labels | Marker |
 | Technical measurement | Dimension (D) |
 | Decorative arrow | Custom Shape (arrows category) |
 | Visual indicator/emotion | Emoji (✅ ⚠️ 😀) |
@@ -603,9 +603,10 @@ Images are stored as base64 data URLs. The maximum size is configurable:
 - [[Style Presets]] — Save and reuse tool styles
 - [[Alignment and Distribution]] — Precise positioning
 
-## Shortcut limitation in v1.8rc1
+## Toolbar-only tools
 
 Older help advertises M for Marker, G for Shape Library and J for Emoji.
 The shipped keyboard dispatcher does not implement these three shortcuts; use
 the toolbar controls. Ctrl+G and Ctrl+Shift+G do implement grouping/ungrouping.
-This documentation correction does not add or remove editor functionality.
+In RC2, open Emoji or Shape Library with Enter on its toolbar button. Tab and
+Shift+Tab stay inside the picker, and Escape returns to the toolbar button.

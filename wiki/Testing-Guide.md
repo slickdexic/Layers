@@ -21,7 +21,7 @@ Exercise production behavior, including negative cases. An assertion that only r
 
 Cover images, standalone slides and PDF pages. For asynchronous viewers/editors, test stale successes and failures, both image-load orders, page changes, close/reopen and retained unsaved work. Permission tests should cover ordinary page rights and Layers ownership separately.
 
-Database doubles establish call scope; they do not establish live transaction/concurrency behavior. v1.8rc1 has native revision-history and migrated-search regression evidence; use the acceptance ledger for its scope. Cargo and any expanded claims still need their applicable native acceptance.
+Database doubles establish call scope; they do not establish live transaction/concurrency behavior. The 1.8 candidates have native revision-history and migrated-search regression evidence; use the acceptance ledger for its scope. Cargo and any expanded claims still need their applicable native acceptance.
 
 ## Core-backed revision tests
 

@@ -2,7 +2,7 @@
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-> **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. v1.8rc1 includes page-owned revision history and migrated page-owned text search. Broader search acceptance and Cargo work retain their charter order; do not document proposals as shipped behavior.
+> **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. The 1.8 candidates include page-owned revision history and migrated page-owned text search. Broader search acceptance and Cargo work retain their charter order; do not document proposals as shipped behavior.
 
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.
 

@@ -2,11 +2,11 @@
 
 Destination: the [project charter](PROJECT_CHARTER.md) defines what Layers 2.0 contains and what must be true to declare it finished.
 
-Active milestone: [page ownership and native page history](MILESTONE_1_RELEASE_CHECKLIST.md). The [release preparation checklist](RELEASE_PREPARATION.md) tracks cleanup, documentation and upgrade readiness. Final stable acceptance remains open. Current page-owned search is included in v1.8rc1; broader search acceptance, Cargo readiness, Cargo and on-page links retain their charter order.
+Active milestone: [page ownership and native page history](MILESTONE_1_RELEASE_CHECKLIST.md). The [release preparation checklist](RELEASE_PREPARATION.md) tracks cleanup, documentation and upgrade readiness. Final stable acceptance remains open. Current page-owned search is included in v1.8rc2; broader search acceptance, Cargo readiness, Cargo and on-page links retain their charter order.
 
 **Layers is a MediaWiki extension, not a Docker-based application. Docker is only used for our development/test environment. Layers features must not require or provide Docker workers, host supervisors, PowerShell or .NET backends.**
 
-The page-history candidate covers images, PDFs and standalone slides after migration completion. The published testing release is v1.8rc1 (manifest 1.8.0-rc.1), with final stable acceptance separate. Current page-owned layer text is searchable after migration and cleanup; Cargo and layer-link work continues toward 2.0. Dated designs and investigation packets retain their historical scope. See the [documentation audit](DOCUMENTATION_1_8_AUDIT.md).
+The page-history candidate covers images, PDFs and standalone slides after migration completion. The testing release is v1.8rc2 (manifest 1.8.0-rc.2), with final stable acceptance separate. Current page-owned layer text is searchable after migration and cleanup; Cargo and layer-link work continues toward 2.0. Dated designs and investigation packets retain their historical scope. See the [documentation audit](DOCUMENTATION_1_8_AUDIT.md).
 
 ## Find the right guide
 

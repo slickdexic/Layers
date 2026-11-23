@@ -1,6 +1,6 @@
 # Permissions
 
-## Search in v1.8rc1
+## Search in the 1.8 candidate
 
 After completed migration and search cleanup, MediaWiki's normal search includes
 eligible text from the current owning page's layer sets, including slides and

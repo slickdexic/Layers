@@ -49,14 +49,12 @@ Screens were shown; a real manual screen-reader pass remains open. The owner
 approved LAN access to the same primary wiki for device testing. Docker remains
 only the development/test environment.
 
-The published testing download remains **[v1.8rc1](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)**,
-published November 8, 2026, manifest **1.8.0-rc.1**, commit
-`cfdf8f2bd31b1d9616871e769317b52c64aba0bd`. It uses the qualified internal rc.3
-application code. Internal rc.1–rc.3 were local test builds, not earlier public
-releases. Publication was November 7 locally / November 8 UTC.
-
-Changes on main after this tag, including the documentation/editor-help refresh,
-are Unreleased and do not silently replace the downloadable candidate.
+The testing download is [v1.8rc2](https://github.com/slickdexic/Layers/releases/tag/v1.8rc2),
+manifest **1.8.0-rc.2**. The release page records the exact release commit,
+hosted checks and archive checksum. Candidate `ee6759ed` is the earlier
+application qualification build recorded above.
+The [RC1 release](https://github.com/slickdexic/Layers/releases/tag/v1.8rc1)
+retains its original archive and checks.
 
 ## Included behavior
 
@@ -92,7 +90,7 @@ Back up and rehearse, drain old-code work, complete migration, clean search and
 verify before reopening. Preserve legacy recovery rows and retained uploads.
 Use the [upgrade runbook](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
 
-The exact release commit passed [CI](https://github.com/slickdexic/Layers/actions/runs/42446168558),
+The RC1 release commit passed [CI](https://github.com/slickdexic/Layers/actions/runs/42446168558),
 [native MediaWiki tests](https://github.com/slickdexic/Layers/actions/runs/42446168520),
 [browser tests](https://github.com/slickdexic/Layers/actions/runs/42446168517) and
 [lint/style](https://github.com/slickdexic/Layers/actions/runs/42446168555).
@@ -118,7 +116,7 @@ assert every deployment or database combination has been tested.
 - Record final owner acceptance and qualify the eventual stable artifact.
 
 Publicly served unmigrated legacy search and arbitrary external search backends
-are outside v1.8rc1 qualification. Cargo readiness/integration and clickable
+are outside the 1.8 candidate scope. Cargo readiness/integration and clickable
 layer-object links retain their later charter milestones; no final 2.0 acceptance
 is claimed. Layer-object links are excluded from the lightbox.
 

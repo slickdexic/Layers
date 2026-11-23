@@ -1,6 +1,6 @@
 # Frequently asked questions
 
-## Search in v1.8rc1
+## Search in the 1.8 candidate
 
 After completed migration and search cleanup, MediaWiki's normal search includes
 eligible text from the current owning page's layer sets, including slides and
@@ -17,8 +17,8 @@ Keep readers and editors restricted through migration and successful search
 cleanup; an edit-only freeze is insufficient. Use the
 [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md).
 
-Updated November 8, 2026 for the published v1.8rc1 testing candidate
-(manifest 1.8.0-rc.1). Tagged 1.5.95 uses the older shared model.
+Updated November 22, 2026 for v1.8rc2 (manifest 1.8.0-rc.2).
+Tagged 1.5.95 uses the older shared model.
 Final stable 1.8 acceptance remains open; see [[Current Status]].
 
 ## What is Layers, and does it change uploaded originals?
@@ -92,9 +92,9 @@ positioning and layers before saving.
 
 Undo/Redo changes the current editor session. Native owner-page history records
 successful Saves; use its available viewing/comparison/restoration workflows
-for earlier saved content. Local draft Review/Restore is separate and requires
-explicit confirmation. Restoring a draft is not a saved page revision until
-Save succeeds.
+for earlier saved content. **Continue draft** loads reviewed local edits into the
+editor. Only a successful Save creates a page revision. **Cancel** preserves the
+backup. Confirmed Discard preserves it until the saved editor opens.
 
 Keep the editor and drafts intact after a refusal or uncertain response. Use the
 existing Check/reconciliation flow to establish the result before publishing

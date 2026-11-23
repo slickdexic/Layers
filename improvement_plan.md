@@ -10,7 +10,7 @@ All active work must use MediaWiki extension mechanisms and respect the supporte
 
 > **Current guidance — September 6, 2026:** Layers supports image annotations, PDF annotations and standalone slides as equal content types. Slides are a general-purpose canvas for presentations, diagrams, educational material, infographics, visual documents, dashboards and more. SOPs are one application, not the definition of the product. The agreed foundation priorities remain **page revision history, MediaWiki search, then Cargo query/filter support**. See [the architecture proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md) for technical context; its SOP examples illustrate one use case rather than restricting scope. Post-1.5.95 fixes are not yet verified/backported to REL1_43; this plan does not announce a release.
 
-**Version:** 1.8.0-rc.1
+**Version:** 1.8.0-rc.2
 **Last updated:** September 10, 2026 — ordered implementation handoff plan
 
 ## Current execution plan — September 13, 2026

@@ -51,7 +51,7 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `Delete` | Delete selected layers |
 | `Backspace` | Delete selected layers (alternative) |
 | `Ctrl+A` | Select all layers |
-| `Escape` | Deselect all / Cancel current operation |
+| `Escape` | Cancel the active operation or dismiss the open dialog. In the editor, returns to Pointer or starts Close when Pointer is active. |
 
 ---
 
@@ -101,7 +101,6 @@ not require a mouse. All require at least one selected, unlocked layer.
 | `Ctrl+A` | Select all layers |
 | `Ctrl+Click` | Add/remove layer from selection |
 | `Shift+Click` | Range select (select all between) |
-| `Escape` | Deselect all |
 
 ---
 
@@ -223,9 +222,10 @@ The single-key tool shortcuts (`V`, `T`, `R`, `A`, etc.) are the most valuable t
 - [[Drawing Tools]] — Complete tool reference
 - [[Quick Start Guide]] — Getting started tutorial
 
-## Shortcut limitation in v1.8rc1
+## Toolbar-only tools
 
 Older help advertises M for Marker, G for Shape Library and J for Emoji.
 The shipped keyboard dispatcher does not implement these three shortcuts; use
 the toolbar controls. Ctrl+G and Ctrl+Shift+G do implement grouping/ungrouping.
-This documentation correction does not add or remove editor functionality.
+In RC2, open Emoji or Shape Library with Enter on its toolbar button. Tab and
+Shift+Tab stay inside the picker, and Escape returns to the toolbar button.
