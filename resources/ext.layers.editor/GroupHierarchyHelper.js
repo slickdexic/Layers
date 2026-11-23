@@ -286,6 +286,66 @@
 		}
 
 		/**
+		 * Plan a one-position move in the flat stacking order without changing membership.
+		 *
+		 * @param {Array} layers Current layer order
+		 * @param {string} layerId Layer or folder to move
+		 * @param {number} direction -1 for up, 1 for down
+		 * @return {Array|null} New order, or null when no move is available
+		 */
+		static getSiblingOrder( layers, layerId, direction ) {
+			if ( layerId === '__background__' || ( direction !== -1 && direction !== 1 ) ) {
+				return null;
+			}
+			const byId = new Map( layers.map( layer => [ layer.id, layer ] ) );
+			const selected = byId.get( layerId );
+			if ( !selected || byId.size !== layers.length ||
+				( selected.parentGroup && byId.get( selected.parentGroup )?.type !== 'group' ) ) {
+				return null;
+			}
+			const siblings = layers.filter( layer => layer.id !== '__background__' &&
+				( layer.parentGroup || null ) === ( selected.parentGroup || null ) );
+			const target = siblings[ siblings.indexOf( selected ) + direction ];
+			if ( !target ) {
+				return null;
+			}
+
+			const collect = ( root ) => {
+				const ids = new Set( [ root.id ] );
+				for ( const id of ids ) {
+					const layer = byId.get( id );
+					if ( layer.type === 'group' ) {
+						const children = layer.children ?? [];
+						if ( !Array.isArray( children ) ) {
+							return null;
+						}
+						for ( const child of children ) {
+							if ( ids.has( child ) || byId.get( child )?.parentGroup !== id ) {
+								return null;
+							}
+							ids.add( child );
+						}
+					}
+				}
+				if ( layers.some( layer => ids.has( layer.parentGroup ) && !ids.has( layer.id ) ) ) {
+					return null;
+				}
+				return layers.filter( layer => ids.has( layer.id ) );
+			};
+			const from = collect( selected );
+			const to = collect( target );
+			if ( !from || !to || from.some( layer => layer.locked === true || layer.locked === 1 ) ) {
+				return null;
+			}
+
+			// Reuse the two branches' slots so unrelated, interleaved layers stay in place.
+			const moved = direction < 0 ? [ ...from, ...to ] : [ ...to, ...from ];
+			const affected = new Set( moved.map( layer => layer.id ) );
+			let index = 0;
+			return layers.map( layer => affected.has( layer.id ) ? moved[ index++ ] : layer );
+		}
+
+		/**
 		 * Check if a layer is a group
 		 *
 		 * @param {Object|string} layerOrId Layer object or ID

@@ -37,6 +37,7 @@
 			this.ungroupLayer = options.ungroupLayer;
 			this.deleteLayer = options.deleteLayer;
 			this.editLayerName = options.editLayerName;
+			this.panel = options.panel;
 
 			this.activeContextMenu = null;
 
@@ -54,15 +55,68 @@
 		 */
 		handleLayerContextMenu( e ) {
 			e.preventDefault();
+			this.openMenu( e.target.closest( '.layer-item' ), e.clientX, e.clientY );
+		}
 
-			const target = e.target;
-			const layerItem = target.closest( '.layer-item' );
+		appendLayerActions( container ) {
+			const button = document.createElement( 'button' );
+			button.type = 'button';
+			button.className = 'layers-btn layers-btn-icon layers-layer-actions';
+			button.textContent = '…';
+			button.title = this.msg( 'layers-layer-actions', 'Layer actions' );
+			button.setAttribute( 'aria-label', button.title );
+			button.setAttribute( 'aria-haspopup', 'menu' );
+			button.setAttribute( 'aria-expanded', 'false' );
+			this.actionButton = button;
+			this.updateActionButton();
+			this.panel.addTargetListener( button, 'click', () => {
+				const id = this.selectedLayerId();
+				if ( id ) {
+					this.openForLayer( button, this.panel.layerListRenderer?.findLayerRow( id ), id );
+				}
+			} );
+			container.appendChild( button );
+		}
 
-			// Close any existing context menu
+		selectedLayerId() {
+			const [ id, other ] = this.getSelectedLayerIds();
+			return id && !other && id !== '__background__' && this.editor.getLayerById( id ) ? id : null;
+		}
+
+		updateActionButton() {
+			if ( this.actionButton ) {
+				this.actionButton.disabled = !this.selectedLayerId();
+			}
+		}
+
+		moveSibling( id, direction ) {
+			const order = this.selectedLayerId() === id && this.editor.groupManager?.getSiblingOrder( id, direction );
+			if ( !order ) {
+				this.actionButton.focus();
+				return;
+			}
+			this.editor.stateManager.set( 'layers', order );
+			this.editor.canvasManager?.redraw();
+			this.editor.saveState( 'Reorder Layers' );
+			const row = this.panel.layerListRenderer?.findLayerRow( id, true );
+			( row?.querySelector( '.layer-grab-area' ) || this.actionButton ).focus();
+			this.panel.announceToScreenReader( direction < 0 ?
+				this.msg( 'layers-aria-moved-up', 'Moved up one layer.' ) :
+				this.msg( 'layers-aria-moved-down', 'Moved down one layer.' ) );
+		}
+
+		openForLayer( opener, row, id ) {
+			if ( this.opener === opener ) {
+				this.closeLayerContextMenu( true );
+			} else {
+				this.openMenu( row, 0, 0, opener, id );
+			}
+		}
+
+		openMenu( layerItem, x, y, opener, clickedLayerId = layerItem?.dataset.layerId ) {
 			this.closeLayerContextMenu();
 
 			// Determine clicked layer and select it if not already selected
-			const clickedLayerId = layerItem ? layerItem.dataset.layerId : null;
 			if ( clickedLayerId && !this.getSelectedLayerIds().includes( clickedLayerId ) ) {
 				this.selectLayer( clickedLayerId, false, false );
 			}
@@ -75,16 +129,10 @@
 			const menu = document.createElement( 'div' );
 			menu.className = 'layers-context-menu';
 			menu.setAttribute( 'role', 'menu' );
-			menu.style.position = 'fixed';
-			menu.style.left = e.clientX + 'px';
-			menu.style.top = e.clientY + 'px';
-			menu.style.zIndex = String( window.Layers.Constants.Z_INDEX.CONTEXT_MENU );
-			menu.style.backgroundColor = '#fff';
-			menu.style.border = '1px solid #ccc';
-			menu.style.borderRadius = '4px';
-			menu.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-			menu.style.padding = '4px 0';
-			menu.style.minWidth = '160px';
+			menu.style.left = x + 'px';
+			menu.style.top = y + 'px';
+			const zIndex = window.Layers.Constants.Z_INDEX;
+			menu.style.zIndex = String( opener ? zIndex.EDITOR_FULLSCREEN + 1 : zIndex.CONTEXT_MENU );
 
 			const addMenuItem = ( label, icon, callback, disabled ) => {
 				const item = document.createElement( 'button' );
@@ -92,34 +140,13 @@
 				item.type = 'button';
 				item.setAttribute( 'role', 'menuitem' );
 				item.setAttribute( 'tabindex', '-1' );
-				item.style.display = 'flex';
-				item.style.alignItems = 'center';
-				item.style.width = '100%';
-				item.style.padding = '8px 12px';
-				item.style.border = 'none';
-				item.style.background = 'none';
-				item.style.cursor = disabled ? 'default' : 'pointer';
-				item.style.textAlign = 'left';
-				item.style.fontSize = '13px';
-				item.style.color = disabled ? '#999' : '#333';
-				item.style.gap = '8px';
-				if ( !disabled ) {
-					item.addEventListener( 'mouseenter', () => {
-						item.style.backgroundColor = '#f0f0f0';
-					} );
-					item.addEventListener( 'mouseleave', () => {
-						item.style.backgroundColor = 'transparent';
-					} );
-				}
 				if ( icon ) {
 					const iconSpan = document.createElement( 'span' );
 					iconSpan.textContent = icon;
-					iconSpan.style.width = '16px';
+					iconSpan.className = 'layers-context-menu-icon';
 					item.appendChild( iconSpan );
 				}
-				const labelSpan = document.createElement( 'span' );
-				labelSpan.textContent = label;
-				item.appendChild( labelSpan );
+				item.append( label );
 				if ( disabled ) {
 					item.disabled = true;
 				} else {
@@ -133,9 +160,7 @@
 
 			const addSeparator = () => {
 				const sep = document.createElement( 'div' );
-				sep.style.height = '1px';
-				sep.style.backgroundColor = '#e0e0e0';
-				sep.style.margin = '4px 0';
+				sep.className = 'layers-context-menu-separator';
 				menu.appendChild( sep );
 			};
 
@@ -144,6 +169,15 @@
 			const hasSingleSelected = selectedIds.length === 1;
 			const clickedLayer = clickedLayerId ? this.editor.getLayerById( clickedLayerId ) : null;
 			const isGroup = clickedLayer && clickedLayer.type === 'group';
+
+			if ( opener ) {
+				const group = this.editor.groupManager;
+				addMenuItem( this.msg( 'layers-context-move-up', 'Move up' ), null,
+					() => this.moveSibling( clickedLayerId, -1 ), !group?.getSiblingOrder( clickedLayerId, -1 ) );
+				addMenuItem( this.msg( 'layers-context-move-down', 'Move down' ), null,
+					() => this.moveSibling( clickedLayerId, 1 ), !group?.getSiblingOrder( clickedLayerId, 1 ) );
+				addSeparator();
+			}
 
 			// Group option (requires 2+ layers selected)
 			addMenuItem(
@@ -176,7 +210,7 @@
 						}
 					}
 				},
-				!hasSingleSelected && !clickedLayerId
+				opener ? !layerItem : !hasSingleSelected && !clickedLayerId
 			);
 
 			addMenuItem(
@@ -203,21 +237,35 @@
 
 			document.body.appendChild( menu );
 			this.activeContextMenu = menu;
+			const firstItem = menu.querySelector( '[role="menuitem"]:not([disabled])' );
+			if ( opener ) {
+				this.opener = opener;
+				opener.setAttribute( 'aria-expanded', 'true' );
+				menu.setAttribute( 'aria-label', opener.title );
+				menu.classList.add( 'layers-context-menu-anchored' );
+				this.placeMenu = () => this.positionAtOpener( menu, opener );
+				this.placeMenu();
+				window.addEventListener( 'resize', this.placeMenu );
+				firstItem?.focus();
+			} else {
+				requestAnimationFrame( () => firstItem?.focus() );
+			}
 
 			// Close menu when clicking outside - store reference for cleanup
 			this._boundCloseHandler = ( evt ) => {
-				if ( !menu.contains( evt.target ) ) {
+				if ( !menu.contains( evt.target ) && !opener?.contains( evt.target ) ) {
 					this.closeLayerContextMenu();
 				}
 			};
-			setTimeout( () => {
-				document.addEventListener( 'click', this._boundCloseHandler );
-			}, 0 );
+			document.addEventListener( 'click', this._boundCloseHandler );
 
 			// Close on Escape, arrow-key navigation (WCAG 2.1 SC 4.1.2)
 			this._boundEscHandler = ( evt ) => {
-				if ( evt.key === 'Escape' ) {
-					this.closeLayerContextMenu();
+				if ( evt.key === 'Escape' || ( opener && evt.key === 'Tab' ) ) {
+					if ( opener && evt.key === 'Escape' ) {
+						evt.preventDefault();
+					}
+					this.closeLayerContextMenu( true );
 					return;
 				}
 				if ( evt.key === 'ArrowDown' || evt.key === 'ArrowUp' ||
@@ -229,35 +277,32 @@
 					if ( items.length === 0 ) {
 						return;
 					}
-					const current = menu.querySelector( '[role="menuitem"]:focus' );
-					let idx = items.indexOf( current );
-					if ( evt.key === 'ArrowDown' ) {
-						idx = idx < items.length - 1 ? idx + 1 : 0;
-					} else if ( evt.key === 'ArrowUp' ) {
-						idx = idx > 0 ? idx - 1 : items.length - 1;
-					} else if ( evt.key === 'Home' ) {
-						idx = 0;
-					} else if ( evt.key === 'End' ) {
-						idx = items.length - 1;
-					}
-					items[ idx ].focus();
+					const current = items.indexOf( document.activeElement );
+					const destinations = {
+						ArrowDown: ( current + 1 ) % items.length,
+						ArrowUp: current > 0 ? current - 1 : items.length - 1,
+						Home: 0,
+						End: items.length - 1
+					};
+					items[ destinations[ evt.key ] ].focus();
 				}
 			};
 			document.addEventListener( 'keydown', this._boundEscHandler );
+		}
 
-			// Focus the first enabled menu item for keyboard accessibility
-			requestAnimationFrame( () => {
-				const firstItem = menu.querySelector( '[role="menuitem"]:not([disabled])' );
-				if ( firstItem ) {
-					firstItem.focus();
-				}
-			} );
+		positionAtOpener( menu, opener ) {
+			const anchor = opener.getBoundingClientRect();
+			const { width, height } = menu.getBoundingClientRect();
+			const bottom = window.innerHeight - 4;
+			const preferredTop = anchor.bottom + height <= bottom ? anchor.bottom : anchor.top - height;
+			menu.style.left = Math.max( 4, Math.min( anchor.left, window.innerWidth - width - 4 ) ) + 'px';
+			menu.style.top = Math.max( 4, Math.min( preferredTop, bottom - height ) ) + 'px';
 		}
 
 		/**
 		 * Close the active layer context menu if open
 		 */
-		closeLayerContextMenu() {
+		closeLayerContextMenu( restoreFocus ) {
 			// Remove document event listeners to prevent memory leaks
 			if ( this._boundCloseHandler ) {
 				document.removeEventListener( 'click', this._boundCloseHandler );
@@ -268,10 +313,17 @@
 				this._boundEscHandler = null;
 			}
 
-			if ( this.activeContextMenu && this.activeContextMenu.parentNode ) {
-				this.activeContextMenu.parentNode.removeChild( this.activeContextMenu );
-			}
+			this.activeContextMenu?.remove();
 			this.activeContextMenu = null;
+			if ( this.opener ) {
+				window.removeEventListener( 'resize', this.placeMenu );
+				this.placeMenu = null;
+				this.opener.setAttribute( 'aria-expanded', 'false' );
+				if ( restoreFocus ) {
+					this.opener.focus();
+				}
+				this.opener = null;
+			}
 		}
 
 		/**
@@ -290,6 +342,8 @@
 			this.ungroupLayer = null;
 			this.deleteLayer = null;
 			this.editLayerName = null;
+			this.panel = null;
+			this.actionButton = null;
 		}
 	}
 

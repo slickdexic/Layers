@@ -20,6 +20,19 @@
 		};
 
 	/**
+	 * Wrap the static paths used by the toolbar icons.
+	 *
+	 * @param {string} contents Icon paths and shapes
+	 * @param {number} [size=24] Icon width and height in pixels
+	 * @param {boolean} [roundJoins=true] Whether to round joins between strokes
+	 * @return {string} SVG markup
+	 */
+	function toolbarIcon( contents, size = 24, roundJoins = true ) {
+		const join = roundJoins ? ' stroke-linejoin="round"' : '';
+		return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"${join}>${contents}</svg>`;
+	}
+
+	/**
 	 * Toolbar class
 	 *
 	 * @class Toolbar
@@ -426,120 +439,114 @@
 
 	/**
 		 * Get SVG icons for toolbar tools
-		 * Icons follow industry standards (Figma, Adobe, etc.)
 		 *
 		 * @return {Object} Object containing SVG icon strings for each tool
 		 */
 		getToolIcons() {
-			const size = 24;
-			const stroke = 'currentColor';
-			const fill = 'none';
-			const strokeWidth = 2;
-
 			return {
 				// Select/Pointer tool - Mouse cursor arrow (industry standard)
-				pointer: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				pointer: toolbarIcon( `
 				<path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
 				<path d="M13 13l6 6"/>
-			</svg>`,
+			` ),
 
 				// Text tool - Bold T character
-				text: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				text: toolbarIcon( `
 				<polyline points="4 7 4 4 20 4 20 7"/>
 				<line x1="9" y1="20" x2="15" y2="20"/>
 				<line x1="12" y1="4" x2="12" y2="20"/>
-			</svg>`,
+			` ),
 
 				// Pen tool - Pen nib (Bezier curve tool standard)
-				pen: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				pen: toolbarIcon( `
 				<path d="M12 19l7-7 3 3-7 7-3-3z"/>
 				<path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
 				<path d="M2 2l7.586 7.586"/>
 				<circle cx="11" cy="11" r="2"/>
-			</svg>`,
+			` ),
 
 				// Rectangle tool - Rectangle shape
-				rectangle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				rectangle: toolbarIcon( `
 				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-			</svg>`,
+			` ),
 
 				// Circle tool - Perfect circle
-				circle: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				circle: toolbarIcon( `
 				<circle cx="12" cy="12" r="9"/>
-			</svg>`,
+			` ),
 
 				// Ellipse tool - Oval/ellipse shape
-				ellipse: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				ellipse: toolbarIcon( `
 				<ellipse cx="12" cy="12" rx="10" ry="6"/>
-			</svg>`,
+			` ),
 
 				// Polygon tool - Pentagon shape
-				polygon: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				polygon: toolbarIcon( `
 				<polygon points="12 2 22 9 18.5 21 5.5 21 2 9 12 2"/>
-			</svg>`,
+			` ),
 
 				// Star tool - 5-pointed star
-				star: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				star: toolbarIcon( `
 				<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-			</svg>`,
+			` ),
 
 				// Arrow tool - Annotation arrow (distinct from pointer)
-				arrow: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				arrow: toolbarIcon( `
 				<line x1="5" y1="19" x2="19" y2="5"/>
 				<polyline points="12 5 19 5 19 12"/>
-			</svg>`,
+			` ),
 
 				// Line tool - Diagonal line
-				line: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				line: toolbarIcon( `
 				<line x1="5" y1="19" x2="19" y2="5"/>
-			</svg>`,
+			` ),
 
 				// Text Box tool - Rectangle with text lines
-				textbox: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				textbox: toolbarIcon( `
 				<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
 				<line x1="7" y1="8" x2="17" y2="8"/>
 				<line x1="7" y1="12" x2="17" y2="12"/>
 				<line x1="7" y1="16" x2="12" y2="16"/>
-			</svg>`,
+			` ),
 
 				// Callout/Chat Bubble tool - Speech bubble with tail
-				callout: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				callout: toolbarIcon( `
 				<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-			</svg>`,
+			` ),
 
 				// Number Marker tool - Circled number with optional arrow
-				marker: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				marker: toolbarIcon( `
 				<circle cx="12" cy="10" r="7"/>
-				<text x="12" y="13" font-size="9" font-weight="bold" text-anchor="middle" fill="${stroke}" stroke="none">1</text>
-				<line x1="12" y1="17" x2="12" y2="22" stroke="${stroke}"/>
-				<polyline points="9,19 12,22 15,19" stroke="${stroke}" fill="none"/>
-			</svg>`,
+				<text x="12" y="13" font-size="9" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text>
+				<line x1="12" y1="17" x2="12" y2="22" stroke="currentColor"/>
+				<polyline points="9,19 12,22 15,19" stroke="currentColor" fill="none"/>
+			` ),
 
 				// Dimension tool - Measurement line with extension lines
-				dimension: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				dimension: toolbarIcon( `
 				<line x1="4" y1="12" x2="20" y2="12"/>
 				<line x1="4" y1="8" x2="4" y2="16"/>
 				<line x1="20" y1="8" x2="20" y2="16"/>
 				<polyline points="7,10 4,12 7,14" fill="none"/>
 				<polyline points="17,10 20,12 17,14" fill="none"/>
-				<text x="12" y="9" font-size="6" text-anchor="middle" fill="${stroke}" stroke="none">50</text>
-			</svg>`,
+				<text x="12" y="9" font-size="6" text-anchor="middle" fill="currentColor" stroke="none">50</text>
+			` ),
 
 				// Angle Dimension tool - Arc between two lines showing angle
-				angleDimension: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				angleDimension: toolbarIcon( `
 				<line x1="4" y1="20" x2="20" y2="20"/>
 				<line x1="4" y1="20" x2="14" y2="4"/>
 				<path d="M10,20 A7,7 0 0,1 8.2,13.6" fill="none"/>
-				<text x="12" y="16" font-size="5" text-anchor="middle" fill="${stroke}" stroke="none">45°</text>
-			</svg>`,
+				<text x="12" y="16" font-size="5" text-anchor="middle" fill="currentColor" stroke="none">45°</text>
+			` ),
 
 				// Custom Shape Library - Grid of shapes
-				customShapes: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				customShapes: toolbarIcon( `
 				<rect x="3" y="3" width="7" height="7"/>
 				<rect x="14" y="3" width="7" height="7"/>
 				<polygon points="6.5 21 3 14 10 14 6.5 21"/>
 				<circle cx="17.5" cy="17.5" r="3.5"/>
-			</svg>`
+			` )
 			};
 		}
 
@@ -564,83 +571,78 @@
 		 * @return {Object} Object containing SVG icon strings
 		 */
 		getActionIcons() {
-			const size = 24;
-			const stroke = 'currentColor';
-			const fill = 'none';
-			const strokeWidth = 2;
-
 			return {
 				// Undo - Curved arrow pointing left/back
-				undo: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				undo: toolbarIcon( `
 				<polyline points="1 4 1 10 7 10"/>
 				<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-			</svg>`,
+			` ),
 
 				// Redo - Curved arrow pointing right/forward
-				redo: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				redo: toolbarIcon( `
 				<polyline points="23 4 23 10 17 10"/>
 				<path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"/>
-			</svg>`,
+			` ),
 
 				// Duplicate - Two overlapping squares
-				duplicate: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				duplicate: toolbarIcon( `
 				<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
 				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-			</svg>`,
+			` ),
 
 				// Zoom in - Magnifying glass with plus
-				zoomIn: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				zoomIn: toolbarIcon( `
 				<circle cx="11" cy="11" r="8"/>
 				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
 				<line x1="11" y1="8" x2="11" y2="14"/>
 				<line x1="8" y1="11" x2="14" y2="11"/>
-			</svg>`,
+			` ),
 
 				// Zoom out - Magnifying glass with minus
-				zoomOut: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				zoomOut: toolbarIcon( `
 				<circle cx="11" cy="11" r="8"/>
 				<line x1="21" y1="21" x2="16.65" y2="16.65"/>
 				<line x1="8" y1="11" x2="14" y2="11"/>
-			</svg>`,
+			` ),
 
 				// Fit to window - Expand arrows
-				fitWindow: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				fitWindow: toolbarIcon( `
 				<polyline points="15 3 21 3 21 9"/>
 				<polyline points="9 21 3 21 3 15"/>
 				<line x1="21" y1="3" x2="14" y2="10"/>
 				<line x1="3" y1="21" x2="10" y2="14"/>
-			</svg>`,
+			` ),
 
 				// Import Layers - Folder with arrow up (upload/load file into editor)
-				importLayers: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				importLayers: toolbarIcon( `
 				<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
 				<line x1="12" y1="17" x2="12" y2="11"/>
 				<polyline points="9 14 12 11 15 14"/>
-			</svg>`,
+			` ),
 
 				// Export Layers - Folder with arrow down (download/save file from editor)
-				exportLayers: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				exportLayers: toolbarIcon( `
 				<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
 				<line x1="12" y1="11" x2="12" y2="17"/>
 				<polyline points="9 14 12 17 15 14"/>
-			</svg>`,
+			` ),
 
 				// Export Image - Download/save icon (arrow down into tray)
-				exportImage: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				exportImage: toolbarIcon( `
 				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
 				<polyline points="7 10 12 15 17 10"/>
 				<line x1="12" y1="15" x2="12" y2="3"/>
-			</svg>`,
+			` ),
 
 				// Import Image - Image icon with plus badge (add image layer)
-				importImage: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				importImage: toolbarIcon( `
 				<rect x="2" y="2" width="16" height="16" rx="2" ry="2"/>
 				<circle cx="7" cy="7" r="1.5"/>
 				<path d="M18 14l-4-4-8 8"/>
 				<circle cx="18" cy="18" r="5" fill="currentColor" stroke="none"/>
 				<line x1="18" y1="15.5" x2="18" y2="20.5" stroke="white" stroke-width="2"/>
 				<line x1="15.5" y1="18" x2="20.5" y2="18" stroke="white" stroke-width="2"/>
-			</svg>`
+			` )
 			};
 		}
 
@@ -1030,53 +1032,51 @@
 		 * @return {Object} Object containing alignment SVG icon strings
 		 */
 		getAlignmentIcons() {
-			const size = 18;
-			const stroke = 'currentColor';
-			const strokeWidth = 2;
+			const alignmentIcon = ( contents ) => toolbarIcon( contents, 18, false );
 
 			return {
-				alignLeft: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				alignLeft: alignmentIcon( `
 					<line x1="4" y1="4" x2="4" y2="20"/>
 					<rect x="4" y="6" width="12" height="4" rx="1"/>
 					<rect x="4" y="14" width="8" height="4" rx="1"/>
-				</svg>`,
-				alignCenterH: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				alignCenterH: alignmentIcon( `
 					<line x1="12" y1="4" x2="12" y2="20"/>
 					<rect x="6" y="6" width="12" height="4" rx="1"/>
 					<rect x="8" y="14" width="8" height="4" rx="1"/>
-				</svg>`,
-				alignRight: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				alignRight: alignmentIcon( `
 					<line x1="20" y1="4" x2="20" y2="20"/>
 					<rect x="8" y="6" width="12" height="4" rx="1"/>
 					<rect x="12" y="14" width="8" height="4" rx="1"/>
-				</svg>`,
-				alignTop: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				alignTop: alignmentIcon( `
 					<line x1="4" y1="4" x2="20" y2="4"/>
 					<rect x="6" y="4" width="4" height="12" rx="1"/>
 					<rect x="14" y="4" width="4" height="8" rx="1"/>
-				</svg>`,
-				alignCenterV: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				alignCenterV: alignmentIcon( `
 					<line x1="4" y1="12" x2="20" y2="12"/>
 					<rect x="6" y="6" width="4" height="12" rx="1"/>
 					<rect x="14" y="8" width="4" height="8" rx="1"/>
-				</svg>`,
-				alignBottom: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				alignBottom: alignmentIcon( `
 					<line x1="4" y1="20" x2="20" y2="20"/>
 					<rect x="6" y="8" width="4" height="12" rx="1"/>
 					<rect x="14" y="12" width="4" height="8" rx="1"/>
-				</svg>`,
-				distributeH: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				distributeH: alignmentIcon( `
 					<line x1="4" y1="4" x2="4" y2="20"/>
 					<line x1="20" y1="4" x2="20" y2="20"/>
 					<rect x="7" y="8" width="4" height="8" rx="1"/>
 					<rect x="13" y="8" width="4" height="8" rx="1"/>
-				</svg>`,
-				distributeV: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round">
+				` ),
+				distributeV: alignmentIcon( `
 					<line x1="4" y1="4" x2="20" y2="4"/>
 					<line x1="4" y1="20" x2="20" y2="20"/>
 					<rect x="8" y="7" width="8" height="4" rx="1"/>
 					<rect x="8" y="13" width="8" height="4" rx="1"/>
-				</svg>`
+				` )
 			};
 		}
 

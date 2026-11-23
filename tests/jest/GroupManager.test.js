@@ -64,6 +64,65 @@ describe( 'GroupManager', () => {
 		groupManager.destroy();
 	} );
 
+	describe( 'getSiblingOrder', () => {
+		it( 'plans a single root move in either direction without writing state or history', () => {
+			const layers = mockStateManager.state.layers;
+			expect( groupManager.getSiblingOrder( 'layer-2', -1 ) ).toEqual(
+				[ layers[ 1 ], layers[ 0 ], layers[ 2 ], layers[ 3 ] ] );
+			expect( groupManager.getSiblingOrder( 'layer-2', 1 ) ).toEqual(
+				[ layers[ 0 ], layers[ 2 ], layers[ 1 ], layers[ 3 ] ] );
+			expect( mockStateManager.state.layers ).toEqual( testLayers );
+			expect( mockStateManager.set ).not.toHaveBeenCalled();
+			expect( mockHistoryManager.saveState ).not.toHaveBeenCalled();
+		} );
+
+		it( 'moves a nested folder branch while preserving unrelated interleaved positions', () => {
+			const parent = { id: 'parent', type: 'group', children: [ 'folder', 'sibling' ] };
+			const folder = { id: 'folder', type: 'group', parentGroup: parent.id, children: [ 'nested' ] };
+			const nested = { id: 'nested', type: 'group', parentGroup: folder.id, children: [ 'leaf' ] };
+			const leaf = { id: 'leaf', type: 'text', parentGroup: nested.id, visible: false };
+			const sibling = { id: 'sibling', type: 'text', parentGroup: parent.id };
+			const unrelated = { id: 'unrelated', type: 'text' };
+			mockStateManager.state.layers = [ parent, folder, unrelated, nested, sibling, leaf ];
+
+			const expected = [ parent, sibling, unrelated, folder, nested, leaf ];
+			expect( groupManager.getSiblingOrder( 'folder', 1 ) ).toEqual( expected );
+			expect( groupManager.getSiblingOrder( 'sibling', -1 ) ).toEqual( expected );
+			expect( groupManager.getSiblingOrder( 'sibling', 1 ) ).toBeNull();
+			expect( groupManager.getSiblingOrder( 'leaf', -1 ) ).toBeNull();
+
+			leaf.locked = 1;
+			expect( groupManager.getSiblingOrder( 'folder', 1 ) ).toBeNull();
+		} );
+
+		it( 'keeps both folders and their descendants ordered as whole branches', () => {
+			const left = { id: 'left', type: 'group', children: [ 'left-child' ] };
+			const right = { id: 'right', type: 'group', children: [ 'right-child' ] };
+			const leftChild = { id: 'left-child', type: 'text', parentGroup: left.id };
+			const rightChild = { id: 'right-child', type: 'text', parentGroup: right.id };
+			mockStateManager.state.layers = [ left, leftChild, right, rightChild ];
+
+			expect( groupManager.getSiblingOrder( 'left', 1 ) ).toEqual(
+				[ right, rightChild, left, leftChild ] );
+			right.children = [];
+			expect( groupManager.getSiblingOrder( 'left', 1 ) ).toBeNull();
+			right.children = { invalid: true };
+			expect( groupManager.getSiblingOrder( 'left', 1 ) ).toBeNull();
+		} );
+
+		it( 'refuses the background, locked layers, unknown IDs and boundary moves', () => {
+			const background = { id: '__background__', type: 'image' };
+			const locked = { id: 'locked', type: 'text', locked: true };
+			mockStateManager.state.layers = [ testLayers[ 0 ], locked, background ];
+
+			expect( groupManager.getSiblingOrder( '__background__', -1 ) ).toBeNull();
+			expect( groupManager.getSiblingOrder( 'locked', -1 ) ).toBeNull();
+			expect( groupManager.getSiblingOrder( 'layer-1', -1 ) ).toBeNull();
+			expect( groupManager.getSiblingOrder( 'layer-1', 0 ) ).toBeNull();
+			expect( groupManager.getSiblingOrder( 'missing', 1 ) ).toBeNull();
+		} );
+	} );
+
 	describe( 'constructor', () => {
 		it( 'should create instance with default config', () => {
 			const gm = new GroupManager( {} );

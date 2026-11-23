@@ -32,6 +32,124 @@ async function tabTo( page, control ) {
 	await expect( control ).toBeFocused();
 }
 
+test.describe( 'Layer actions', () => {
+	test.use( { hasTouch: true } );
+
+	test( 'reorders a layer by click, keyboard and touch without changing the saved revision',
+		async ( { loggedInPage: page, context }, testInfo ) => {
+			const base = new URL( server ).origin;
+			expect( [ 'localhost', '127.0.0.1' ] ).toContain( new URL( base ).hostname );
+			expect( owner ).toMatch( /^Layers[_ ]/ );
+			const errors = [];
+			await guardReads( page, base, errors );
+			page.on( 'pageerror', error => errors.push( { message: error.message } ) );
+			const saved = async () => {
+				const response = await context.request.get( base + '/api.php', { params: {
+					action: 'query', titles: owner, prop: 'revisions', rvprop: 'ids|slotsha1', rvslots: '*', format: 'json', formatversion: 2
+				} } );
+				const result = await response.json();
+				expect( result.error ).toBeUndefined();
+				return result.query.pages[ 0 ].revisions[ 0 ];
+			};
+			const before = await saved();
+			expect( before.slots ).toBeDefined();
+			const editorUrl = base + '/index.php?' + new URLSearchParams( {
+				title: 'Special:EditLayersPage', owner, surface, revid: 'current', useskin: skin
+			} );
+			await page.goto( editorUrl );
+			await page.getByRole( 'button', { name: 'Check saved page', exact: true } ).waitFor( { timeout: 90000 } );
+			const addFolder = page.getByRole( 'button', { name: 'Add folder', exact: true } );
+			const actions = page.getByRole( 'button', { name: 'Layer actions', exact: true } );
+			const menu = page.getByRole( 'menu', { name: 'Layer actions', exact: true } );
+			const unsaved = page.getByRole( 'alertdialog', { name: 'Unsaved Changes', exact: true } );
+			const moveUp = menu.getByRole( 'menuitem', { name: 'Move up', exact: true } );
+			const moveDown = menu.getByRole( 'menuitem', { name: 'Move down', exact: true } );
+			await expect( addFolder.locator( 'xpath=following-sibling::*[1]' ) ).toHaveAccessibleName( 'Layer actions' );
+			await expect( actions ).toHaveAttribute( 'aria-haspopup', 'menu' );
+			await expect( actions ).toBeDisabled();
+
+			const originals = await page.evaluate( () => window.layersEditorInstance.layers.filter( layer => !layer.parentGroup ) );
+			const seed = originals.find( layer => layer.type !== 'group' && !layer.locked );
+			expect( seed ).toBeDefined();
+			const row = id => page.locator( '.layer-item[data-layer-id=' + JSON.stringify( id ) + ']' );
+			await row( seed.id ).locator( '.layer-grab-area' ).click();
+			await page.locator( '[data-action="duplicate"]' ).click();
+			const readOrder = () => page.evaluate( () => window.layersEditorInstance.layers
+				.filter( layer => !layer.parentGroup ).map( layer => layer.id ) );
+			await expect.poll( async () => ( await readOrder() ).length ).toBe( originals.length + 1 );
+			const initialOrder = await readOrder();
+			const [ selected, next, ...rest ] = initialOrder;
+			expect( originals.map( layer => layer.id ) ).not.toContain( selected );
+			const movedOrder = [ next, selected, ...rest ];
+			const grab = row( selected ).locator( '.layer-grab-area' );
+			const announcement = page.locator( '.layers-panel .layers-sr-only[aria-live]' );
+			const expectMove = async ( order, message ) => {
+				await expect.poll( readOrder ).toEqual( order );
+				await expect( grab ).toHaveAttribute( 'aria-pressed', 'true' );
+				await expect( grab ).toBeFocused();
+				await expect( announcement ).toHaveText( message );
+			};
+
+			await actions.click();
+			await expect( actions ).toHaveAttribute( 'aria-expanded', 'true' );
+			await expect( menu.getByRole( 'menuitem' ).nth( 0 ) ).toHaveAccessibleName( 'Move up' );
+			await expect( menu.getByRole( 'menuitem' ).nth( 1 ) ).toHaveAccessibleName( 'Move down' );
+			await expect( moveUp ).toBeDisabled();
+			await expect( moveDown ).toBeFocused();
+			await moveDown.hover( { timeout: 10000 } );
+			await expect( moveDown ).toHaveCSS( 'background-color', 'rgb(240, 240, 240)' );
+			await menu.screenshot( { path: testInfo.outputPath( 'layer-actions-desktop.png' ) } );
+			await moveDown.click( { timeout: 10000 } );
+			await expectMove( movedOrder, 'Moved down one layer.' );
+			await expect( menu ).toBeHidden();
+			await expect( actions ).toHaveAttribute( 'aria-expanded', 'false' );
+			await page.keyboard.press( 'Control+z' );
+			await expect.poll( readOrder ).toEqual( initialOrder );
+			await page.keyboard.press( 'Control+y' );
+			await expect.poll( readOrder ).toEqual( movedOrder );
+
+			await grab.click();
+			await tabTo( page, actions );
+			await page.keyboard.press( 'Space' );
+			await expect( moveUp ).toBeFocused();
+			if ( movedOrder.length === 2 ) {
+				await expect( moveDown ).toBeDisabled();
+			}
+			await page.keyboard.press( 'Escape' );
+			await expect( actions ).toBeFocused();
+			await expect( menu ).toBeHidden();
+			await expect( unsaved ).toHaveCount( 0 );
+			await page.keyboard.press( 'Enter' );
+			await expect( moveUp ).toBeFocused();
+			await page.keyboard.press( 'Enter' );
+			await expectMove( initialOrder, 'Moved up one layer.' );
+
+			const lock = row( selected ).locator( '.layer-lock' );
+			await lock.click();
+			await actions.click();
+			await expect( moveUp ).toBeDisabled();
+			await expect( moveDown ).toBeDisabled();
+			await page.keyboard.press( 'Escape' );
+			await expect( actions ).toBeFocused();
+			await expect( unsaved ).toHaveCount( 0 );
+			await lock.click();
+			await row( next ).locator( '.layer-grab-area' ).click( { modifiers: [ 'Control' ] } );
+			await expect( actions ).toBeDisabled();
+			await grab.click();
+			await expect( actions ).toBeEnabled();
+
+			await page.setViewportSize( { width: 320, height: 256 } );
+			await actions.tap();
+			await expect( menu ).toBeInViewport( { ratio: 1 } );
+			await expect( moveDown ).toBeFocused();
+			await page.screenshot( { path: testInfo.outputPath( 'layer-actions-compact.png' ) } );
+			await moveDown.tap( { timeout: 10000 } );
+			await expectMove( movedOrder, 'Moved down one layer.' );
+			expect( await saved() ).toEqual( before );
+			expect( errors ).toEqual( [] );
+		} );
+} );
+
 test( 'confirmed draft discard survives a failed destination and completes on a healthy reopen', async ( { loggedInPage: page, context }, testInfo ) => {
 	test.setTimeout( 240000 );
 	const base = new URL( server ).origin;
@@ -232,6 +350,42 @@ for ( const theme of [ 'light', 'dark' ] ) {
 		await page.addScriptTag( { path: path.resolve( 'node_modules/axe-core/axe.min.js' ) } );
 		const violations = await audit( page, '.layers-editor' );
 		expect( violations.filter( v => [ 'critical', 'serious' ].includes( v.impact ) ) ).toEqual( [] );
+		const styleGroup = page.locator( '.style-group' ), toolbarContrast = [];
+		const colourLabels = [ 'Stroke Color', 'Fill Color', 'Stroke Width' ];
+		for ( const preference of theme === 'dark' ? [ 'night', 'os' ] : [ 'day' ] ) {
+			if ( preference === 'os' ) {
+				await page.emulateMedia( { colorScheme: 'dark' } );
+				await page.evaluate( () => document.documentElement.classList.replace( 'skin-theme-clientpref-night', 'skin-theme-clientpref-os' ) );
+			}
+			for ( const [ tool, key, labels ] of [
+				[ 'rectangle', 'r', colourLabels ],
+				[ 'arrow', 'a', colourLabels ],
+				[ 'text', 't', [ 'Font Size' ] ]
+			] ) {
+				await skip.focus();
+				await page.keyboard.press( key );
+				await page.waitForFunction( expected => window.layersEditorInstance.stateManager.get( 'currentTool' ) === expected, tool );
+				for ( const label of labels ) {
+					await expect( styleGroup.getByText( label, { exact: true } ) ).toBeVisible();
+				}
+				await styleGroup.evaluate( node => Promise.allSettled( node.getAnimations( { subtree: true } )
+					.filter( animation => Number.isFinite( animation.effect.getComputedTiming().endTime ) )
+					.map( animation => animation.finished ) ) );
+				const findings = await audit( page, '.style-group', [ 'color-contrast' ] );
+				expect( findings, preference + ' ' + tool ).toEqual( [] );
+				toolbarContrast.push( { preference, tool, labels, violations: findings } );
+				if ( preference === 'night' && tool === 'rectangle' ) {
+					await styleGroup.screenshot( { path: testInfo.outputPath( 'toolbar-label-contrast.png' ), animations: 'disabled' } );
+				}
+			}
+		}
+		if ( theme === 'dark' ) {
+			await page.evaluate( () => document.documentElement.classList.replace( 'skin-theme-clientpref-os', 'skin-theme-clientpref-night' ) );
+			await page.emulateMedia( { colorScheme: null } );
+		}
+		await skip.focus();
+		await page.keyboard.press( 'v' );
+		await expect( colour ).toBeHidden();
 		const counter = page.locator( '.toolbar-page-display' ), contrast = [];
 		if ( await counter.count() ) {
 			const classes = await counter.evaluate( node => node.parentElement.className );
@@ -305,7 +459,7 @@ for ( const theme of [ 'light', 'dark' ] ) {
 			expect( await saved() ).toEqual( before ); expect( errors ).toEqual( [] ); closeReopen = true;
 		}
 		const evidence = testInfo.outputPath( 'native-accessibility.json' );
-		fs.writeFileSync( evidence, JSON.stringify( { owner, surface, revision: before.revid, skin, theme, violations, contrast,
+		fs.writeFileSync( evidence, JSON.stringify( { owner, surface, revision: before.revid, skin, theme, violations, contrast, toolbarContrast,
 			keyboardFocus: true, layerControlsAndHistory: true, closeReopen, savedContentUnchanged: true, errors }, null, 2 ) );
 		await testInfo.attach( 'native-accessibility', { path: evidence, contentType: 'application/json' } );
 	} );
