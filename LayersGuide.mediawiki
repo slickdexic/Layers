@@ -1,7 +1,7 @@
 '''Layers is a MediaWiki extension. Docker is only one development/test environment, not a runtime dependency.'''
 
 = Layers user guide =
-The testing candidate is '''v1.8rc2''' (manifest '''1.8.0-rc.2'''). It includes page ownership, native revision history and current page-owned text search after migration and cleanup. Final stable acceptance remains separate; see the [https://github.com/slickdexic/Layers/releases/tag/v1.8rc2 release and limitations]. This repository file is a publication source, not proof of a mediawiki.org update.
+'''Layers 1.8''' (manifest '''1.8.0''') includes page ownership, native revision history and current page-owned text search after migration and cleanup. See the [https://github.com/slickdexic/Layers/blob/main/docs/RELEASE_NOTES_1_8.md release notes] for qualification and deployment limits.
 
 == Complete setup first ==
 Follow [https://github.com/slickdexic/Layers/blob/main/wiki/Installation.md installation] and the [https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md upgrade/recovery procedure]. The native updater alone does not complete migration. Even a fresh empty wiki needs the unscoped completion procedure and <code>layerspagehistorymigrated: true</code> verified through siteinfo. Existing 1.5.x shared editing uses a different model.

@@ -13,6 +13,12 @@
 			root.focus();
 			this.sync = () => this.isolate();
 			this.keydown = ( event ) => this.handleTab( event );
+			this.resize = () => {
+				const active = document.activeElement;
+				if ( active !== root && root.contains( active ) && root.scrollHeight > root.clientHeight ) {
+					active.scrollIntoView( { block: 'nearest', inline: 'nearest' } );
+				}
+			};
 			this.focusin = ( event ) => {
 				const roots = this.scope();
 				if ( roots.some( node => node.contains( event.target ) ) ||
@@ -28,6 +34,7 @@
 			this.observer.observe( document.body, { childList: true } );
 			document.addEventListener( 'keydown', this.keydown );
 			document.addEventListener( 'focusin', this.focusin );
+			window.addEventListener( 'resize', this.resize );
 			this.isolate();
 		}
 
@@ -97,6 +104,7 @@
 			this.observer.disconnect();
 			document.removeEventListener( 'keydown', this.keydown );
 			document.removeEventListener( 'focusin', this.focusin );
+			window.removeEventListener( 'resize', this.resize );
 			for ( const [ node, values ] of this.background ) {
 				[ 'inert', 'aria-hidden' ].forEach( ( name, i ) => {
 					if ( values[ i ] === null ) { node.removeAttribute( name ); } else { node.setAttribute( name, values[ i ] ); }

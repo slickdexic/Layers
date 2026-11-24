@@ -1,7 +1,6 @@
 # Upgrading layer sets to page revision history
 
-This guide covers the independent page-history release, working target
-**Layers 1.8**, and advances [Milestone 1 and OPS-1](PROJECT_CHARTER.md).
+This guide covers the independent page-history release, **Layers 1.8**, and advances [Milestone 1 and OPS-1](PROJECT_CHARTER.md).
 The [release acceptance ledger](RELEASE_1_8_ACCEPTANCE.md) tracks the remaining
 qualification. Layers uses MediaWiki's extension, database and maintenance
 mechanisms; Docker is not a deployment requirement.
@@ -36,8 +35,8 @@ a substitute for that rehearsal. See [test coverage](UPGRADE_PATH_ACCEPTANCE.md)
 
 A new installation needs no previous Layers version. It still runs the updater
 and the unscoped migration completion step below, even when there is no legacy
-data to copy. For RC2 use tag `v1.8rc2` and verify that `Special:Version` reports
-`1.8.0-rc.2`.
+data to copy. Install the reviewed release package and verify that
+`Special:Version` reports `1.8.0`. Use tag `v1.8` once published.
 
 | Requirement | What to prepare |
 | --- | --- |

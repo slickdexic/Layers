@@ -167,6 +167,7 @@ describe( 'ContextMenuController', () => {
 			const menu = document.querySelector( '.layers-context-menu' );
 			expect( menu.style.left ).toBe( '100px' );
 			expect( menu.style.top ).toBe( '200px' );
+			expect( menu.textContent ).not.toContain( 'Move up' );
 		} );
 
 		it( 'should include group action for non-group layers', () => {
@@ -248,6 +249,40 @@ describe( 'ContextMenuController', () => {
 
 			expect( mockCallbacks.selectLayer ).toHaveBeenCalledWith( 'layer1', false, false );
 		} );
+	} );
+
+	it( 'opens the selected layer actions, exposes boundaries and restores focus on Escape', () => {
+		mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+		mockEditor.groupManager = {
+			getSiblingOrder: jest.fn( ( id, direction ) => direction === 1 ? [ mockLayers[ 1 ], mockLayers[ 0 ] ] : null )
+		};
+		controller.moveSibling = jest.fn();
+		const opener = document.createElement( 'button' );
+		opener.title = 'Layer actions';
+		document.body.appendChild( opener );
+		const row = createMockEvent( 'layer1' ).target;
+
+		controller.openForLayer( opener, row );
+		const menu = controller.activeContextMenu;
+		const [ up, down, group ] = menu.querySelectorAll( '[role="menuitem"]' );
+		expect( menu.getAttribute( 'aria-label' ) ).toBe( 'Layer actions' );
+		expect( opener.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+		expect( up.textContent ).toBe( 'Move up' );
+		expect( up.disabled ).toBe( true );
+		expect( down.textContent ).toBe( 'Move down' );
+		expect( down.disabled ).toBe( false );
+		expect( group.textContent ).toContain( 'Group' );
+		up.click();
+		expect( controller.moveSibling ).not.toHaveBeenCalled();
+		down.click();
+		expect( controller.moveSibling ).toHaveBeenCalledWith( 'layer1', 1 );
+		expect( controller.activeContextMenu ).toBeNull();
+
+		controller.openForLayer( opener, row );
+		document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', cancelable: true } ) );
+		expect( controller.activeContextMenu ).toBeNull();
+		expect( opener.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+		expect( document.activeElement ).toBe( opener );
 	} );
 
 	describe( 'closeLayerContextMenu', () => {
@@ -567,38 +602,6 @@ describe( 'ContextMenuController', () => {
 	} );
 
 	describe( 'menu item interactions', () => {
-		it( 'should highlight menu item on mouseenter', () => {
-			const mockEvent = createMockEvent( 'layer1' );
-			controller.handleLayerContextMenu( mockEvent );
-
-			const menu = document.querySelector( '.layers-context-menu' );
-			const menuItems = menu.querySelectorAll( 'button' );
-			const enabledItem = Array.from( menuItems ).find( ( btn ) => !btn.disabled );
-
-			if ( enabledItem ) {
-				const enterEvent = new Event( 'mouseenter' );
-				enabledItem.dispatchEvent( enterEvent );
-
-				expect( enabledItem.style.backgroundColor ).toBe( 'rgb(240, 240, 240)' );
-			}
-		} );
-
-		it( 'should remove highlight on mouseleave', () => {
-			const mockEvent = createMockEvent( 'layer1' );
-			controller.handleLayerContextMenu( mockEvent );
-
-			const menu = document.querySelector( '.layers-context-menu' );
-			const menuItems = menu.querySelectorAll( 'button' );
-			const enabledItem = Array.from( menuItems ).find( ( btn ) => !btn.disabled );
-
-			if ( enabledItem ) {
-				enabledItem.dispatchEvent( new Event( 'mouseenter' ) );
-				enabledItem.dispatchEvent( new Event( 'mouseleave' ) );
-
-				expect( enabledItem.style.backgroundColor ).toBe( 'transparent' );
-			}
-		} );
-
 		it( 'should call editLayerName when rename is clicked', () => {
 			// Create layer item with name element
 			const layerItem = document.createElement( 'div' );

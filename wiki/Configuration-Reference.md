@@ -4,7 +4,7 @@ Reviewed October 24, 2026 against the candidate's `extension.json` and callers.
 These are extension defaults, not MediaWiki defaults. Set overrides after
 `wfLoadExtension( 'Layers' );` in `LocalSettings.php`.
 
-The testing candidate is v1.8rc2 (manifest 1.8.0-rc.2). Tagged 1.5.95
+Layers 1.8 uses manifest 1.8.0. Tagged 1.5.95
 uses the older shared model. Follow the
 [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md), including migration completion on an empty
 new wiki. Changing a setting does not record completion or migrate content.

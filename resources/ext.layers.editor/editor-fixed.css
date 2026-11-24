@@ -503,6 +503,7 @@ body.layers-editor-open .mw-body-content {
 
 .style-group.context-aware .context-hidden {
 	opacity: 0;
+	visibility: hidden;
 	max-width: 0;
 	margin: 0;
 	padding: 0;
@@ -1120,6 +1121,67 @@ body.layers-editor-open .mw-body-content {
 .layers-btn.layers-btn-icon svg {
 	width: 18px;
 	height: 18px;
+}
+
+.layers-btn.layers-layer-actions {
+	min-width: 24px;
+	min-height: 24px;
+	color: var( --layers-text-primary, #333 );
+}
+
+.layers-layer-actions:disabled {
+	opacity: 0.55;
+}
+
+.layers-context-menu {
+	position: fixed;
+	min-width: 160px;
+	padding: 4px 0;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background-color: #fff;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.15 );
+}
+
+.layers-context-menu-item {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	gap: 8px;
+	padding: 8px 12px;
+	border: 0;
+	background: none;
+	color: #333;
+	font-size: 0.8125rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.layers-context-menu-item:disabled {
+	color: #999;
+	cursor: default;
+}
+
+.layers-context-menu-item:hover:not( :disabled ) {
+	background-color: #f0f0f0;
+}
+
+.layers-context-menu-icon {
+	width: 16px;
+}
+
+.layers-context-menu-separator {
+	height: 1px;
+	margin: 4px 0;
+	background-color: #e0e0e0;
+}
+
+.layers-context-menu-anchored {
+	box-sizing: border-box;
+	max-width: calc( 100vw - 8px );
+	max-height: calc( 100vh - 8px );
+	max-height: calc( 100dvh - 8px );
+	overflow: auto;
 }
 
 .layers-panel-subtitle {
@@ -2975,6 +3037,34 @@ body.layers-resize-cursor {
 	text-decoration: underline;
 }
 
+/* Scroll the editor when its header, toolbar and workspace need more room. */
+@media ( max-height: 520px ), ( max-width: 768px ) {
+	.layers-editor {
+		overflow-y: auto;
+		scroll-padding-block: 4px;
+	}
+
+	.layers-content {
+		min-height: 12rem;
+	}
+
+	.layers-skip-links {
+		position: fixed;
+	}
+}
+
+@media ( max-width: 768px ) {
+	/* Reserve room for both the stacked layer panel and canvas. */
+	.layers-content {
+		min-height: 22rem;
+	}
+}
+
+.layers-shape-library-parent:focus-visible {
+	outline: 2px solid var( --layers-accent-hover, #36c );
+	outline-offset: -2px;
+}
+
 /* Reduced Motion Accessibility Support
  * Respects user preferences for reduced motion (WCAG 2.3.3)
  * See: https://www.w3.org/WAI/WCAG21/Understanding/animation-from-interactions.html
@@ -3328,7 +3418,7 @@ body.layers-resize-cursor {
 	}
 
 	html.skin-theme-clientpref-night .style-control-label {
-		color: var( --layers-text-muted );
+		color: var( --layers-text-secondary );
 	}
 
 	html.skin-theme-clientpref-night .style-control-item .stroke-width-input {
@@ -3969,7 +4059,7 @@ body.layers-resize-cursor {
 	}
 
 	html.skin-theme-clientpref-os .style-control-label {
-		color: var( --layers-text-muted );
+		color: var( --layers-text-secondary );
 	}
 
 	html.skin-theme-clientpref-os .style-control-item .stroke-width-input {

@@ -248,12 +248,14 @@
 		parentCategories.forEach( ( parent ) => {
 			const childCategories = subcategories.filter( ( sub ) => sub.parentId === parent.id );
 			const totalCount = getParentShapeCount( parent.id );
-			const isExpanded = this.expandedParents[ parent.id ];
+			const isExpanded = !!this.expandedParents[ parent.id ];
 
 			// Parent header (collapsible)
-			const parentItem = document.createElement( 'div' );
+			const parentItem = document.createElement( 'button' );
+			parentItem.type = 'button';
 			parentItem.className = 'layers-shape-library-parent';
 			parentItem.dataset.parent = parent.id;
+			parentItem.setAttribute( 'aria-expanded', String( isExpanded ) );
 			parentItem.style.cssText = `
 				display: flex;
 				align-items: center;
@@ -263,6 +265,7 @@
 				border: none;
 				text-align: left;
 				cursor: pointer;
+				font-family: inherit;
 				font-size: 13px;
 				color: var(--color-base, #202122);
 				border-bottom: 1px solid var(--border-color-base, #a2a9b1);
@@ -272,6 +275,7 @@
 			// Expand/collapse arrow
 			const arrow = document.createElement( 'span' );
 			arrow.className = 'layers-category-arrow';
+			arrow.setAttribute( 'aria-hidden', 'true' );
 			arrow.textContent = isExpanded ? '▼' : '▶';
 			arrow.style.cssText = `
 				width: 16px;
@@ -316,21 +320,21 @@
 			parentItem.appendChild( indicator );
 			parentItem.appendChild( textContainer );
 
-			// Click to toggle expand/collapse
-			parentItem.addEventListener( 'click', () => {
-				this.expandedParents[ parent.id ] = !this.expandedParents[ parent.id ];
-				this.buildCategories();
-			} );
-
 			fragment.appendChild( parentItem );
 
 			// Child container
 			const childContainer = document.createElement( 'div' );
 			childContainer.className = 'layers-shape-library-children';
 			childContainer.dataset.parentId = parent.id;
-			childContainer.style.cssText = `
-				display: ${ isExpanded ? 'block' : 'none' };
-			`;
+			childContainer.hidden = !isExpanded;
+
+			parentItem.addEventListener( 'click', () => {
+				const expanded = !this.expandedParents[ parent.id ];
+				this.expandedParents[ parent.id ] = expanded;
+				parentItem.setAttribute( 'aria-expanded', String( expanded ) );
+				arrow.textContent = expanded ? '▼' : '▶';
+				childContainer.hidden = !expanded;
+			} );
 
 			// Render child categories
 			childCategories.forEach( ( cat ) => {

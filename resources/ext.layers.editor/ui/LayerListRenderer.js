@@ -97,6 +97,14 @@
 			return null;
 		}
 
+		findLayerRow( id, reveal ) {
+			if ( reveal && this._virtualList?.isEnabled() ) {
+				this._virtualList.scrollToLayer( id );
+				this._virtualList.render();
+			}
+			return Array.from( this.layerList.children ).find( node => node.dataset.layerId === id );
+		}
+
 		/**
 		 * Get the nesting depth of a layer (0 = top level)
 		 *

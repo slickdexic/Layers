@@ -416,19 +416,28 @@ describe( 'ShapeLibraryPanel', () => {
 			expect( items.length ).toBe( 1 );
 		} );
 
-		it( 'should handle parent category toggle', () => {
+		it( 'discloses child categories from the same focused native button', () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
+			panel.open();
 
-			// Initially iso7010 is expanded
-			expect( panel.expandedParents.iso7010 ).toBe( true );
-
-			// Find parent item and click to toggle
 			const parentItem = panel.categoryList.querySelector( '[data-parent="iso7010"]' );
-			if ( parentItem ) {
-				parentItem.click();
-				// Should toggle expansion
-				expect( panel.expandedParents.iso7010 ).toBe( false );
-			}
+			const children = parentItem.nextElementSibling;
+			expect( parentItem ).toBeInstanceOf( HTMLButtonElement );
+			expect( parentItem.tabIndex ).toBe( 0 );
+			expect( parentItem.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+			expect( children.hidden ).toBe( false );
+
+			parentItem.focus();
+			parentItem.click();
+			expect( parentItem.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+			expect( children.hidden ).toBe( true );
+			expect( document.activeElement ).toBe( parentItem );
+
+			parentItem.click();
+			expect( parentItem.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
+			expect( children.hidden ).toBe( false );
+			expect( document.activeElement ).toBe( parentItem );
+			expect( panel.activeCategory ).toBe( 'iso7010-w' );
 		} );
 	} );
 

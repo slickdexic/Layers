@@ -114,7 +114,8 @@
 					createGroupFromSelection: this.createGroupFromSelection.bind( this ),
 					ungroupLayer: this.ungroupLayer.bind( this ),
 					deleteLayer: this.deleteLayer.bind( this ),
-					editLayerName: this.editLayerName.bind( this )
+					editLayerName: this.editLayerName.bind( this ),
+					panel: this
 				} );
 			}
 		}
@@ -769,6 +770,7 @@
 				this.itemEventsController.destroy();
 				this.itemEventsController = null;
 			}
+			this.contextMenuController?.destroy?.();
 			this.runDialogCleanups();
 			this.removeAllListeners();
 			document.body.classList.remove( 'layers-resize-cursor' );
@@ -948,6 +950,7 @@
 			} );
 			leftGroup.appendChild( createGroupBtn );
 
+			this.contextMenuController?.appendLayerActions( leftGroup );
 			headerRow.appendChild( leftGroup );
 
 			// Right side: search bar
@@ -1269,17 +1272,12 @@
 		 * Render the layer list
 		 */
 		renderLayerList() {
-			// Use extracted LayerListRenderer if available
-			if ( this.layerListRenderer ) {
-				this.layerListRenderer.render();
-				// Always render background layer item at the bottom
-				this.renderBackgroundLayerItem();
-				return;
-			}
-
-			// Initialize renderer if LayerListRenderer is available
-			const LayerListRenderer = getClass( 'UI.LayerListRenderer', 'LayerListRenderer' );
-			if ( LayerListRenderer && !this.layerListRenderer ) {
+			this.contextMenuController?.updateActionButton();
+			if ( !this.layerListRenderer ) {
+				const LayerListRenderer = getClass( 'UI.LayerListRenderer', 'LayerListRenderer' );
+				if ( !LayerListRenderer ) {
+					return;
+				}
 				this.layerListRenderer = new LayerListRenderer( {
 					layerList: this.layerList,
 					msg: this.msg.bind( this ),
@@ -1289,10 +1287,9 @@
 					onMoveLayer: this.moveLayer.bind( this ),
 					onToggleGroupExpand: this.toggleGroupExpand.bind( this )
 				} );
-				this.layerListRenderer.render();
-				// Always render background layer item at the bottom
-				this.renderBackgroundLayerItem();
 			}
+			this.layerListRenderer.render();
+			this.renderBackgroundLayerItem();
 		}
 
 		/**

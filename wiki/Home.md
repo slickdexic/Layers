@@ -4,20 +4,20 @@ Layers is a MediaWiki extension for editable layers on images, PDF pages and
 standalone slides. It preserves uploaded originals. Docker is only a
 possible development/test environment, not a runtime requirement.
 
-**Public release candidate: v1.8rc2.** It includes safer draft recovery, keyboard
-focus fixes and editor improvements for page-owned layer sets. Tagged 1.5.95
-uses older shared storage. Follow [[Installation]] and the
-[upgrade procedure](https://github.com/slickdexic/Layers/blob/v1.8rc2/docs/UPGRADING.md),
+Layers 1.8 brings native page history, safer draft recovery and keyboard
+access improvements to page-owned layer sets. Tagged 1.5.95 uses legacy
+shared storage. Follow [[Installation]] and the
+[upgrade procedure](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md),
 including migration and search cleanup before reopening readers.
-See the [candidate testing guide](https://github.com/slickdexic/Layers/blob/v1.8rc2/docs/V1_8_CANDIDATE_TESTING.md)
-for the remaining stable 1.8 acceptance checks.
+See the [v1.8 release notes](https://github.com/slickdexic/Layers/releases/tag/v1.8)
+and [GitHub Releases](https://github.com/slickdexic/Layers/releases).
 
 | Current manifest and tagged baseline | Value |
 | --- | --- |
-| **Manifest version** | 1.8.0-rc.2 |
-| **Release date for this version** | November 22, 2026 |
+| **Manifest version** | 1.8.0 |
+| **Release date for this version** | November 23, 2026 |
 
-## What the candidate does
+## What Layers 1.8 does
 
 A layer set belongs to one page and one file/slide. Save captures the complete
 owner snapshot in one native page revision. Equal names on different owners or
@@ -31,17 +31,17 @@ Images/slides offer PNG first and a separate PDF Download; PDFs offer PDF only.
 
 ## Start here
 
-- [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/main/docs/UPGRADING.md): exact versions,
+- [[Installation]] and the [upgrade guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/UPGRADING.md): exact versions,
   backup, rehearsal, updater, discovery, dry run, completion and recovery.
 - [[Quick Start Guide]], [[Slide Mode]], [[Drawing Tools]] and
   [[Keyboard Shortcuts]]: edit and use the existing tools.
 - [[Wikitext Syntax]] and [[Named Layer Sets]]: choose this page's content.
-- [[Configuration Reference]] and [[Permissions]]: administer the candidate.
+- [[Configuration Reference]] and [[Permissions]]: administer Layers.
 - [[Troubleshooting]] and [[FAQ]]: diagnose failures while preserving work.
-- [Current release checklist](https://github.com/slickdexic/Layers/blob/main/docs/MILESTONE_1_RELEASE_CHECKLIST.md),
-  [[Current Status]] and [known limits](https://github.com/slickdexic/Layers/blob/main/docs/KNOWN_ISSUES.md): qualified scopes
+- [Current release checklist](https://github.com/slickdexic/Layers/blob/v1.8/docs/MILESTONE_1_RELEASE_CHECKLIST.md),
+  [[Current Status]] and [known limits](https://github.com/slickdexic/Layers/blob/v1.8/docs/KNOWN_ISSUES.md): qualified scopes
   and remaining acceptance. Old dated reports retain their historical scope.
-- [[API Reference]] and the [native API guide](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_GUIDE.md):
+- [[API Reference]] and the [native API guide](https://github.com/slickdexic/Layers/blob/v1.8/docs/PAGE_OWNED_API_GUIDE.md):
   current developer contracts and clearly labelled legacy APIs.
 
 ## Embed examples
@@ -67,5 +67,5 @@ in the charter order. Those later milestones do not hold up page ownership, and 
 will not be active in the lightbox.
 
 [Repository](https://github.com/slickdexic/Layers) ·
-[Technical documentation](https://github.com/slickdexic/Layers/blob/main/docs/README.md) ·
-[Release preparation](https://github.com/slickdexic/Layers/blob/main/docs/RELEASE_PREPARATION.md)
+[Technical documentation](https://github.com/slickdexic/Layers/blob/v1.8/docs/README.md) ·
+[Release preparation](https://github.com/slickdexic/Layers/blob/v1.8/docs/RELEASE_PREPARATION.md)

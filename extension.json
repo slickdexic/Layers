@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.8.0-rc.2",
+	"version": "1.8.0",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -1381,6 +1381,9 @@
 				"layers-group-select-multiple",
 				"layers-group-unavailable",
 				"layers-ungrouped",
+				"layers-layer-actions",
+				"layers-context-move-up",
+				"layers-context-move-down",
 				"layers-context-group",
 				"layers-context-ungroup",
 				"layers-context-rename",

@@ -804,6 +804,12 @@
 			return GroupHierarchyHelper.getTopLevelLayers( layers );
 		}
 
+		/** @see GroupHierarchyHelper.getSiblingOrder */
+		getSiblingOrder( layerId, direction ) {
+			return GroupHierarchyHelper.getSiblingOrder(
+				this.stateManager?.get( 'layers' ) || [], layerId, direction );
+		}
+
 		/** @see GroupHierarchyHelper.isGroup */
 		isGroup( layerOrId ) {
 			if ( typeof layerOrId === 'string' && this.stateManager ) {

@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## [1.8.0] - 2026-11-23
+
+Layers 1.8 brings native page history to layer sets on images, PDF pages and
+standalone slides. Saving records the complete layer set in its owning page's
+revision. Historical viewing and restoration retain the referenced source
+version, including when a file is reuploaded.
+
+- Layer sets with the same name on different owning pages remain independent.
+  Copy a set or slide to another page and edit it independently. Page history
+  records the copy and its attribution.
+- Keep local work when Save is refused or interrupted. Draft recovery offers
+  **Continue draft**, **Discard draft and open saved version**, and **Cancel**.
+- Preserve the whole PDF layer set through Save, Download, rollback and native
+  restoration. The editor keeps focus on the available PDF paging button and
+  announces each page turn.
+- Browse Shape Library categories with the keyboard. Keep focused editor and
+  draft recovery controls reachable at narrow sizes and browser zoom.
+- Use **Layer actions** to reorder a layer or folder among its siblings by click,
+  tap or keyboard. Dark toolbar labels use the existing secondary text color.
+
+Layers 1.8 requires MediaWiki 1.44 or newer. On upgrade, keep reader and editor
+access restricted through the Layers migration and successful search cleanup.
+See the [upgrade guide](docs/UPGRADING.md) and [release notes](docs/RELEASE_NOTES_1_8.md).
+
 ## [1.8.0-rc.2] - 2026-11-22
 
 Second public Layers 1.8 testing candidate, tagged **v1.8rc2**.

@@ -1,8 +1,8 @@
 # PC editor keyboard and layer-list accessibility
 
 **Status:** approved November 21, 2026: “Approve the PC accessibility brief”.
-Implemented and verified in bounded native/browser scope. Manual screen-reader
-acceptance remains open.
+Implemented and verified in the recorded browser and manual Windows
+screen-reader scope. The PDF page-navigation gap passed its live retest.
 Advances UI-3 and preserves the PC interface required by the 1.8 release gate.
 
 ## What people experience
@@ -163,3 +163,79 @@ modal to the editor's existing focus boundary corrected the failure.
 The tests run on synthetic content, check the saved revision and slots, and
 exercise the existing Help, colour dialog, layer visibility and Undo/Redo.
 The separate manual screen-reader pass remains open.
+
+## Manual screen-reader results — November 22, 2026
+
+UI-3 remains open. The manual walkthrough used Windows Narrator with Speech
+Recap, Edge 158.0.4370.33 and Vector 2022 on the maintained MediaWiki 1.44.6
+test wiki. Its installed build was `ee6759ed`. The RC2 tag changes only
+version identifiers in the application compared with that build.
+
+- On the owning page, Narrator read **Edit layers** and **View full size**.
+  The image viewer announced its dialog and named controls. Tab and Shift+Tab
+  wrapped inside the viewer, and Escape returned to **View full size**.
+- In the editor, the skip links and **Check saved page** formed the two
+  ends of the Tab cycle. Narrator identified the layer list and independent
+  move/select, visibility, rename, lock and delete controls with the layer
+  name. It announced the selected and visibility toggle states.
+- Emoji, Shape Library, the colour picker and Help announced their dialogs
+  or controls. Emoji and Shape Library kept Tab within their dialogs. Escape
+  returned to the invoking controls when system focus was verified before
+  opening. In an initial Shape Library attempt without an opener focus check,
+  Narrator reported Emoji after dismissal. The repeated run with Shape Library
+  focus verified before opening reported Shape Library after Escape.
+  The slide's **Canvas** control was announced as a toggle. Enter
+  selected it, and Tab reached **Background Opacity** and **Width**.
+- **Recover local layer edits** announced its three choices. The discard
+  confirmation focused **Cancel** and announced both confirmation buttons.
+  Escape returned to the recovery choices. Cancel then returned to the page
+  with one local backup still present, matching the count before recovery.
+- **PDF page navigation failed.** In a two-page PDF, focus was on
+  **Next page**. Enter displayed **Page 2 / 2**, which was present in the
+  browser accessibility tree. Narrator did not speak the new page number.
+  Its system-focus check reported the editor document after the page turn.
+
+The fixture's saved revision and slot hashes matched after testing. The
+read-only browser guard recorded zero refused requests after login. The
+scope is one screen reader and browser on the maintained Windows test wiki.
+
+The owner approved the PDF repair on November 22, 2026. It keeps focus on the
+activated paging control while it remains available. At the first or last
+page, focus moves to the available direction. The reader announces the new
+page once using the existing
+**Page 2 / 2** wording for that example. Existing buttons, visible wording
+and disabled states are preserved.
+
+### PDF navigation retest
+
+On MediaWiki 1.45.3 at port 8080, Edge 158.0.4370.33 loaded the patched toolbar
+on a synthetic two-page PDF. Windows Narrator Speech Recap recorded one
+**Page 2 / 2** announcement after Enter on **Next page**. Focus moved to
+**Previous page**. Enter there produced one **Page 1 / 2** announcement and
+moved focus to **Next page**. Tab reached the paging controls through the
+normal editor order. The focused regression covers retaining position at an
+intermediate page, avoiding duplicate counter updates and respecting focus
+elsewhere in the editor.
+
+The saved revision and all slot hashes matched after the read-only walkthrough.
+This completes the manual Windows screen-reader check for the recorded PC
+workflows. On November 23 the same toolbar passed the automated focus and
+status checks on the installed 8082 candidate. Edge could not be activated for
+the installed-candidate Narrator retest. The spoken result comes from the
+8080 walkthrough. See the [installed audit and remaining findings](RELEASE_1_8_ACCEPTANCE.md#installed-pdf-repair-and-accessibility-audit--november-23-2026).
+
+### Shape Library and compact layouts
+
+The owner approved keyboard disclosure for **ISO 7010 Safety Signs** and
+scrollable editor and recovery layouts. The updated browser tests exercise
+keyboard toggling, focus after a resize, and recovery focus and retention on
+the maintained wikis. The qualification replay used actual 200% and 400%
+browser zoom. See the [implementation and remaining scope](RELEASE_1_8_ACCEPTANCE.md#approved-keyboard-disclosure-and-compact-layouts--november-23-2026).
+
+### Toolbar contrast and layer reordering
+
+The approved **Layer actions** menu offers up and down commands for a single
+layer or folder within its current parent. The menu supports mouse, touch
+and keyboard input and uses the existing layer history and status messages.
+The toolbar's active labels use the existing secondary text color in both
+dark modes. See the [qualification results](RELEASE_1_8_ACCEPTANCE.md#layer-actions-and-dark-toolbar-labels--november-23-2026).
